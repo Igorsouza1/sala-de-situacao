@@ -1,0 +1,1 @@
+Limpei um projeto starter supabase para começar totalmente novo.
