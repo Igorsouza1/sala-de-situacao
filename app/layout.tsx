@@ -1,6 +1,6 @@
 
-import { EnvVarWarning } from "@/components/env-var-warning";
-import HeaderAuth from "@/components/header-auth";
+import { EnvVarWarning } from "@/components/auth/env-var-warning";
+import HeaderAuth from "@/components/auth/header-auth";
 import { hasEnvVars } from "@/utils/supabase/check-env-vars";
 import { Geist } from "next/font/google";
 import { ThemeProvider } from "next-themes";
@@ -35,12 +35,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <main className="min-h-screen flex flex-col items-center">
-            <div className="flex-1 w-full flex flex-col gap-20 items-center">
-              <nav className="w-full flex justify-center border-b border-b-foreground/10 h-16">
+          <main className="">
+            <div className="">
+              <nav className="">
                   {!hasEnvVars ? <EnvVarWarning /> : <HeaderAuth />}
               </nav>
-              <div className="flex flex-col gap-20 max-w-5xl p-5">
+              <div className="">
                 {children}
               </div>
             </div>
