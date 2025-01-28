@@ -36,14 +36,9 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <main className="">
-            <div className="">
-              <nav className="">
-                  {!hasEnvVars ? <EnvVarWarning /> : <HeaderAuth />}
-              </nav>
               <div className="">
                 {children}
               </div>
-            </div>
           </main>
         </ThemeProvider>
       </body>

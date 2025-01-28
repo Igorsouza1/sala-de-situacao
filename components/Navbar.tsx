@@ -7,16 +7,31 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useUserRole } from "@/hooks/useUserRole"
+import { createClient } from "@/utils/supabase/client"
+import { signOutAction } from "@/app/actions/authentication/actions"
 
-const navItems = [
+const commonNavItems = [
   { name: "Mapa", href: "/search", icon: Map },
   { name: "Dashboard", href: "/", icon: ChartNetwork },
+]
+
+const adminNavItems = [
   { name: "Painel do Administrador", href: "/admin", icon: HardDrive },
   { name: "Adicionar", href: "/add", icon: Plus },
 ]
 
 export function Navbar() {
   const pathname = usePathname()
+  const { isAdmin, isLoading } = useUserRole()
+  const supabase = createClient()
+
+  const handleSignOut = async () => {
+     signOutAction()
+  }
+
+  // Only show nav items after role check is complete
+  const navItems = isLoading ? commonNavItems : [...commonNavItems, ...(isAdmin ? adminNavItems : [])]
 
   return (
     <TooltipProvider>
@@ -67,7 +82,10 @@ export function Navbar() {
                 <Settings className="w-4 h-4" />
                 <span>Configurações</span>
               </DropdownMenuItem>
-              <DropdownMenuItem className="flex items-center gap-2 hover:bg-pantaneiro-lime hover:bg-opacity-20">
+              <DropdownMenuItem
+                className="flex items-center gap-2 hover:bg-pantaneiro-lime hover:bg-opacity-20"
+                onSelect={handleSignOut}
+              >
                 <LogOut className="w-4 h-4" />
                 <span>Sair</span>
               </DropdownMenuItem>
