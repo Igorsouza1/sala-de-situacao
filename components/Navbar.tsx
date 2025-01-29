@@ -11,12 +11,12 @@ import { useUserRole } from "@/hooks/useUserRole"
 import { createClient } from "@/utils/supabase/client"
 
 const commonNavItems = [
-  { name: "Mapa", href: "/search", icon: Map },
-  { name: "Dashboard", href: "/", icon: ChartNetwork },
+  { name: "Mapa", href: "/protected", icon: Map },
+  { name: "Dashboard", href: "/protected/dashboard", icon: ChartNetwork },
 ]
 
 const adminNavItems = [
-  { name: "Painel do Administrador", href: "/admin", icon: HardDrive },
+  { name: "Painel do Administrador", href: "/protected/admin", icon: HardDrive },
   { name: "Adicionar", href: "/add", icon: Plus },
 ]
 

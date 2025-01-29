@@ -6,6 +6,7 @@ import { Icon, type LatLngExpression } from "leaflet"
 import "leaflet/dist/leaflet.css"
 import { CustomZoomControl } from "./CustomZoomControl"
 import { CustomLayerControl } from "./CustomLayerControl"
+import { MapLayersCard } from "./MapLayerCard"
 
 const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false })
@@ -22,8 +23,15 @@ interface MapProps {
   }>
 }
 
+const layerOptions = [
+  { id: "layer1", label: "Layer 1" },
+  { id: "layer2", label: "Layer 2" },
+  { id: "layer3", label: "Layer 3" },
+]
+
 export default function Map({ center = [-20.481, -54.6352], zoom = 13, markers = [] }: MapProps) {
   const [isMounted, setIsMounted] = useState(false)
+  const [visibleLayers, setVisibleLayers] = useState<string[]>([])
 
   useEffect(() => {
     setIsMounted(true)
@@ -36,6 +44,11 @@ export default function Map({ center = [-20.481, -54.6352], zoom = 13, markers =
     popupAnchor: [1, -34],
     shadowSize: [41, 41],
   })
+
+  const handleLayerToggle = (id: string, isChecked: boolean) => {
+    setVisibleLayers((prev) => (isChecked ? [...prev, id] : prev.filter((layerId) => layerId !== id)))
+    console.log(`Layer ${id} is now ${isChecked ? "visible" : "hidden"}`)
+  }
 
   if (!isMounted) {
     return (
@@ -69,6 +82,11 @@ export default function Map({ center = [-20.481, -54.6352], zoom = 13, markers =
         <CustomZoomControl />
         <CustomLayerControl />
       </MapContainer>
+
+      <div className="absolute bottom-4 left-4 z-[1000] gap-3 flex flex-col">
+        <MapLayersCard title="Shapes" options={layerOptions} onLayerToggle={handleLayerToggle} />
+        <MapLayersCard title="Ações" options={layerOptions} onLayerToggle={handleLayerToggle} />
+      </div>
     </div>
   )
 }
