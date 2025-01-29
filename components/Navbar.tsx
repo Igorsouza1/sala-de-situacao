@@ -9,7 +9,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useUserRole } from "@/hooks/useUserRole"
 import { createClient } from "@/utils/supabase/client"
-import { signOutAction } from "@/app/actions/authentication/actions"
 
 const commonNavItems = [
   { name: "Mapa", href: "/search", icon: Map },
@@ -27,7 +26,7 @@ export function Navbar() {
   const supabase = createClient()
 
   const handleSignOut = async () => {
-     signOutAction()
+    await supabase.auth.signOut()
   }
 
   // Only show nav items after role check is complete
@@ -35,7 +34,7 @@ export function Navbar() {
 
   return (
     <TooltipProvider>
-      <nav className="flex flex-col h-screen w-16 bg-pantaneiro-green">
+      <nav className="flex flex-col h-screen w-16 bg-pantaneiro-green z-50">
         <div className="flex-1 flex flex-col items-center pt-6 gap-6">
           {navItems.map((item) => (
             <Tooltip key={item.name}>
@@ -52,7 +51,7 @@ export function Navbar() {
                   <item.icon className="w-5 h-5" strokeWidth={1.5} />
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="right" className="bg-pantaneiro-lime text-pantaneiro-green">
+              <TooltipContent side="right" className="bg-pantaneiro-lime text-pantaneiro-green ">
                 <p>{item.name}</p>
               </TooltipContent>
             </Tooltip>
@@ -73,7 +72,7 @@ export function Navbar() {
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" className="w-56 bg-pantaneiro-green text-white">
+            <DropdownMenuContent side="right" className="w-56 bg-pantaneiro-green text-white z-[1000]">
               <DropdownMenuItem className="flex items-center gap-2 hover:bg-pantaneiro-lime hover:bg-opacity-20">
                 <User className="w-4 h-4" />
                 <span>Perfil</span>

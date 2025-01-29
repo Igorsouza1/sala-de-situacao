@@ -1,11 +1,17 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { MapContainer, TileLayer, ZoomControl, Marker, Popup } from "react-leaflet"
+import dynamic from "next/dynamic"
 import { Icon, type LatLngExpression } from "leaflet"
 import "leaflet/dist/leaflet.css"
+import { CustomZoomControl } from "./CustomZoomControl"
+import { CustomLayerControl } from "./CustomLayerControl"
 
-// Define types for our map props
+const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
+const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false })
+const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false })
+const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false })
+
 interface MapProps {
   center?: LatLngExpression
   zoom?: number
@@ -16,27 +22,21 @@ interface MapProps {
   }>
 }
 
-export default function Map({
-  center = [-20.481, -54.6352], // Default to Campo Grande - MS
-  zoom = 13,
-  markers = [],
-}: MapProps) {
+export default function Map({ center = [-20.481, -54.6352], zoom = 13, markers = [] }: MapProps) {
   const [isMounted, setIsMounted] = useState(false)
 
   useEffect(() => {
     setIsMounted(true)
   }, [])
 
-  // Custom icon for markers
   const customIcon = new Icon({
-    iconUrl: "/marker-icon.png", // You'll need to add this image to your public folder
+    iconUrl: "/marker-icon.png",
     iconSize: [25, 41],
     iconAnchor: [12, 41],
     popupAnchor: [1, -34],
     shadowSize: [41, 41],
   })
 
-  // Don't render the map on the server side
   if (!isMounted) {
     return (
       <div className="w-screen h-screen bg-gray-100 animate-pulse flex items-center justify-center">
@@ -46,29 +46,28 @@ export default function Map({
   }
 
   return (
-    <div className="w-full h-screen relative">
-      <MapContainer
-        center={center}
-        zoom={zoom}
-        zoomControl={false} // We'll add our own zoom control
-        className="w-full h-full"
-      >
+    <div className="w-full h-screen relative z-10">
+      <MapContainer center={center} zoom={zoom} zoomControl={false} className="w-full h-full">
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          url="https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
+          maxZoom={20}
+          subdomains={["mt0", "mt1", "mt2", "mt3"]}
+          attribution="&copy; Google"
         />
-        <ZoomControl position="topright" />
 
         {markers.map((marker, index) => (
           <Marker key={index} position={marker.position} icon={customIcon}>
             <Popup>
-              <div >
+              <div>
                 <h3 className="font-semibold text-lg">{marker.title}</h3>
-                {marker.description && <p className=" text-sm text-gray-600">{marker.description}</p>}
+                {marker.description && <p className="text-sm text-gray-600">{marker.description}</p>}
               </div>
             </Popup>
           </Marker>
         ))}
+
+        <CustomZoomControl />
+        <CustomLayerControl />
       </MapContainer>
     </div>
   )
