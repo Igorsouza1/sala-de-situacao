@@ -1,6 +1,6 @@
 import Image from "next/image"
 import Link from "next/link"
-import { signInAction } from "@/app/actions/authentication/actions"
+import { signInAction } from "@/app/api/authentication/actions"
 import { FormMessage, type Message } from "@/components/auth/form-message"
 import { SubmitButton } from "@/components/auth/submit-button"
 import { Input } from "@/components/ui/input"
