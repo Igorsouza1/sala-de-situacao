@@ -11,18 +11,16 @@ DATABASE_URL
 
 | Tabela                 | Geometry Column | SRID     | Tipo de Geometria  | Observação |
 |------------------------|----------------|---------|-------------------|------------|
-| Bacia_Rio_Da_Prata     | geom           | 4326    | MULTIPOLYGON     |            |
-| Banhado_Rio_Da_Prata   | geom           | 4326    | MULTIPOLYGON     |            |
-| Leito_Rio_Da_Prata     | geom           | 31981   | MULTILINESTRING  | SRID diferente |
-| Acoes                 | **FALTANDO**    | **FALTANDO** | **FALTANDO**  | Essa tabela está sem Geometry Column |
-| Deque de pedras       | **FALTANDO**    | **FALTANDO** | **FALTANDO**  | Essa tabela está sem Geometry Column |
-| Desmatamento          | geom           | 4674    | MULTIPOLYGON     |            |
-| Desmatamento (duplicado?) | geometry    | 4326    | GEOMETRY         | Duplicado? |
-| Estradas              | geom           | 4326    | GEOMETRY         |            |
-| Estradas (duplicado?) | geom           | 4326    | GEOMETRY         | Duplicado? |
-| Ponte do Cure         | **FALTANDO**    | **FALTANDO** | **FALTANDO**  | Essa tabela está sem Geometry Column |
-| Propriedades          | geom           | 4326    | MULTIPOLYGON     |            |
-| Raw Firms            | geometry       | 4674    | POINT            |            |
+| Bacia_Rio_Da_Prata     | geom             | 4326    | MULTIPOLYGON     |            |
+| Banhado_Rio_Da_Prata   | geom             | 4326    | MULTIPOLYGON     |            |
+| Leito_Rio_Da_Prata     | geom             | 4326    | MULTILINESTRING  |            |
+| Acoes                  | geom            | 4326    | POINT             | |
+| Deque de pedras        | Não é necessario | Não é necessario | Não é necessario  | 
+| Desmatamento           | geom         | 4326    | GEOMETRY         |              |
+| Estradas               | geom             | 4326    | GEOMETRY         |            |
+| Ponte do Cure          | Não é necessario | Não é necessario | Não é necessario  | |
+| Propriedades           | geom             | 4326    | MULTIPOLYGON     |            |
+| Raw Firms              | geom         | 4326    | POINT            |            |
 
 ### Observações:
 - **Tabelas sem Geometry Column** precisam ser corrigidas (`Acoes`, `Deque de pedras`, `Ponte do Cure`).
