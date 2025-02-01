@@ -1,12 +1,11 @@
+import { AdminPanel } from "@/components/admin/adminPanel";
 
 
 
 export default function Admin(){
     return (
-        <>
-            <div>
-            <h1>Admin</h1>
+            <div className="w-full">
+                <AdminPanel />
             </div>
-        </>
     );
 }

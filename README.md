@@ -12,6 +12,24 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=<sua_supabase_anon_key>
 DATABASE_URL=<sua_database_url>
 ```
 
+
+
+# Em Contrução
+/api/admin/routes.ts
+- [X] Buscar a lista de tabelas existentes no banco
+- [X] Listar todos os dados de uma tabela especifica
+- [ ] Editar uma linha especifica
+- [ ] Excluir uma linha especifica
+- [ ] Inserir uma unica linha
+- [ ] inserir varias linhas (CSV ou Geojson)
+
+/components/admin-painel
+- [X] Lista de tabelas no banco
+- [X] Tabela de itens do banco
+- [X] Icones de editar e excluir na tabela do banco
+- [X] Botão/modal para inserir varios arquivos (CSV)
+- [X] Botão/modal para inserir varios arquivos (Geojson)
+- [X] Botão/modal para inserir um unico item na tabela
 ---
 
 ## 📊 Estrutura das Tabelas Geoespaciais
