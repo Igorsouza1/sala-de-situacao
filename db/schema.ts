@@ -44,7 +44,7 @@ export const desmatamento = pgTable("desmatamento", {
 
 
 
-export const fireDetections = pgTable("fire_detections", {
+export const fireDetections = pgTable("raw_firms", {
   latitude: doublePrecision("latitude"),
   longitude: doublePrecision("longitude"),
   bright_ti4: doublePrecision("bright_ti4"),
