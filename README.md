@@ -30,6 +30,7 @@ DATABASE_URL=<sua_database_url>
 - [X] Botão/modal para inserir varios arquivos (CSV)
 - [X] Botão/modal para inserir varios arquivos (Geojson)
 - [X] Botão/modal para inserir um unico item na tabela
+- [X] Modal para editar item
 ---
 
 ## 📊 Estrutura das Tabelas Geoespaciais

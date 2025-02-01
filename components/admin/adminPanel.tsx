@@ -8,7 +8,10 @@ import { Input } from "@/components/ui/input"
 import { CsvUploadModal } from "./CsvUploadModal"
 import { GeoJsonUploadModal } from "./GeojsonUpload"
 import { AddItemModal } from "./AddItemModal"
+import { EditItemModal } from "./EditItemModal"
+import { DeleteConfirmationModal } from "./DeleteConfirmationModal"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { useToast } from "@/hooks/use-toast"
 
 export function AdminPanel() {
   const [tables, setTables] = useState<string[]>([])
@@ -17,7 +20,12 @@ export function AdminPanel() {
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false)
   const [isGeoJsonModalOpen, setIsGeoJsonModalOpen] = useState(false)
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false)
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<any | null>(null)
+  const [deletingItem, setDeletingItem] = useState<any | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const { toast } = useToast()
 
   useEffect(() => {
     fetchTables()
@@ -30,15 +38,39 @@ export function AdminPanel() {
   }, [selectedTable])
 
   const fetchTables = async () => {
-    const response = await fetch("/api/admin/tables")
-    const data = await response.json()
-    setTables(data)
+    try {
+      const response = await fetch("/api/admin/tables")
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      setTables(data)
+    } catch (error) {
+      console.error("Error fetching tables:", error)
+      toast({
+        title: "Error",
+        description: "Failed to fetch tables. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   const fetchTableData = async (tableName: string) => {
-    const response = await fetch(`/api/admin/table-data?table=${tableName}`)
-    const data = await response.json()
-    setTableData(data)
+    try {
+      const response = await fetch(`/api/admin/table-data?table=${tableName}`)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      setTableData(data)
+    } catch (error) {
+      console.error(`Error fetching data for table ${tableName}:`, error)
+      toast({
+        title: "Error",
+        description: `Failed to fetch data for table ${tableName}. Please try again.`,
+        variant: "destructive",
+      })
+    }
   }
 
   const handleTableSelect = (tableName: string) => {
@@ -46,17 +78,89 @@ export function AdminPanel() {
   }
 
   const handleEditItem = (item: any) => {
-    console.log("Edit item:", item)
+    setEditingItem(item)
+    setIsEditModalOpen(true)
   }
 
-  const handleDeleteItem = async (item: any) => {
-    if (confirm("Are you sure you want to delete this item?")) {
-      await fetch(`/api/admin/delete-item?table=${selectedTable}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(item),
-      })
-      fetchTableData(selectedTable!)
+  const handleDeleteItem = (item: any) => {
+    setDeletingItem(item)
+    setIsDeleteModalOpen(true)
+  }
+
+  const confirmDeleteItem = async () => {
+    if (deletingItem && selectedTable) {
+      try {
+        const response = await fetch(`/api/admin/delete-item?table=${selectedTable}`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(deletingItem),
+        })
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        await fetchTableData(selectedTable)
+        setIsDeleteModalOpen(false)
+        setDeletingItem(null)
+        toast({
+          title: "Success",
+          description: "Item deleted successfully.",
+        })
+      } catch (error) {
+        console.error("Error deleting item:", error)
+        toast({
+          title: "Error",
+          description: "Failed to delete item. Please try again.",
+          variant: "destructive",
+        })
+      }
+    }
+  }
+
+  const handleSaveEdit = async (editedItem: any) => {
+    if (selectedTable && editingItem) {
+      try {
+        // Find the modified fields
+        const modifiedFields = Object.entries(editedItem).reduce(
+          (acc, [key, value]) => {
+            if (editingItem[key] !== value) {
+              if (value instanceof Date) {
+                acc[key] = value.toISOString()
+              } else {
+                acc[key] = value
+              }
+            }
+            return acc
+          },
+          {} as Record<string, any>,
+        )
+
+        // Add the id to the modified fields
+        modifiedFields.id = editingItem.id
+
+        const response = await fetch(`/api/admin/update-item?table=${selectedTable}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(modifiedFields),
+        })
+        if (!response.ok) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+        }
+        await fetchTableData(selectedTable)
+        setIsEditModalOpen(false)
+        setEditingItem(null)
+        toast({
+          title: "Success",
+          description: "Item updated successfully.",
+        })
+      } catch (error) {
+        console.error("Error updating item:", error)
+        toast({
+          title: "Error",
+          description: `Failed to update item: ${error}`,
+          variant: "destructive",
+        })
+      }
     }
   }
 
@@ -131,6 +235,10 @@ export function AdminPanel() {
         onClose={() => setIsCsvModalOpen(false)}
         onUpload={(data) => {
           console.log("CSV data:", data)
+          toast({
+            title: "Success",
+            description: "CSV data uploaded successfully.",
+          })
         }}
       />
       <GeoJsonUploadModal
@@ -138,6 +246,10 @@ export function AdminPanel() {
         onClose={() => setIsGeoJsonModalOpen(false)}
         onUpload={(data) => {
           console.log("GeoJSON data:", data)
+          toast({
+            title: "Success",
+            description: "GeoJSON data uploaded successfully.",
+          })
         }}
       />
       <AddItemModal
@@ -145,8 +257,24 @@ export function AdminPanel() {
         onClose={() => setIsAddItemModalOpen(false)}
         onAdd={(item) => {
           console.log("New item:", item)
+          toast({
+            title: "Success",
+            description: "New item added successfully.",
+          })
         }}
         table={selectedTable}
+      />
+      <EditItemModal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={handleSaveEdit}
+        item={editingItem}
+      />
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        onConfirm={confirmDeleteItem}
+        itemName={deletingItem ? String(Object.values(deletingItem)[0] ?? "") : ""}
       />
     </div>
   )
