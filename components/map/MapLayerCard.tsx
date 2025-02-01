@@ -31,8 +31,8 @@ export function MapLayersCard({ title, options, onLayerToggle }: MapLayersCardPr
   const toggleExpand = () => setIsExpanded(!isExpanded)
 
   return (
-    <Card className="w-64 bg-white shadow-md z-[1000] overflow-hidden">
-      <CardHeader className="p-4 bg-gray-50">
+    <Card className="w-64 bg-gray-100 text-black shadow-md z-[1000] overflow-hidden">
+      <CardHeader className="p-4 bg-gray-100">
         <div className="flex items-center justify-between">
           <CardTitle className="text-lg font-semibold flex items-center">
             <Boxes className="w-5 h-5 mr-2" />
@@ -59,8 +59,9 @@ export function MapLayersCard({ title, options, onLayerToggle }: MapLayersCardPr
                       id={option.id}
                       checked={checkedLayers.includes(option.id)}
                       onCheckedChange={(checked) => handleCheckboxChange(option.id, checked as boolean)}
+                      className="w-5 h-5 border-2 border-gray-700 rounded-md text-black focus:ring-2  checked:bg-black checked:border-black"
                     />
-                    <Label htmlFor={option.id} className="text-sm font-medium leading-none cursor-pointer select-none">
+                    <Label htmlFor={option.id} className="text-sm font-medium leading-none cursor-pointer select-none ">
                       {option.label}
                     </Label>
                   </div>
