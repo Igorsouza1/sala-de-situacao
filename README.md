@@ -18,8 +18,8 @@ DATABASE_URL=<sua_database_url>
 /api/admin/routes.ts
 - [X] Buscar a lista de tabelas existentes no banco
 - [X] Listar todos os dados de uma tabela especifica
-- [ ] Editar uma linha especifica
-- [ ] Excluir uma linha especifica
+- [ ] Editar uma linha especifica *** Probblemas para editar
+- [ ] Excluir uma linha especifica *** Probblemas para Excluir 
 - [ ] Inserir uma unica linha
 - [ ] inserir varias linhas (CSV ou Geojson)
 
@@ -31,6 +31,19 @@ DATABASE_URL=<sua_database_url>
 - [X] Botão/modal para inserir varios arquivos (Geojson)
 - [X] Botão/modal para inserir um unico item na tabela
 - [X] Modal para editar item
+
+/components/map
+- [ ] CustomLayer exibi os shapes
+- [ ] Customlayer exibi as ações
+- [ ] O map exibi os shapes e ações marcados
+- [ ] Modal para mais informações dos shapes ou ações
+
+/api/map
+- [ ] Listar todos os itens com exceção das ações
+- [ ] Agrupar e listar as ações por categorias
+- [ ] Buscar mais informações do ponto ou shape especifico
+
+
 ---
 
 ## 📊 Estrutura das Tabelas Geoespaciais

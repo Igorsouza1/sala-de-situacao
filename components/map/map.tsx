@@ -29,7 +29,7 @@ const layerOptions = [
   { id: "layer3", label: "Layer 3" },
 ]
 
-export default function Map({ center = [-20.481, -54.6352], zoom = 13, markers = [] }: MapProps) {
+export default function Map({ center = [-21.327773, -56.694734], zoom = 11, markers = [] }: MapProps) {
   const [isMounted, setIsMounted] = useState(false)
   const [visibleLayers, setVisibleLayers] = useState<string[]>([])
 

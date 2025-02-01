@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 
 interface AddItemModalProps {
   isOpen: boolean
@@ -23,7 +24,8 @@ export function AddItemModal({ isOpen, onClose, onAdd, table }: AddItemModalProp
   const fetchTableFields = async (tableName: string) => {
     const response = await fetch(`/api/admin/table-fields?table=${tableName}`)
     const data = await response.json()
-    setFields(data)
+    // Filter out 'id' and 'geom' fields
+    setFields(data.filter((field: string) => field !== "id" && field !== "geom"))
     setFormData({})
   }
 
@@ -38,20 +40,40 @@ export function AddItemModal({ isOpen, onClose, onAdd, table }: AddItemModalProp
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
+      <DialogContent className="sm:max-w-[800px]">
         <DialogHeader>
           <DialogTitle>Add New Item</DialogTitle>
         </DialogHeader>
-        {fields.map((field) => (
-          <Input
-            key={field}
-            placeholder={field}
-            value={formData[field] || ''}
-            onChange={(e) => handleInputChange(field, e.target.value)}
-          />
-        ))}
-        <Button onClick={handleSubmit}>Add Item</Button>
+        <div className="grid grid-cols-2 gap-4 py-4">
+          {fields.map((field) => (
+            <div key={field} className="grid grid-cols-3 items-center gap-4">
+              <Label htmlFor={field} className="text-right">
+                {field}
+              </Label>
+              {field === "time" ? (
+                <Input
+                  id={field}
+                  type="datetime-local"
+                  value={formData[field] || ""}
+                  onChange={(e) => handleInputChange(field, e.target.value)}
+                  className="col-span-2"
+                />
+              ) : (
+                <Input
+                  id={field}
+                  value={formData[field] || ""}
+                  onChange={(e) => handleInputChange(field, e.target.value)}
+                  className="col-span-2"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+        <DialogFooter>
+          <Button onClick={handleSubmit}>Add Item</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
+

@@ -1,3 +1,4 @@
+import { DashboardContent } from "@/components/dashboard/DashboardContent";
 
 
 
@@ -5,7 +6,7 @@ export default function Dashboard(){
     return (
         <>
             <div>
-            <h1>Dashboardddddddddddddddddddddddddddddddddd</h1>
+                <DashboardContent />
             </div>
         </>
     );
