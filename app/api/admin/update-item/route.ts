@@ -1,53 +1,50 @@
 import { NextResponse } from "next/server"
 import { db } from "@/db"
-import { eq, sql } from "drizzle-orm"
+import { sql } from "drizzle-orm"
 import * as schema from "@/db/schema"
 
 export async function PUT(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const tableName = searchParams.get("table")
-
-  if (!tableName) {
-    return NextResponse.json({ error: "Table name is required" }, { status: 400 })
-  }
-
   try {
-    const item = await request.json()
-    const table = schema[tableName as keyof typeof schema]
-    console.log(table)
+    const body = await request.json()
+    const { searchParams } = new URL(request.url)
+    const tableName = searchParams.get("table")
 
+    if (!body || Object.keys(body).length === 0) {
+      return NextResponse.json({ error: "Body is required and cannot be empty" }, { status: 400 })
+    }
+
+    if (!tableName) {
+      return NextResponse.json({ error: "Table name is required" }, { status: 400 })
+    }
+
+    const table = schema[tableName as keyof typeof schema]
     if (!table) {
       return NextResponse.json({ error: "Invalid table name" }, { status: 400 })
     }
 
-    const { id, ...updateData } = item
-
-    if (!id) {
+    if (!body.id) {
       return NextResponse.json({ error: "Item ID is required" }, { status: 400 })
     }
 
-    // Process date and timestamp fields
-    for (const [key, value] of Object.entries(updateData)) {
-      const column = (table as any).columns?.[key]
-      if (column?.dataType === "date" || column?.dataType === "timestamp") {
-        updateData[key] = sql`${value}::timestamp`
-      }
+    // Criando dinamicamente os campos a serem atualizados
+    const updates = Object.entries(body)
+      .filter(([key]) => key !== "id") // Exclui o ID da atualização
+      .map(([key, value]) => sql`${sql.identifier(key)} = ${value}`)
+
+    if (updates.length === 0) {
+      return NextResponse.json({ error: "No fields to update" }, { status: 400 })
     }
 
-    const result = await db
-      .update(table)
-      .set(updateData)
-      .where(eq((table as any).columns.id, id))
-      .returning()
+    // Executando a query de UPDATE dinâmica
+    const result = await db.execute(sql`
+      UPDATE rio_da_prata.${table}
+      SET ${sql.join(updates, sql`, `)}
+      WHERE id = ${body.id}
+    `)
 
-    if (result.length === 0) {
-      return NextResponse.json({ error: "Item not found" }, { status: 404 })
-    }
-
-    return NextResponse.json({ success: true, updatedItem: result[0] })
+    return NextResponse.json({ success: true, updatedRows: result.rowCount })
   } catch (error) {
-    console.error(`Error updating item in table ${tableName}:`, error)
-    return NextResponse.json({ error: `Failed to update item in table ${tableName}` }, { status: 500 })
+    console.error("Error updating item:", error)
+    return NextResponse.json({ error: "Failed to update item" }, { status: 500 })
   }
 }
-

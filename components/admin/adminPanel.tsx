@@ -117,34 +117,15 @@ export function AdminPanel() {
   }
 
   const handleSaveEdit = async (editedItem: any) => {
-    if (selectedTable && editingItem) {
+    if (selectedTable) {
       try {
-        // Find the modified fields
-        const modifiedFields = Object.entries(editedItem).reduce(
-          (acc, [key, value]) => {
-            if (editingItem[key] !== value) {
-              if (value instanceof Date) {
-                acc[key] = value.toISOString()
-              } else {
-                acc[key] = value
-              }
-            }
-            return acc
-          },
-          {} as Record<string, any>,
-        )
-
-        // Add the id to the modified fields
-        modifiedFields.id = editingItem.id
-
         const response = await fetch(`/api/admin/update-item?table=${selectedTable}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(modifiedFields),
+          body: JSON.stringify(editedItem),
         })
         if (!response.ok) {
-          const errorData = await response.json()
-          throw new Error(errorData.error || `HTTP error! status: ${response.status}`)
+          throw new Error(`HTTP error! status: ${response.status}`)
         }
         await fetchTableData(selectedTable)
         setIsEditModalOpen(false)
@@ -157,7 +138,7 @@ export function AdminPanel() {
         console.error("Error updating item:", error)
         toast({
           title: "Error",
-          description: `Failed to update item: ${error}`,
+          description: "Failed to update item. Please try again.",
           variant: "destructive",
         })
       }
