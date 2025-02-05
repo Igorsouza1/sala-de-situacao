@@ -1,4 +1,4 @@
-import { pgTable, check, integer, varchar, serial, text, boolean, pgView, doublePrecision, geometry } from "drizzle-orm/pg-core"
+import { pgTable, check, integer, varchar, serial, text, boolean, doublePrecision, geometry, pgView } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 
@@ -44,6 +44,13 @@ export const usLex = pgTable("us_lex", {
 	stdword: text(),
 	token: integer(),
 	isCustom: boolean("is_custom").default(true).notNull(),
+});
+
+export const banhado = pgTable("banhado", {
+	id: serial().primaryKey().notNull(),
+	name: text().notNull(),
+	area: doublePrecision(),
+	geom: geometry({ type: "multipolygon", srid: 4326 }),
 });
 export const geographyColumns = pgView("geography_columns", {	// TODO: failed to parse database type 'name'
 	fTableCatalog: unknown("f_table_catalog"),
