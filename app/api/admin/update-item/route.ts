@@ -9,6 +9,7 @@ export async function PUT(request: Request) {
     const { searchParams } = new URL(request.url)
     const tableName = searchParams.get("table")
 
+
     if (!body || Object.keys(body).length === 0) {
       return NextResponse.json({ error: "Body is required and cannot be empty" }, { status: 400 })
     }
@@ -34,6 +35,7 @@ export async function PUT(request: Request) {
     if (updates.length === 0) {
       return NextResponse.json({ error: "No fields to update" }, { status: 400 })
     }
+
 
     // Executando a query de UPDATE dinâmica
     const result = await db.execute(sql`
