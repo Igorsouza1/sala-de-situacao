@@ -34,8 +34,15 @@ export function AddItemModal({ isOpen, onClose, onAdd, table }: AddItemModalProp
   }
 
   const handleSubmit = () => {
-    onAdd(formData)
-    onClose()
+    const formattedData = { ...formData };
+  
+    // Converte o formato do datetime-local para um formato mais padronizado
+    if (formattedData.time) {
+      formattedData.time = new Date(formattedData.time).toISOString(); // Garante um formato ISO compatível
+    }
+  
+    onAdd(formattedData);
+    onClose();
   }
 
   return (

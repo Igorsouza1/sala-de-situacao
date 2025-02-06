@@ -1,4 +1,4 @@
-import { pgTable, serial, text, timestamp, doublePrecision, integer, date } from "drizzle-orm/pg-core"
+import { pgTable, serial, text, timestamp, doublePrecision, integer, date, geometry } from "drizzle-orm/pg-core"
 
 export const shapes = pgTable("shapes", {
   id: serial("id").primaryKey(),
@@ -16,16 +16,16 @@ export const deque_de_pedras = pgTable("deque_de_pedras", {
 
 export const acoes = pgTable("acoes", {
   id: serial("id").primaryKey(), 
-  geom: text("geom").notNull(), 
+  name: text("name").notNull(),
   latitude: doublePrecision("latitude").notNull(),
   longitude: doublePrecision("longitude").notNull(),
   elevation: doublePrecision("elevation"), 
   time: timestamp("time", { withTimezone: false }).notNull(),
-  name: text("name").notNull(),
   descricao: text("descricao"),
   mes: text("mes"),
   atuacao: text("atuacao"),
-  acao: text("acao")
+  acao: text("acao"),
+  geom: geometry('geom', { type: 'point', mode: 'xy', srid: 4326 }),
 });
 
 

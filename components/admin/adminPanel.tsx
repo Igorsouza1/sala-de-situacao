@@ -87,6 +87,35 @@ export function AdminPanel() {
     setIsDeleteModalOpen(true)
   }
 
+  const handleAddItem = async (item: any) => {
+    if (selectedTable) {
+      try {
+        const response = await fetch(`/api/admin/add-item?table=${selectedTable}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(item),
+        })
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+        await fetchTableData(selectedTable)
+        setIsAddItemModalOpen(false)
+        toast({
+          title: "Success",
+          description: "Item added successfully.",
+        })
+      } catch (error) {
+        console.error("Error adding item:", error)
+        toast({
+          title: "Error",
+          description: "Failed to add item. Please try again.",
+          variant: "destructive",
+        })
+      }
+    }
+  }
+
+
   const confirmDeleteItem = async () => {
     if (deletingItem && selectedTable) {
       try {
@@ -118,12 +147,15 @@ export function AdminPanel() {
 
   const handleSaveEdit = async (editedItem: any) => {
     if (selectedTable) {
+      
+      console.log(editedItem)
       try {
         const response = await fetch(`/api/admin/update-item?table=${selectedTable}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(editedItem),
         })
+        
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
@@ -236,13 +268,7 @@ export function AdminPanel() {
       <AddItemModal
         isOpen={isAddItemModalOpen}
         onClose={() => setIsAddItemModalOpen(false)}
-        onAdd={(item) => {
-          console.log("New item:", item)
-          toast({
-            title: "Success",
-            description: "New item added successfully.",
-          })
-        }}
+        onAdd={handleAddItem}
         table={selectedTable}
       />
       <EditItemModal
