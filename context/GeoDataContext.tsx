@@ -2,69 +2,71 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
-import { db } from "../db"
-import * as schema from "@/db/schema"
 
-interface GeoData {
-  shapes: any[]
-  acoes: any[]
-  desmatamento: any[]
-  rawFirms: any[]
+type GeometryType = {
+  type: string
+  coordinates: number[] | number[][] | number[][][]
 }
 
-interface GeoDataContextType {
-  geoData: GeoData | null
-  loading: boolean
-  error: Error | null
+type ShapeType = {
+  layer: string
+  id: number
+  geometry: GeometryType
 }
 
-const GeoDataContext = createContext<GeoDataContextType | undefined>(undefined)
-
-export const useGeoData = () => {
-  const context = useContext(GeoDataContext)
-  if (context === undefined) {
-    throw new Error("useGeoData must be used within a GeoDataProvider")
-  }
-  return context
+type ActionType = {
+  id: number
+  geometry: GeometryType
 }
 
-export const GeoDataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [geoData, setGeoData] = useState<GeoData | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
+type ActionsGroupType = {
+  [category: string]: ActionType[]
+}
+
+type MapContextType = {
+  shapes: ShapeType[]
+  actions: ActionsGroupType
+  isLoading: boolean
+  error: string | null
+}
+
+const MapContext = createContext<MapContextType | undefined>(undefined)
+
+export function MapProvider({ children }: { children: React.ReactNode }) {
+  const [shapes, setShapes] = useState<ShapeType[]>([])
+  const [actions, setActions] = useState<ActionsGroupType>({})
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [
-          shapes,
-          acoesData,
-          desmatamentoData,
-          rawFirmsData,
-        ] = await Promise.all([
-          db.select().from(schema.shapes),
-          db.select().from(schema.acoes),
-          db.select().from(schema.desmatamento),
-          db.select().from(schema.deque_de_pedras),
-          db.select().from(schema.fireDetections),
-        ])
-
-        setGeoData({
-          shapes: shapes,
-          acoes: acoesData,
-          desmatamento: desmatamentoData,
-          rawFirms: rawFirmsData,
-        })
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error("An unknown error occurred"))
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
+    fetchMapData()
   }, [])
 
-  return <GeoDataContext.Provider value={{ geoData, loading, error }}>{children}</GeoDataContext.Provider>
+  const fetchMapData = async () => {
+    try {
+      const response = await fetch("/api/map")
+      if (!response.ok) {
+        throw new Error("Failed to fetch map data")
+      }
+      const data = await response.json()
+      setShapes(data.shapes)
+      setActions(data.actions)
+      console.log(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred")
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return <MapContext.Provider value={{ shapes, actions, isLoading, error }}>{children}</MapContext.Provider>
+}
+
+export function useMapContext() {
+  const context = useContext(MapContext)
+  if (context === undefined) {
+    throw new Error("useMapContext must be used within a MapProvider")
+  }
+  return context
 }
 

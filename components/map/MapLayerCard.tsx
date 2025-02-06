@@ -11,6 +11,7 @@ import { motion, AnimatePresence } from "framer-motion"
 interface LayerOption {
   id: string
   label: string
+  count?: number
 }
 
 interface MapLayersCardProps {
@@ -61,8 +62,14 @@ export function MapLayersCard({ title, options, onLayerToggle }: MapLayersCardPr
                       onCheckedChange={(checked) => handleCheckboxChange(option.id, checked as boolean)}
                       className="w-5 h-5 border-2 border-gray-700 rounded-md text-black focus:ring-2  checked:bg-black checked:border-black"
                     />
-                    <Label htmlFor={option.id} className="text-sm font-medium leading-none cursor-pointer select-none ">
+                    <Label
+                      htmlFor={option.id}
+                      className="text-sm font-medium leading-none cursor-pointer select-none flex items-center"
+                    >
                       {option.label}
+                      {option.count !== undefined && (
+                        <span className="ml-2 px-2 py-1 bg-gray-200 rounded-full text-xs">{option.count}</span>
+                      )}
                     </Label>
                   </div>
                 ))}

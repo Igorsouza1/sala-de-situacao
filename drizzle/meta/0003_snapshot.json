@@ -1,6 +1,6 @@
 {
-  "id": "50fcbd43-dd62-4dee-9265-ecb111110c86",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "25cc929a-42d9-4fe0-9b66-497678d9428a",
+  "prevId": "bfce49df-2e2e-4701-bbf5-23bc522cb083",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -200,8 +200,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.estradas": {
-      "name": "estradas",
+    "public.rio_da_prata.estradas": {
+      "name": "rio_da_prata.estradas",
       "schema": "",
       "columns": {
         "id": {

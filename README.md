@@ -38,6 +38,10 @@ DATABASE_URL=<sua_database_url>
 ⏳ Exibir shapes e ações marcados no mapa  
 ⏳ Modal com mais informações  
 
+### 📌 **Contexto Mapa (`/context/mapContext`)**
+⏳ Concentrar informações dos shapes e ações
+
+
 ### 📌 **API do Mapa (`/api/map`)**
 ⏳ Listar todos os itens (exceto ações)  
 ⏳ Agrupar e listar ações por categoria  

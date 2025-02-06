@@ -1,12 +1,12 @@
 {
-  "id": "50fcbd43-dd62-4dee-9265-ecb111110c86",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "85322f25-35aa-4fe2-99a7-c5cf2be89e2d",
+  "prevId": "b83a3a61-df88-4c1f-818d-e5e23afb0064",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "public.acoes": {
+    "rio_da_prata.acoes": {
       "name": "acoes",
-      "schema": "",
+      "schema": "rio_da_prata",
       "columns": {
         "id": {
           "name": "id",
@@ -83,9 +83,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.deque_de_pedras": {
+    "rio_da_prata.deque_de_pedras": {
       "name": "deque_de_pedras",
-      "schema": "",
+      "schema": "rio_da_prata",
       "columns": {
         "id": {
           "name": "id",
@@ -127,9 +127,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.desmatamento": {
+    "rio_da_prata.desmatamento": {
       "name": "desmatamento",
-      "schema": "",
+      "schema": "rio_da_prata",
       "columns": {
         "id": {
           "name": "id",
@@ -200,9 +200,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.estradas": {
+    "rio_da_prata.estradas": {
       "name": "estradas",
-      "schema": "",
+      "schema": "rio_da_prata",
       "columns": {
         "id": {
           "name": "id",
@@ -243,9 +243,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.ponte_do_cure": {
+    "rio_da_prata.ponte_do_cure": {
       "name": "ponte_do_cure",
-      "schema": "",
+      "schema": "rio_da_prata",
       "columns": {
         "id": {
           "name": "id",
@@ -304,9 +304,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.propriedades": {
+    "rio_da_prata.propriedades": {
       "name": "propriedades",
-      "schema": "",
+      "schema": "rio_da_prata",
       "columns": {
         "id": {
           "name": "id",
@@ -383,9 +383,9 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.raw_firms": {
+    "rio_da_prata.raw_firms": {
       "name": "raw_firms",
-      "schema": "",
+      "schema": "rio_da_prata",
       "columns": {
         "latitude": {
           "name": "latitude",
@@ -500,7 +500,9 @@
     }
   },
   "enums": {},
-  "schemas": {},
+  "schemas": {
+    "rio_da_prata": "rio_da_prata"
+  },
   "sequences": {},
   "roles": {},
   "policies": {},

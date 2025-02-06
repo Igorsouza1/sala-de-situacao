@@ -1,0 +1,1 @@
+ALTER TABLE "estradas" RENAME TO "rio_da_prata.estradas";

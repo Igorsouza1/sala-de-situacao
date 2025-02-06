@@ -1,8 +1,14 @@
-// drizzle.config.ts
-import { defineConfig } from "drizzle-kit";
+
+
+import 'dotenv/config';
+import { defineConfig } from 'drizzle-kit';
+
 export default defineConfig({
-  dialect: "postgresql",
+  out: './drizzle',
+  schema: './db/schema.ts',
+  dialect: 'postgresql',
   dbCredentials: {
-    url: "postgres://postgres:ihp@ihp@localhost:5432/IHP?search_path=rio_da_prata",
+    url: "postgres://postgres:ihp@ihp@localhost:5432/IHP",
   },
+  schemaFilter: ['rio_da_prata'],
 });
