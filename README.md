@@ -38,10 +38,35 @@ DATABASE_URL=<sua_database_url>
 - [ ] O map exibi os shapes e ações marcados
 - [ ] Modal para mais informações dos shapes ou ações
 
+/context/map
+- [ ] Contexto para administrar exibição dos shapes/ações
+
 /api/map
 - [ ] Listar todos os itens com exceção das ações
 - [ ] Agrupar e listar as ações por categorias
 - [ ] Buscar mais informações do ponto ou shape especifico
+
+/components/dashboard
+- [X] Componente Principal Dashboard
+- [X] Grafico Fogo
+- [X] Grafico Desmatamento
+- [X] Grafico Ações
+- [X] Grafico Pontos Deque de pedras
+    - [X] Grafico Chuva
+    - [X] Grafico Turbidez
+- [X] Grafico Pontos Ponte do Cure
+    - [X] Grafico Chuva
+    - [X] Grafico Cristalino
+    - [X] Grafico Nivel do rio
+
+/api/dashboard
+- [ ] Get dados de fogo
+- [ ] Get dados de desmatamento
+- [ ] Get dados de chuva
+- [ ] Get dados de Cristalino
+- [ ] Get dados de Nivel do rio
+- [ ] Filtro por ano
+
 
 
 ---
@@ -100,12 +125,23 @@ app/
 └── api/
     ├── postgis/
     │   ├── route.ts       # Endpoints gerais para PostGIS
-    ├── dashboard/
-    │   ├── route.ts       # Dados para dashboards
-    ├── admin/
-    │   ├── route.ts       # Operações administrativas
+    ├── dashboard/          # Dados para dashboards
+    │   ├── route.ts      
+    ├── admin/             # Operações administrativas
+    │   ├── add-item/
+            ├──route.ts
+    │   ├── delete-item/
+            ├──route.ts
+    │   ├── table-data/
+            ├──route.ts
+    │   ├── table-fields/
+            ├──route.ts
+    │   ├── tables/
+            ├──route.ts
+    │   ├── update-item/
+            ├──route.ts
     ├── authentication/
-        ├── route.ts       # Autenticação de usuários
+        ├── actions.ts       # Autenticação de usuários
 ```
 
 ### 📁 **Banco de Dados** (Drizzle ORM e PostGIS)
@@ -115,9 +151,6 @@ src/
 └── db/
     ├── drizzle.ts         # Configuração do Drizzle ORM
     ├── schema.ts          # Definição das tabelas
-    ├── postgis.ts         # Funções para manipular PostGIS
-    ├── dashboard.ts       # Funções para dashboards
-    ├── admin.ts           # Funções administrativas
 ```
 
 ### 📁 **Utilidades e Funções Auxiliares**
@@ -161,7 +194,7 @@ npm run drizzle migrate
 - **Drizzle ORM** (Gerenciamento do banco de dados)
 - **PostGIS** (Dados geoespaciais)
 - **Supabase** (Autenticação e storage)
-- **Leaflet.js** (Mapas interativos)
+- **Leaflet.js/react-leaflet** (Mapas interativos)
 
 Caso tenha alguma dúvida ou sugestão, entre em contato! 🚀
 
