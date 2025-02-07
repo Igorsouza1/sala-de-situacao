@@ -33,17 +33,18 @@ DATABASE_URL=<sua_database_url>
 ✅ Modal para editar um item  
 
 ### 📌 **Mapa (`/components/map`)**
-⏳ Exibir shapes no `CustomLayer`  
+⏳ Exibir shapes no `CustomLayer`   -- Exibindo estradas
 ⏳ Exibir ações no `CustomLayer`  
-⏳ Exibir shapes e ações marcados no mapa  
+⏳ Exibir shapes e ações marcados no mapa  -- Exibindo estradas
 ⏳ Modal com mais informações  
 
 ### 📌 **Contexto Mapa (`/context/mapContext`)**
-⏳ Concentrar informações dos shapes e ações
+⏳ Concentrar informações dos shapes -- Concentrando estradas
+⏳ Concentrar informações dos açoes
 
 
 ### 📌 **API do Mapa (`/api/map`)**
-⏳ Listar todos os itens (exceto ações)  
+⏳ Listar todos os itens (exceto ações)  -- Listando estradas
 ⏳ Agrupar e listar ações por categoria  
 ⏳ Buscar mais informações de um ponto ou shape específico  
 
