@@ -7,11 +7,13 @@ import "leaflet/dist/leaflet.css"
 import { CustomZoomControl } from "./CustomZoomControl"
 import { CustomLayerControl } from "./CustomLayerControl"
 import { MapLayersCard } from "./MapLayerCard"
+import { useMapContext } from "@/context/GeoDataContext"
 
 const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false })
 const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false })
 const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false })
+const GeoJSON = dynamic(() => import("react-leaflet").then((mod) => mod.GeoJSON), { ssr: false })
 
 interface MapProps {
   center?: LatLngExpression
@@ -23,15 +25,10 @@ interface MapProps {
   }>
 }
 
-const layerOptions = [
-  { id: "layer1", label: "Layer 1" },
-  { id: "layer2", label: "Layer 2" },
-  { id: "layer3", label: "Layer 3" },
-]
-
 export default function Map({ center = [-21.327773, -56.694734], zoom = 11, markers = [] }: MapProps) {
   const [isMounted, setIsMounted] = useState(false)
   const [visibleLayers, setVisibleLayers] = useState<string[]>([])
+  const { shapes, actions, isLoading, error } = useMapContext()
 
   useEffect(() => {
     setIsMounted(true)
@@ -50,13 +47,28 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11, mark
     console.log(`Layer ${id} is now ${isChecked ? "visible" : "hidden"}`)
   }
 
-  if (!isMounted) {
+  if (!isMounted || isLoading) {
     return (
       <div className="w-screen h-screen bg-gray-100 animate-pulse flex items-center justify-center">
         <span className="text-gray-500">Carregando mapa...</span>
       </div>
     )
   }
+
+  if (error) {
+    return (
+      <div className="w-screen h-screen bg-gray-100 flex items-center justify-center">
+        <span className="text-red-500">Erro ao carregar o mapa: {error}</span>
+      </div>
+    )
+  }
+
+  const shapeOptions = Object.keys(shapes).map((category) => ({
+    id: category,
+    label: category,
+    count: shapes[category].length,
+  }))
+
 
   return (
     <div className="w-full h-screen relative z-10">
@@ -79,13 +91,31 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11, mark
           </Marker>
         ))}
 
+        {visibleLayers.map((layerId) => {
+          if (shapes[layerId]) {
+            return (
+              <GeoJSON
+                key={layerId}
+                data={{
+                  type: "FeatureCollection",
+                  features: shapes[layerId].map((shape) => ({
+                    type: "Feature",
+                    geometry: shape.geometry,
+                    properties: { id: shape.id },
+                  })),
+                }}
+              />
+            )
+          } 
+          return null
+        })}
+
         <CustomZoomControl />
         <CustomLayerControl />
       </MapContainer>
 
       <div className="absolute bottom-4 left-4 z-[1000] gap-3 flex flex-col">
-        <MapLayersCard title="Shapes" options={layerOptions} onLayerToggle={handleLayerToggle} />
-        <MapLayersCard title="Ações" options={layerOptions} onLayerToggle={handleLayerToggle} />
+        <MapLayersCard title="Shapes" options={shapeOptions} onLayerToggle={handleLayerToggle} />
       </div>
     </div>
   )

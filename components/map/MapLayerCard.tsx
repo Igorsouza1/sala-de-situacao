@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from "framer-motion"
 interface LayerOption {
   id: string
   label: string
-  count?: number
+  count: number
 }
 
 interface MapLayersCardProps {
@@ -67,9 +67,7 @@ export function MapLayersCard({ title, options, onLayerToggle }: MapLayersCardPr
                       className="text-sm font-medium leading-none cursor-pointer select-none flex items-center"
                     >
                       {option.label}
-                      {option.count !== undefined && (
-                        <span className="ml-2 px-2 py-1 bg-gray-200 rounded-full text-xs">{option.count}</span>
-                      )}
+                      <span className="ml-2 px-2 py-1 bg-gray-200 rounded-full text-xs">{option.count}</span>
                     </Label>
                   </div>
                 ))}

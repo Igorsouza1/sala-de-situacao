@@ -9,9 +9,12 @@ type GeometryType = {
 }
 
 type ShapeType = {
-  layer: string
-  id: number
+  id: number | string
   geometry: GeometryType
+}
+
+type ShapeGroupType = {
+  [category: string]: ShapeType[]
 }
 
 type ActionType = {
@@ -24,7 +27,7 @@ type ActionsGroupType = {
 }
 
 type MapContextType = {
-  shapes: ShapeType[]
+  shapes: ShapeGroupType
   actions: ActionsGroupType
   isLoading: boolean
   error: string | null
@@ -33,7 +36,7 @@ type MapContextType = {
 const MapContext = createContext<MapContextType | undefined>(undefined)
 
 export function MapProvider({ children }: { children: React.ReactNode }) {
-  const [shapes, setShapes] = useState<ShapeType[]>([])
+  const [shapes, setShapes] = useState<ShapeGroupType>({})
   const [actions, setActions] = useState<ActionsGroupType>({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -49,9 +52,8 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Failed to fetch map data")
       }
       const data = await response.json()
-      setShapes(data.shapes)
+      setShapes(data)
       setActions(data.actions)
-      console.log(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred")
     } finally {
