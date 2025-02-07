@@ -21,7 +21,7 @@ interface MapLayersCardProps {
 }
 
 export function MapLayersCard({ title, options, onLayerToggle }: MapLayersCardProps) {
-  const [checkedLayers, setCheckedLayers] = useState<string[]>([])
+  const [checkedLayers, setCheckedLayers] = useState<string[]>(["estradas"])
   const [isExpanded, setIsExpanded] = useState(true)
 
   const handleCheckboxChange = (id: string, checked: boolean) => {

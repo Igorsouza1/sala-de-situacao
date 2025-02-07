@@ -3,32 +3,27 @@
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 
-type GeometryType = {
-  type: string
-  coordinates: number[] | number[][] | number[][][]
+type GeoJSONFeature = {
+  type: "Feature"
+  properties: {
+    id: number
+    nome: string
+    tipo: string
+    codigo: string
+  }
+  geometry: {
+    type: string
+    coordinates: number[] | number[][] | number[][][]
+  }
 }
 
-type ShapeType = {
-  id: number | string
-  geometry: GeometryType
-}
-
-type ShapeGroupType = {
-  [category: string]: ShapeType[]
-}
-
-type ActionType = {
-  id: number
-  geometry: GeometryType
-}
-
-type ActionsGroupType = {
-  [category: string]: ActionType[]
+type GeoJSONFeatureCollection = {
+  type: "FeatureCollection"
+  features: GeoJSONFeature[]
 }
 
 type MapContextType = {
-  shapes: ShapeGroupType
-  actions: ActionsGroupType
+  estradas: GeoJSONFeatureCollection | null
   isLoading: boolean
   error: string | null
 }
@@ -36,8 +31,7 @@ type MapContextType = {
 const MapContext = createContext<MapContextType | undefined>(undefined)
 
 export function MapProvider({ children }: { children: React.ReactNode }) {
-  const [shapes, setShapes] = useState<ShapeGroupType>({})
-  const [actions, setActions] = useState<ActionsGroupType>({})
+  const [estradas, setEstradas] = useState<GeoJSONFeatureCollection | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -52,8 +46,7 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Failed to fetch map data")
       }
       const data = await response.json()
-      setShapes(data)
-      setActions(data.actions)
+      setEstradas(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred")
     } finally {
@@ -61,7 +54,7 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  return <MapContext.Provider value={{ shapes, actions, isLoading, error }}>{children}</MapContext.Provider>
+  return <MapContext.Provider value={{ estradas, isLoading, error }}>{children}</MapContext.Provider>
 }
 
 export function useMapContext() {
