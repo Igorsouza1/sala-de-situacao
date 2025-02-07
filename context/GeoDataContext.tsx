@@ -6,10 +6,7 @@ import { createContext, useContext, useState, useEffect } from "react"
 type GeoJSONFeature = {
   type: "Feature"
   properties: {
-    id: number
-    nome: string
-    tipo: string
-    codigo: string
+    [key: string]: any
   }
   geometry: {
     type: string
@@ -22,8 +19,17 @@ type GeoJSONFeatureCollection = {
   features: GeoJSONFeature[]
 }
 
+type MapData = {
+  estradas: GeoJSONFeatureCollection
+  bacia: GeoJSONFeatureCollection
+  leito: GeoJSONFeatureCollection
+  desmatamento: GeoJSONFeatureCollection
+  propriedades: GeoJSONFeatureCollection
+  firms: GeoJSONFeatureCollection
+}
+
 type MapContextType = {
-  estradas: GeoJSONFeatureCollection | null
+  mapData: MapData | null
   isLoading: boolean
   error: string | null
 }
@@ -31,7 +37,7 @@ type MapContextType = {
 const MapContext = createContext<MapContextType | undefined>(undefined)
 
 export function MapProvider({ children }: { children: React.ReactNode }) {
-  const [estradas, setEstradas] = useState<GeoJSONFeatureCollection | null>(null)
+  const [mapData, setMapData] = useState<MapData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -46,7 +52,7 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Failed to fetch map data")
       }
       const data = await response.json()
-      setEstradas(data)
+      setMapData(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred")
     } finally {
@@ -54,7 +60,7 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  return <MapContext.Provider value={{ estradas, isLoading, error }}>{children}</MapContext.Provider>
+  return <MapContext.Provider value={{ mapData, isLoading, error }}>{children}</MapContext.Provider>
 }
 
 export function useMapContext() {
