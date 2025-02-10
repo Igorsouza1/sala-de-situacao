@@ -78,6 +78,11 @@ DATABASE_URL=<sua_database_url>
 
 ---
 
+ICONES DAS AÇÕES
+
+
+
+
 ## 💽 Estrutura do Projeto
 
 ### 📁 **Backend (APIs)**

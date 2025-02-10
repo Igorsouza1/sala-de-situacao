@@ -7,12 +7,18 @@ import "leaflet/dist/leaflet.css"
 import { CustomZoomControl } from "./CustomZoomControl"
 import { CustomLayerControl } from "./CustomLayerControl"
 import { MapLayersCard } from "./MapLayerCard"
+import { ActionsLayerCard } from "./ActionLayerCard"
 import { useMapContext } from "@/context/GeoDataContext"
+import { Home, AlertTriangle, Fish, Anchor, MapPin, Skull, Droplet, Sprout, Ruler, NotebookPen } from "lucide-react"
+import L from "leaflet"
+import ReactDOMServer from "react-dom/server"
 
 const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false })
 const GeoJSON = dynamic(() => import("react-leaflet").then((mod) => mod.GeoJSON), { ssr: false })
 const CircleMarker = dynamic(() => import("react-leaflet").then((mod) => mod.CircleMarker), { ssr: false })
+const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false })
+const Popup = dynamic(() => import("react-leaflet").then((mod) => mod.Popup), { ssr: false })
 
 interface MapProps {
   center?: LatLngExpression
@@ -20,12 +26,25 @@ interface MapProps {
 }
 
 const layerColors = {
-  estradas: "white",
+  estradas: "#FFFFF0",
   bacia: "#33FF57",
   leito: "#3357FF",
   desmatamento: "yellow",
   propriedades: "green",
   firms: "red",
+  banhado: "darkblue",
+}
+
+const actionIcons: { [key: string]: React.ReactNode } = {
+  Fazenda: <Home />,
+  "Passivo Ambiental": <AlertTriangle />,
+  Pesca: <Fish />,
+  "Pesca - Crime Ambiental": <Anchor />,
+  "Ponto de Referência": <MapPin />,
+  "Crime Ambiental": <Skull />,
+  Nascente: <Droplet />,
+  Plantio: <Sprout />,
+  "Régua Fluvial": <Ruler />,
 }
 
 export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: MapProps) {
@@ -37,8 +56,10 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     "desmatamento",
     "propriedades",
     "firms",
+    "banhado",
   ])
-  const { mapData, isLoading, error } = useMapContext()
+  const [visibleActions, setVisibleActions] = useState<string[]>([])
+  const { mapData, actionsData, isLoading, error } = useMapContext()
 
   useEffect(() => {
     setIsMounted(true)
@@ -46,6 +67,10 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
 
   const handleLayerToggle = (id: string, isChecked: boolean) => {
     setVisibleLayers((prev) => (isChecked ? [...prev, id] : prev.filter((layerId) => layerId !== id)))
+  }
+
+  const handleActionToggle = (id: string, isChecked: boolean) => {
+    setVisibleActions((prev) => (isChecked ? [...prev, id] : prev.filter((actionId) => actionId !== id)))
   }
 
   if (!isMounted || isLoading) {
@@ -65,23 +90,34 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
   }
 
   const layerOptions = [
-    { id: "estradas", label: "Estradas", count: mapData?.estradas.features.length || 0, color: layerColors.estradas },
     { id: "bacia", label: "Bacia", count: mapData?.bacia.features.length || 0, color: layerColors.bacia },
-    { id: "leito", label: "Leito", count: mapData?.leito.features.length || 0, color: layerColors.leito },
-    {
-      id: "desmatamento",
-      label: "Desmatamento",
-      count: mapData?.desmatamento.features.length || 0,
-      color: layerColors.desmatamento,
-    },
+    { id: "banhado", label: "Banhado", count: mapData?.banhado.features.length || 0, color: layerColors.banhado },
     {
       id: "propriedades",
       label: "Propriedades",
       count: mapData?.propriedades.features.length || 0,
       color: layerColors.propriedades,
     },
+    { id: "leito", label: "Leito", count: mapData?.leito.features.length || 0, color: layerColors.leito },
+    { id: "estradas", label: "Estradas", count: mapData?.estradas.features.length || 0, color: layerColors.estradas },
+    {
+      id: "desmatamento",
+      label: "Desmatamento",
+      count: mapData?.desmatamento.features.length || 0,
+      color: layerColors.desmatamento,
+    },
     { id: "firms", label: "Focos de Incêndio", count: mapData?.firms.features.length || 0, color: layerColors.firms },
   ]
+
+  const actionOptions = actionsData
+    ? Object.entries(actionsData).map(([acao, data]) => ({
+        id: acao,
+        label: acao,
+        count: data.features.length,
+        color: "#FF00FF", // You can assign different colors for different action types
+        icon: actionIcons[acao] || <NotebookPen />,
+      }))
+    : []
 
   return (
     <div className="w-full h-screen relative z-10">
@@ -93,16 +129,6 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
           attribution="&copy; Google"
         />
 
-        {mapData && visibleLayers.includes("estradas") && (
-          <GeoJSON
-            data={mapData.estradas}
-            style={() => ({
-              color: layerColors.estradas,
-              weight: 4,
-              opacity: 0.65,
-            })}
-          />
-        )}
         {mapData && visibleLayers.includes("bacia") && (
           <GeoJSON
             data={mapData.bacia}
@@ -115,11 +141,45 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
             })}
           />
         )}
+        {mapData && visibleLayers.includes("banhado") && (
+          <GeoJSON
+            data={mapData.banhado}
+            style={() => ({
+              color: layerColors.banhado,
+              fillColor: layerColors.banhado,
+              weight: 2,
+              opacity: 0.65,
+              fillOpacity: 0.2,
+            })}
+          />
+        )}
+        {mapData && visibleLayers.includes("propriedades") && (
+          <GeoJSON
+            data={mapData.propriedades}
+            style={() => ({
+              color: "black",
+              fillColor: layerColors.propriedades,
+              weight: 2,
+              opacity: 0.65,
+              fillOpacity: 0.2,
+            })}
+          />
+        )}
         {mapData && visibleLayers.includes("leito") && (
           <GeoJSON
             data={mapData.leito}
             style={() => ({
               color: layerColors.leito,
+              weight: 4,
+              opacity: 0.65,
+            })}
+          />
+        )}
+        {mapData && visibleLayers.includes("estradas") && (
+          <GeoJSON
+            data={mapData.estradas}
+            style={() => ({
+              color: layerColors.estradas,
               weight: 4,
               opacity: 0.65,
             })}
@@ -137,32 +197,64 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
             })}
           />
         )}
-        {mapData && visibleLayers.includes("propriedades") && (
-          <GeoJSON
-            data={mapData.propriedades}
-            style={() => ({
-              color: "black",
-              fillColor: layerColors.propriedades,
-              weight: 2,
-              opacity: 0.65,
-              fillOpacity: 0.2,
-            })}
-          />
-        )}
         {mapData &&
           visibleLayers.includes("firms") &&
-          mapData.firms.features.map((firm, index) => (
-            <CircleMarker
-              key={`firm-${index}`}
-              center={[firm.geometry.coordinates[1], firm.geometry.coordinates[0]]}
-              radius={5}
-              pathOptions={{
-                color: layerColors.firms,
-                fillColor: layerColors.firms,
-                fillOpacity: 0.8,
-              }}
-            ></CircleMarker>
-          ))}
+          mapData.firms.features.map((firm, index) => {
+            const coords = firm.geometry.coordinates
+            if (
+              Array.isArray(coords) &&
+              coords.length === 2 &&
+              typeof coords[0] === "number" &&
+              typeof coords[1] === "number"
+            ) {
+              return (
+                <CircleMarker
+                  key={`firm-${index}`}
+                  center={[coords[1], coords[0]]}
+                  radius={5}
+                  pathOptions={{
+                    color: layerColors.firms,
+                    fillColor: layerColors.firms,
+                    fillOpacity: 0.8,
+                  }}
+                />
+              )
+            }
+            return null
+          })}
+
+        {actionsData &&
+          visibleActions.map((actionType) =>
+            actionsData[actionType].features.map((feature, index) => {
+              const coords = feature.geometry.coordinates
+              if (
+                Array.isArray(coords) &&
+                coords.length === 2 &&
+                typeof coords[0] === "number" &&
+                typeof coords[1] === "number"
+              ) {
+                return (
+                  <Marker
+                    key={`${actionType}-${index}`}
+                    position={[coords[1], coords[0]]}
+                    icon={L.divIcon({
+                      html: ReactDOMServer.renderToString(actionIcons[actionType] || <NotebookPen />),
+                      className: "custom-icon",
+                      iconSize: [24, 24],
+                    })}
+                  >
+                    <Popup>
+                      <div>
+                        <h3 className="font-semibold text-lg">{feature.properties.acao}</h3>
+                        <p className="text-sm text-gray-600">ID: {feature.properties.id}</p>
+                      </div>
+                    </Popup>
+                  </Marker>
+                )
+              }
+              return null
+            }),
+          )}
 
         <CustomZoomControl />
         <CustomLayerControl />
@@ -170,6 +262,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
 
       <div className="absolute bottom-4 left-4 z-[1000] gap-3 flex flex-col">
         <MapLayersCard title="Camadas" options={layerOptions} onLayerToggle={handleLayerToggle} />
+        <ActionsLayerCard title="Ações" options={actionOptions} onLayerToggle={handleActionToggle} />
       </div>
     </div>
   )
