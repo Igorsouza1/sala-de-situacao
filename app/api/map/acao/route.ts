@@ -16,7 +16,7 @@ export async function GET() {
       }
       acc[acao].push({
         type: "Feature",
-        properties: { id: action.id, acao: action.acao, name: action.name, descrição: action.descricao, mes: action.mes },
+        properties: { id: action.id, acao: action.acao, name: action.name, descricao: action.descricao, mes: action.mes },
         geometry: JSON.parse(action.geojson)
       })
       return acc
