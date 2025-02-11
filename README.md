@@ -36,7 +36,8 @@ DATABASE_URL=<sua_database_url>
 ✅ Exibir shapes no `CustomLayer` 
 ✅ Exibir ações no `CustomLayer`  
 ✅ Exibir shapes e ações marcados no mapa
-⏳ Modal com mais informações  
+✅ Modal com mais informações  
+✅ Componente de Filtragem por data
 
 ### 📌 **Contexto Mapa (`/context/mapContext`)**
 ✅ Concentrar informações dos shapes
@@ -46,7 +47,7 @@ DATABASE_URL=<sua_database_url>
 ### 📌 **API do Mapa (`/api/map`)**
 ✅ Listar todos os itens (exceto ações) 
 ✅ Agrupar e listar ações por categoria  
-⏳ Buscar mais informações de um ponto ou shape específico  
+✅ Buscar mais informações de um ponto ou shape específico  
 
 ### 📌 **Dashboard (`/components/dashboard`)**
 ✅ Dashboard principal  
