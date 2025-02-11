@@ -4,11 +4,11 @@ import { db } from "@/db"
 export async function GET() {
   try {
     const actions = await db.execute(`
-      SELECT id, acao, ST_AsGeoJSON(geom) as geojson
+      SELECT id, acao, name, descricao, mes, time, ST_AsGeoJSON(geom) as geojson
       FROM "rio_da_prata"."acoes"
     `)
 
-    // Group actions by 'acao'
+    // Agrupar ações por 'acao'
     const groupedActions = actions.rows.reduce((acc: { [key: string]: any[] }, action: any) => {
       const acao = action.acao
       if (!acc[acao]) {
@@ -16,13 +16,20 @@ export async function GET() {
       }
       acc[acao].push({
         type: "Feature",
-        properties: { id: action.id, acao: action.acao, name: action.name, descricao: action.descricao, mes: action.mes },
+        properties: { 
+          id: action.id, 
+          acao: action.acao, 
+          name: action.name, 
+          descricao: action.descricao, 
+          mes: action.mes ,
+          time: action.time
+        },
         geometry: JSON.parse(action.geojson)
       })
       return acc
     }, {})
 
-    // Convert grouped actions to GeoJSON FeatureCollections
+    // Converter ações agrupadas em GeoJSON FeatureCollections
     const actionsGeoJSON = Object.entries(groupedActions).reduce((acc: { [key: string]: any }, [acao, features]) => {
       acc[acao] = {
         type: "FeatureCollection",

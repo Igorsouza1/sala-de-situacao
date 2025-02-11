@@ -33,11 +33,22 @@ type ActionsData = {
   [key: string]: GeoJSONFeatureCollection
 }
 
+type ModalData = {
+  isOpen: boolean
+  title: string
+  content: React.ReactNode
+}
+
 type MapContextType = {
   mapData: MapData | null
   actionsData: ActionsData | null
   isLoading: boolean
   error: string | null
+  modalData: ModalData
+  openModal: (title: string, content: React.ReactNode) => void
+  closeModal: () => void
+  dateFilter: { startDate: Date | undefined; endDate: Date | undefined }
+  setDateFilter: (startDate: Date | undefined, endDate: Date | undefined) => void
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined)
@@ -47,6 +58,15 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
   const [actionsData, setActionsData] = useState<ActionsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [modalData, setModalData] = useState<ModalData>({
+    isOpen: false,
+    title: "",
+    content: null,
+  })
+  const [dateFilter, setDateFilter] = useState<{ startDate: Date | undefined; endDate: Date | undefined }>({
+    startDate: undefined,
+    endDate: undefined,
+  })
 
   useEffect(() => {
     fetchMapData()
@@ -60,6 +80,7 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Failed to fetch map data")
       }
       const data = await response.json()
+      console.log(data)
       setMapData(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred")
@@ -81,7 +102,35 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  return <MapContext.Provider value={{ mapData, actionsData, isLoading, error }}>{children}</MapContext.Provider>
+  const openModal = (title: string, content: React.ReactNode) => {
+    setModalData({ isOpen: true, title, content })
+  }
+
+  const closeModal = () => {
+    setModalData({ isOpen: false, title: "", content: null })
+  }
+
+  const setDateFilterFunction = (startDate: Date | undefined, endDate: Date | undefined) => {
+    setDateFilter({ startDate, endDate })
+  }
+
+  return (
+    <MapContext.Provider
+      value={{
+        mapData,
+        actionsData,
+        isLoading,
+        error,
+        modalData,
+        openModal,
+        closeModal,
+        dateFilter,
+        setDateFilter: setDateFilterFunction,
+      }}
+    >
+      {children}
+    </MapContext.Provider>
+  )
 }
 
 export function useMapContext() {
