@@ -54,7 +54,7 @@ export function DashboardAmbiental() {
               <CardTitle className="text-white">Ações Realizadas</CardTitle>
             </CardHeader>
             <CardContent>
-              <GraficoAcoes ano={anoSelecionado} />
+              <GraficoAcoes />
             </CardContent>
           </Card>
 
