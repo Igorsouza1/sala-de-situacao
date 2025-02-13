@@ -2,23 +2,26 @@
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { useFogo } from "@/context/FogoContext"
 
-const data = [
-  { mes: "Jan", focos: 10 },
-  { mes: "Fev", focos: 20 },
-  { mes: "Mar", focos: 15 },
-  { mes: "Abr", focos: 25 },
-  { mes: "Mai", focos: 30 },
-  { mes: "Jun", focos: 40 },
-  { mes: "Jul", focos: 50 },
-  { mes: "Ago", focos: 60 },
-  { mes: "Set", focos: 45 },
-  { mes: "Out", focos: 35 },
-  { mes: "Nov", focos: 25 },
-  { mes: "Dez", focos: 15 },
-]
+const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 
-export function GraficoFogo({ ano }: { ano: string }) {
+export function GraficoFogo() {
+  const { filteredFogoData, isLoading, error, selectedYear } = useFogo()
+
+  if (isLoading) {
+    return <p className="text-white/70">Carregando...</p>
+  }
+
+  if (error) {
+    return <p className="text-red-400">{error}</p>
+  }
+
+  const data = meses.map((mes, index) => ({
+    mes,
+    focos: filteredFogoData[index] || 0,
+  }))
+
   return (
     <ChartContainer
       config={{

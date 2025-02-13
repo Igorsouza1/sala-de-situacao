@@ -9,14 +9,17 @@ import { GraficoAcoes } from "./charts/grafico-acoes"
 import { GraficoPontos } from "./charts/grafico-pontos"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AcoesProvider, useAcoes } from "@/context/AcoesContext"
+import { FogoProvider, useFogo } from "@/context/FogoContext"
 
 function DashboardContent() {
   const [anoSelecionado, setAnoSelecionado] = useState<string>("todos")
-  const { setSelectedYear } = useAcoes()
+  const { setSelectedYear: setSelectedYearAcoes } = useAcoes()
+  const { setSelectedYear: setSelectedYearFogo } = useFogo()
 
   const handleAnoChange = (ano: string) => {
     setAnoSelecionado(ano)
-    setSelectedYear(ano)
+    setSelectedYearAcoes(ano)
+    setSelectedYearFogo(ano)
   }
 
   return (
@@ -30,10 +33,10 @@ function DashboardContent() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos os anos</SelectItem>
-              <SelectItem value="2021">2021</SelectItem>
               <SelectItem value="2022">2022</SelectItem>
               <SelectItem value="2023">2023</SelectItem>
               <SelectItem value="2024">2024</SelectItem>
+              <SelectItem value="2025">2025</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -44,7 +47,7 @@ function DashboardContent() {
               <CardTitle className="text-white">Focos de Incêndio</CardTitle>
             </CardHeader>
             <CardContent>
-              <GraficoFogo ano={anoSelecionado} />
+              <GraficoFogo />
             </CardContent>
           </Card>
 
@@ -98,7 +101,9 @@ function DashboardContent() {
 export function DashboardAmbiental() {
   return (
     <AcoesProvider>
-      <DashboardContent />
+      <FogoProvider>
+        <DashboardContent />
+      </FogoProvider>
     </AcoesProvider>
   )
 }
