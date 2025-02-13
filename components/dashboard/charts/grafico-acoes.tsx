@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { TrendingUp } from "lucide-react"
-import { Label, Pie, PieChart, ResponsiveContainer } from "recharts"
+import { Pie, PieChart, ResponsiveContainer, Label } from "recharts"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { type ChartConfig, ChartContainer, ChartTooltip } from "@/components/ui/chart"
@@ -28,10 +28,10 @@ const COLORS = [
 ]
 
 export function GraficoAcoes() {
-  const { acoes, isLoading, error } = useAcoes()
+  const { filteredAcoes, isLoading, error, selectedYear } = useAcoes()
 
   const processedData = React.useMemo(() => {
-    const acoesCount = acoes.reduce(
+    const acoesCount = filteredAcoes.reduce(
       (acc, acao) => {
         if (acao.acao !== "Ponto de Referência") {
           acc[acao.acao] = (acc[acao.acao] || 0) + 1
@@ -44,7 +44,7 @@ export function GraficoAcoes() {
     return Object.entries(acoesCount)
       .map(([acao, valor]) => ({ acao, valor }))
       .sort((a, b) => b.valor - a.valor)
-  }, [acoes])
+  }, [filteredAcoes])
 
   const totalAcoes = React.useMemo(() => {
     return processedData.reduce((acc, curr) => acc + curr.valor, 0)
@@ -84,7 +84,9 @@ export function GraficoAcoes() {
   return (
     <Card className="bg-white/10 border-white/20">
       <CardHeader>
-        <CardTitle className="text-white">Ações Realizadas</CardTitle>
+        <CardTitle className="text-white">
+          Ações Realizadas {selectedYear !== "todos" ? `em ${selectedYear}` : ""}
+        </CardTitle>
       </CardHeader>
       <CardContent>
         <ChartContainer config={chartConfig} className="w-full aspect-[4/3]">
@@ -113,24 +115,7 @@ export function GraficoAcoes() {
                 outerRadius="80%"
                 strokeWidth={2}
                 stroke="rgba(255,255,255,0.2)"
-                label={({ cx, cy, midAngle, innerRadius, outerRadius, percent, index }) => {
-                  const RADIAN = Math.PI / 180
-                  const radius = (innerRadius || 0) + ((outerRadius || 0) - (innerRadius || 0)) * 0.5
-                  const x = (cx || 0) + radius * Math.cos(-midAngle * RADIAN)
-                  const y = (cy || 0) + radius * Math.sin(-midAngle * RADIAN)
-
-                  return (
-                    <text
-                      x={x}
-                      y={y}
-                      fill="white"
-                      textAnchor={x > (cx || 0) ? "start" : "end"}
-                      dominantBaseline="central"
-                    >
-                      {`${chartData[index].acao} (${(percent * 100).toFixed(0)}%)`}
-                    </text>
-                  )
-                }}
+                
               >
                 <Label
                   content={({ viewBox }) => {
@@ -156,7 +141,9 @@ export function GraficoAcoes() {
         </ChartContainer>
         <div className="mt-4 flex items-center justify-center gap-2 text-sm text-white/70">
           <TrendingUp className="h-4 w-4" />
-          <span>Aumento de 5.2% este mês</span>
+          <span>
+            Total de {totalAcoes} ações {selectedYear !== "todos" ? `em ${selectedYear}` : "realizadas"}
+          </span>
         </div>
       </CardContent>
     </Card>

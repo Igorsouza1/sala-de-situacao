@@ -17,16 +17,21 @@ interface Acao {
 
 interface AcoesContextType {
   acoes: Acao[]
+  filteredAcoes: Acao[]
   isLoading: boolean
   error: string | null
+  setSelectedYear: (year: string) => void
+  selectedYear: string
 }
 
 const AcoesContext = createContext<AcoesContextType | undefined>(undefined)
 
 export function AcoesProvider({ children }: { children: ReactNode }) {
   const [acoes, setAcoes] = useState<Acao[]>([])
+  const [filteredAcoes, setFilteredAcoes] = useState<Acao[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [selectedYear, setSelectedYear] = useState<string>("todos")
 
   useEffect(() => {
     async function fetchAcoes() {
@@ -37,6 +42,7 @@ export function AcoesProvider({ children }: { children: ReactNode }) {
         }
         const data = await response.json()
         setAcoes(data)
+        setFilteredAcoes(data)
       } catch (err) {
         setError("Erro ao carregar dados de ações")
         console.error(err)
@@ -48,7 +54,23 @@ export function AcoesProvider({ children }: { children: ReactNode }) {
     fetchAcoes()
   }, [])
 
-  return <AcoesContext.Provider value={{ acoes, isLoading, error }}>{children}</AcoesContext.Provider>
+  useEffect(() => {
+    if (selectedYear === "todos") {
+      setFilteredAcoes(acoes)
+    } else {
+      const filtered = acoes.filter((acao) => {
+        const acaoYear = new Date(acao.time).getFullYear().toString()
+        return acaoYear === selectedYear
+      })
+      setFilteredAcoes(filtered)
+    }
+  }, [selectedYear, acoes])
+
+  return (
+    <AcoesContext.Provider value={{ acoes, filteredAcoes, isLoading, error, setSelectedYear, selectedYear }}>
+      {children}
+    </AcoesContext.Provider>
+  )
 }
 
 export function useAcoes() {
