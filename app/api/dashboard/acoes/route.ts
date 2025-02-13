@@ -1,17 +1,23 @@
 import { NextResponse } from "next/server"
 import { db } from "@/db"
-import { sql } from "drizzle-orm"
 import { acoesInRioDaPrata } from "@/db/schema"
 
 export async function GET() {
   try {
     const result = await db
       .select({
+        id: acoesInRioDaPrata.id,
+        name: acoesInRioDaPrata.name,
+        latitude: acoesInRioDaPrata.latitude,
+        longitude: acoesInRioDaPrata.longitude,
+        elevation: acoesInRioDaPrata.elevation,
+        time: acoesInRioDaPrata.time,
+        descricao: acoesInRioDaPrata.descricao,
+        mes: acoesInRioDaPrata.mes,
+        atuacao: acoesInRioDaPrata.atuacao,
         acao: acoesInRioDaPrata.acao,
-        valor: sql<number>`COUNT(*)`.as("count"),
       })
       .from(acoesInRioDaPrata)
-      .groupBy(acoesInRioDaPrata.acao)
       .execute()
 
     return NextResponse.json(result)

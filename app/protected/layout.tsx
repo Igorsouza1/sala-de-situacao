@@ -2,6 +2,7 @@ import { Navbar } from "@/components/Navbar"
 import "@/app/globals.css"
 import { Inter } from "next/font/google"
 import { MapProvider } from "@/context/GeoDataContext"
+import { AcoesProvider } from "@/context/AcoesContext"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -19,7 +20,10 @@ export default function RootLayout({
         <div className="flex min-h-screen bg-gray-50">
           <Navbar />
           <MapProvider> 
+            
+          <AcoesProvider >
           <main className="flex-1">{children}</main>
+          </AcoesProvider>
           </MapProvider>
         </div>
   )

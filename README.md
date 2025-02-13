@@ -79,7 +79,20 @@ DATABASE_URL=<sua_database_url>
 
 ---
 
-ICONES DAS AÇÕES
+Acoes
+"id","name","latitude","longitude","elevation","time","descricao","mes","atuacao","acao","geom"
+Deque de pedras
+"id","local","mes","data","turbidez","secchi_vertical","secchi_horizontal","chuva"
+Desmatamento
+"id","alertid","alertcode","alertha","source","detectat","detectyear","state","stateha","geom"
+Estradas
+"id","nome","tipo","codigo","geom"
+Ponte do cure
+"id","local","mes","data","chuva","nivel","visibilidade"
+propriedades
+"id","cod_tema","nom_tema","cod_imovel","mod_fiscal","num_area","ind_status","ind_tipo","des_condic","municipio","geom"
+raw_firms
+"latitude","longitude","bright_ti4","scan","track","acq_date","acq_time","satellite","instrument","confidence","version","bright_ti5","frp","daynight","type","hora_deteccao","geom"
 
 
 
