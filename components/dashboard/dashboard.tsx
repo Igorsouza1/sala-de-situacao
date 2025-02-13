@@ -12,6 +12,7 @@ import { AcoesProvider, useAcoes } from "@/context/AcoesContext"
 import { FogoProvider, useFogo } from "@/context/FogoContext"
 import { DesmatamentoProvider, useDesmatamento } from "@/context/DesmatamentoContext"
 import { DequePedrasProvider, useDequePedras } from "@/context/DequePedrasContext"
+import { PonteCureProvider, usePonteCure } from "@/context/PonteCureContext"
 
 function DashboardContent() {
   const [anoSelecionado, setAnoSelecionado] = useState<string>("todos")
@@ -19,6 +20,7 @@ function DashboardContent() {
   const { setSelectedYear: setSelectedYearFogo } = useFogo()
   const { setSelectedYear: setSelectedYearDesmatamento } = useDesmatamento()
   const { setSelectedYear: setSelectedYearDequePedras } = useDequePedras()
+  const { setSelectedYear: setSelectedYearPonteCure } = usePonteCure()
 
   const handleAnoChange = (ano: string) => {
     setAnoSelecionado(ano)
@@ -26,6 +28,7 @@ function DashboardContent() {
     setSelectedYearFogo(ano)
     setSelectedYearDesmatamento(ano)
     setSelectedYearDequePedras(ano)
+    setSelectedYearPonteCure(ano)
   }
 
   return (
@@ -47,7 +50,7 @@ function DashboardContent() {
           </Select>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 h-screen">
           <Card className="bg-white/10 border-white/20">
             <CardHeader>
               <CardTitle className="text-white">Focos de Incêndio</CardTitle>
@@ -110,7 +113,9 @@ export function DashboardAmbiental() {
       <FogoProvider>
         <DesmatamentoProvider>
           <DequePedrasProvider>
-            <DashboardContent />
+            <PonteCureProvider>
+              <DashboardContent />
+            </PonteCureProvider>
           </DequePedrasProvider>
         </DesmatamentoProvider>
       </FogoProvider>
