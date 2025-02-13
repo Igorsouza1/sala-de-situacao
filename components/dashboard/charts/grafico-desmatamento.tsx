@@ -2,28 +2,31 @@
 
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { useDesmatamento } from "@/context/DesmatamentoContext"
 
-const data = [
-  { mes: "Jan", desmatamento: 5 },
-  { mes: "Fev", desmatamento: 8 },
-  { mes: "Mar", desmatamento: 12 },
-  { mes: "Abr", desmatamento: 15 },
-  { mes: "Mai", desmatamento: 20 },
-  { mes: "Jun", desmatamento: 25 },
-  { mes: "Jul", desmatamento: 30 },
-  { mes: "Ago", desmatamento: 35 },
-  { mes: "Set", desmatamento: 28 },
-  { mes: "Out", desmatamento: 22 },
-  { mes: "Nov", desmatamento: 18 },
-  { mes: "Dez", desmatamento: 10 },
-]
+const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 
-export function GraficoDesmatamento({ ano }: { ano: string }) {
+export function GraficoDesmatamento() {
+  const { filteredDesmatamentoData, isLoading, error, selectedYear } = useDesmatamento()
+
+  if (isLoading) {
+    return <p className="text-white/70">Carregando...</p>
+  }
+
+  if (error) {
+    return <p className="text-red-400">{error}</p>
+  }
+
+  const data = meses.map((mes, index) => ({
+    mes,
+    desmatamento: filteredDesmatamentoData[index] || 0,
+  }))
+
   return (
     <ChartContainer
       config={{
         desmatamento: {
-          label: "Áreas Desmatadas",
+          label: "Áreas Desmatadas (ha)",
           color: "hsl(var(--chart-2))",
         },
       }}
@@ -41,3 +44,4 @@ export function GraficoDesmatamento({ ano }: { ano: string }) {
     </ChartContainer>
   )
 }
+

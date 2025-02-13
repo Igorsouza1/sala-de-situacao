@@ -10,16 +10,22 @@ import { GraficoPontos } from "./charts/grafico-pontos"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AcoesProvider, useAcoes } from "@/context/AcoesContext"
 import { FogoProvider, useFogo } from "@/context/FogoContext"
+import { DesmatamentoProvider, useDesmatamento } from "@/context/DesmatamentoContext"
+import { DequePedrasProvider, useDequePedras } from "@/context/DequePedrasContext"
 
 function DashboardContent() {
   const [anoSelecionado, setAnoSelecionado] = useState<string>("todos")
   const { setSelectedYear: setSelectedYearAcoes } = useAcoes()
   const { setSelectedYear: setSelectedYearFogo } = useFogo()
+  const { setSelectedYear: setSelectedYearDesmatamento } = useDesmatamento()
+  const { setSelectedYear: setSelectedYearDequePedras } = useDequePedras()
 
   const handleAnoChange = (ano: string) => {
     setAnoSelecionado(ano)
     setSelectedYearAcoes(ano)
     setSelectedYearFogo(ano)
+    setSelectedYearDesmatamento(ano)
+    setSelectedYearDequePedras(ano)
   }
 
   return (
@@ -33,10 +39,10 @@ function DashboardContent() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="todos">Todos os anos</SelectItem>
+              <SelectItem value="2021">2021</SelectItem>
               <SelectItem value="2022">2022</SelectItem>
               <SelectItem value="2023">2023</SelectItem>
               <SelectItem value="2024">2024</SelectItem>
-              <SelectItem value="2025">2025</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -56,7 +62,7 @@ function DashboardContent() {
               <CardTitle className="text-white">Desmatamento</CardTitle>
             </CardHeader>
             <CardContent>
-              <GraficoDesmatamento ano={anoSelecionado} />
+              <GraficoDesmatamento />
             </CardContent>
           </Card>
 
@@ -102,7 +108,11 @@ export function DashboardAmbiental() {
   return (
     <AcoesProvider>
       <FogoProvider>
-        <DashboardContent />
+        <DesmatamentoProvider>
+          <DequePedrasProvider>
+            <DashboardContent />
+          </DequePedrasProvider>
+        </DesmatamentoProvider>
       </FogoProvider>
     </AcoesProvider>
   )
