@@ -2,6 +2,10 @@
 
 O **Sala de Situação** é um sistema de monitoramento geoespacial que permite a visualização e análise de dados ambientais, como desmatamento, incêndios e ações de preservação. O projeto utiliza **Next.js 15**, **Drizzle ORM**, **PostGIS** e **Leaflet.js** para exibição e manipulação de dados geoespaciais.
 
+Com a sala conseguimos analisar dados georeferenciados como pontos de ações realizadas pelo IHP, passivos ambientais, vestigios de pesca ou crimes ambientais.
+Reunimos em 1 só lugar dados de focos de incendio, desmatamento para que seja possivel tomar decisões mais acertadas. 
+A plataforma gerencia todos os seus dados para que voce se concentre na tomada de decisões relevantes no longo prazo.
+
 ## 📌 Requisitos de Configuração
 
 Para rodar o projeto, você precisa configurar as seguintes variáveis de ambiente:
