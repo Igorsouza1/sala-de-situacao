@@ -55,10 +55,10 @@ DATABASE_URL=<sua_database_url>
 ✅ Gráficos ambientais (`Deque de pedras`, `Ponte do Cure`)  
 
 ### 📌 **API do Dashboard (`/api/dashboard`)**
-⏳ Buscar dados de fogo  
-⏳ Buscar dados de desmatamento  
-⏳ Buscar dados de chuva  
-⏳ Buscar dados do rio  
+✅ Buscar dados de fogo  
+✅ Buscar dados de desmatamento  
+✅ Buscar dados de chuva  
+✅ Buscar dados do rio  
 
 ---
 
