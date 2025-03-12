@@ -68,6 +68,14 @@
   }
 }
 
+.container {
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto; /* Centraliza horizontalmente */
+  padding: 0 16px; /* Adiciona espaçamento lateral */
+}
+
+
 @layer base {
   * {
     @apply border-border;
