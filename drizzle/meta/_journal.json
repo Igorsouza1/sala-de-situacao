@@ -43,6 +43,13 @@
       "when": 1738872490349,
       "tag": "0005_mighty_george_stacy",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1742913717615,
+      "tag": "0006_concerned_radioactive_man",
+      "breakpoints": true
     }
   ]
 }
