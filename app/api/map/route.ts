@@ -60,8 +60,8 @@ export async function GET() {
 
     return NextResponse.json(geoJson)
   } catch (error) {
-    console.error('Erro em /api/map:', error);
-    return NextResponse.json({ error: 'Erro interno' }, { status: 500 });
+    console.error("Erro ao buscar dados:", error)
+    return NextResponse.json({ error: "Falha ao obter os dados" }, { status: 500 })
   }
 }
 
