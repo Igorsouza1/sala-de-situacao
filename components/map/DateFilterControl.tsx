@@ -19,12 +19,12 @@ import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
 
 interface DateFilterControlProps {
-  onDateChange: (startDate: Date | undefined, endDate: Date | undefined) => void
+  onDateChange: (startDate: Date | null, endDate: Date | null) => void
 }
 
 export function DateFilterControl({ onDateChange }: DateFilterControlProps) {
-  const [startDate, setStartDate] = useState<Date>()
-  const [endDate, setEndDate] = useState<Date>()
+  const [startDate, setStartDate] = useState<Date | null>(null)
+  const [endDate, setEndDate] = useState<Date | null>(null)
   const [isExpanded, setIsExpanded] = useState(false)
 
   const handleApplyFilter = useCallback(() => {
@@ -33,9 +33,9 @@ export function DateFilterControl({ onDateChange }: DateFilterControlProps) {
   }, [startDate, endDate, onDateChange])
 
   const handleClearFilter = useCallback(() => {
-    setStartDate(undefined)
-    setEndDate(undefined)
-    onDateChange(undefined, undefined)
+    setStartDate(null)
+    setEndDate(null)
+    onDateChange(null, null)
     setIsExpanded(false)
   }, [onDateChange])
 
@@ -119,7 +119,7 @@ export function DateFilterControl({ onDateChange }: DateFilterControlProps) {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus locale={ptBR} />
+                  <Calendar selected={startDate} onChange={setStartDate} />
                 </PopoverContent>
               </Popover>
               <Popover>
@@ -133,7 +133,7 @@ export function DateFilterControl({ onDateChange }: DateFilterControlProps) {
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus locale={ptBR} />
+                  <Calendar selected={endDate} onChange={setEndDate} />
                 </PopoverContent>
               </Popover>
             </div>
