@@ -113,7 +113,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     openModal(title, content)
   }
 
-  const isWithinDateRange = (date: string, startDate: Date | undefined, endDate: Date | undefined) => {
+  const isWithinDateRange = (date: string, startDate: Date | null, endDate: Date | null) => {
     const itemDate = new Date(date)
     if (startDate && itemDate < startDate) return false
     if (endDate) {

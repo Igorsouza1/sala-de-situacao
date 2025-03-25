@@ -47,8 +47,8 @@ type MapContextType = {
   modalData: ModalData
   openModal: (title: string, content: React.ReactNode) => void
   closeModal: () => void
-  dateFilter: { startDate: Date | undefined; endDate: Date | undefined }
-  setDateFilter: (startDate: Date | undefined, endDate: Date | undefined) => void
+  dateFilter: { startDate: Date | null; endDate: Date | null }
+  setDateFilter: (startDate: Date | null, endDate: Date | null) => void
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined)
@@ -63,9 +63,9 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
     title: "",
     content: null,
   })
-  const [dateFilter, setDateFilter] = useState<{ startDate: Date | undefined; endDate: Date | undefined }>({
-    startDate: undefined,
-    endDate: undefined,
+  const [dateFilter, setDateFilter] = useState<{ startDate: Date | null; endDate: Date | null }>({
+    startDate: null,
+    endDate: null,
   })
 
   useEffect(() => {
@@ -110,7 +110,7 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
     setModalData({ isOpen: false, title: "", content: null })
   }
 
-  const setDateFilterFunction = (startDate: Date | undefined, endDate: Date | undefined) => {
+  const setDateFilterFunction = (startDate: Date | null, endDate: Date | null) => {
     setDateFilter({ startDate, endDate })
   }
 
