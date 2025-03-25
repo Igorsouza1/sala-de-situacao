@@ -41,9 +41,11 @@ export default function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-4">
-            <Button variant="outline" className="hidden md:flex">
-              Entrar
-            </Button>
+          <Link href="/sign-in">
+              <Button variant="outline" className="hidden md:flex">
+                Entrar
+              </Button>
+            </Link>
             <Button className="hidden md:flex">Cadastrar</Button>
             <MobileNav />
           </div>
