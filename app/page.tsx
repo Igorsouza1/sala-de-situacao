@@ -51,7 +51,6 @@ export default function LandingPage() {
                 Entrar
               </Button>
             </Link>
-            <Button className="hidden md:flex bg-[#003C2C] text-[#f8f5ed] hover:bg-[#478D4F]">Cadastrar</Button>
             <MobileNav />
           </div>
         </div>
