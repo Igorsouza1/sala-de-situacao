@@ -27,6 +27,7 @@ DATABASE_URL=<sua_database_url>
 ✅ Excluir uma linha específica  
 ⏳ Inserir uma única linha  
 ⏳ Inserir várias linhas (CSV ou GeoJSON)
+[] Aceitar um arquivo GPX - Inserir no banco
 
 ### 📌 **Painel Administrativo (`/components/admin-painel`)**
 ✅ Lista de tabelas no banco  
@@ -42,6 +43,7 @@ DATABASE_URL=<sua_database_url>
 ✅ Exibir shapes e ações marcados no mapa
 ✅ Modal com mais informações  
 ✅ Componente de Filtragem por data
+[] Vizualizar o trajeto (expedições)
 
 ### 📌 **Contexto Mapa (`/context/mapContext`)**
 ✅ Concentrar informações dos shapes
@@ -57,12 +59,19 @@ DATABASE_URL=<sua_database_url>
 ✅ Dashboard principal  
 ✅ Gráficos de fogo, desmatamento e ações  
 ✅ Gráficos ambientais (`Deque de pedras`, `Ponte do Cure`)  
+[] Novo Grafico de turbidez
 
 ### 📌 **API do Dashboard (`/api/dashboard`)**
 ✅ Buscar dados de fogo  
 ✅ Buscar dados de desmatamento  
 ✅ Buscar dados de chuva  
 ✅ Buscar dados do rio  
+
+[] Botão de notificações de alerta
+[] Tela para gerenciar os alertas
+
+[] Colocar o alerta de desmatamento na nuvem
+[] colocar o alerta de fogo na nuvem
 
 ---
 
