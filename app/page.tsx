@@ -144,7 +144,7 @@ export default function LandingPage() {
                   </div>
                   <div className="p-6">
                     <Image
-                      src="/placeholder.svg?height=400&width=600"
+                      src="/mapa.PNG"
                       alt="PRISMA Dashboard Preview"
                       width={600}
                       height={400}
@@ -355,10 +355,10 @@ export default function LandingPage() {
 
               <div className="relative">
                 <Image
-                  src="/placeholder.svg?height=500&width=600"
+                  src="/dashboard.PNG"
                   alt="Casos de Uso PRISMA"
-                  width={600}
-                  height={500}
+                  width={800}
+                  height={700}
                   className="w-full h-auto rounded-2xl shadow-2xl"
                 />
               </div>
