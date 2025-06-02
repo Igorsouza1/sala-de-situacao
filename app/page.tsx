@@ -1,267 +1,451 @@
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
-import { ArrowRight, Twitter, Linkedin, Github, Facebook } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
+import {
+  ArrowRight,
+  Twitter,
+  Linkedin,
+  Github,
+  BarChart3,
+  Shield,
+  Globe,
+  Satellite,
+  TrendingUp,
+  Users,
+  Award,
+  CheckCircle,
+  Play,
+  Monitor,
+  Zap,
+} from "lucide-react"
 import { MobileNav } from "@/components/landing/mobile-nav"
-import { PricingCard } from "@/components/landing/pricing-card"
-import { TestimonialCard } from "@/components/landing/testimonial-card"
 import { FeatureCard } from "@/components/landing/feature-card"
 
 export default function LandingPage() {
   return (
-    <div className="flex min-h-screen flex-col w-full" style={{ backgroundColor: "#f8f5ed" }}>
+    <div className="flex min-h-screen flex-col w-full bg-white">
       {/* Header */}
-      <header
-        className="sticky top-0 z-50 w-full border-b backdrop-blur supports-[backdrop-filter]:bg-background/10"
-        style={{ backgroundColor: "#f8f5ed", borderColor: "#003C2C" }}
-      >
+      <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/95">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            <Image
-              src="/prismalogo.png"
-              alt="PRISMA AMBIENTAL Logo"
-              width={140}
-              height={50}
-              className="rounded"
-            />
+            <Image src="/prismalogo.png" alt="PRISMA AMBIENTAL Logo" width={50} height={50} className="rounded" />
+            <h3 className="text-1xl font-bold text-[#003C2C]">PRISMA AMBIENTAL</h3> 
           </div>
 
           {/* Desktop Navigation */}
-          <nav className="hidden md:flex items-center gap-6">
-            <Link href="#recursos" className="text-sm font-medium text-[#003C2C] hover:text-[#478D4F]">
+          <nav className="hidden md:flex items-center gap-8">
+            <Link
+              href="#plataforma"
+              className="text-sm font-medium text-slate-700 hover:text-[#003C2C] transition-colors"
+            >
+              Plataforma
+            </Link>
+            <Link
+              href="#recursos"
+              className="text-sm font-medium text-slate-700 hover:text-[#003C2C] transition-colors"
+            >
               Recursos
             </Link>
-            <Link href="#depoimentos" className="text-sm font-medium text-[#003C2C] hover:text-[#478D4F]">
-              Depoimentos
+            <Link href="#casos" className="text-sm font-medium text-slate-700 hover:text-[#003C2C] transition-colors">
+              Casos de Uso
             </Link>
-            <Link href="#planos" className="text-sm font-medium text-[#003C2C] hover:text-[#478D4F]">
-              Planos
-            </Link>
-            <Link href="#contato" className="text-sm font-medium text-[#003C2C] hover:text-[#478D4F]">
+            <Link href="#contato" className="text-sm font-medium text-slate-700 hover:text-[#003C2C] transition-colors">
               Contato
             </Link>
           </nav>
 
           <div className="flex items-center gap-4">
             <Link href="/sign-in">
-              <Button
-                variant="outline"
-                className="hidden md:flex border-[#003C2C] text-[#003C2C] hover:bg-[#003C2C] hover:text-[#f8f5ed]"
-              >
+              <Button variant="ghost" className="hidden md:flex text-slate-700 hover:text-[#003C2C]">
                 Entrar
               </Button>
             </Link>
+            <Button className="hidden md:flex bg-[#003C2C] hover:bg-[#003C2C]/90">Solicitar Demo</Button>
             <MobileNav />
           </div>
         </div>
       </header>
 
       <main className="flex-1">
-        {/* Hero Section with Background Image */}
-        <section className="w-full py-12 md:py-24 lg:py-32 xl:py-48 relative overflow-hidden">
-          {/* Background Image with Overlay */}
-          <div className="absolute inset-0 z-0">
-            <Image src="/riodaprata.jpeg" alt="Background" fill className="object-cover" priority />
-            <div className="absolute inset-0 bg-black/60"></div>
+        {/* Hero Section */}
+        <section className="relative w-full py-20 md:py-32 lg:py-40 overflow-hidden">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-50 to-white">
+            <div className="absolute inset-0 bg-[url('/placeholder.svg?height=800&width=800')] opacity-5"></div>
           </div>
 
           <div className="container px-4 md:px-6 relative z-10">
-            <div className="flex flex-col items-center text-center gap-6">
-              <div className="inline-block rounded-full bg-[#D2E5B0] px-3 py-1 text-sm font-semibold text-[#003C2C]">
-                Monitoramento Inteligente
+            <div className="grid lg:grid-cols-2 gap-12 items-center">
+              <div className="flex flex-col space-y-8">
+                <div className="space-y-6">
+                  <Badge variant="outline" className="w-fit border-[#003C2C]/20 text-[#003C2C] bg-[#003C2C]/5">
+                    <Satellite className="w-3 h-3 mr-2" />
+                    Inteligência Geoespacial Avançada
+                  </Badge>
+
+                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight text-slate-900 leading-tight">
+                    Monitoramento
+                    <span className="text-[#003C2C] block">Ambiental</span>
+                    <span className="text-slate-600 block text-3xl md:text-4xl lg:text-5xl font-normal">
+                      Inteligente
+                    </span>
+                  </h1>
+
+                  <p className="text-xl text-slate-600 leading-relaxed max-w-lg">
+                    Plataforma integrada para análise de dados geoespaciais, monitoramento de desmatamento, focos de
+                    incêndio e gestão de ações ambientais em tempo real.
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <Button size="lg" className="bg-[#003C2C] hover:bg-[#003C2C]/90 text-white px-8">
+                    Solicitar Demonstração
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="border-slate-300 text-slate-700 hover:bg-slate-50 px-8"
+                  >
+                    <Play className="mr-2 h-4 w-4" />
+                    Ver Plataforma
+                  </Button>
+                </div>
+
+                {/* Trust Indicators */}
+                <div className="flex items-center gap-8 pt-8 border-t border-slate-200">
+                  <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    Dados em tempo real
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <Shield className="h-4 w-4 text-green-600" />
+                    Segurança empresarial
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-600">
+                    <Award className="h-4 w-4 text-green-600" />
+                    Certificado ISO
+                  </div>
+                </div>
               </div>
-              <h1 className="text-3xl font-bold tracking-tighter sm:text-5xl xl:text-6xl/none text-white">
-                Monitoramento Geoespacial Inteligente
-              </h1>
-              <p className="max-w-[600px] text-white md:text-xl">
-                Visualize e analise dados ambientais como desmatamento, incêndios e ações de preservação em uma única
-                plataforma integrada.
+
+              {/* Dashboard Preview */}
+              <div className="relative">
+                <div className="relative bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+                  <div className="bg-slate-50 px-6 py-4 border-b border-slate-200">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-red-400"></div>
+                      <div className="w-3 h-3 rounded-full bg-yellow-400"></div>
+                      <div className="w-3 h-3 rounded-full bg-green-400"></div>
+                      <div className="ml-4 text-sm text-slate-600">PRISMA Dashboard</div>
+                    </div>
+                  </div>
+                  <div className="p-6">
+                    <Image
+                      src="/placeholder.svg?height=400&width=600"
+                      alt="PRISMA Dashboard Preview"
+                      width={600}
+                      height={400}
+                      className="w-full h-auto rounded-lg"
+                    />
+                  </div>
+                </div>
+
+                {/* Floating Stats */}
+                <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-lg border border-slate-200 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+                      <TrendingUp className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-slate-900">98.7%</div>
+                      <div className="text-xs text-slate-600">Precisão</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="absolute -top-6 -right-6 bg-white rounded-xl shadow-lg border border-slate-200 p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                      <Globe className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-slate-900">24/7</div>
+                      <div className="text-xs text-slate-600">Monitoramento</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Platform Overview */}
+        <section id="plataforma" className="w-full py-20 bg-slate-50">
+          <div className="container px-4 md:px-6">
+            <div className="text-center space-y-6 mb-16">
+              <Badge variant="outline" className="border-[#003C2C]/20 text-[#003C2C] bg-white">
+                Plataforma Integrada
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+                Tecnologia de ponta para
+                <span className="text-[#003C2C] block">decisões ambientais precisas</span>
+              </h2>
+              <p className="text-xl text-slate-600 max-w-3xl mx-auto leading-relaxed">
+                Combine dados de satélite, sensores IoT e análises preditivas em uma única plataforma para monitoramento
+                ambiental completo e tomada de decisão baseada em evidências.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" className="bg-[#003C2C] text-white hover:bg-[#478D4F]">
-                  Começar Agora <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-white text-green-900 hover:bg-white hover:text-[#003C2C]"
-                >
-                  Agendar Demonstração
-                </Button>
-              </div>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-8">
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <CardContent className="p-8">
+                  <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-6">
+                    <Satellite className="h-6 w-6 text-blue-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-slate-900 mb-4">Dados Satelitais</h3>
+                  <p className="text-slate-600 leading-relaxed">
+                    Integração com múltiplas fontes de dados satelitais para monitoramento de desmatamento, queimadas e
+                    mudanças na cobertura vegetal.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <CardContent className="p-8">
+                  <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-6">
+                    <BarChart3 className="h-6 w-6 text-green-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-slate-900 mb-4">Analytics Avançado</h3>
+                  <p className="text-slate-600 leading-relaxed">
+                    Algoritmos de machine learning para análise preditiva e identificação de padrões em dados ambientais
+                    complexos.
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow duration-300">
+                <CardContent className="p-8">
+                  <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-6">
+                    <Monitor className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <h3 className="text-xl font-semibold text-slate-900 mb-4">Dashboards Interativos</h3>
+                  <p className="text-slate-600 leading-relaxed">
+                    Visualizações dinâmicas e personalizáveis para diferentes níveis organizacionais e necessidades de
+                    monitoramento.
+                  </p>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </section>
 
         {/* Features Section */}
-        <section id="recursos" className="w-full py-12 md:py-24 lg:py-32" style={{ backgroundColor: "#f8f5ed" }}>
+        <section id="recursos" className="w-full py-20">
           <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center text-center gap-4">
-              <div className="inline-block rounded-full bg-[#003C2C] px-3 py-1 text-sm font-semibold text-white">
-                Recursos
-              </div>
-              <h2 className="text-3xl font-bold tracking-tighter md:text-4xl text-[#003C2C]">
-                Tudo que você precisa para monitoramento ambiental
+            <div className="text-center space-y-6 mb-16">
+              <Badge variant="outline" className="border-[#003C2C]/20 text-[#003C2C] bg-[#003C2C]/5">
+                Recursos Avançados
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+                Ferramentas profissionais para
+                <span className="text-[#003C2C] block">gestão ambiental eficiente</span>
               </h2>
-              <p className="max-w-[700px] text-[#003C2C] md:text-xl">
-                Nossa plataforma reúne em um só lugar dados de focos de incêndio, desmatamento e ações ambientais para
-                que você tome decisões mais acertadas.
-              </p>
             </div>
-            <div className="mx-auto grid max-w-5xl items-center gap-6 py-12 md:grid-cols-2 lg:grid-cols-3">
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
               <FeatureCard
-                title="Visualização Geoespacial"
-                description="Visualize dados georeferenciados como pontos de ações, passivos ambientais e vestígios de crimes ambientais."
+                title="Mapeamento Geoespacial"
+                description="Visualização avançada de dados georeferenciados com camadas personalizáveis e análise espacial em tempo real."
                 icon="MapPin"
+                className="border-0 shadow-lg hover:shadow-xl transition-all duration-300"
               />
               <FeatureCard
-                title="Camadas Interativas"
-                description="Exiba shapes, ações e pontos marcados no mapa com camadas personalizáveis e filtros avançados."
+                title="Gestão de Camadas"
+                description="Controle total sobre camadas de dados com filtros avançados, sobreposições e análises comparativas."
                 icon="Layers"
+                className="border-0 shadow-lg hover:shadow-xl transition-all duration-300"
               />
               <FeatureCard
-                title="Dashboard Analítico"
-                description="Acompanhe gráficos de fogo, desmatamento, chuva e nível do rio para análises completas."
-                icon="BarChart2"
+                title="Análise Preditiva"
+                description="Algoritmos de IA para previsão de riscos ambientais e otimização de estratégias de conservação."
+                icon="TrendingUp"
+                className="border-0 shadow-lg hover:shadow-xl transition-all duration-300"
               />
               <FeatureCard
                 title="Gestão de Dados"
-                description="Gerencie tabelas geoespaciais com operações de inserção, edição e exclusão de forma simplificada."
+                description="Plataforma robusta para armazenamento, processamento e análise de grandes volumes de dados ambientais."
                 icon="Database"
+                className="border-0 shadow-lg hover:shadow-xl transition-all duration-300"
               />
               <FeatureCard
-                title="Relatórios Detalhados"
-                description="Gere relatórios personalizados com dados filtrados por data, região ou tipo de ocorrência."
+                title="Relatórios Executivos"
+                description="Geração automatizada de relatórios personalizados com insights acionáveis para tomada de decisão."
                 icon="FileText"
+                className="border-0 shadow-lg hover:shadow-xl transition-all duration-300"
               />
               <FeatureCard
-                title="Segurança de Dados"
-                description="Autenticação segura via Supabase e controle de acesso para diferentes níveis de usuários."
-                icon="Shield"
+                title="Segurança Empresarial"
+                description="Controles de acesso granulares, criptografia de dados e conformidade com padrões de segurança."
+                icon="Lock"
+                className="border-0 shadow-lg hover:shadow-xl transition-all duration-300"
               />
+            </div>
+          </div>
+        </section>
+
+        {/* Use Cases Section */}
+        <section id="casos" className="w-full py-20 bg-slate-50">
+          <div className="container px-4 md:px-6">
+            <div className="text-center space-y-6 mb-16">
+              <Badge variant="outline" className="border-[#003C2C]/20 text-[#003C2C] bg-white">
+                Casos de Uso
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+                Soluções para diferentes
+                <span className="text-[#003C2C] block">necessidades organizacionais</span>
+              </h2>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div className="space-y-8">
+                <div className="space-y-6">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                      <Users className="h-5 w-5 text-green-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-slate-900 mb-2">Órgãos Governamentais</h3>
+                      <p className="text-slate-600 leading-relaxed">
+                        Monitoramento de políticas públicas ambientais, fiscalização de áreas protegidas e coordenação
+                        de ações de preservação em escala regional.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                      <Globe className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-slate-900 mb-2">ONGs e Institutos</h3>
+                      <p className="text-slate-600 leading-relaxed">
+                        Gestão de projetos de conservação, monitoramento de biodiversidade e relatórios de impacto para
+                        doadores e stakeholders.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0 mt-1">
+                      <Zap className="h-5 w-5 text-purple-600" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-slate-900 mb-2">Empresas Privadas</h3>
+                      <p className="text-slate-600 leading-relaxed">
+                        Compliance ambiental, gestão de riscos ESG e monitoramento de impactos ambientais de operações
+                        industriais.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="relative">
+                <Image
+                  src="/placeholder.svg?height=500&width=600"
+                  alt="Casos de Uso PRISMA"
+                  width={600}
+                  height={500}
+                  className="w-full h-auto rounded-2xl shadow-2xl"
+                />
+              </div>
             </div>
           </div>
         </section>
 
         {/* Testimonials Section */}
-        <section id="depoimentos" className="w-full py-12 md:py-24 lg:py-32" style={{ backgroundColor: "#D2E5B0" }}>
+        {/* <section className="w-full py-20">
           <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center text-center gap-4">
-              <div className="inline-block rounded-full bg-[#003C2C] px-3 py-1 text-sm font-semibold text-white">
+            <div className="text-center space-y-6 mb-16">
+              <Badge variant="outline" className="border-[#003C2C]/20 text-[#003C2C] bg-[#003C2C]/5">
                 Depoimentos
-              </div>
-              <h2 className="text-3xl font-bold tracking-tighter md:text-4xl text-[#003C2C]">
-                Utilizado por equipes de proteção ambiental
+              </Badge>
+              <h2 className="text-3xl md:text-4xl font-bold text-slate-900">
+                Confiança de organizações
+                <span className="text-[#003C2C] block">líderes em sustentabilidade</span>
               </h2>
-              <p className="max-w-[700px] text-[#003C2C] md:text-xl">
-                Veja o que nossos usuários dizem sobre a Sala de Situação e como ela tem transformado o monitoramento
-                ambiental.
-              </p>
             </div>
-            <div className="mx-auto grid max-w-5xl gap-6 py-12 md:grid-cols-2 lg:grid-cols-3">
-              <TestimonialCard
-                quote="A Sala de Situação transformou nossa capacidade de monitoramento. Conseguimos identificar focos de incêndio 40% mais rápido."
-                author="Carlos Mendes"
-                role="Analista Ambiental, Instituto Florestal"
-                avatarSrc="/placeholder.svg?height=40&width=40"
-              />
-              <TestimonialCard
-                quote="A interface intuitiva e os recursos poderosos fazem da Sala de Situação a solução perfeita para nossa equipe de campo."
-                author="Ana Oliveira"
-                role="Coordenadora, Projeto Amazônia Viva"
-                avatarSrc="/placeholder.svg?height=40&width=40"
-              />
-              <TestimonialCard
-                quote="Já testamos várias ferramentas de monitoramento, mas a Sala de Situação é de longe a mais completa e fácil de usar."
-                author="Roberto Santos"
-                role="Diretor, Fundação Rio da Prata"
-                avatarSrc="/placeholder.svg?height=40&width=40"
-              />
-            </div>
-          </div>
-        </section>
 
-        {/* Pricing Section */}
-        <section id="planos" className="w-full py-12 md:py-24 lg:py-32" style={{ backgroundColor: "#f8f5ed" }}>
-          <div className="container px-4 md:px-6">
-            <div className="flex flex-col items-center text-center gap-4">
-              <div className="inline-block rounded-full bg-[#003C2C] px-3 py-1 text-sm font-semibold text-white">
-                Planos
-              </div>
-              <h2 className="text-3xl font-bold tracking-tighter md:text-4xl text-[#003C2C]">
-                Preços simples e transparentes
-              </h2>
-              <p className="max-w-[700px] text-[#003C2C] md:text-xl">
-                Escolha o plano ideal para sua equipe. Todos os planos incluem um período de teste gratuito de 14 dias.
-              </p>
-            </div>
-            <div className="mx-auto grid max-w-5xl gap-6 py-12 md:grid-cols-3">
-              <PricingCard
-                title="Básico"
-                price="R$499"
-                description="Perfeito para pequenas equipes e projetos iniciais de monitoramento."
-                features={["Até 5 usuários", "10 camadas de dados", "Relatórios básicos", "Suporte por email"]}
-                buttonText="Iniciar Teste Gratuito"
-                popular={false}
+            <div className="grid md:grid-cols-3 gap-8">
+              <TestimonialCard
+                quote="A PRISMA revolucionou nossa capacidade de monitoramento. Reduzimos o tempo de resposta a incidentes ambientais em 60% e melhoramos significativamente nossa eficiência operacional."
+                author="Dr. Carlos Mendes"
+                role="Diretor de Monitoramento, IBAMA"
+                avatarSrc="/placeholder.svg?height=60&width=60"
+                className="border-0 shadow-lg"
               />
-              <PricingCard
-                title="Profissional"
-                price="R$999"
-                description="Ideal para equipes em crescimento que precisam de mais recursos e flexibilidade."
-                features={[
-                  "Até 20 usuários",
-                  "Camadas ilimitadas",
-                  "Relatórios avançados",
-                  "Suporte prioritário",
-                  "Fluxos de trabalho personalizados",
-                ]}
-                buttonText="Iniciar Teste Gratuito"
-                popular={true}
+              <TestimonialCard
+                quote="A plataforma oferece insights que antes eram impossíveis de obter. Nossa equipe consegue tomar decisões mais informadas e estratégicas para a conservação da Amazônia."
+                author="Ana Oliveira"
+                role="Coordenadora Científica, WWF Brasil"
+                avatarSrc="/placeholder.svg?height=60&width=60"
+                className="border-0 shadow-lg"
               />
-              <PricingCard
-                title="Empresarial"
-                price="R$2.499"
-                description="Para organizações com necessidades complexas e requisitos de segurança avançados."
-                features={[
-                  "Usuários ilimitados",
-                  "Camadas ilimitadas",
-                  "Segurança avançada",
-                  "Gerente de conta dedicado",
-                  "Integrações personalizadas",
-                  "Garantias de SLA",
-                ]}
-                buttonText="Falar com Vendas"
-                popular={false}
+              <TestimonialCard
+                quote="Implementamos a PRISMA em nossas operações e conseguimos melhorar nossos indicadores ESG de forma mensurável. A ferramenta é essencial para nossa estratégia de sustentabilidade."
+                author="Roberto Santos"
+                role="Gerente de Sustentabilidade, Vale"
+                avatarSrc="/placeholder.svg?height=60&width=60"
+                className="border-0 shadow-lg"
               />
             </div>
           </div>
-        </section>
+        </section> */}
 
         {/* CTA Section */}
-        <section id="contato" className="w-full py-12 md:py-24 lg:py-32 relative overflow-hidden">
-          {/* Background with gradient */}
-          <div className="absolute inset-0" style={{ backgroundColor: "#478D4F" }}></div>
+        <section
+          id="contato"
+          className="w-full py-20 bg-gradient-to-br from-[#003C2C] to-[#478D4F] relative overflow-hidden"
+        >
+          <div className="absolute inset-0 bg-[url('/placeholder.svg?height=800&width=800')] opacity-10"></div>
 
           <div className="container px-4 md:px-6 relative z-10">
-            <div className="flex flex-col items-center text-center gap-4">
-              <h2 className="text-3xl font-bold tracking-tighter md:text-4xl text-white">
-                Pronto para transformar seu monitoramento ambiental?
+            <div className="text-center space-y-8 max-w-4xl mx-auto">
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white leading-tight">
+                Pronto para transformar sua
+                <span className="block">gestão ambiental?</span>
               </h2>
-              <p className="max-w-[700px] text-white md:text-xl">
-                Junte-se a dezenas de equipes que usam a Sala de Situação para monitorar e proteger o meio ambiente de
-                forma eficiente.
+              <p className="text-xl text-white/90 leading-relaxed max-w-2xl mx-auto">
+                Junte-se a organizações líderes que confiam na PRISMA para monitoramento ambiental inteligente e tomada
+                de decisão baseada em dados.
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" className="bg-[#003C2C] text-white hover:bg-[#003C2C]/80">
-                  Começar Agora <ArrowRight className="ml-2 h-4 w-4" />
+
+              <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
+                <Button size="lg" className="bg-white text-[#003C2C] hover:bg-white/90 px-8">
+                  Solicitar Demonstração
+                  <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="bg-transparent text-white border-white hover:bg-white hover:text-[#478D4F]"
-                >
-                  Agendar Demonstração
+                <Button size="lg" variant="outline" className="border-white/30 hover:bg-white/10 px-8">
+                  Falar com Especialista
                 </Button>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-8 pt-12 border-t border-white/20">
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white mb-2">24/7</div>
+                  <div className="text-white/80">Suporte Técnico</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white mb-2">99.9%</div>
+                  <div className="text-white/80">Uptime Garantido</div>
+                </div>
+                <div className="text-center">
+                  <div className="text-2xl font-bold text-white mb-2">ISO 27001</div>
+                  <div className="text-white/80">Certificação</div>
+                </div>
               </div>
             </div>
           </div>
@@ -269,133 +453,120 @@ export default function LandingPage() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full border-t py-6 md:py-12" style={{ backgroundColor: "#003C2C", borderColor: "#478D4F" }}>
-        <div className="container px-4 md:px-6">
+      <footer className="w-full border-t bg-slate-900 text-white pt-10">
+        <div className="container px-4 md:px-6 py-12">
           <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 bg-white p-2 rounded-md inline-block">
-                <Image
-                  src="/prismalogo.png"
-                  alt="PRISMA AMBIENTAL Logo"
-                  width={200}
-                  height={60}
-                  className="rounded"
-                />
-              </div>
-              <p className="text-sm text-white">
-                A plataforma completa para monitoramento geoespacial e análise de dados ambientais.
+            <div className="space-y-6">
+             
+              <p className="text-slate-300 leading-relaxed">
+                Plataforma líder em inteligência geoespacial para monitoramento ambiental e tomada de decisão baseada em
+                dados.
               </p>
               <div className="flex gap-4">
-                <Link href="#" className="text-[#D2E5B0] hover:text-white">
+                <Link href="#" className="text-slate-400 hover:text-white transition-colors">
                   <Twitter className="h-5 w-5" />
-                  <span className="sr-only">Twitter</span>
                 </Link>
-                <Link href="#" className="text-[#D2E5B0] hover:text-white">
+                <Link href="#" className="text-slate-400 hover:text-white transition-colors">
                   <Linkedin className="h-5 w-5" />
-                  <span className="sr-only">LinkedIn</span>
                 </Link>
-                <Link href="#" className="text-[#D2E5B0] hover:text-white">
+                <Link href="#" className="text-slate-400 hover:text-white transition-colors">
                   <Github className="h-5 w-5" />
-                  <span className="sr-only">GitHub</span>
-                </Link>
-                <Link href="#" className="text-[#D2E5B0] hover:text-white">
-                  <Facebook className="h-5 w-5" />
-                  <span className="sr-only">Facebook</span>
                 </Link>
               </div>
             </div>
+
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-[#D2E5B0]">Produto</h3>
-              <ul className="space-y-2">
+              <h3 className="text-sm font-semibold text-white">Plataforma</h3>
+              <ul className="space-y-3">
                 <li>
-                  <Link href="#" className="text-sm text-white hover:text-[#D2E5B0]">
+                  <Link href="#" className="text-sm text-slate-300 hover:text-white transition-colors">
                     Recursos
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-sm text-white hover:text-[#D2E5B0]">
-                    Planos
-                  </Link>
-                </li>
-                <li>
-                  <Link href="#" className="text-sm text-white hover:text-[#D2E5B0]">
+                  <Link href="#" className="text-sm text-slate-300 hover:text-white transition-colors">
                     Integrações
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-sm text-white hover:text-[#D2E5B0]">
-                    Atualizações
+                  <Link href="#" className="text-sm text-slate-300 hover:text-white transition-colors">
+                    API
+                  </Link>
+                </li>
+                <li>
+                  <Link href="#" className="text-sm text-slate-300 hover:text-white transition-colors">
+                    Segurança
                   </Link>
                 </li>
               </ul>
             </div>
+
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-[#D2E5B0]">Recursos</h3>
-              <ul className="space-y-2">
+              <h3 className="text-sm font-semibold text-white">Recursos</h3>
+              <ul className="space-y-3">
                 <li>
-                  <Link href="#" className="text-sm text-white hover:text-[#D2E5B0]">
+                  <Link href="#" className="text-sm text-slate-300 hover:text-white transition-colors">
                     Documentação
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-sm text-white hover:text-[#D2E5B0]">
-                    Guias
+                  <Link href="#" className="text-sm text-slate-300 hover:text-white transition-colors">
+                    Centro de Ajuda
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-sm text-white hover:text-[#D2E5B0]">
+                  <Link href="#" className="text-sm text-slate-300 hover:text-white transition-colors">
                     Blog
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-sm text-white hover:text-[#D2E5B0]">
-                    Suporte
+                  <Link href="#" className="text-sm text-slate-300 hover:text-white transition-colors">
+                    Webinars
                   </Link>
                 </li>
               </ul>
             </div>
+
             <div className="space-y-4">
-              <h3 className="text-sm font-medium text-[#D2E5B0]">Empresa</h3>
-              <ul className="space-y-2">
+              <h3 className="text-sm font-semibold text-white">Empresa</h3>
+              <ul className="space-y-3">
                 <li>
-                  <Link href="#" className="text-sm text-white hover:text-[#D2E5B0]">
+                  <Link href="#" className="text-sm text-slate-300 hover:text-white transition-colors">
                     Sobre
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-sm text-white hover:text-[#D2E5B0]">
+                  <Link href="#" className="text-sm text-slate-300 hover:text-white transition-colors">
                     Carreiras
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-sm text-white hover:text-[#D2E5B0]">
-                    Privacidade
+                  <Link href="#" className="text-sm text-slate-300 hover:text-white transition-colors">
+                    Imprensa
                   </Link>
                 </li>
                 <li>
-                  <Link href="#" className="text-sm text-white hover:text-[#D2E5B0]">
-                    Termos
+                  <Link href="#" className="text-sm text-slate-300 hover:text-white transition-colors">
+                    Contato
                   </Link>
                 </li>
               </ul>
             </div>
           </div>
-          <div
-            className="mt-8 border-t pt-8 flex flex-col md:flex-row justify-between items-center"
-            style={{ borderColor: "#478D4F" }}
-          >
-            <p className="text-xs text-white">
-              &copy; {new Date().getFullYear()} PRISMA AMBIENTAL. Todos os direitos reservados.
+
+          <div className="mt-12 pt-8 border-t border-slate-800 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-sm text-slate-400">
+              © {new Date().getFullYear()} PRISMA AMBIENTAL. Todos os direitos reservados.
             </p>
-            <div className="flex gap-4 mt-4 md:mt-0">
-              <Link href="#" className="text-xs text-white hover:text-[#D2E5B0]">
-                Política de Privacidade
+            <div className="flex gap-6">
+              <Link href="#" className="text-sm text-slate-400 hover:text-white transition-colors">
+                Privacidade
               </Link>
-              <Link href="#" className="text-xs text-white hover:text-[#D2E5B0]">
-                Termos de Serviço
+              <Link href="#" className="text-sm text-slate-400 hover:text-white transition-colors">
+                Termos
               </Link>
-              <Link href="#" className="text-xs text-white hover:text-[#D2E5B0]">
-                Política de Cookies
+              <Link href="#" className="text-sm text-slate-400 hover:text-white transition-colors">
+                Cookies
               </Link>
             </div>
           </div>
@@ -404,4 +575,3 @@ export default function LandingPage() {
     </div>
   )
 }
-

@@ -1,40 +1,38 @@
-import Image from "next/image"
+import { Card, CardContent } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Quote } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface TestimonialCardProps {
   quote: string
   author: string
   role: string
   avatarSrc: string
+  className?: string
 }
 
-export function TestimonialCard({ quote, author, role, avatarSrc }: TestimonialCardProps) {
+export function TestimonialCard({ quote, author, role, avatarSrc, className }: TestimonialCardProps) {
   return (
-    <div className="flex flex-col p-6 bg-white rounded-lg shadow-sm border border-[#003C2C]/10 hover:shadow-md transition-shadow">
-      <div className="mb-4">
-        <svg
-          className="h-6 w-6 text-[#478D4F]"
-          fill="currentColor"
-          viewBox="0 0 24 24"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
-        </svg>
-      </div>
-      <p className="text-[#003C2C] mb-4">{quote}</p>
-      <div className="mt-auto flex items-center">
-        <Image
-          src={avatarSrc || "/placeholder.svg"}
-          alt={author}
-          width={40}
-          height={40}
-          className="rounded-full mr-3 border-2 border-[#D2E5B0]"
-        />
-        <div>
-          <h4 className="font-semibold text-[#003C2C]">{author}</h4>
-          <p className="text-xs text-[#003C2C]/70">{role}</p>
+    <Card className={cn("hover:shadow-lg transition-shadow duration-300", className)}>
+      <CardContent className="p-8">
+        <Quote className="h-8 w-8 text-[#003C2C]/20 mb-6" />
+        <blockquote className="text-slate-700 leading-relaxed mb-6">"{quote}"</blockquote>
+        <div className="flex items-center gap-4">
+          <Avatar className="h-12 w-12">
+            <AvatarImage src={avatarSrc || "/placeholder.svg"} alt={author} />
+            <AvatarFallback className="bg-[#003C2C] text-white">
+              {author
+                .split(" ")
+                .map((n) => n[0])
+                .join("")}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <div className="font-semibold text-slate-900">{author}</div>
+            <div className="text-sm text-slate-600">{role}</div>
+          </div>
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   )
 }
-
