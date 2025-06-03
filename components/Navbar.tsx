@@ -34,7 +34,7 @@ export function Navbar() {
 
   return (
     <TooltipProvider>
-      <nav className="flex flex-col h-screen w-16 bg-pantaneiro-green z-50">
+      <nav className="flex flex-col h-screen w-16 bg-pantaneiro-green z-50 sticky top-0 left-0 shadow-md">
         <div className="flex-1 flex flex-col items-center pt-6 gap-6">
           {navItems.map((item) => (
             <Tooltip key={item.name}>

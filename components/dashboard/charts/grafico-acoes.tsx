@@ -64,7 +64,7 @@ export function GraficoAcoes() {
   }, [processedData])
 
   if (isLoading) {
-    return <p className="text-white/70">Carregando...</p>
+    return <p className="text-black/70">Carregando...</p>
   }
 
   if (error) {
@@ -72,7 +72,7 @@ export function GraficoAcoes() {
   }
 
   if (processedData.length === 0) {
-    return <p className="text-white/70">Nenhum dado encontrado</p>
+    return <p className="text-black/70">Nenhum dado encontrado</p>
   }
 
   const chartData = processedData.map((item, index) => ({
@@ -84,7 +84,7 @@ export function GraficoAcoes() {
   return (
     <Card className="bg-white/10 border-white/20">
       <CardHeader>
-        <CardTitle className="text-white">
+        <CardTitle className="text-black">
           Ações Realizadas {selectedYear !== "todos" ? `em ${selectedYear}` : ""}
         </CardTitle>
       </CardHeader>
@@ -99,8 +99,8 @@ export function GraficoAcoes() {
                     const data = payload[0].payload
                     return (
                       <div className="bg-white/10 backdrop-blur-sm border border-white/20 p-2 rounded-lg shadow-lg">
-                        <p className="text-white font-semibold">{data.acao}</p>
-                        <p className="text-white/70">{data.valor} ações</p>
+                        <p className="text-black font-semibold">{data.acao}</p>
+                        <p className="text-black/70">{data.valor} ações</p>
                       </div>
                     )
                   }
@@ -123,10 +123,10 @@ export function GraficoAcoes() {
                     if (safeViewBox && typeof safeViewBox.cx === "number" && typeof safeViewBox.cy === "number") {
                       return (
                         <text x={safeViewBox.cx} y={safeViewBox.cy} textAnchor="middle" dominantBaseline="middle">
-                          <tspan x={safeViewBox.cx} y={safeViewBox.cy} className="fill-white text-3xl font-bold">
+                          <tspan x={safeViewBox.cx} y={safeViewBox.cy} className="fill-black text-3xl font-bold">
                             {totalAcoes.toLocaleString()}
                           </tspan>
-                          <tspan x={safeViewBox.cx} y={safeViewBox.cy + 30} className="fill-white/70 text-lg">
+                          <tspan x={safeViewBox.cx} y={safeViewBox.cy + 30} className="fill-black/70 text-lg">
                             Ações
                           </tspan>
                         </text>
@@ -139,9 +139,9 @@ export function GraficoAcoes() {
             </PieChart>
           </ResponsiveContainer>
         </ChartContainer>
-        <div className="mt-4 flex items-center justify-center gap-2 text-sm text-white/70">
+        <div className="mt-4 flex items-center justify-center gap-2 text-sm text-black/70">
           <TrendingUp className="h-4 w-4" />
-          <span>
+          <span className="text-black/70">
             Total de {totalAcoes} ações {selectedYear !== "todos" ? `em ${selectedYear}` : "realizadas"}
           </span>
         </div>
