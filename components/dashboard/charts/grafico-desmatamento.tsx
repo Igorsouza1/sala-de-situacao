@@ -27,21 +27,44 @@ export function GraficoDesmatamento() {
       config={{
         desmatamento: {
           label: "Áreas Desmatadas (ha)",
-          color: "hsl(var(--chart-2))",
+          color: "hsl(120, 60%, 50%)", // Verde mais vibrante
         },
       }}
       className="h-[300px]"
     >
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-          <XAxis dataKey="mes" stroke="rgba(255,255,255,0.7)" />
-          <YAxis stroke="rgba(255,255,255,0.7)" />
-          <ChartTooltip content={<ChartTooltipContent />} />
-          <Bar dataKey="desmatamento" fill="hsl(var(--chart-2))" />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.2)" />
+          <XAxis 
+            dataKey="mes" 
+            stroke="rgba(255,255,255,0.8)" 
+            fontSize={12}
+            tickLine={{ stroke: "rgba(255,255,255,0.3)" }}
+            axisLine={{ stroke: "rgba(255,255,255,0.3)" }}
+          />
+          <YAxis 
+            stroke="rgba(255,255,255,0.8)" 
+            fontSize={12}
+            tickLine={{ stroke: "rgba(255,255,255,0.3)" }}
+            axisLine={{ stroke: "rgba(255,255,255,0.3)" }}
+          />
+          <ChartTooltip 
+            content={<ChartTooltipContent />}
+            contentStyle={{
+              backgroundColor: "hsl(var(--dashboard-card))",
+              border: "1px solid hsl(var(--dashboard-accent))",
+              borderRadius: "8px",
+              color: "hsl(var(--dashboard-text))"
+            }}
+          />
+          <Bar 
+            dataKey="desmatamento" 
+            fill="hsl(120, 60%, 50%)"
+            radius={[4, 4, 0, 0]}
+          />
         </BarChart>
       </ResponsiveContainer>
     </ChartContainer>
-  )
-}
+  );
+};
 

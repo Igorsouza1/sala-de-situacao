@@ -1,6 +1,6 @@
 "use client"
 
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from "recharts"
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { useFogo } from "@/context/FogoContext"
 
@@ -27,21 +27,44 @@ export function GraficoFogo() {
       config={{
         focos: {
           label: "Focos de Incêndio",
-          color: "hsl(var(--chart-1))",
+          color: "hsl(0, 70%, 60%)", // Vermelho mais vibrante
         },
       }}
       className="h-[300px]"
     >
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
-          <XAxis dataKey="mes" stroke="rgba(255,255,255,0.7)" />
-          <YAxis stroke="rgba(255,255,255,0.7)" />
-          <ChartTooltip content={<ChartTooltipContent />} />
-          <Bar dataKey="focos" fill="hsl(var(--chart-1))" />
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.2)" />
+          <XAxis 
+            dataKey="mes" 
+            stroke="rgba(255,255,255,0.8)" 
+            fontSize={12}
+            tickLine={{ stroke: "rgba(255,255,255,0.3)" }}
+            axisLine={{ stroke: "rgba(255,255,255,0.3)" }}
+          />
+          <YAxis 
+            stroke="rgba(255,255,255,0.8)" 
+            fontSize={12}
+            tickLine={{ stroke: "rgba(255,255,255,0.3)" }}
+            axisLine={{ stroke: "rgba(255,255,255,0.3)" }}
+          />
+          <Tooltip 
+            content={<ChartTooltipContent />}
+            contentStyle={{
+              backgroundColor: "hsl(var(--dashboard-card))",
+              border: "1px solid hsl(var(--dashboard-accent))",
+              borderRadius: "8px",
+              color: "hsl(var(--dashboard-text))"
+            }}
+          />
+          <Bar 
+            dataKey="focos" 
+            fill="hsl(0, 70%, 60%)"
+            radius={[4, 4, 0, 0]}
+          />
         </BarChart>
       </ResponsiveContainer>
     </ChartContainer>
-  )
-}
+  );
+};
 
