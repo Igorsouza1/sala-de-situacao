@@ -65,7 +65,7 @@ function DashboardContent() {
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 ">
             <Badge variant="outline" className="border-pantaneiro-lime text-pantaneiro-lime bg-pantaneiro-lime/10">
               <CheckCircle className="h-3 w-3 mr-1" />
               Sistema Ativo
@@ -74,7 +74,7 @@ function DashboardContent() {
               <SelectTrigger className="w-[180px] bg-[hsl(var(--dashboard-accent))] border-[hsl(var(--dashboard-accent))] text-[hsl(var(--dashboard-text))]">
                 <SelectValue placeholder="Selecione o ano" />
               </SelectTrigger>
-              <SelectContent className="bg-[hsl(var(--dashboard-card))] border-[hsl(var(--dashboard-accent))]">
+              <SelectContent className="bg-[hsl(var(--dashboard-card))] border-[hsl(var(--dashboard-accent))] text-white">
                 <SelectItem value="todos">Todos os anos</SelectItem>
                 <SelectItem value="2021">2021</SelectItem>
                 <SelectItem value="2022">2022</SelectItem>
@@ -86,19 +86,19 @@ function DashboardContent() {
             <Button
               variant="outline"
               size="sm"
-              className="border-[hsl(var(--dashboard-accent))] text-[hsl(var(--dashboard-text))] hover:bg-[hsl(var(--dashboard-accent))]"
+              className="border-[hsl(var(--dashboard-accent))] text-[hsl(var(--dashboard-text))] hover:bg-[hsl(var(--dashboard-accent))] text-black hover:text-white"
             >
               <RefreshCw className="h-4 w-4 mr-2" />
               Atualizar
             </Button>
-            <Button
+            {/* <Button
               variant="outline"
               size="sm"
-              className="border-[hsl(var(--dashboard-accent))] text-[hsl(var(--dashboard-text))] hover:bg-[hsl(var(--dashboard-accent))]"
+              className="border-[hsl(var(--dashboard-accent))] text-[hsl(var(--dashboard-text))] hover:bg-[hsl(var(--dashboard-accent))] text-black hover:text-white"
             >
               <Download className="h-4 w-4 mr-2" />
               Exportar
-            </Button>
+            </Button> */}
           </div>
         </div>
 
