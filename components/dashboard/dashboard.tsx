@@ -29,6 +29,8 @@ import {
   TreePine,
   CheckCircle,
 } from "lucide-react"
+import { GraficoTurbidezDiario } from "./charts/GraficoTurbidezDiario"
+import { DailyDequeProvider } from "@/context/DailyDequeContext"
 
 function DashboardContent() {
   const [anoSelecionado, setAnoSelecionado] = useState<string>("todos")
@@ -350,6 +352,9 @@ function DashboardContent() {
                             </div>
                           </div>
                         </CardContent>
+                        <DailyDequeProvider>   {/* micro diário */}
+                <GraficoTurbidezDiario />
+              </DailyDequeProvider>
                       </Card>
                     </div>
                   </div>
