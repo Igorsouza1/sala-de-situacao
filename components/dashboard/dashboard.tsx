@@ -31,6 +31,7 @@ import {
 } from "lucide-react"
 import { GraficoTurbidezDiario } from "./charts/GraficoTurbidezDiario"
 import { DailyDequeProvider } from "@/context/DailyDequeContext"
+import { GraficoPonteCure } from "./charts/GraficoCureDiario"
 
 function DashboardContent() {
   const [anoSelecionado, setAnoSelecionado] = useState<string>("todos")
@@ -352,6 +353,7 @@ function DashboardContent() {
                             </div>
                           </div>
                         </CardContent>
+                        <GraficoPonteCure />
                         <DailyDequeProvider>   {/* micro diário */}
                 <GraficoTurbidezDiario />
               </DailyDequeProvider>
