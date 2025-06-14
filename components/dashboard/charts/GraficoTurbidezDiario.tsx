@@ -36,11 +36,14 @@ const COLORS = {
 } as const
 
 const TURBIDEZ_BANDS = [
-  { y1: 0, y2: 1, color: "#10b98133", label: "Claríssima", range: "0-1 NTU" },
-  { y1: 1, y2: 5, color: "#3b82f633", label: "Muito limpa", range: "1-5 NTU" },
-  { y1: 5, y2: 50, color: "#f59e0b33", label: "Turva", range: "5-50 NTU" },
-  { y1: 50, y2: 100, color: "#ef444433", label: "Muito turva", range: "50-100 NTU" },
-  { y1: 100, y2: 300, color: "#7f1d1d33", label: "Sedimentos", range: ">100 NTU" },
+  // 🟢 0–3 NTU
+  { y1: 0,  y2: 3,   color: "#10b98133", label: "Flutuação excelente", range: "0–3 NTU" },
+  // 🟡 4–7 NTU
+  { y1: 3,  y2: 7,   color: "#eab30833", label: "Boa – atenção",       range: "4–7 NTU" },
+  // 🟠 8–15 NTU
+  { y1: 7,  y2: 15,  color: "#f9731633", label: "Regular – informe",   range: "8–15 NTU" },
+  // 🔴 >15 NTU
+  { y1: 15, y2: 300, color: "#ef444433", label: "Experiência ruim",    range: ">15 NTU" },
 ]
 
 export function GraficoTurbidezDiario(): JSX.Element {
