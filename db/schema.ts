@@ -437,10 +437,28 @@ export const baciaRioDaPrataInRioDaPrata = rioDaPrata.table("Bacia_Rio_Da_Prata"
 
 
 export const expedicoes = rioDaPrata.table("trilha_e_waypoints", {
-	id: serial().primaryKey().notNull(),
-	tipo: text().notNull(), // 'trilha' ou 'waypoint'
-	name: text(),           // nome do waypoint (ex: "Jacaré")
-	recordedAt: timestamp({ mode: 'string' }),
-	ele: doublePrecision(),
-	geom: geometry({ type: "geometry", srid: 4326 }), // pode ser LineString ou Point
+        id: serial().primaryKey().notNull(),
+        tipo: text().notNull(), // 'trilha' ou 'waypoint'
+        name: text(),           // nome do waypoint (ex: "Jacaré")
+        recordedAt: timestamp({ mode: 'string' }),
+        ele: doublePrecision(),
+        geom: geometry({ type: "geometry", srid: 4326 }), // pode ser LineString ou Point
   });
+
+export const trilhas = rioDaPrata.table("trilhas", {
+        id: serial().primaryKey().notNull(),
+        nome: text().notNull(),
+        geom: geometry({ type: "linestring", srid: 4326 }).notNull(),
+        data: timestamp({ mode: 'string' }),
+});
+
+export const waypoints = rioDaPrata.table("waypoints", {
+        id: serial().primaryKey().notNull(),
+        trilhaId: integer("trilha_id")
+                .references(() => trilhas.id, { onDelete: "cascade" })
+                .notNull(),
+        nome: text(),
+        geom: geometry({ type: "point", srid: 4326 }).notNull(),
+        ele: doublePrecision(),
+        recordedAt: timestamp({ mode: 'string' }),
+});

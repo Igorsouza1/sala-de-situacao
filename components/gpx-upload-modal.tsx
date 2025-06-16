@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useCallback, type DragEvent } from "react"
+import gpxParse from "gpx-parse/lib/gpx-parse"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -25,6 +26,7 @@ export function GpxUploadModal({ isOpen, onClose, onUpload }: GpxUploadModalProp
   const [file, setFile] = useState<File | null>(null)
   const [isDragging, setIsDragging] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [confirmNoWaypoints, setConfirmNoWaypoints] = useState(false)
   const { toast } = useToast()
 
   const handleFileChange = (selectedFile: File | null) => {
@@ -68,20 +70,59 @@ export function GpxUploadModal({ isOpen, onClose, onUpload }: GpxUploadModalProp
     }
   }
 
-  const handleUploadClick = () => {
-    if (file) {
-      onUpload(file)
-      toast({
-        title: "Sucesso",
-        description: `Arquivo GPX "${file.name}" enviado.`,
+  const parseGpx = (text: string) =>
+    new Promise<any>((resolve, reject) => {
+      gpxParse.parseGpx(text, (err, data) => {
+        if (err) reject(err)
+        else resolve(data)
       })
+    })
+
+  const sendFile = async (force = false) => {
+    if (!file) return
+    const formData = new FormData()
+    formData.append("file", file)
+    if (force) formData.append("force", "true")
+    const res = await fetch("/api/gpx-upload", {
+      method: "POST",
+      body: formData,
+    })
+    if (res.ok) {
+      toast({ title: "Sucesso", description: `Arquivo GPX "${file.name}" enviado.` })
       handleClose()
+    } else {
+      const data = await res.json().catch(() => null)
+      setError(data?.error || "Falha no upload")
+    }
+  }
+
+  const handleUploadClick = async () => {
+    if (!file) return
+    try {
+      const text = await file.text()
+      const parsed = await parseGpx(text)
+
+      if (!parsed.tracks || parsed.tracks.length === 0) {
+        setError("Arquivo GPX não contém trilha")
+        return
+      }
+
+      if (!parsed.waypoints || parsed.waypoints.length === 0) {
+        setConfirmNoWaypoints(true)
+        return
+      }
+
+      await sendFile()
+    } catch (err) {
+      console.error(err)
+      setError("Falha ao processar o arquivo GPX")
     }
   }
 
   const handleRemoveFile = () => {
     setFile(null)
     setError(null)
+    setConfirmNoWaypoints(false)
     // Resetar o valor do input file para permitir selecionar o mesmo arquivo novamente
     const fileInput = document.getElementById("gpx-file-input") as HTMLInputElement
     if (fileInput) {
@@ -93,10 +134,12 @@ export function GpxUploadModal({ isOpen, onClose, onUpload }: GpxUploadModalProp
     setFile(null)
     setIsDragging(false)
     setError(null)
+    setConfirmNoWaypoints(false)
     onClose()
   }
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
@@ -161,5 +204,25 @@ export function GpxUploadModal({ isOpen, onClose, onUpload }: GpxUploadModalProp
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <Dialog open={confirmNoWaypoints} onOpenChange={setConfirmNoWaypoints}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Nenhum waypoint encontrado</DialogTitle>
+          <DialogDescription>
+            O arquivo GPX não possui waypoints. Deseja continuar o upload mesmo assim?
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setConfirmNoWaypoints(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={() => { setConfirmNoWaypoints(false); sendFile(true) }}>
+            Continuar
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+    </>
   )
 }

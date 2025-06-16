@@ -31,9 +31,14 @@ export function Navbar() {
     await supabase.auth.signOut()
   }
 
-  const handleGpxUpload = (file: File) => {
-    console.log("Arquivo GPX para upload:", file)
-    // Implemente sua lógica de upload aqui
+  const handleGpxUpload = async (file: File) => {
+    const formData = new FormData()
+    formData.append("file", file)
+    const res = await fetch("/api/gpx-upload", { method: "POST", body: formData })
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      console.error("Falha no upload GPX", data)
+    }
   }
 
   // Only show nav items after role check is complete
