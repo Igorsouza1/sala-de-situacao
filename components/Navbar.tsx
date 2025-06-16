@@ -1,48 +1,69 @@
 "use client"
 
-import { useState } from "react" // Importar useState
+import { useState } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { Plus, Map, BarChartIcon as ChartNetwork, HardDrive, User, Settings, LogOut } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
+import {
+  Plus,
+  Map,
+  BarChartIcon as ChartNetwork,
+  HardDrive,
+  User,
+  Settings,
+  LogOut,
+} from "lucide-react"
+
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+
 import { useUserRole } from "@/hooks/useUserRole"
 import { createClient } from "@/utils/supabase/client"
-import { GpxUploadModal } from "@/components/gpx-upload-modal" // Importar o modal GPX
+import { GpxUploadModal } from "@/components/gpx-upload-modal" // modal já envia sozinho
 
+/* ───────── itens de navegação ───────── */
 const commonNavItems = [
   { name: "Mapa", href: "/protected", icon: Map },
   { name: "Dashboard", href: "/protected/dashboard", icon: ChartNetwork },
 ]
 
-// Removido o item "Adicionar" daqui para ser tratado separadamente
-const adminNavItems = [{ name: "Painel do Administrador", href: "/protected/admin", icon: HardDrive }]
+const adminNavItems = [
+  { name: "Painel do Administrador", href: "/protected/admin", icon: HardDrive },
+]
 
 export function Navbar() {
   const pathname = usePathname()
+  const router = useRouter()
   const { isAdmin, isLoading } = useUserRole()
   const supabase = createClient()
 
-  const [isGpxModalOpen, setIsGpxModalOpen] = useState(false) // Estado para controlar o modal GPX
+  const [isGpxModalOpen, setIsGpxModalOpen] = useState(false)
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
+    router.refresh()
   }
 
-  const handleGpxUpload = (file: File) => {
-    console.log("Arquivo GPX para upload:", file)
-    // Implemente sua lógica de upload aqui
-  }
-
-  // Only show nav items after role check is complete
-  const navItems = isLoading ? commonNavItems : [...commonNavItems, ...(isAdmin ? adminNavItems : [])]
+  const navItems = isLoading
+    ? commonNavItems
+    : [...commonNavItems, ...(isAdmin ? adminNavItems : [])]
 
   return (
     <TooltipProvider>
-      <nav className="flex flex-col h-screen w-16 bg-pantaneiro-green z-50 sticky top-0 left-0 shadow-md">
+      <nav className="flex flex-col h-screen w-16 bg-pantaneiro-green sticky top-0 left-0 shadow-md z-50">
         <div className="flex-1 flex flex-col items-center pt-6 gap-6">
+          {/* links de navegação */}
           {navItems.map((item) => (
             <Tooltip key={item.name}>
               <TooltipTrigger asChild>
@@ -58,33 +79,40 @@ export function Navbar() {
                   <item.icon className="w-5 h-5" strokeWidth={1.5} />
                 </Link>
               </TooltipTrigger>
-              <TooltipContent side="right" className="bg-pantaneiro-lime text-pantaneiro-green ">
+              <TooltipContent
+                side="right"
+                className="bg-pantaneiro-lime text-pantaneiro-green"
+              >
                 <p>{item.name}</p>
               </TooltipContent>
             </Tooltip>
           ))}
 
-          {/* Botão de Adicionar (Plus) para abrir o modal GPX */}
-          {isAdmin && ( // Apenas mostra se for admin, como estava antes
+          {/* botão de upload GPX (só admins) */}
+          {isAdmin && (
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setIsGpxModalOpen(true)} // Abre o modal
-                  className={`p-2 rounded-lg transition-colors duration-200 text-white hover:bg-pantaneiro-lime hover:bg-opacity-20`}
-                  aria-label="Upload GPX File"
+                  onClick={() => setIsGpxModalOpen(true)}
+                  className="p-2 rounded-lg text-white transition-colors duration-200 hover:bg-pantaneiro-lime hover:bg-opacity-20"
+                  aria-label="Upload GPX"
                 >
                   <Plus className="w-5 h-5" strokeWidth={1.5} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent side="right" className="bg-pantaneiro-lime text-pantaneiro-green ">
+              <TooltipContent
+                side="right"
+                className="bg-pantaneiro-lime text-pantaneiro-green"
+              >
                 <p>Upload GPX</p>
               </TooltipContent>
             </Tooltip>
           )}
         </div>
 
+        {/* avatar / menu do usuário */}
         <div className="flex flex-col items-center mb-6">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -95,19 +123,26 @@ export function Navbar() {
               >
                 <Avatar className="w-8 h-8">
                   <AvatarImage src="https://github.com/shadcn.png" />
-                  <AvatarFallback className="bg-pantaneiro-lime text-pantaneiro-green">CN</AvatarFallback>
+                  <AvatarFallback className="bg-pantaneiro-lime text-pantaneiro-green">
+                    CN
+                  </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent side="right" className="w-56 bg-pantaneiro-green text-white z-[1000]">
+            <DropdownMenuContent
+              side="right"
+              className="w-56 bg-pantaneiro-green text-white z-[1000]"
+            >
               <DropdownMenuItem className="flex items-center gap-2 hover:bg-pantaneiro-lime hover:bg-opacity-20">
                 <User className="w-4 h-4" />
                 <span>Perfil</span>
               </DropdownMenuItem>
+
               <DropdownMenuItem className="flex items-center gap-2 hover:bg-pantaneiro-lime hover:bg-opacity-20">
                 <Settings className="w-4 h-4" />
                 <span>Configurações</span>
               </DropdownMenuItem>
+
               <DropdownMenuItem
                 className="flex items-center gap-2 hover:bg-pantaneiro-lime hover:bg-opacity-20"
                 onSelect={handleSignOut}
@@ -120,8 +155,11 @@ export function Navbar() {
         </div>
       </nav>
 
-      {/* O modal GPX é renderizado aqui, fora da nav, mas dentro do componente Navbar */}
-      <GpxUploadModal isOpen={isGpxModalOpen} onClose={() => setIsGpxModalOpen(false)} onUpload={handleGpxUpload} />
+      {/* modal de upload GPX */}
+      <GpxUploadModal
+        isOpen={isGpxModalOpen}
+        onClose={() => setIsGpxModalOpen(false)}
+      />
     </TooltipProvider>
   )
 }
