@@ -2,9 +2,9 @@
 
 import { ComposedChart, Line, Bar, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
 import { useMemo, useState, useCallback, type JSX } from "react"
-import { format, subDays, differenceInCalendarDays } from "date-fns"
+import { format, parseISO, differenceInCalendarDays } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { usePonteCure } from "@/context/PonteCureContext"
+import { useDailyPonteCure } from "@/context/DailyPonteCureContext"
 import { ChartContainer } from "@/components/ui/chart"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -34,75 +34,6 @@ interface SerieDia {
   chuva: number
   nivel: number
   visibilidade: "cristalino" | "turvo" | "muitoTurvo"
-  probabilidadeCristalino: number
-  probabilidadeTurvo: number
-  probabilidadeMuitoTurvo: number
-}
-
-// Função para gerar dados diários simulados baseados nos dados mensais
-function gerarDadosDiarios(dadosMensais: any[], ano: number, diasParaGerar: number): SerieDia[] {
-  const dadosDiarios: SerieDia[] = []
-
-  // Se não há dados, usar ano atual como fallback
-  const anoBase = ano || new Date().getFullYear()
-
-  // Começar do final do ano e voltar os dias solicitados
-  const ultimoDiaDoAno = new Date(anoBase, 11, 31) // 31 de dezembro do ano
-
-  for (let i = diasParaGerar - 1; i >= 0; i--) {
-    const dataAtual = subDays(ultimoDiaDoAno, i)
-    const mesAtual = dataAtual.getMonth()
-
-    // Pega os dados do mês correspondente (ou usa dados padrão se não existir)
-    const dadosDoMes = dadosMensais[mesAtual] || {
-      chuva: Math.random() * 20,
-      nivel: [0.8 + Math.random() * 1.5],
-      visibilidade: { cristalino: 15, turvo: 10, muitoTurvo: 5 },
-    }
-
-    // Simula variação diária baseada nos dados mensais
-    const variacao = (Math.random() - 0.5) * 0.3 // ±15% de variação
-    const chuvaBase = dadosDoMes.chuva / 30 // Distribui chuva mensal pelos dias
-    const chuvaDiaria = Math.max(0, chuvaBase + (Math.random() * 10 - 5)) // Adiciona aleatoriedade
-
-    // Calcula nível com base na chuva e variação natural
-    const nivelBase =
-      dadosDoMes.nivel.length > 0
-        ? dadosDoMes.nivel.reduce((s: number, n: number) => s + n, 0) / dadosDoMes.nivel.length
-        : 1.2
-    const nivel = Math.max(0.1, nivelBase + variacao + (chuvaDiaria > 5 ? 0.1 : 0))
-
-    // Determina visibilidade baseada no nível e chuva recente
-    const totalVis =
-      dadosDoMes.visibilidade.cristalino + dadosDoMes.visibilidade.turvo + dadosDoMes.visibilidade.muitoTurvo
-    const probCristalino = totalVis > 0 ? dadosDoMes.visibilidade.cristalino / totalVis : 0.5
-    const probTurvo = totalVis > 0 ? dadosDoMes.visibilidade.turvo / totalVis : 0.3
-    const probMuitoTurvo = totalVis > 0 ? dadosDoMes.visibilidade.muitoTurvo / totalVis : 0.2
-
-    // Ajusta probabilidades baseado na chuva recente
-    let visibilidade: SerieDia["visibilidade"] = "cristalino"
-    const fatorChuva = chuvaDiaria > 10 ? 0.3 : chuvaDiaria > 5 ? 0.1 : 0
-    const rand = Math.random() + fatorChuva
-
-    if (rand > probCristalino + probTurvo) {
-      visibilidade = "muitoTurvo"
-    } else if (rand > probCristalino) {
-      visibilidade = "turvo"
-    }
-
-    dadosDiarios.push({
-      label: format(dataAtual, "dd/MM", { locale: ptBR }),
-      data: dataAtual,
-      chuva: Number(chuvaDiaria.toFixed(1)),
-      nivel: Number(nivel.toFixed(2)),
-      visibilidade,
-      probabilidadeCristalino: probCristalino * 100,
-      probabilidadeTurvo: probTurvo * 100,
-      probabilidadeMuitoTurvo: probMuitoTurvo * 100,
-    })
-  }
-
-  return dadosDiarios
 }
 
 function CustomTooltip({ active, payload, label }: any) {
@@ -143,7 +74,7 @@ function CustomTooltip({ active, payload, label }: any) {
 }
 
 export function GraficoPonteCure(): JSX.Element {
-  const { filteredPonteCureData, isLoading, error, selectedYear } = usePonteCure()
+  const { raw, isLoading, error } = useDailyPonteCure()
   const [presetDias, setPresetDias] = useState<number>(30)
 
   const handlePresetChange = useCallback((dias: number) => {
@@ -151,34 +82,22 @@ export function GraficoPonteCure(): JSX.Element {
   }, [])
 
   const serieCompleta: SerieDia[] = useMemo(() => {
-    // Determinar o ano baseado no selectedYear do contexto
-    let anoParaUsar = new Date().getFullYear()
+    if (!raw.length) return []
 
-    if (selectedYear && selectedYear !== "todos") {
-      anoParaUsar = Number.parseInt(selectedYear)
-    } else if (filteredPonteCureData.length > 0) {
-      // Se tem dados, usar 2024 como padrão (ano dos dados reais)
-      anoParaUsar = 2024
-    }
+    const sorted = raw
+      .slice()
+      .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())
 
-    if (!filteredPonteCureData.length) {
-      // Se não há dados, gera dados simulados para o ano correto
-      const dadosSimulados = Array(12)
-        .fill(null)
-        .map((_, idx) => ({
-          chuva: 20 + Math.random() * 40,
-          nivel: [1.0 + Math.random() * 1.5, 1.2 + Math.random() * 1.3],
-          visibilidade: {
-            cristalino: 15 + Math.random() * 10,
-            turvo: 8 + Math.random() * 7,
-            muitoTurvo: 2 + Math.random() * 5,
-          },
-        }))
-      return gerarDadosDiarios(dadosSimulados, anoParaUsar, 30)
-    }
-
-    return gerarDadosDiarios(filteredPonteCureData, anoParaUsar, 30)
-  }, [filteredPonteCureData, selectedYear])
+    return sorted.map((item) => ({
+      label: format(parseISO(item.data), "dd/MM", { locale: ptBR }),
+      data: parseISO(item.data),
+      chuva: Number(item.chuva ?? 0),
+      nivel: Number(item.nivel ?? 0),
+      visibilidade: (item.visibilidade ?? "cristalino")
+        .toLowerCase()
+        .replace(" ", "") as SerieDia["visibilidade"],
+    }))
+  }, [raw])
 
   const displayData = useMemo(() => {
     return serieCompleta.slice(-presetDias)
