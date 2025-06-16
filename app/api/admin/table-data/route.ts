@@ -30,7 +30,6 @@ export async function GET(request: Request) {
     const data = await db.execute<QueryResult>(sql`
       SELECT *
       FROM rio_da_prata.${sql.identifier(table)}
-      LIMIT 100
     `)
     return NextResponse.json(data.rows)
   } catch (error) {
