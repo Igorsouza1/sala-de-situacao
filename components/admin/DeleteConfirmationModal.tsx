@@ -1,5 +1,14 @@
+"use client"
+
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog"
 
 interface DeleteConfirmationModalProps {
   isOpen: boolean
@@ -13,21 +22,20 @@ export function DeleteConfirmationModal({ isOpen, onClose, onConfirm, itemName }
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Confirm Deletion</DialogTitle>
+          <DialogTitle>Confirmar Exclusão</DialogTitle>
+          <DialogDescription>
+            Tem certeza que deseja excluir o item "{itemName}"? Esta ação não pode ser desfeita.
+          </DialogDescription>
         </DialogHeader>
-        <div className="py-4">
-          <p>Are you sure you want to delete the item "{itemName}"? This action cannot be undone.</p>
-        </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Cancel
+            Cancelar
           </Button>
           <Button variant="destructive" onClick={onConfirm}>
-            Delete
+            Excluir
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
-

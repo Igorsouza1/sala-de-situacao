@@ -1,3 +1,4 @@
+"use client"
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,17 +17,31 @@ export function AddItemModal({ isOpen, onClose, onAdd, table }: AddItemModalProp
   const [formData, setFormData] = useState<Record<string, string>>({})
 
   useEffect(() => {
-    if (table) {
+    if (table && isOpen) {
+      // Fetch fields when modal opens and table is selected
       fetchTableFields(table)
+    } else if (!isOpen) {
+      // Clear form data when modal closes
+      setFormData({})
+      setFields([])
     }
-  }, [table])
+  }, [table, isOpen])
 
   const fetchTableFields = async (tableName: string) => {
-    const response = await fetch(`/api/admin/table-fields?table=${tableName}`)
-    const data = await response.json()
-    // Filter out 'id' and 'geom' fields
-    setFields(data.filter((field: string) => field !== "id" && field !== "geom"))
-    setFormData({})
+    try {
+      const response = await fetch(`/api/admin/table-fields?table=${tableName}`)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      const data = await response.json()
+      // Filter out 'id' and 'geom' fields
+      setFields(data.filter((field: string) => field !== "id" && field !== "geom"))
+      setFormData({}) // Reset form data for new fields
+    } catch (error) {
+      console.error("Error fetching table fields:", error)
+      // Optionally, show a toast message to the user
+      setFields([]) // Clear fields on error
+    }
   }
 
   const handleInputChange = (field: string, value: string) => {
@@ -34,27 +49,36 @@ export function AddItemModal({ isOpen, onClose, onAdd, table }: AddItemModalProp
   }
 
   const handleSubmit = () => {
-    const formattedData = { ...formData };
-  
+    const formattedData = { ...formData }
+
     // Converte o formato do datetime-local para um formato mais padronizado
-    if (formattedData.time) {
-      formattedData.time = new Date(formattedData.time).toISOString(); // Garante um formato ISO compatível
+    // Apenas se o campo 'time' existir nos campos atuais (evita erro se 'time' não for um campo da tabela)
+    if (fields.includes("time") && formattedData.time) {
+      try {
+        formattedData.time = new Date(formattedData.time).toISOString()
+      } catch (e) {
+        console.error("Error formatting time:", e)
+        // Handle invalid date string if necessary, e.g., show an error
+      }
     }
-  
-    onAdd(formattedData);
-    onClose();
+
+    onAdd(formattedData)
+    // onClose(); // onClose is typically called by the parent after successful onAdd
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[800px]">
         <DialogHeader>
-          <DialogTitle>Add New Item</DialogTitle>
+          <DialogTitle>Adicionar Novo Item</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-4 py-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto">
+          {fields.length === 0 && (
+            <p className="text-muted-foreground col-span-full text-center">Carregando campos da tabela...</p>
+          )}
           {fields.map((field) => (
-            <div key={field} className="grid grid-cols-3 items-center gap-4">
-              <Label htmlFor={field} className="text-right">
+            <div key={field} className="grid grid-cols-1 items-start gap-2 md:grid-cols-3 md:items-center md:gap-4">
+              <Label htmlFor={field} className="md:text-right">
                 {field}
               </Label>
               {field === "time" ? (
@@ -63,24 +87,29 @@ export function AddItemModal({ isOpen, onClose, onAdd, table }: AddItemModalProp
                   type="datetime-local"
                   value={formData[field] || ""}
                   onChange={(e) => handleInputChange(field, e.target.value)}
-                  className="col-span-2"
+                  className="col-span-1 md:col-span-2"
                 />
               ) : (
                 <Input
                   id={field}
                   value={formData[field] || ""}
                   onChange={(e) => handleInputChange(field, e.target.value)}
-                  className="col-span-2"
+                  className="col-span-1 md:col-span-2"
+                  placeholder={`Valor para ${field}`}
                 />
               )}
             </div>
           ))}
         </div>
         <DialogFooter>
-          <Button onClick={handleSubmit}>Add Item</Button>
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSubmit} disabled={fields.length === 0}>
+            Adicionar Item
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
   )
 }
-

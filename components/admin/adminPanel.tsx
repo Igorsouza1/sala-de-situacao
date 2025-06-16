@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Search, Filter, Plus } from "lucide-react"
+import { useState, useEffect, useMemo } from "react"
+import { Search, Filter, Plus, X } from "lucide-react"
 import { DataTable } from "./DataTable"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,8 +10,16 @@ import { GeoJsonUploadModal } from "./GeojsonUpload"
 import { AddItemModal } from "./AddItemModal"
 import { EditItemModal } from "./EditItemModal"
 import { DeleteConfirmationModal } from "./DeleteConfirmationModal"
+import { FilterModal } from "./FilterModa" // Importação do novo modal
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
+
+interface FilterState {
+  column: string
+  operator: string
+  value: string
+}
 
 export function AdminPanel() {
   const [tables, setTables] = useState<string[]>([])
@@ -22,9 +30,11 @@ export function AdminPanel() {
   const [isAddItemModalOpen, setIsAddItemModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false) // Estado para o novo modal
   const [editingItem, setEditingItem] = useState<any | null>(null)
   const [deletingItem, setDeletingItem] = useState<any | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [activeFilters, setActiveFilters] = useState<FilterState[]>([]) // Estado para filtros ativos
   const { toast } = useToast()
 
   useEffect(() => {
@@ -34,6 +44,12 @@ export function AdminPanel() {
   useEffect(() => {
     if (selectedTable) {
       fetchTableData(selectedTable)
+      setActiveFilters([]) // Limpa filtros ao trocar de tabela
+      setSearchQuery("") // Limpa pesquisa ao trocar de tabela
+    } else {
+      setTableData([])
+      setActiveFilters([])
+      setSearchQuery("")
     }
   }, [selectedTable])
 
@@ -48,8 +64,8 @@ export function AdminPanel() {
     } catch (error) {
       console.error("Error fetching tables:", error)
       toast({
-        title: "Error",
-        description: "Failed to fetch tables. Please try again.",
+        title: "Erro",
+        description: "Falha ao buscar tabelas. Por favor, tente novamente.",
         variant: "destructive",
       })
     }
@@ -66,8 +82,8 @@ export function AdminPanel() {
     } catch (error) {
       console.error(`Error fetching data for table ${tableName}:`, error)
       toast({
-        title: "Error",
-        description: `Failed to fetch data for table ${tableName}. Please try again.`,
+        title: "Erro",
+        description: `Falha ao buscar dados para a tabela ${tableName}. Por favor, tente novamente.`,
         variant: "destructive",
       })
     }
@@ -101,20 +117,19 @@ export function AdminPanel() {
         await fetchTableData(selectedTable)
         setIsAddItemModalOpen(false)
         toast({
-          title: "Success",
-          description: "Item added successfully.",
+          title: "Sucesso",
+          description: "Item adicionado com sucesso.",
         })
       } catch (error) {
         console.error("Error adding item:", error)
         toast({
-          title: "Error",
-          description: "Failed to add item. Please try again.",
+          title: "Erro",
+          description: "Falha ao adicionar item. Por favor, tente novamente.",
           variant: "destructive",
         })
       }
     }
   }
-
 
   const confirmDeleteItem = async () => {
     if (deletingItem && selectedTable) {
@@ -131,14 +146,14 @@ export function AdminPanel() {
         setIsDeleteModalOpen(false)
         setDeletingItem(null)
         toast({
-          title: "Success",
-          description: "Item deleted successfully.",
+          title: "Sucesso",
+          description: "Item deletado com sucesso.",
         })
       } catch (error) {
         console.error("Error deleting item:", error)
         toast({
-          title: "Error",
-          description: "Failed to delete item. Please try again.",
+          title: "Erro",
+          description: "Falha ao deletar item. Por favor, tente novamente.",
           variant: "destructive",
         })
       }
@@ -147,15 +162,13 @@ export function AdminPanel() {
 
   const handleSaveEdit = async (editedItem: any) => {
     if (selectedTable) {
-      
-      console.log(editedItem)
       try {
         const response = await fetch(`/api/admin/update-item?table=${selectedTable}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(editedItem),
         })
-        
+
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`)
         }
@@ -163,51 +176,124 @@ export function AdminPanel() {
         setIsEditModalOpen(false)
         setEditingItem(null)
         toast({
-          title: "Success",
-          description: "Item updated successfully.",
+          title: "Sucesso",
+          description: "Item atualizado com sucesso.",
         })
       } catch (error) {
         console.error("Error updating item:", error)
         toast({
-          title: "Error",
-          description: "Failed to update item. Please try again.",
+          title: "Erro",
+          description: "Falha ao atualizar item. Por favor, tente novamente.",
           variant: "destructive",
         })
       }
     }
   }
 
-  const filteredData = tableData.filter((item) => {
-    if (!searchQuery) return true
-    return Object.values(item).some(
-      (value) => value && value.toString().toLowerCase().includes(searchQuery.toLowerCase()),
-    )
-  })
+  const handleApplyFilters = (newFilters: FilterState[]) => {
+    setActiveFilters(newFilters)
+    setIsFilterModalOpen(false)
+  }
+
+  const filteredData = useMemo(() => {
+    let data = tableData
+
+    if (searchQuery) {
+      data = data.filter((item) =>
+        Object.values(item).some(
+          (value) => value && value.toString().toLowerCase().includes(searchQuery.toLowerCase()),
+        ),
+      )
+    }
+
+    if (activeFilters.length > 0) {
+      data = data.filter((item) => {
+        return activeFilters.every((filter) => {
+          const itemValue = item[filter.column]
+          const filterValue = filter.value
+
+          if (itemValue === null || itemValue === undefined) {
+            if (
+              filter.operator === "equals" &&
+              (filterValue === null || filterValue === "" || filterValue === undefined)
+            )
+              return true
+            if (
+              filter.operator === "notEquals" &&
+              filterValue !== null &&
+              filterValue !== "" &&
+              filterValue !== undefined
+            )
+              return true
+            return false
+          }
+
+          const itemValueStr = String(itemValue).toLowerCase()
+          const filterValueStr = String(filterValue).toLowerCase()
+
+          const numericItemValue = Number.parseFloat(String(itemValue))
+          const numericFilterValue = Number.parseFloat(String(filterValue))
+          const canCompareNumerically = !isNaN(numericItemValue) && !isNaN(numericFilterValue)
+
+          switch (filter.operator) {
+            case "equals":
+              return itemValueStr === filterValueStr
+            case "contains":
+              return itemValueStr.includes(filterValueStr)
+            case "startsWith":
+              return itemValueStr.startsWith(filterValueStr)
+            case "endsWith":
+              return itemValueStr.endsWith(filterValueStr)
+            case "notEquals":
+              return itemValueStr !== filterValueStr
+            case "greaterThan":
+              return canCompareNumerically ? numericItemValue > numericFilterValue : itemValueStr > filterValueStr
+            case "lessThan":
+              return canCompareNumerically ? numericItemValue < numericFilterValue : itemValueStr < filterValueStr
+            case "greaterThanOrEqual":
+              return canCompareNumerically ? numericItemValue >= numericFilterValue : itemValueStr >= filterValueStr
+            case "lessThanOrEqual":
+              return canCompareNumerically ? numericItemValue <= numericFilterValue : itemValueStr <= filterValueStr
+            default:
+              return true
+          }
+        })
+      })
+    }
+    return data
+  }, [tableData, searchQuery, activeFilters])
+
+  const tableColumns = useMemo(() => {
+    if (tableData.length > 0) {
+      return Object.keys(tableData[0])
+    }
+    return []
+  }, [tableData])
 
   return (
     <div className="h-screen max-h-screen overflow-hidden bg-gray-50/90">
       <div className="container mx-auto p-6 h-full flex flex-col">
         <div className="bg-white rounded-lg shadow-sm border p-6 flex-grow overflow-hidden flex flex-col">
           <div className="flex items-center justify-between mb-6">
-            <h1 className="text-2xl font-semibold">Database Management</h1>
+            <h1 className="text-2xl font-semibold">Gerenciamento de Banco de Dados</h1>
             <div className="flex space-x-2">
-              <Button variant="outline" onClick={() => setIsCsvModalOpen(true)}>
+              <Button variant="outline" onClick={() => setIsCsvModalOpen(true)} disabled={!selectedTable}>
                 Upload CSV
               </Button>
-              <Button variant="outline" onClick={() => setIsGeoJsonModalOpen(true)}>
+              <Button variant="outline" onClick={() => setIsGeoJsonModalOpen(true)} disabled={!selectedTable}>
                 Upload GeoJSON
               </Button>
-              <Button onClick={() => setIsAddItemModalOpen(true)}>
+              <Button onClick={() => setIsAddItemModalOpen(true)} disabled={!selectedTable}>
                 <Plus className="h-4 w-4 mr-2" />
-                New Item
+                Novo Item
               </Button>
             </div>
           </div>
 
-          <div className="flex items-center space-x-4 mb-6">
-            <Select onValueChange={handleTableSelect} value={selectedTable || undefined}>
+          <div className="flex items-center space-x-4 mb-4">
+            <Select onValueChange={handleTableSelect} value={selectedTable || ""}>
               <SelectTrigger className="w-[200px]">
-                <SelectValue placeholder="Select a table" />
+                <SelectValue placeholder="Selecione uma tabela" />
               </SelectTrigger>
               <SelectContent>
                 {tables.map((table) => (
@@ -220,16 +306,50 @@ export function AdminPanel() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
-                placeholder="Search items..."
+                placeholder="Pesquisar itens..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
+                disabled={!selectedTable}
               />
             </div>
-            <Button variant="outline" size="icon">
+            <Button variant="outline" size="icon" onClick={() => setIsFilterModalOpen(true)} disabled={!selectedTable}>
               <Filter className="h-4 w-4" />
             </Button>
           </div>
+
+          {activeFilters.length > 0 && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold text-sm text-blue-700">Filtros Ativos:</h4>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setActiveFilters([])}
+                  className="text-blue-600 hover:text-blue-800"
+                >
+                  Limpar Todos
+                </Button>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {activeFilters.map((filter, index) => (
+                  <Badge key={index} variant="secondary" className="flex items-center gap-1 py-1 px-2">
+                    {filter.column} {filter.operator} "{filter.value}"
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 ml-1 hover:bg-blue-200 rounded-full"
+                      onClick={() => {
+                        setActiveFilters((prev) => prev.filter((_, i) => i !== index))
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
 
           {selectedTable ? (
             <div className="flex-grow overflow-hidden">
@@ -237,7 +357,7 @@ export function AdminPanel() {
             </div>
           ) : (
             <div className="flex-grow flex items-center justify-center text-gray-500">
-              Select a table to view its contents
+              Selecione uma tabela para visualizar seu conteúdo.
             </div>
           )}
         </div>
@@ -247,10 +367,10 @@ export function AdminPanel() {
         isOpen={isCsvModalOpen}
         onClose={() => setIsCsvModalOpen(false)}
         onUpload={(data) => {
-          console.log("CSV data:", data)
+          console.log("CSV data:", data) // Implementar lógica de upload
           toast({
-            title: "Success",
-            description: "CSV data uploaded successfully.",
+            title: "Sucesso",
+            description: "Dados CSV enviados (implementar lógica).",
           })
         }}
       />
@@ -258,10 +378,10 @@ export function AdminPanel() {
         isOpen={isGeoJsonModalOpen}
         onClose={() => setIsGeoJsonModalOpen(false)}
         onUpload={(data) => {
-          console.log("GeoJSON data:", data)
+          console.log("GeoJSON data:", data) // Implementar lógica de upload
           toast({
-            title: "Success",
-            description: "GeoJSON data uploaded successfully.",
+            title: "Sucesso",
+            description: "Dados GeoJSON enviados (implementar lógica).",
           })
         }}
       />
@@ -281,9 +401,15 @@ export function AdminPanel() {
         isOpen={isDeleteModalOpen}
         onClose={() => setIsDeleteModalOpen(false)}
         onConfirm={confirmDeleteItem}
-        itemName={deletingItem ? String(Object.values(deletingItem)[0] ?? "") : ""}
+        itemName={deletingItem ? String(Object.values(deletingItem)[1] ?? Object.values(deletingItem)[0] ?? "") : ""}
+      />
+      <FilterModal
+        isOpen={isFilterModalOpen}
+        onClose={() => setIsFilterModalOpen(false)}
+        columns={tableColumns}
+        onApplyFilters={handleApplyFilters}
+        currentFilters={activeFilters}
       />
     </div>
   )
 }
-
