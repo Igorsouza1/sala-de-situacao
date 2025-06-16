@@ -1,23 +1,43 @@
 import { NextResponse } from "next/server"
 import { db } from "@/db"
 import { ponteDoCureInRioDaPrata } from "@/db/schema"
-import { and, gte, lte } from "drizzle-orm"
+import { and, gte, lte, inArray, desc, asc } from "drizzle-orm"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const startDate = searchParams.get("startDate")
   const endDate = searchParams.get("endDate")
 
-  const conditions = [] as any[]
-  if (startDate) {
-    conditions.push(gte(ponteDoCureInRioDaPrata.data, startDate))
-  }
-  if (endDate) {
-    conditions.push(lte(ponteDoCureInRioDaPrata.data, endDate))
-  }
-
   try {
-    const query = db
+    let dataFiltro: string[] = []
+
+    if (!startDate && !endDate) {
+      const dias = await db
+        .selectDistinct({ data: ponteDoCureInRioDaPrata.data })
+        .from(ponteDoCureInRioDaPrata)
+        .orderBy(desc(ponteDoCureInRioDaPrata.data))
+        .limit(30)
+
+      dataFiltro = dias
+        .map((d) => d.data)
+        .filter((d): d is string => !!d)
+    }
+
+    const conditions = [] as any[]
+
+    if (startDate) {
+      conditions.push(gte(ponteDoCureInRioDaPrata.data, startDate))
+    }
+
+    if (endDate) {
+      conditions.push(lte(ponteDoCureInRioDaPrata.data, endDate))
+    }
+
+    if (!startDate && !endDate && dataFiltro.length > 0) {
+      conditions.push(inArray(ponteDoCureInRioDaPrata.data, dataFiltro))
+    }
+
+    const result = await db
       .select({
         id: ponteDoCureInRioDaPrata.id,
         local: ponteDoCureInRioDaPrata.local,
@@ -27,18 +47,15 @@ export async function GET(request: Request) {
         visibilidade: ponteDoCureInRioDaPrata.visibilidade,
       })
       .from(ponteDoCureInRioDaPrata)
+      .where(and(...conditions))
+      .orderBy(asc(ponteDoCureInRioDaPrata.data))
 
-    if (conditions.length > 0) {
-      query.where(and(...conditions))
-    }
-
-    const result = await query.execute()
     return NextResponse.json(result)
   } catch (error) {
     console.error("Erro ao buscar dados diários da Ponte do Cure:", error)
     return NextResponse.json(
       { error: "Falha ao obter os dados diários da Ponte do Cure" },
-      { status: 500 },
+      { status: 500 }
     )
   }
 }

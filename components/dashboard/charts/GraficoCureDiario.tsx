@@ -31,8 +31,8 @@ const COLORS = {
 interface SerieDia {
   label: string
   data: Date
-  chuva: number
-  nivel: number
+  chuva: number | null
+  nivel: number | null
   visibilidade: "cristalino" | "turvo" | "muitoTurvo"
 }
 
@@ -84,6 +84,7 @@ export function GraficoPonteCure(): JSX.Element {
   const serieCompleta: SerieDia[] = useMemo(() => {
     if (!raw.length) return []
 
+    console.log(raw)
     const sorted = raw
       .slice()
       .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())
@@ -91,8 +92,8 @@ export function GraficoPonteCure(): JSX.Element {
     return sorted.map((item) => ({
       label: format(parseISO(item.data), "dd/MM", { locale: ptBR }),
       data: parseISO(item.data),
-      chuva: Number(item.chuva ?? 0),
-      nivel: Number(item.nivel ?? 0),
+      chuva: item.chuva !== null ? Number(item.chuva) : null,
+      nivel: item.nivel !== null ? Number(item.nivel) : null,
       visibilidade: (item.visibilidade ?? "cristalino")
         .toLowerCase()
         .replace(" ", "") as SerieDia["visibilidade"],
@@ -251,7 +252,7 @@ export function GraficoPonteCure(): JSX.Element {
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
-                  domain={[0, (d: number) => Math.ceil(d * 1.1)]}
+                  domain={[0, (d: number) => (d ? Math.ceil(d * 1.1) : 1)]}
                   tickFormatter={(v) => `${v.toFixed(0)}`}
                   label={{
                     value: "Chuva (mm)",
@@ -268,7 +269,7 @@ export function GraficoPonteCure(): JSX.Element {
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
-                  domain={[0, (d: number) => Math.ceil(d * 1.1)]}
+                  domain={[0, (d: number) => (d ? Math.ceil(d * 1.1) : 1)]}
                   tickFormatter={(v) => `${v.toFixed(1)}`}
                   label={{
                     value: "Nível (m)",
@@ -297,7 +298,7 @@ export function GraficoPonteCure(): JSX.Element {
                   dot={(props: any) => {
                     const { cx, cy, payload } = props
                     const cor = COLORS[payload.visibilidade as keyof typeof COLORS]
-                    return <circle cx={cx} cy={cy} r={6} fill={cor} stroke="#fff" strokeWidth={3} />
+                    return <circle key={cx} cx={cx} cy={cy} r={6} fill={cor} stroke="#fff" strokeWidth={3} />
                   }}
                   activeDot={{ r: 8, stroke: "#fff", strokeWidth: 3 }}
                 />
