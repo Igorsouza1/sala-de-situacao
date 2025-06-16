@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react" // Importar useState
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Plus, Map, BarChartIcon as ChartNetwork, HardDrive, User, Settings, LogOut } from "lucide-react"
@@ -9,24 +10,30 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useUserRole } from "@/hooks/useUserRole"
 import { createClient } from "@/utils/supabase/client"
+import { GpxUploadModal } from "@/components/gpx-upload-modal" // Importar o modal GPX
 
 const commonNavItems = [
   { name: "Mapa", href: "/protected", icon: Map },
   { name: "Dashboard", href: "/protected/dashboard", icon: ChartNetwork },
 ]
 
-const adminNavItems = [
-  { name: "Painel do Administrador", href: "/protected/admin", icon: HardDrive },
-  { name: "Adicionar", href: "/add", icon: Plus },
-]
+// Removido o item "Adicionar" daqui para ser tratado separadamente
+const adminNavItems = [{ name: "Painel do Administrador", href: "/protected/admin", icon: HardDrive }]
 
 export function Navbar() {
   const pathname = usePathname()
   const { isAdmin, isLoading } = useUserRole()
   const supabase = createClient()
 
+  const [isGpxModalOpen, setIsGpxModalOpen] = useState(false) // Estado para controlar o modal GPX
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
+  }
+
+  const handleGpxUpload = (file: File) => {
+    console.log("Arquivo GPX para upload:", file)
+    // Implemente sua lógica de upload aqui
   }
 
   // Only show nav items after role check is complete
@@ -56,6 +63,26 @@ export function Navbar() {
               </TooltipContent>
             </Tooltip>
           ))}
+
+          {/* Botão de Adicionar (Plus) para abrir o modal GPX */}
+          {isAdmin && ( // Apenas mostra se for admin, como estava antes
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsGpxModalOpen(true)} // Abre o modal
+                  className={`p-2 rounded-lg transition-colors duration-200 text-white hover:bg-pantaneiro-lime hover:bg-opacity-20`}
+                  aria-label="Upload GPX File"
+                >
+                  <Plus className="w-5 h-5" strokeWidth={1.5} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="bg-pantaneiro-lime text-pantaneiro-green ">
+                <p>Upload GPX</p>
+              </TooltipContent>
+            </Tooltip>
+          )}
         </div>
 
         <div className="flex flex-col items-center mb-6">
@@ -92,7 +119,9 @@ export function Navbar() {
           </DropdownMenu>
         </div>
       </nav>
+
+      {/* O modal GPX é renderizado aqui, fora da nav, mas dentro do componente Navbar */}
+      <GpxUploadModal isOpen={isGpxModalOpen} onClose={() => setIsGpxModalOpen(false)} onUpload={handleGpxUpload} />
     </TooltipProvider>
   )
 }
-
