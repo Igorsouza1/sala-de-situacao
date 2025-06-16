@@ -434,3 +434,13 @@ export const baciaRioDaPrataInRioDaPrata = rioDaPrata.table("Bacia_Rio_Da_Prata"
 	gdpUdUsu: bigint("gdp_ud_usu", { mode: "number" }),
 	hdiIxSav: integer("hdi_ix_sav"),
 });
+
+
+export const expedicoes = rioDaPrata.table("trilha_e_waypoints", {
+	id: serial().primaryKey().notNull(),
+	tipo: text().notNull(), // 'trilha' ou 'waypoint'
+	name: text(),           // nome do waypoint (ex: "Jacaré")
+	recordedAt: timestamp({ mode: 'string' }),
+	ele: doublePrecision(),
+	geom: geometry({ type: "geometry", srid: 4326 }), // pode ser LineString ou Point
+  });
