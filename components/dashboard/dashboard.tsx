@@ -32,6 +32,7 @@ import {
 import { GraficoTurbidezDiario } from "./charts/GraficoTurbidezDiario"
 import { DailyDequeProvider } from "@/context/DailyDequeContext"
 import { GraficoPonteCure } from "./charts/GraficoCureDiario"
+import { DailyPonteCureProvider } from "@/context/DailyPonteCureContext"
 
 function DashboardContent() {
   const [anoSelecionado, setAnoSelecionado] = useState<string>("todos")
@@ -353,7 +354,9 @@ function DashboardContent() {
                             </div>
                           </div>
                         </CardContent>
-                        <GraficoPonteCure />
+                        <DailyPonteCureProvider>
+                          <GraficoPonteCure />
+                        </DailyPonteCureProvider>
                         <DailyDequeProvider>   {/* micro diário */}
                 <GraficoTurbidezDiario />
               </DailyDequeProvider>
