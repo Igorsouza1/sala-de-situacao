@@ -272,42 +272,7 @@ function DashboardContent() {
 
                     {/* Micro View - Detailed Analysis */}
                     <div className="space-y-6">
-                      {/* Detailed Point Analysis */}
-                      <div className="grid md:grid-cols-2 gap-6">
-                        <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-300 bg-[hsl(var(--dashboard-card))] border border-[hsl(var(--dashboard-accent))]">
-                          <CardHeader className="pb-4">
-                            <CardTitle className="text-[hsl(var(--dashboard-text))] flex items-center gap-2">
-                              <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center border border-blue-500/30">
-                                <Droplets className="h-4 w-4 text-blue-400" />
-                              </div>
-                              Deque de Pedras - Análise Detalhada
-                            </CardTitle>
-                            <p className="text-sm text-[hsl(var(--dashboard-muted))]">
-                              Monitoramento micro de qualidade da água
-                            </p>
-                          </CardHeader>
-                          <CardContent>
-                            <GraficoPontos ponto="deque" ano={anoSelecionado} />
-                          </CardContent>
-                        </Card>
-
-                        <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-300 bg-[hsl(var(--dashboard-card))] border border-[hsl(var(--dashboard-accent))]">
-                          <CardHeader className="pb-4">
-                            <CardTitle className="text-[hsl(var(--dashboard-text))] flex items-center gap-2">
-                              <div className="w-8 h-8 bg-pantaneiro-lime/20 rounded-lg flex items-center justify-center border border-pantaneiro-lime/30">
-                                <Activity className="h-4 w-4 text-pantaneiro-lime" />
-                              </div>
-                              Ponte do Cure - Análise Detalhada
-                            </CardTitle>
-                            <p className="text-sm text-[hsl(var(--dashboard-muted))]">
-                              Monitoramento micro de nível e visibilidade
-                            </p>
-                          </CardHeader>
-                          <CardContent>
-                            <GraficoPontos ponto="ponte" ano={anoSelecionado} />
-                          </CardContent>
-                        </Card>
-                      </div>
+                      
 
                       {/* Micro Analysis Summary */}
                       <Card className="border-0 shadow-md bg-[hsl(var(--dashboard-card))] border border-[hsl(var(--dashboard-accent))]">
