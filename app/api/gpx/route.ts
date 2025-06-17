@@ -10,11 +10,12 @@ import type {
   Position,
 } from "geojson"
 
-// ───────── helpers de narrowing ─────────
+// ────── Type Guards ──────
 const isLineString = (g: any): g is LineString => g?.type === "LineString"
-const isPoint      = (g: any): g is Point      => g?.type === "Point"
+const isPoint = (g: any): g is Point => g?.type === "Point"
 
-const toMultiLineStringZ = (fc: FeatureCollection): string | null => {
+// ────── Converte GeoJSON para MULTILINESTRING Z (WKT) ──────
+function toMultiLineStringZ(fc: FeatureCollection): string | null {
   const segments: string[] = []
 
   for (const feat of fc.features) {
@@ -30,9 +31,10 @@ const toMultiLineStringZ = (fc: FeatureCollection): string | null => {
   return segments.length ? `MULTILINESTRING Z (${segments.join(",")})` : null
 }
 
+// ────── POST: Upload de arquivo GPX ──────
 export async function POST(request: Request) {
   try {
-    // ───── entrada do arquivo ─────
+    // ─── Recebe e valida o arquivo GPX ───
     const form = await request.formData()
     const file = form.get("file")
     if (!(file instanceof File))
@@ -42,30 +44,29 @@ export async function POST(request: Request) {
     const xmlDoc = new DOMParser().parseFromString(gpxString, "text/xml")
     const geojson = gpxToGeoJSON(xmlDoc) as FeatureCollection
 
+    // ─── Extrai a trilha principal ───
     const wkt = toMultiLineStringZ(geojson)
     if (!wkt)
       return NextResponse.json({ error: "GPX sem trilhas" }, { status: 400 })
 
+    // ─── Extrai datas dos waypoints ───
+    const times: string[] = geojson.features
+      .filter(f => isPoint(f.geometry))
+      .map(f => f.properties?.time)
+      .filter((t): t is string => !!t)
+      .sort()
 
-    // Coleta todas as datas dos pontos
-const times: string[] = geojson.features
-.filter(f => isPoint(f.geometry))
-.map(f => f.properties?.time)
-.filter((t): t is string => !!t);
+    const dataInicio = times[0] ?? null
+    const dataFim = times[times.length - 1] ?? null
+    let duracaoMinutos: number | null = null
 
-// Ordena
-times.sort(); // ordem crescente ISO 8601
+    if (dataInicio && dataFim) {
+      const inicio = new Date(dataInicio)
+      const fim = new Date(dataFim)
+      duracaoMinutos = Math.floor((fim.getTime() - inicio.getTime()) / 60000)
+    }
 
-const dataInicio = times[0] ?? null;
-const dataFim = times[times.length - 1] ?? null;
-
-let duracaoMinutos: number | null = null;
-if (dataInicio && dataFim) {
-  const inicio = new Date(dataInicio);
-  const fim = new Date(dataFim);
-  duracaoMinutos = Math.floor((fim.getTime() - inicio.getTime()) / 60000);
-}
-
+    // ─── Insere trilha no banco ───
     const nomeBase = file.name.replace(/\.gpx$/i, "")
     const { rows } = await db.execute(sql`
       INSERT INTO rio_da_prata.trilhas (nome, geom, data_inicio, data_fim, duracao_minutos)
@@ -80,6 +81,7 @@ if (dataInicio && dataFim) {
     `)
     const trilhaId = rows[0].id as number
 
+    // ─── Insere waypoints individuais ───
     for (const feat of geojson.features) {
       const geom = feat.geometry
       if (isPoint(geom)) {
@@ -98,6 +100,7 @@ if (dataInicio && dataFim) {
     }
 
     return NextResponse.json({ success: true, trilhaId })
+
   } catch (err) {
     console.error("Erro ao processar GPX:", err)
     return NextResponse.json({ error: "Erro no servidor" }, { status: 500 })
