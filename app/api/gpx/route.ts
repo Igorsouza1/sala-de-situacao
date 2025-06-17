@@ -1,16 +1,9 @@
-/**
- * app/api/gpx/route.ts
- * Converte GPX em MULTILINESTRING Z e grava em PostGIS.
- * npm i @tmcw/togeojson @xmldom/xmldom
- */
 import { NextResponse } from "next/server"
 import { db, sql } from "@/db"
-
 import { gpx as gpxToGeoJSON } from "@tmcw/togeojson"
 import { DOMParser } from "@xmldom/xmldom"
 
 import type {
-  Feature,
   FeatureCollection,
   LineString,
   Point,
@@ -39,37 +32,60 @@ const toMultiLineStringZ = (fc: FeatureCollection): string | null => {
 
 export async function POST(request: Request) {
   try {
-    // ─────── entrada ───────
+    // ───── entrada do arquivo ─────
     const form = await request.formData()
     const file = form.get("file")
     if (!(file instanceof File))
       return NextResponse.json({ error: "Arquivo não enviado" }, { status: 400 })
 
-    // ─────── parse GPX ───────
-    const xml     = await file.text()
-    const xmlDoc  = new DOMParser().parseFromString(xml, "text/xml")
+    const gpxString = await file.text()
+    const xmlDoc = new DOMParser().parseFromString(gpxString, "text/xml")
     const geojson = gpxToGeoJSON(xmlDoc) as FeatureCollection
 
     const wkt = toMultiLineStringZ(geojson)
     if (!wkt)
       return NextResponse.json({ error: "GPX sem trilhas" }, { status: 400 })
 
-    // ─────── trilha ───────
+
+    // Coleta todas as datas dos pontos
+const times: string[] = geojson.features
+.filter(f => isPoint(f.geometry))
+.map(f => f.properties?.time)
+.filter((t): t is string => !!t);
+
+// Ordena
+times.sort(); // ordem crescente ISO 8601
+
+const dataInicio = times[0] ?? null;
+const dataFim = times[times.length - 1] ?? null;
+
+let duracaoMinutos: number | null = null;
+if (dataInicio && dataFim) {
+  const inicio = new Date(dataInicio);
+  const fim = new Date(dataFim);
+  duracaoMinutos = Math.floor((fim.getTime() - inicio.getTime()) / 60000);
+}
+
     const nomeBase = file.name.replace(/\.gpx$/i, "")
     const { rows } = await db.execute(sql`
-      INSERT INTO rio_da_prata.trilhas (nome, geom)
-      VALUES (${nomeBase}, ST_SetSRID(ST_GeomFromText(${wkt}), 4326))
+      INSERT INTO rio_da_prata.trilhas (nome, geom, data_inicio, data_fim, duracao_minutos)
+      VALUES (
+        ${nomeBase},
+        ST_SetSRID(ST_GeomFromText(${wkt}), 4326),
+        ${dataInicio},
+        ${dataFim},
+        ${duracaoMinutos}
+      )
       RETURNING id
     `)
     const trilhaId = rows[0].id as number
 
-    // ─────── waypoints ───────
     for (const feat of geojson.features) {
       const geom = feat.geometry
       if (isPoint(geom)) {
         const [lon, lat, ele] = geom.coordinates
         await db.execute(sql`
-          INSERT INTO rio_da_prata.waypoints (trilha_id, nome, geom, ele, recorded_at)
+          INSERT INTO rio_da_prata.waypoints (trilha_id, nome, geom, ele, recordedAt)
           VALUES (
             ${trilhaId},
             ${feat.properties?.name ?? null},
