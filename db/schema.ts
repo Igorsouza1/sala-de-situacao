@@ -432,5 +432,23 @@ export const baciaRioDaPrataInRioDaPrata = rioDaPrata.table("Bacia_Rio_Da_Prata"
 	gdpUdSsu: bigint("gdp_ud_ssu", { mode: "number" }),
 	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
 	gdpUdUsu: bigint("gdp_ud_usu", { mode: "number" }),
-	hdiIxSav: integer("hdi_ix_sav"),
+        hdiIxSav: integer("hdi_ix_sav"),
+});
+
+export const trilhas = rioDaPrata.table("trilhas", {
+        id: serial().primaryKey().notNull(),
+        nome: text().notNull(),
+        geom: geometry({ type: "MultiLineStringZ", srid: 4326 }).notNull(),
+        dataInicio: timestamp("data_inicio", { mode: 'string' }),
+        dataFim: timestamp("data_fim", { mode: 'string' }),
+        duracaoMinutos: integer("duracao_minutos"),
+});
+
+export const waypoints = rioDaPrata.table("waypoints", {
+        id: serial().primaryKey().notNull(),
+        trilhaId: integer("trilha_id").references(() => trilhas.id, { onDelete: "cascade" }).notNull(),
+        nome: text(),
+        geom: geometry({ type: "point", srid: 4326 }).notNull(),
+        ele: doublePrecision(),
+        recordedat: timestamp({ mode: 'string' }),
 });

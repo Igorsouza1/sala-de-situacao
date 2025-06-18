@@ -29,6 +29,11 @@ type MapData = {
   banhado: GeoJSONFeatureCollection
 }
 
+type ExpedicoesData = {
+  trilhas: GeoJSONFeatureCollection
+  waypoints: GeoJSONFeatureCollection
+}
+
 type ActionsData = {
   [key: string]: GeoJSONFeatureCollection
 }
@@ -42,6 +47,7 @@ type ModalData = {
 type MapContextType = {
   mapData: MapData | null
   actionsData: ActionsData | null
+  expedicoesData: ExpedicoesData | null
   isLoading: boolean
   error: string | null
   modalData: ModalData
@@ -56,6 +62,7 @@ const MapContext = createContext<MapContextType | undefined>(undefined)
 export function MapProvider({ children }: { children: React.ReactNode }) {
   const [mapData, setMapData] = useState<MapData | null>(null)
   const [actionsData, setActionsData] = useState<ActionsData | null>(null)
+  const [expedicoesData, setExpedicoesData] = useState<ExpedicoesData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [modalData, setModalData] = useState<ModalData>({
@@ -71,6 +78,7 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetchMapData()
     fetchActionsData()
+    fetchExpedicoesData()
   }, [])
 
   const fetchMapData = async () => {
@@ -102,6 +110,19 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const fetchExpedicoesData = async () => {
+    try {
+      const response = await fetch("/api/map/expedicoes")
+      if (!response.ok) {
+        throw new Error("Failed to fetch expeditions data")
+      }
+      const data = await response.json()
+      setExpedicoesData(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred")
+    }
+  }
+
   const openModal = (title: string, content: React.ReactNode) => {
     setModalData({ isOpen: true, title, content })
   }
@@ -119,6 +140,7 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
       value={{
         mapData,
         actionsData,
+        expedicoesData,
         isLoading,
         error,
         modalData,
