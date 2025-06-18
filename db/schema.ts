@@ -443,7 +443,9 @@ export const trilhas = rioDaPrata.table("trilhas", {
 	id: serial().primaryKey().notNull(),
 	nome: text().notNull(),
 	geom: geometry({ type: "MultiLineStringZ", srid: 4326 }).notNull(),
-	data: timestamp({ mode: 'string' }),
+	data_inicio: timestamp({ mode: 'string' }),
+	data_fim: timestamp({ mode: 'string' }),
+	duracao_minutos: integer(),
 });
 
 export const waypoints = rioDaPrata.table("waypoints", {
@@ -454,5 +456,5 @@ export const waypoints = rioDaPrata.table("waypoints", {
 	nome: text(),
 	geom: geometry({ type: "point", srid: 4326 }).notNull(),
 	ele: doublePrecision(),
-	recordedAt: timestamp({ mode: 'string' }),
+	recordedat: timestamp({ mode: 'string' }),
 });

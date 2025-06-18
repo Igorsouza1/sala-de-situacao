@@ -6,7 +6,7 @@ import type { LatLngExpression } from "leaflet"
 import "leaflet/dist/leaflet.css"
 import { CustomZoomControl } from "./CustomZoomControl"
 import { CustomLayerControl } from "./CustomLayerControl"
-import { MapLayersCard } from "./MapLayerCard"
+import { MapLayersCard } from "./MapLayerCard"  
 import { ActionsLayerCard } from "./ActionLayerCard"
 import { DateFilterControl } from "./DateFilterControl"
 import { useMapContext } from "@/context/GeoDataContext"
@@ -78,25 +78,20 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     "firms",
     "banhado",
   ])
-  const [visibleActions, setVisibleActions] = useState<string[]>([])
-  const { mapData, actionsData, isLoading, error, modalData, openModal, closeModal, dateFilter, setDateFilter } =
+  const { mapData, isLoading, error, modalData, openModal, closeModal, dateFilter, setDateFilter } =
     useMapContext()
 
   useEffect(() => {
     setIsMounted(true)
   }, [])
 
-  useEffect(() => {
-    //Removed console.log
-  }, [])
+
 
   const handleLayerToggle = (id: string, isChecked: boolean) => {
     setVisibleLayers((prev) => (isChecked ? [...prev, id] : prev.filter((layerId) => layerId !== id)))
   }
 
-  const handleActionToggle = (id: string, isChecked: boolean) => {
-    setVisibleActions((prev) => (isChecked ? [...prev, id] : prev.filter((actionId) => actionId !== id)))
-  }
+ 
 
   const handleFeatureClick = (properties: any, layerType: string) => {
     const title = `${layerType.charAt(0).toUpperCase() + layerType.slice(1)} Details`
@@ -172,15 +167,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     { id: "firms", label: "Focos de Incêndio", count: mapData?.firms.features.length || 0, color: layerColors.firms },
   ]
 
-  const actionOptions = actionsData
-    ? Object.entries(actionsData).map(([acao, data]) => ({
-        id: acao,
-        label: acao,
-        count: data.features.length,
-        color: "#FF00FF", // You can assign different colors for different action types
-        icon: actionIcons[acao] || <NotebookPen />,
-      }))
-    : []
+ 
 
   return (
     <div className="w-full h-screen relative z-10">
@@ -250,7 +237,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
             data={mapData.leito}
             style={() => ({
               color: layerColors.leito,
-              weight: 4,
+              weight: 4,  
               opacity: 0.65,
             })}
             onEachFeature={(feature, layer) => {
@@ -324,36 +311,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
               return null
             })}
 
-        {actionsData &&
-          visibleActions.map((actionType) =>
-            actionsData[actionType].features
-              .filter((feature) => isWithinDateRange(feature.properties.time, dateFilter.startDate, dateFilter.endDate))
-              .map((feature, index) => {
-                const coords = feature.geometry.coordinates
-                if (
-                  Array.isArray(coords) &&
-                  coords.length === 2 &&
-                  typeof coords[0] === "number" &&
-                  typeof coords[1] === "number"
-                ) {
-                  return (
-                    <Marker
-                      key={`${actionType}-${index}`}
-                      position={[coords[1], coords[0]]}
-                      icon={L.divIcon({
-                        html: ReactDOMServer.renderToString(actionIcons[actionType] || <NotebookPen />),
-                        className: "custom-icon",
-                        iconSize: [24, 24],
-                      })}
-                      eventHandlers={{
-                        click: () => handleFeatureClick(feature.properties, actionType),
-                      }}
-                    ></Marker>
-                  )
-                }
-                return null
-              }),
-          )}
+    
       </MapContainer>
 
       <div className="absolute top-4 left-4 z-[1000]">
@@ -362,7 +320,6 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
 
       <div className="absolute bottom-4 left-4 z-[1000] gap-3 flex flex-col">
         <MapLayersCard title="Camadas" options={layerOptions} onLayerToggle={handleLayerToggle} />
-        <ActionsLayerCard title="Ações" options={actionOptions} onLayerToggle={handleActionToggle} />
       </div>
 
       <Modal isOpen={modalData.isOpen} onClose={closeModal} title={modalData.title}>
