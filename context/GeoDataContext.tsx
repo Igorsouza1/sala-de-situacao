@@ -39,9 +39,16 @@ type ModalData = {
   content: React.ReactNode
 }
 
+type ExpedicoesData = {
+  trilhas: GeoJSONFeatureCollection
+  waypoints: GeoJSONFeatureCollection
+}
+
+
 type MapContextType = {
   mapData: MapData | null
   actionsData: ActionsData | null
+  expedicoesData: ExpedicoesData | null
   isLoading: boolean
   error: string | null
   modalData: ModalData
@@ -58,6 +65,7 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
   const [actionsData, setActionsData] = useState<ActionsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [expedicoesData, setExpedicoesData] = useState<ExpedicoesData | null>(null)
   const [modalData, setModalData] = useState<ModalData>({
     isOpen: false,
     title: "",
@@ -71,6 +79,7 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetchMapData()
     fetchActionsData()
+    fetchExpedicoesData()
   }, [])
 
   const fetchMapData = async () => {
@@ -101,6 +110,19 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const fetchExpedicoesData = async () => {
+    try {
+      const response = await fetch("/api/map/expedicoes")
+      if (!response.ok) {
+        throw new Error("Failed to fetch expeditions data")
+      }
+      const data = await response.json()
+      setExpedicoesData(data)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred")
+    }
+  }
+
   const openModal = (title: string, content: React.ReactNode) => {
     setModalData({ isOpen: true, title, content })
   }
@@ -118,6 +140,7 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
       value={{
         mapData,
         actionsData,
+        expedicoesData,
         isLoading,
         error,
         modalData,

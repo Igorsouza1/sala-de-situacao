@@ -38,6 +38,7 @@ const layerColors = {
   propriedades: "green",
   firms: "red",
   banhado: "darkblue",
+  expedicoes: "orange",
 }
 
 const actionIcons: { [key: string]: React.ReactNode } = {
@@ -78,8 +79,17 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     "firms",
     "banhado",
   ])
-  const { mapData, isLoading, error, modalData, openModal, closeModal, dateFilter, setDateFilter } =
-    useMapContext()
+  const {
+    mapData,
+    expedicoesData,
+    isLoading,
+    error,
+    modalData,
+    openModal,
+    closeModal,
+    dateFilter,
+    setDateFilter,
+  } = useMapContext()
 
   useEffect(() => {
     setIsMounted(true)
@@ -165,6 +175,12 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
       color: layerColors.desmatamento,
     },
     { id: "firms", label: "Focos de Incêndio", count: mapData?.firms.features.length || 0, color: layerColors.firms },
+    {
+      id: "expedicoes",
+      label: "Expedições",
+      count: expedicoesData?.trilhas.features.length || 0,
+      color: layerColors.expedicoes,
+    },
   ]
 
  
@@ -304,6 +320,57 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
                     }}
                     eventHandlers={{
                       click: () => handleFeatureClick(firm.properties, "firms"),
+                    }}
+                  />
+                )
+              }
+              return null
+            })}
+
+{expedicoesData && visibleLayers.includes("expedicoes") && (
+          <GeoJSON
+            data={{
+              type: "FeatureCollection",
+              features: expedicoesData.trilhas.features.filter((feature) =>
+                isWithinDateRange(
+                  feature.properties.data,
+                  dateFilter.startDate,
+                  dateFilter.endDate,
+                ),
+              ),
+            } as any}
+            style={() => ({
+              color: layerColors.expedicoes,
+              weight: 3,
+              opacity: 0.8,
+            })}
+            onEachFeature={(feature, layer) => {
+              layer.on({
+                click: () => handleFeatureClick(feature.properties, "expedicoes"),
+              })
+            }}
+          />
+        )}
+
+        {expedicoesData &&
+          visibleLayers.includes("expedicoes") &&
+          expedicoesData.waypoints.features
+            .filter((wp) => isWithinDateRange(wp.properties.data, dateFilter.startDate, dateFilter.endDate))
+            .map((wp, index) => {
+              const coords = wp.geometry.coordinates as number[]
+              if (Array.isArray(coords) && coords.length === 2) {
+                return (
+                  <CircleMarker
+                    key={`exp-wp-${index}`}
+                    center={[coords[1], coords[0]]}
+                    radius={6}
+                    pathOptions={{
+                      color: layerColors.expedicoes,
+                      fillColor: layerColors.expedicoes,
+                      fillOpacity: 0.9,
+                    }}
+                    eventHandlers={{
+                      click: () => handleFeatureClick(wp.properties, "expedicoes"),
                     }}
                   />
                 )
