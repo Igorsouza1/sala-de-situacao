@@ -70,10 +70,6 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     setIsMounted(true)
   }, [])
 
-  useEffect(() => {
-    //Removed console.log
-  }, [])
-
   const handleLayerToggle = (id: string, isChecked: boolean) => {
     setVisibleLayers((prev) => (isChecked ? [...prev, id] : prev.filter((layerId) => layerId !== id)))
   }
@@ -118,7 +114,40 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
       } as GeoJSONFeatureCollection
     }
     return null
-  }, [mapData, dateFilter.startDate, dateFilter.endDate, isWithinDateRange])
+  }, [mapData, dateFilter.startDate, dateFilter.endDate])
+
+  const layerConfigs = useMemo(
+    () =>
+      mapData
+        ? [
+            {
+              id: "bacia",
+              data: mapData.bacia,
+              style: { color: layerColors.bacia, fillColor: layerColors.bacia, weight: 2, opacity: 0.65, fillOpacity: 0.2 },
+            },
+            {
+              id: "banhado",
+              data: mapData.banhado,
+              style: { color: layerColors.banhado, fillColor: layerColors.banhado, weight: 2, opacity: 0.65, fillOpacity: 0.2 },
+            },
+            {
+              id: "propriedades",
+              data: mapData.propriedades,
+              style: { color: "black", fillColor: layerColors.propriedades, weight: 2, opacity: 0.65, fillOpacity: 0.2 },
+            },
+            { id: "leito", data: mapData.leito, style: { color: layerColors.leito, weight: 4, opacity: 0.65 } },
+            { id: "estradas", data: mapData.estradas, style: { color: layerColors.estradas, weight: 4, opacity: 0.65 } },
+          ]
+        : [],
+    [mapData],
+  )
+
+  const filteredFirms = useMemo(() => {
+    if (!mapData) return []
+    return mapData.firms.features.filter((firm) =>
+      isWithinDateRange(firm.properties.acq_date, dateFilter.startDate, dateFilter.endDate),
+    )
+  }, [mapData, dateFilter.startDate, dateFilter.endDate])
 
   if (!isMounted || isLoading) {
     return <MapPlaceholder />
@@ -152,46 +181,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     { id: "firms", label: "Focos de Incêndio", count: mapData?.firms.features.length || 0, color: layerColors.firms },
   ]
 
-  const layerConfigs = useMemo(
-    () =>
-      mapData
-        ? [
-            {
-              id: "bacia",
-              data: mapData.bacia,
-              style: { color: layerColors.bacia, fillColor: layerColors.bacia, weight: 2, opacity: 0.65, fillOpacity: 0.2 },
-            },
-            {
-              id: "banhado",
-              data: mapData.banhado,
-              style: { color: layerColors.banhado, fillColor: layerColors.banhado, weight: 2, opacity: 0.65, fillOpacity: 0.2 },
-            },
-            {
-              id: "propriedades",
-              data: mapData.propriedades,
-              style: { color: "black", fillColor: layerColors.propriedades, weight: 2, opacity: 0.65, fillOpacity: 0.2 },
-            },
-            {
-              id: "leito",
-              data: mapData.leito,
-              style: { color: layerColors.leito, weight: 4, opacity: 0.65 },
-            },
-            {
-              id: "estradas",
-              data: mapData.estradas,
-              style: { color: layerColors.estradas, weight: 4, opacity: 0.65 },
-            },
-          ]
-        : [],
-    [mapData],
-  )
 
-  const filteredFirms = useMemo(() => {
-    if (!mapData) return []
-    return mapData.firms.features.filter((firm) =>
-      isWithinDateRange(firm.properties.acq_date, dateFilter.startDate, dateFilter.endDate),
-    )
-  }, [mapData, dateFilter.startDate, dateFilter.endDate])
 
 
   return (

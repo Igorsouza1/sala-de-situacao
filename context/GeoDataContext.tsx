@@ -73,7 +73,6 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Failed to fetch map data")
       }
       const data = await response.json()
-      console.log(data)
       setMapData(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred")
