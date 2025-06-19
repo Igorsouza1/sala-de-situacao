@@ -29,10 +29,6 @@ type MapData = {
   banhado: GeoJSONFeatureCollection
 }
 
-type ActionsData = {
-  [key: string]: GeoJSONFeatureCollection
-}
-
 type ModalData = {
   isOpen: boolean
   title: string
@@ -41,7 +37,6 @@ type ModalData = {
 
 type MapContextType = {
   mapData: MapData | null
-  actionsData: ActionsData | null
   isLoading: boolean
   error: string | null
   modalData: ModalData
@@ -55,7 +50,6 @@ const MapContext = createContext<MapContextType | undefined>(undefined)
 
 export function MapProvider({ children }: { children: React.ReactNode }) {
   const [mapData, setMapData] = useState<MapData | null>(null)
-  const [actionsData, setActionsData] = useState<ActionsData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [modalData, setModalData] = useState<ModalData>({
@@ -70,7 +64,6 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     fetchMapData()
-    fetchActionsData()
   }, [])
 
   const fetchMapData = async () => {
@@ -84,23 +77,11 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
       setMapData(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred")
-    }
-  }
-
-  const fetchActionsData = async () => {
-    try {
-      const response = await fetch("/api/map/acao")
-      if (!response.ok) {
-        throw new Error("Failed to fetch actions data")
-      }
-      const data = await response.json()
-      setActionsData(data)
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unknown error occurred")
     } finally {
       setIsLoading(false)
     }
   }
+
 
   const openModal = (title: string, content: React.ReactNode) => {
     setModalData({ isOpen: true, title, content })
@@ -118,7 +99,6 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
     <MapContext.Provider
       value={{
         mapData,
-        actionsData,
         isLoading,
         error,
         modalData,
