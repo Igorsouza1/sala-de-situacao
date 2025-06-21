@@ -3,34 +3,17 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import {
-  Plus,
-  Map,
-  BarChartIcon as ChartNetwork,
-  HardDrive,
-  User,
-  Settings,
-  LogOut,
-} from "lucide-react"
+import { Plus, Map, BarChartIcon as ChartNetwork, HardDrive, User, Settings, LogOut } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 import { useUserRole } from "@/hooks/useUserRole"
 import { createClient } from "@/utils/supabase/client"
-import { GpxUploadModal } from "@/components/gpx-upload-modal" // modal já envia sozinho
+import { GpxUploadModal } from "@/components/gpx-upload-modal"
+import { UserProfileModal } from "@/components/user-profile-modal"
 
 /* ───────── itens de navegação ───────── */
 const commonNavItems = [
@@ -38,9 +21,7 @@ const commonNavItems = [
   { name: "Dashboard", href: "/protected/dashboard", icon: ChartNetwork },
 ]
 
-const adminNavItems = [
-  { name: "Painel do Administrador", href: "/protected/admin", icon: HardDrive },
-]
+const adminNavItems = [{ name: "Painel do Administrador", href: "/protected/admin", icon: HardDrive }]
 
 export function Navbar() {
   const pathname = usePathname()
@@ -49,15 +30,22 @@ export function Navbar() {
   const supabase = createClient()
 
   const [isGpxModalOpen, setIsGpxModalOpen] = useState(false)
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
+
+  // ⬇️  controle explícito do dropdown
+  const [menuOpen, setMenuOpen] = useState(false)
 
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     router.refresh()
   }
 
-  const navItems = isLoading
-    ? commonNavItems
-    : [...commonNavItems, ...(isAdmin ? adminNavItems : [])]
+  const navItems = isLoading ? commonNavItems : [...commonNavItems, ...(isAdmin ? adminNavItems : [])]
+
+  const openProfile = () => {
+    setMenuOpen(false)               // fecha o dropdown imediatamente
+    setIsProfileModalOpen(true)      // abre a modal depois
+  }
 
   return (
     <TooltipProvider>
@@ -69,20 +57,16 @@ export function Navbar() {
               <TooltipTrigger asChild>
                 <Link
                   href={item.href}
-                  className={`p-2 rounded-lg transition-colors duration-200
-                    ${
-                      pathname === item.href
-                        ? "bg-pantaneiro-lime text-pantaneiro-green"
-                        : "text-white hover:bg-pantaneiro-lime hover:bg-opacity-20"
-                    }`}
+                  className={`p-2 rounded-lg transition-colors duration-200 ${
+                    pathname === item.href
+                      ? "bg-pantaneiro-lime text-pantaneiro-green"
+                      : "text-white hover:bg-pantaneiro-lime hover:bg-opacity-20"
+                  }`}
                 >
                   <item.icon className="w-5 h-5" strokeWidth={1.5} />
                 </Link>
               </TooltipTrigger>
-              <TooltipContent
-                side="right"
-                className="bg-pantaneiro-lime text-pantaneiro-green"
-              >
+              <TooltipContent side="right" className="bg-pantaneiro-lime text-pantaneiro-green">
                 <p>{item.name}</p>
               </TooltipContent>
             </Tooltip>
@@ -102,10 +86,7 @@ export function Navbar() {
                   <Plus className="w-5 h-5" strokeWidth={1.5} />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent
-                side="right"
-                className="bg-pantaneiro-lime text-pantaneiro-green"
-              >
+              <TooltipContent side="right" className="bg-pantaneiro-lime text-pantaneiro-green">
                 <p>Upload GPX</p>
               </TooltipContent>
             </Tooltip>
@@ -114,7 +95,7 @@ export function Navbar() {
 
         {/* avatar / menu do usuário */}
         <div className="flex flex-col items-center mb-6">
-          <DropdownMenu>
+          <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
@@ -123,17 +104,18 @@ export function Navbar() {
               >
                 <Avatar className="w-8 h-8">
                   <AvatarImage src="https://github.com/shadcn.png" />
-                  <AvatarFallback className="bg-pantaneiro-lime text-pantaneiro-green">
-                    CN
-                  </AvatarFallback>
+                  <AvatarFallback className="bg-pantaneiro-lime text-pantaneiro-green">CN</AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent
-              side="right"
-              className="w-56 bg-pantaneiro-green text-white z-[1000]"
-            >
-              <DropdownMenuItem className="flex items-center gap-2 hover:bg-pantaneiro-lime hover:bg-opacity-20">
+            <DropdownMenuContent side="right" className="w-56 bg-pantaneiro-green text-white z-[1000]">
+              <DropdownMenuItem
+                className="flex items-center gap-2 hover:bg-pantaneiro-lime hover:bg-opacity-20"
+                onSelect={(e) => {
+                  e.preventDefault()
+                  openProfile()
+                }}
+              >
                 <User className="w-4 h-4" />
                 <span>Perfil</span>
               </DropdownMenuItem>
@@ -156,10 +138,10 @@ export function Navbar() {
       </nav>
 
       {/* modal de upload GPX */}
-      <GpxUploadModal
-        isOpen={isGpxModalOpen}
-        onClose={() => setIsGpxModalOpen(false)}
-      />
+      <GpxUploadModal isOpen={isGpxModalOpen} onClose={() => setIsGpxModalOpen(false)} />
+
+      {/* modal de perfil do usuário */}
+      <UserProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
     </TooltipProvider>
   )
 }
