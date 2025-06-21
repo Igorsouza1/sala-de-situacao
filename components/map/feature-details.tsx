@@ -36,7 +36,7 @@ const formatDate = (dateString: string | undefined) => {
 const formatTime = (timeString: string | undefined) => {
   if (!timeString || String(timeString).length < 3) return "Hora não informada"
   const paddedTime = String(timeString).padStart(4, "0")
-  return `${paddedTime.slice(0, 2)}:${paddedTime.slice(2)}`
+  return `${paddedTime.slice(0, 2)}${paddedTime.slice(2)}`
 }
 
 // Helper to convert duration in minutes to a human-readable format
