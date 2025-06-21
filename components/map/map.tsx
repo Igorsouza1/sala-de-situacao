@@ -45,11 +45,30 @@ type GeoJSONFeatureCollection = {
   features: Feature<Geometry, GeoJsonProperties>[]
 }
 
-const waypointIcon = L.divIcon({
-  html: ReactDOMServer.renderToString(<MapPin />),
-  className: "custom-icon",
-  iconSize: [24, 24],
-})
+const createWaypointIcon = (index: number) =>
+  L.divIcon({
+    html: `
+      <div style="
+        background: rgba(255, 165, 0, 0.85);
+        color: white;
+        border: 2px solid white;
+        border-radius: 50%;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        font-weight: bold;
+        box-shadow: 0 0 4px rgba(0,0,0,0.5);
+      ">
+        ${index}
+      </div>
+    `,
+    className: "waypoint-icon",
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  })
 
 export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: MapProps) {
   const [isMounted, setIsMounted] = useState(false)
@@ -294,26 +313,27 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
           />
         )}
 
-        {expedicoesData &&
-          visibleLayers.includes("expedicoes") &&
-          expedicoesData.waypoints.features
-            .filter((wp) => isWithinDateRange(wp.properties.data, dateFilter.startDate, dateFilter.endDate))
-            .map((wp, index) => {
-              const coords = wp.geometry.coordinates as number[]
-              if (Array.isArray(coords) && coords.length >= 2) {
-                return (
-                  <Marker
-                    key={`exp-wp-${index}`}
-                    position={[coords[1], coords[0]]}
-                    icon={waypointIcon}
-                    eventHandlers={{
-                      click: () => handleFeatureClick(wp.properties, "expedicoes"),
-                    }}
-                  />
-                )
-              }
-              return null
-            })}
+{expedicoesData &&
+  visibleLayers.includes("expedicoes") &&
+  [...expedicoesData.waypoints.features]
+    .filter((wp) => isWithinDateRange(wp.properties.data, dateFilter.startDate, dateFilter.endDate))
+    .sort((a, b) => new Date(a.properties.recordedat).getTime() - new Date(b.properties.recordedat).getTime())
+    .map((wp, index) => {
+      const coords = wp.geometry.coordinates as number[]
+      if (Array.isArray(coords) && coords.length >= 2) {
+        return (
+          <Marker
+            key={`exp-wp-${index}`}
+            position={[coords[1], coords[0]]}
+            icon={createWaypointIcon(index + 1)}
+            eventHandlers={{
+              click: () => handleFeatureClick(wp.properties, "expedicoes"),
+            }}
+          />
+        )
+      }
+      return null
+    })}
       </MapContainer>
 
       <div className="absolute top-4 left-4 z-[1000]">
