@@ -10,14 +10,12 @@ import { MapLayersCard } from "./MapLayerCard"
 import { MapPlaceholder } from "./MapPlaceholder"
 import { DateFilterControl } from "./DateFilterControl"
 import { useMapContext } from "@/context/GeoDataContext"
-import ReactDOMServer from "react-dom/server";
-import { MapPin } from "lucide-react";
-import L from "leaflet";
-
+import ReactDOMServer from "react-dom/server"
+import { MapPin } from "lucide-react"
+import L from "leaflet"
+import { FeatureDetails } from "./feature-details"
 
 import { Modal } from "./Modal"
-import type React from "react"
-import { Grid } from "@/components/ui/grid"
 import type { Feature, Geometry, GeoJsonProperties } from "geojson"
 
 const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
@@ -42,7 +40,6 @@ const layerColors = {
   expedicoes: "orange",
 }
 
-
 type GeoJSONFeatureCollection = {
   type: "FeatureCollection"
   features: Feature<Geometry, GeoJsonProperties>[]
@@ -52,8 +49,7 @@ const waypointIcon = L.divIcon({
   html: ReactDOMServer.renderToString(<MapPin />),
   className: "custom-icon",
   iconSize: [24, 24],
-});
-
+})
 
 export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: MapProps) {
   const [isMounted, setIsMounted] = useState(false)
@@ -77,21 +73,11 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     setVisibleLayers((prev) => (isChecked ? [...prev, id] : prev.filter((layerId) => layerId !== id)))
   }
 
-
+  // Modal de detalhes do feature
   const handleFeatureClick = useCallback(
     (properties: Record<string, unknown>, layerType: string) => {
-      const title = `${layerType.charAt(0).toUpperCase() + layerType.slice(1)} Details`
-      const content = (
-        <Grid className="grid-cols-1 md:grid-cols-2 gap-4">
-          {Object.entries(properties).map(([key, value]) => (
-            <div key={key} className="bg-gray-100 dark:bg-gray-700 p-3 rounded-md">
-              <h3 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-1">{key}</h3>
-              <p className="text-base break-words">{String(value)}</p>
-            </div>
-          ))}
-        </Grid>
-      )
-      openModal(title, content)
+      const content = <FeatureDetails layerType={layerType} properties={properties} />
+      openModal("", content)
     },
     [openModal],
   )
@@ -126,21 +112,42 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
             {
               id: "bacia",
               data: mapData.bacia,
-              style: { color: layerColors.bacia, fillColor: layerColors.bacia, weight: 2, opacity: 0.65, fillOpacity: 0.2 },
+              style: {
+                color: layerColors.bacia,
+                fillColor: layerColors.bacia,
+                weight: 2,
+                opacity: 0.65,
+                fillOpacity: 0.2,
+              },
             },
             {
               id: "banhado",
               data: mapData.banhado,
-              style: { color: layerColors.banhado, fillColor: layerColors.banhado, weight: 2, opacity: 0.65, fillOpacity: 0.2 },
+              style: {
+                color: layerColors.banhado,
+                fillColor: layerColors.banhado,
+                weight: 2,
+                opacity: 0.65,
+                fillOpacity: 0.2,
+              },
             },
             {
               id: "propriedades",
               data: mapData.propriedades,
-              style: { color: "black", fillColor: layerColors.propriedades, weight: 2, opacity: 0.65, fillOpacity: 0.2 },
+              style: {
+                color: "black",
+                fillColor: layerColors.propriedades,
+                weight: 2,
+                opacity: 0.65,
+                fillOpacity: 0.2,
+              },
             },
             { id: "leito", data: mapData.leito, style: { color: layerColors.leito, weight: 4, opacity: 0.65 } },
-            { id: "estradas", data: mapData.estradas, style: { color: layerColors.estradas, weight: 4, opacity: 0.65 } },
-            
+            {
+              id: "estradas",
+              data: mapData.estradas,
+              style: { color: layerColors.estradas, weight: 4, opacity: 0.65 },
+            },
           ]
         : [],
     [mapData],
@@ -191,9 +198,6 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     },
   ]
 
-
-
-
   return (
     <div className="w-full h-screen relative z-10">
       <MapContainer center={center} zoom={zoom} zoomControl={false} className="w-full h-full">
@@ -203,8 +207,8 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
           subdomains={["mt0", "mt1", "mt2", "mt3"]}
           attribution="&copy; Google"
         />
-        <CustomZoomControl  />
-        <CustomLayerControl  />
+        <CustomZoomControl />
+        <CustomLayerControl />
 
         {layerConfigs.map(
           (layer) =>
@@ -267,17 +271,13 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
             return null
           })}
 
-{expedicoesData && visibleLayers.includes("expedicoes") && (
+        {expedicoesData && visibleLayers.includes("expedicoes") && (
           <GeoJSON
             data={
               {
                 type: "FeatureCollection",
                 features: expedicoesData.trilhas.features.filter((feature) =>
-                  isWithinDateRange(
-                    feature.properties.data,
-                    dateFilter.startDate,
-                    dateFilter.endDate,
-                  ),
+                  isWithinDateRange(feature.properties.data, dateFilter.startDate, dateFilter.endDate),
                 ),
               } as any
             }
@@ -288,9 +288,8 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
             })}
             onEachFeature={(feature, layer) => {
               layer.on({
-                click: () =>
-                  handleFeatureClick(feature.properties, "expedicoes"),
-              });
+                click: () => handleFeatureClick(feature.properties, "expedicoes"),
+              })
             }}
           />
         )}
@@ -298,15 +297,9 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
         {expedicoesData &&
           visibleLayers.includes("expedicoes") &&
           expedicoesData.waypoints.features
-            .filter((wp) =>
-              isWithinDateRange(
-                wp.properties.data,
-                dateFilter.startDate,
-                dateFilter.endDate,
-              ),
-            )
+            .filter((wp) => isWithinDateRange(wp.properties.data, dateFilter.startDate, dateFilter.endDate))
             .map((wp, index) => {
-              const coords = wp.geometry.coordinates as number[];
+              const coords = wp.geometry.coordinates as number[]
               if (Array.isArray(coords) && coords.length >= 2) {
                 return (
                   <Marker
@@ -314,15 +307,13 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
                     position={[coords[1], coords[0]]}
                     icon={waypointIcon}
                     eventHandlers={{
-                      click: () =>
-                        handleFeatureClick(wp.properties, "expedicoes"),
+                      click: () => handleFeatureClick(wp.properties, "expedicoes"),
                     }}
                   />
-                );
+                )
               }
-              return null;
+              return null
             })}
-
       </MapContainer>
 
       <div className="absolute top-4 left-4 z-[1000]">
@@ -333,7 +324,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
         <MapLayersCard title="Camadas" options={layerOptions} onLayerToggle={handleLayerToggle} />
       </div>
 
-      <Modal isOpen={modalData.isOpen} onClose={closeModal} title={modalData.title}>
+      <Modal isOpen={modalData.isOpen} onClose={closeModal} >
         {modalData.content}
       </Modal>
     </div>
