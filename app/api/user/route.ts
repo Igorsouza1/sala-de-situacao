@@ -43,25 +43,57 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { full_name, email } = await request.json();
+  const body = await request.json();
+  const updates: { full_name?: string; email?: string } = {};
 
-  if (full_name !== undefined) {
+  if (typeof body.full_name === "string" && body.full_name.trim() !== "") {
+    updates.full_name = body.full_name.trim();
+  }
+
+  if (
+    typeof body.email === "string" &&
+    body.email.trim() !== "" &&
+    body.email !== user.email
+  ) {
+    updates.email = body.email.trim();
+  }
+
+  if (updates.full_name) {
     const { error } = await supabase
       .from("profiles")
-      .update({ full_name })
+      .update({ full_name: updates.full_name })
       .eq("id", user.id);
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
-    await supabase.auth.updateUser({ data: { full_name } });
+    await supabase.auth.updateUser({ data: { full_name: updates.full_name } });
   }
 
-  if (email !== undefined && email !== user.email) {
-    const { error } = await supabase.auth.updateUser({ email });
+  if (updates.email) {
+    const { error } = await supabase.auth.updateUser({ email: updates.email });
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
   }
 
-  return NextResponse.json({ message: "Profile updated" });
+  if (!updates.full_name && !updates.email) {
+    return NextResponse.json({ message: "Nothing to update" });
+  }
+
+  const {
+    data: { user: updatedUser },
+  } = await supabase.auth.getUser();
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  return NextResponse.json({
+    id: updatedUser?.id ?? user.id,
+    email: updatedUser?.email ?? user.email,
+    created_at: updatedUser?.created_at ?? user.created_at,
+    full_name: profile?.full_name ?? null,
+  });
 }
