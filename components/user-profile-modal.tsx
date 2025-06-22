@@ -1,15 +1,13 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { User, Lock, Eye, EyeOff, Edit3, Save, X, Mail, Calendar } from "lucide-react"
+import { Lock, Eye, EyeOff, Edit3, Save, X, Shield } from "lucide-react"
 import { createClient } from "@/utils/supabase/client"
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Separator } from "@/components/ui/separator"
 import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 
@@ -107,7 +105,7 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
       if (error) throw error
 
       toast({
-        title: "✅ Sucesso",
+        title: "Sucesso",
         description: "Nome atualizado com sucesso!",
       })
 
@@ -116,7 +114,7 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
       setEditMode("none")
     } catch (error: any) {
       toast({
-        title: "❌ Erro",
+        title: "Erro",
         description: error.message || "Erro ao atualizar nome.",
         variant: "destructive",
       })
@@ -128,7 +126,7 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
   const handleUpdatePassword = async () => {
     if (newPassword !== confirmPassword) {
       toast({
-        title: "❌ Erro",
+        title: "Erro",
         description: "As senhas não coincidem.",
         variant: "destructive",
       })
@@ -137,7 +135,7 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
 
     if (newPassword.length < 6) {
       toast({
-        title: "❌ Erro",
+        title: "Erro",
         description: "A nova senha deve ter pelo menos 6 caracteres.",
         variant: "destructive",
       })
@@ -153,7 +151,7 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
       if (error) throw error
 
       toast({
-        title: "✅ Sucesso",
+        title: "Sucesso",
         description: "Senha alterada com sucesso!",
       })
 
@@ -163,7 +161,7 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
       setEditMode("none")
     } catch (error: any) {
       toast({
-        title: "❌ Erro",
+        title: "Erro",
         description: error.message || "Erro ao alterar senha.",
         variant: "destructive",
       })
@@ -185,7 +183,7 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("pt-BR", {
       day: "2-digit",
-      month: "long",
+      month: "short",
       year: "numeric",
     })
   }
@@ -196,277 +194,260 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
         if (!open) handleClose()
-      }}>
-        
-      <DialogContent className="max-w-4xl max-h-[95vh] overflow-hidden p-0 bg-gradient-to-br from-pantaneiro-green to-pantaneiro-green/90">
-        {/* Header com gradiente */}
-        <div className="relative bg-pantaneiro-green p-8 text-white">
-          <DialogHeader className="space-y-0">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-6">
-                <Avatar className="w-24 h-24 border-4 border-pantaneiro-lime shadow-xl">
-                  <AvatarImage src={userProfile?.avatar_url || ""} />
-                  <AvatarFallback className="bg-pantaneiro-lime text-pantaneiro-green text-2xl font-bold">
-                  </AvatarFallback>
-                </Avatar>
+      }}
+    >
+      <DialogContent className="max-w-md w-[95vw] max-h-[95vh] p-0 bg-pantaneiro-green border-0 shadow-2xl overflow-hidden">
+        {/* Header */}
+        <DialogTitle className="sr-only">Acessar Perfil</DialogTitle>
+        <div className="relative bg-gradient-to-br from-slate-700 via-slate-600 to-slate-700 h-32 rounded-t-lg">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleClose}
+            className="absolute top-4 right-4 text-white/80 hover:text-white hover:bg-white/20 rounded-full h-8 w-8 transition-all duration-200"
+          >
+            <X className="w-4 h-4" />
+          </Button>
 
-                <div className="space-y-2">
-                  <DialogTitle className="text-3xl font-bold text-white">
-                    {displayName || "Nome não informado"}
-                  </DialogTitle>
-                  <div className="flex items-center gap-2 text-pantaneiro-lime">
-                    <Mail className="w-4 h-4" />
-                    <span className="text-lg">{userProfile?.email}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-pantaneiro-lime/80">
-                    <Calendar className="w-4 h-4" />
-                    <span>Membro desde {userProfile?.created_at ? formatDate(userProfile.created_at) : "N/A"}</span>
-                  </div>
-                </div>
-              </div>
-
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleClose}
-                className="text-white hover:bg-white/20 rounded-full"
-              >
-                <X className="w-5 h-5" />
-              </Button>
+          {/* Círculo do avatar sem foto */}
+          <div className="absolute -bottom-8 left-6">
+            <div className="w-16 h-16 bg-pantaneiro-lime rounded-full border-4 border-pantaneiro-green flex items-center justify-center">
+              <span className="text-pantaneiro-green text-xl font-semibold">{getInitials(displayName)}</span>
             </div>
-          </DialogHeader>
+          </div>
         </div>
 
         {/* Conteúdo principal */}
-        <div className="flex-1 bg-white p-8 space-y-8 overflow-y-auto max-h-[60vh]">
-          {/* Seção de Informações Pessoais */}
+        <div className="px-6 pt-12 pb-6 space-y-6">
+          {/* User Info */}
+          <div className="space-y-1">
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-semibold text-white">{displayName || "Nome não informado"}</h1>
+              <Badge className="bg-pantaneiro-lime/20 text-pantaneiro-lime border-pantaneiro-lime/30 text-xs">
+                <Shield className="w-3 h-3 mr-1" />
+                Verificado
+              </Badge>
+            </div>
+            <p className="text-white/70 text-sm">{userProfile?.email}</p>
+          </div>
+
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <p className="text-white/50 text-xs uppercase tracking-wide">Membro desde</p>
+              <p className="text-white font-medium">
+                {userProfile?.created_at ? formatDate(userProfile.created_at) : "N/A"}
+              </p>
+            </div>
+            <div>
+              <p className="text-white/50 text-xs uppercase tracking-wide">Status</p>
+              <p className="text-pantaneiro-lime font-medium">Ativo</p>
+            </div>
+          </div>
+
+          {/* Informações Pessoais */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-pantaneiro-green/10 rounded-lg">
-                  <User className="w-5 h-5 text-pantaneiro-green" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900">Informações Pessoais</h3>
-                  <p className="text-gray-600">Gerencie seus dados básicos</p>
-                </div>
-              </div>
-
+              <h3 className="text-white font-medium">Informações Pessoais</h3>
               {editMode !== "personal" && (
                 <Button
-                  variant="outline"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setEditMode("personal")}
-                  className="border-pantaneiro-green text-pantaneiro-green hover:bg-pantaneiro-green hover:text-white"
+                  className="text-white/70 hover:text-white hover:bg-white/10 h-8 px-3"
                 >
-                  <Edit3 className="w-4 h-4 mr-2" />
+                  <Edit3 className="w-3 h-3 mr-1" />
                   Editar
                 </Button>
               )}
             </div>
 
-            <div className="bg-gray-50 rounded-xl p-6 space-y-4">
-              {editMode === "personal" ? (
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="editName" className="text-sm font-medium text-gray-700">
-                      Nome Completo
-                    </Label>
-                    <Input
-                      id="editName"
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      className="mt-1 border-gray-300 focus:border-pantaneiro-green focus:ring-pantaneiro-green"
-                      placeholder="Digite seu nome completo"
-                    />
-                  </div>
-
-                  <div className="flex gap-3">
-                    <Button
-                      onClick={handleUpdateProfile}
-                      disabled={loading}
-                      className="bg-pantaneiro-green hover:bg-pantaneiro-green/90 text-white"
-                    >
-                      <Save className="w-4 h-4 mr-2" />
-                      {loading ? "Salvando..." : "Salvar"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setEditMode("none")
-                        setEditName(displayName)
-                      }}
-                      className="border-gray-300"
-                    >
-                      Cancelar
-                    </Button>
-                  </div>
+            {editMode === "personal" ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="editName" className="text-white/70 text-sm">
+                    Nome Completo
+                  </Label>
+                  <Input
+                    id="editName"
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-pantaneiro-lime focus:ring-pantaneiro-lime/20 h-10"
+                    placeholder="Digite seu nome completo"
+                  />
                 </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Nome Completo</Label>
-                    <p className="text-lg font-medium text-gray-900 mt-1">{displayName || "Não informado"}</p>
-                  </div>
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">Email</Label>
-                    <p className="text-lg font-medium text-gray-900 mt-1">{userProfile?.email}</p>
-                    <Badge variant="secondary" className="mt-1 bg-green-100 text-green-800">
-                      Verificado
-                    </Badge>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
 
-          <Separator />
-
-          {/* Seção de Segurança */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-red-50 rounded-lg">
-                  <Lock className="w-5 h-5 text-red-600" />
-                </div>
-                <div>
-                  <h3 className="text-xl font-semibold text-gray-900">Segurança</h3>
-                  <p className="text-gray-600">Altere sua senha de acesso</p>
+                <div className="flex gap-2">
+                  <Button
+                    onClick={handleUpdateProfile}
+                    disabled={loading}
+                    className="bg-pantaneiro-lime hover:bg-pantaneiro-lime/90 text-pantaneiro-green h-9 px-4 text-sm font-medium flex-1"
+                  >
+                    <Save className="w-3 h-3 mr-1" />
+                    {loading ? "Salvando..." : "Salvar"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setEditMode("none")
+                      setEditName(displayName)
+                    }}
+                    className="text-white/70 hover:text-white hover:bg-white/10 h-9 px-4 text-sm"
+                  >
+                    Cancelar
+                  </Button>
                 </div>
               </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-pantaneiro-lime rounded-full"></div>
+                  <div>
+                    <p className="text-white/50 text-xs">Nome completo</p>
+                    <p className="text-white text-sm">{displayName || "Não informado"}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="w-2 h-2 bg-pantaneiro-lime rounded-full"></div>
+                  <div>
+                    <p className="text-white/50 text-xs">Email</p>
+                    <p className="text-white text-sm">{userProfile?.email}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
 
+          {/* Segurança */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-white font-medium">Segurança</h3>
               {editMode !== "password" && (
                 <Button
-                  variant="outline"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setEditMode("password")}
-                  className="border-red-500 text-red-600 hover:bg-red-500 hover:text-white"
+                  className="text-white/70 hover:text-white hover:bg-white/10 h-8 px-3"
                 >
-                  <Lock className="w-4 h-4 mr-2" />
-                  Alterar Senha
+                  <Lock className="w-3 h-3 mr-1" />
+                  Alterar
                 </Button>
               )}
             </div>
 
-            <div className="bg-gray-50 rounded-xl p-6">
-              {editMode === "password" ? (
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="currentPassword" className="text-sm font-medium text-gray-700">
-                      Senha Atual
-                    </Label>
-                    <div className="relative mt-1">
-                      <Input
-                        id="currentPassword"
-                        type={showPasswords.current ? "text" : "password"}
-                        value={currentPassword}
-                        onChange={(e) => setCurrentPassword(e.target.value)}
-                        className="border-gray-300 focus:border-pantaneiro-green focus:ring-pantaneiro-green pr-10"
-                        placeholder="Digite sua senha atual"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
-                        onClick={() => setShowPasswords((prev) => ({ ...prev, current: !prev.current }))}
-                      >
-                        {showPasswords.current ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="newPassword" className="text-sm font-medium text-gray-700">
-                      Nova Senha
-                    </Label>
-                    <div className="relative mt-1">
-                      <Input
-                        id="newPassword"
-                        type={showPasswords.new ? "text" : "password"}
-                        value={newPassword}
-                        onChange={(e) => setNewPassword(e.target.value)}
-                        className="border-gray-300 focus:border-pantaneiro-green focus:ring-pantaneiro-green pr-10"
-                        placeholder="Digite sua nova senha"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
-                        onClick={() => setShowPasswords((prev) => ({ ...prev, new: !prev.new }))}
-                      >
-                        {showPasswords.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div>
-                    <Label htmlFor="confirmPassword" className="text-sm font-medium text-gray-700">
-                      Confirmar Nova Senha
-                    </Label>
-                    <div className="relative mt-1">
-                      <Input
-                        id="confirmPassword"
-                        type={showPasswords.confirm ? "text" : "password"}
-                        value={confirmPassword}
-                        onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="border-gray-300 focus:border-pantaneiro-green focus:ring-pantaneiro-green pr-10"
-                        placeholder="Confirme sua nova senha"
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8"
-                        onClick={() => setShowPasswords((prev) => ({ ...prev, confirm: !prev.confirm }))}
-                      >
-                        {showPasswords.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <h4 className="font-medium text-blue-900 mb-2">Dicas para uma senha segura:</h4>
-                    <ul className="text-sm text-blue-800 space-y-1">
-                      <li>• Pelo menos 8 caracteres</li>
-                      <li>• Combine letras maiúsculas e minúsculas</li>
-                      <li>• Inclua números e símbolos</li>
-                      <li>• Evite informações pessoais</li>
-                    </ul>
-                  </div>
-
-                  <div className="flex gap-3">
+            {editMode === "password" ? (
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword" className="text-white/70 text-sm">
+                    Senha Atual
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="currentPassword"
+                      type={showPasswords.current ? "text" : "password"}
+                      value={currentPassword}
+                      onChange={(e) => setCurrentPassword(e.target.value)}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-pantaneiro-lime focus:ring-pantaneiro-lime/20 h-10 pr-10"
+                      placeholder="Digite sua senha atual"
+                    />
                     <Button
-                      onClick={handleUpdatePassword}
-                      disabled={loading || !currentPassword || !newPassword || !confirmPassword}
-                      className="bg-red-600 hover:bg-red-700 text-white"
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 text-white/50 hover:text-white/80"
+                      onClick={() => setShowPasswords((prev) => ({ ...prev, current: !prev.current }))}
                     >
-                      <Save className="w-4 h-4 mr-2" />
-                      {loading ? "Alterando..." : "Alterar Senha"}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setEditMode("none")
-                        setCurrentPassword("")
-                        setNewPassword("")
-                        setConfirmPassword("")
-                      }}
-                      className="border-gray-300"
-                    >
-                      Cancelar
+                      {showPasswords.current ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
                     </Button>
                   </div>
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Lock className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">Sua senha está protegida e criptografada.</p>
-                  <p className="text-sm text-gray-500 mt-1">Última alteração: Não disponível</p>
+
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword" className="text-white/70 text-sm">
+                    Nova Senha
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="newPassword"
+                      type={showPasswords.new ? "text" : "password"}
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-pantaneiro-lime focus:ring-pantaneiro-lime/20 h-10 pr-10"
+                      placeholder="Digite sua nova senha"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 text-white/50 hover:text-white/80"
+                      onClick={() => setShowPasswords((prev) => ({ ...prev, new: !prev.new }))}
+                    >
+                      {showPasswords.new ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    </Button>
+                  </div>
                 </div>
-              )}
-            </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="text-white/70 text-sm">
+                    Confirmar Nova Senha
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showPasswords.confirm ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-pantaneiro-lime focus:ring-pantaneiro-lime/20 h-10 pr-10"
+                      placeholder="Confirme sua nova senha"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 text-white/50 hover:text-white/80"
+                      onClick={() => setShowPasswords((prev) => ({ ...prev, confirm: !prev.confirm }))}
+                    >
+                      {showPasswords.confirm ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    </Button>
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={handleUpdatePassword}
+                    disabled={loading || !currentPassword || !newPassword || !confirmPassword}
+                    className="bg-pantaneiro-lime hover:bg-pantaneiro-lime/90 text-pantaneiro-green h-9 px-4 text-sm font-medium flex-1"
+                  >
+                    <Save className="w-3 h-3 mr-1" />
+                    {loading ? "Alterando..." : "Alterar Senha"}
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      setEditMode("none")
+                      setCurrentPassword("")
+                      setNewPassword("")
+                      setConfirmPassword("")
+                    }}
+                    className="text-white/70 hover:text-white hover:bg-white/10 h-9 px-4 text-sm"
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-3">
+                <div className="w-2 h-2 bg-pantaneiro-lime rounded-full"></div>
+                <div>
+                  <p className="text-white/50 text-xs">Senha</p>
+                  <p className="text-white text-sm">••••••••••</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>
