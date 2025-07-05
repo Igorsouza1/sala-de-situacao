@@ -17,7 +17,6 @@ import L from "leaflet"
 import { FeatureDetails } from "./feature-details"
 
 import { Modal } from "./Modal"
-import type { Feature, Geometry, GeoJsonProperties } from "geojson"
 
 const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false })
@@ -38,6 +37,7 @@ const layerColors = {
   propriedades: "green",
   firms: "red",
   banhado: "darkblue",
+  expedicoes: "orange",
 }
 
 const actionColors: Record<string, string> = {
@@ -53,9 +53,15 @@ const actionColors: Record<string, string> = {
   expedicoes: "orange",
 }
 
+type GeoJSONFeature = {
+  type: "Feature"
+  properties: { [key: string]: any }
+  geometry: { type: string; coordinates: number[] | number[][] | number[][][] }
+}
+
 type GeoJSONFeatureCollection = {
   type: "FeatureCollection"
-  features: Feature<Geometry, GeoJsonProperties>[]
+  features: GeoJSONFeature[]
 }
 
 const createWaypointIcon = (index: number) =>
@@ -211,18 +217,6 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     return result
   }, [acoesData, dateFilter.startDate, dateFilter.endDate])
 
-  if (!isMounted || isLoading) {
-    return <MapPlaceholder />
-  }
-
-  if (error) {
-    return (
-      <div className="w-screen h-screen bg-gray-100 flex items-center justify-center">
-        <span className="text-red-500">Erro ao carregar o mapa: {error}</span>
-      </div>
-    )
-  }
-
   const layerOptions = [
     { id: "bacia", label: "Bacia", count: mapData?.bacia.features.length || 0, color: layerColors.bacia },
     { id: "banhado", label: "Banhado", count: mapData?.banhado.features.length || 0, color: layerColors.banhado },
@@ -255,6 +249,18 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     }
     return opts
   }, [filteredAcoes, expedicoesData])
+
+  if (!isMounted || isLoading) {
+    return <MapPlaceholder />
+  }
+
+  if (error) {
+    return (
+      <div className="w-screen h-screen bg-gray-100 flex items-center justify-center">
+        <span className="text-red-500">Erro ao carregar o mapa: {error}</span>
+      </div>
+    )
+  }
 
   return (
     <div className="w-full h-screen relative z-10">

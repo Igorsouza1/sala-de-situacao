@@ -27,7 +27,7 @@ interface ActionOption {
   label: string
   count: number
   color: string
-  icon: React.ReactNode
+  icon?: React.ReactNode
 }
 
 interface ActionsLayerCardProps {
