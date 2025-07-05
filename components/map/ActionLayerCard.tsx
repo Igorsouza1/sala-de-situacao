@@ -104,7 +104,7 @@ export function ActionsLayerCard({ title, options, onLayerToggle }: ActionsLayer
             transition={{ duration: 0.3, ease: "easeInOut" }}
           >
             <CardContent className="p-4 bg-pantaneiro-green">
-              <div className="space-y-3">
+              <div className="space-y-3 max-h-80 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-pantaneiro-lime/30 scrollbar-track-transparent">
                 {options.map((option, index) => {
                   const isChecked = checkedLayers.includes(option.id)
                   return (
@@ -161,6 +161,13 @@ export function ActionsLayerCard({ title, options, onLayerToggle }: ActionsLayer
                 })}
               </div>
 
+              {/* Indicador de scroll se houver mais de 5 itens */}
+              {options.length > 5 && (
+                <div className="text-center mt-2 text-xs text-white/60">
+                  {options.length} itens • Role para ver mais
+                </div>
+              )}
+
               {/* Quick Actions */}
               <div className="mt-4 pt-4 border-t border-pantaneiro-lime/20">
                 <div className="flex gap-2">
@@ -172,7 +179,7 @@ export function ActionsLayerCard({ title, options, onLayerToggle }: ActionsLayer
                       setCheckedLayers(allIds)
                       allIds.forEach((id) => onLayerToggle(id, true))
                     }}
-                    className="flex-1 text-xs border-pantaneiro-lime/30 text-white hover:bg-pantaneiro-lime hover:bg-opacity-20 hover:text-pantaneiro-lime hover:border-pantaneiro-lime"
+                    className="flex-1 text-xs border-pantaneiro-lime/30  hover:bg-pantaneiro-lime hover:bg-opacity-20 hover:text-pantaneiro-lime hover:border-pantaneiro-lime"
                   >
                     Ativar Todas
                   </Button>
@@ -183,7 +190,7 @@ export function ActionsLayerCard({ title, options, onLayerToggle }: ActionsLayer
                       setCheckedLayers([])
                       options.forEach((opt) => onLayerToggle(opt.id, false))
                     }}
-                    className="flex-1 text-xs border-pantaneiro-lime/30 text-white hover:bg-pantaneiro-lime hover:bg-opacity-20 hover:text-pantaneiro-lime hover:border-pantaneiro-lime"
+                    className="flex-1 text-xs border-pantaneiro-lime/30  hover:bg-pantaneiro-lime hover:bg-opacity-20 hover:text-pantaneiro-lime hover:border-pantaneiro-lime"
                   >
                     Desativar Todas
                   </Button>
