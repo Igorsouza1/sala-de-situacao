@@ -175,6 +175,15 @@ export function FeatureDetails({ layerType, properties }: { layerType: string; p
             <DetailItem icon={Calendar} label="Data" value={formatDate(properties.data)} />
           </>
         )
+        case "acoes":
+        return (
+          <>
+            <DetailItem icon={FileText} label="Nome" value={properties.name} />
+            <DetailItem icon={Tag} label="Ação" value={properties.acao} />
+            <DetailItem icon={Calendar} label="Data" value={formatDate(properties.time)} />
+            <DetailItem icon={FileText} label="Descrição" value={properties.descricao} />
+          </>
+        )
       default:
         return (
           <div className="col-span-full text-center py-8">
