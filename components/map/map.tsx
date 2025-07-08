@@ -23,6 +23,7 @@ const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLa
 const GeoJSON = dynamic(() => import("react-leaflet").then((mod) => mod.GeoJSON), { ssr: false })
 const CircleMarker = dynamic(() => import("react-leaflet").then((mod) => mod.CircleMarker), { ssr: false })
 const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false })
+const Tooltip = dynamic(() => import("react-leaflet").then((mod) => mod.Tooltip), { ssr: false })
 
 interface MapProps {
   center?: LatLngExpression
@@ -330,7 +331,14 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
                   eventHandlers={{
                     click: () => handleFeatureClick(firm.properties, "firms"),
                   }}
-                />
+
+                >
+                  <Tooltip>
+                    {firm.properties.acq_date
+                      ? new Intl.DateTimeFormat('pt-BR').format(new Date(firm.properties.acq_date))
+                      : firm.properties.nome}
+                  </Tooltip>
+                </CircleMarker>
               )
             }
             return null
@@ -355,7 +363,9 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
                     eventHandlers={{
                       click: () => handleFeatureClick(feature.properties, "acoes"),
                     }}
-                  />
+                    >
+                    <Tooltip>{feature.properties.name || feature.properties.nome}</Tooltip>
+                  </CircleMarker>
                 )
               }
               return null
@@ -401,7 +411,9 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
             eventHandlers={{
               click: () => handleFeatureClick(wp.properties, "expedicoes"),
             }}
-          />
+            >
+            <Tooltip>{wp.properties.name || wp.properties.nome}</Tooltip>
+          </Marker>
         )
       }
       return null
