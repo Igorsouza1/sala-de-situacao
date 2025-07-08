@@ -348,16 +348,25 @@ export const leitoRioDaPrataInRioDaPrata = rioDaPrata.table("Leito_Rio_Da_Prata"
 export const acoesInRioDaPrata = rioDaPrata.table("acoes", {
 	id: serial().primaryKey().notNull(),
 	name: varchar({ length: 255 }),
-	latitude: numeric({ precision: 10, scale:  6 }),
-	longitude: numeric({ precision: 10, scale:  6 }),
-	elevation: numeric({ precision: 8, scale:  2 }),
-	time: timestamp({ mode: 'string' }),
+	latitude: numeric({ precision: 10, scale: 6 }),
+	longitude: numeric({ precision: 10, scale: 6 }),
+	elevation: numeric({ precision: 8, scale: 2 }),
+	time: timestamp({ mode: "string" }),
 	descricao: varchar({ length: 255 }),
 	mes: varchar({ length: 50 }),
 	atuacao: varchar({ length: 100 }),
 	acao: varchar({ length: 100 }),
 	geom: geometry({ type: "point", srid: 4326 }),
-});
+  })
+  
+  // nova tabela de fotos associadas às ações
+  export const fotosAcoes = rioDaPrata.table("fotos_acoes", {
+	id: serial().primaryKey().notNull(),
+	acao_id: integer().references(() => acoesInRioDaPrata.id).notNull(),
+	url: varchar({ length: 1000 }).notNull(),
+	descricao: varchar({ length: 255 }), // opcional, caso queira identificar
+	created_at: timestamp({ mode: "string" }).defaultNow(),
+  })
 
 export const dequeDePedrasInRioDaPrata = rioDaPrata.table("deque_de_pedras", {
 	id: serial().primaryKey().notNull(),
