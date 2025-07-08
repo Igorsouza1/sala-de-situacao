@@ -240,13 +240,14 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
 
   const actionOptions = useMemo(() => {
     const opts: { id: string; label: string; count: number; color: string }[] = []
+    
+    if (expedicoesData) {
+      opts.push({ id: "expedicoes", label: "Expedições", count: expedicoesData.trilhas.features.length, color: actionColors.expedicoes })
+    }
     if (filteredAcoes) {
       Object.entries(filteredAcoes).forEach(([acao, fc]) => {
         opts.push({ id: acao, label: acao, count: fc.features.length, color: actionColors[acao] || "#000" })
       })
-    }
-    if (expedicoesData) {
-      opts.push({ id: "expedicoes", label: "Expedições", count: expedicoesData.trilhas.features.length, color: actionColors.expedicoes })
     }
     return opts
   }, [filteredAcoes, expedicoesData])
