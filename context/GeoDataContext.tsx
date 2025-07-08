@@ -53,6 +53,7 @@ type MapContextType = {
   closeModal: () => void
   dateFilter: { startDate: Date | null; endDate: Date | null }
   setDateFilter: (startDate: Date | null, endDate: Date | null) => void
+  refreshAcoesData: () => Promise<void>
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined)
@@ -121,6 +122,10 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const refreshAcoesData = async () => {
+    await fetchAcoesData()
+  }
+
 
   const openModal = (title: string, content: React.ReactNode) => {
     setModalData({ isOpen: true, title, content })
@@ -147,6 +152,7 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
         closeModal,
         dateFilter,
         setDateFilter: setDateFilterFunction,
+        refreshAcoesData,
       }}
     >
       {children}
@@ -159,5 +165,4 @@ export function useMapContext() {
   if (context === undefined) {
     throw new Error("useMapContext must be used within a MapProvider")
   }
-  return context
-}
+  return context}
