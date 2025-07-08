@@ -3,7 +3,9 @@ import { db } from "@/db";
 import { sql } from "drizzle-orm";
 import { BlobServiceClient } from "@azure/storage-blob";
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
+type RouteContext = { params: Record<string, string> }
+
+export async function PUT(request: Request, { params }: RouteContext) {
   try {
     const id = Number(params.id);
     const formData = await request.formData();
@@ -54,3 +56,5 @@ export async function PUT(request: Request, { params }: { params: { id: string }
     return NextResponse.json({ error: "Failed to update acao" }, { status: 500 });
   }
 }
+
+
