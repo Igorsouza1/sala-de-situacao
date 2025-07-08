@@ -1,7 +1,14 @@
 
 "use client"
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from "react"
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+  useMemo,
+} from "react"
 
 export interface DailyDequeEntry {
   id: number
@@ -17,6 +24,10 @@ interface DailyDequeCtx {
   isLoading: boolean
   error: string | null
   refetch: () => void
+  trend: {
+    tendencia: "alta" | "baixa" | "estavel"
+    variacao: number
+  }
 }
 
 const DailyDequeContext = createContext<DailyDequeCtx | undefined>(undefined)
@@ -25,6 +36,26 @@ export function DailyDequeProvider({ children }: { children: ReactNode }) {
   const [raw, setRaw] = useState<DailyDequeEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const trend = useMemo(() => {
+    if (!raw.length) return { tendencia: "estavel", variacao: 0 }
+
+    const sorted = raw
+      .slice()
+      .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())
+    const last = sorted.slice(-7)
+    if (last.length < 2) return { tendencia: "estavel", variacao: 0 }
+
+    const variacao = Number(
+      (last[last.length - 1].turbidez - last[0].turbidez).toFixed(2),
+    )
+
+    let tendencia: "alta" | "baixa" | "estavel" = "estavel"
+    if (variacao > 0.1) tendencia = "alta"
+    else if (variacao < -0.1) tendencia = "baixa"
+
+    return { tendencia, variacao }
+  }, [raw])
 
   const fetchData = async () => {
     setIsLoading(true)
@@ -44,7 +75,9 @@ export function DailyDequeProvider({ children }: { children: ReactNode }) {
   useEffect(() => { fetchData() }, [])
 
   return (
-    <DailyDequeContext.Provider value={{ raw, isLoading, error, refetch: fetchData }}>
+    <DailyDequeContext.Provider
+      value={{ raw, isLoading, error, refetch: fetchData, trend }}
+    >
       {children}
     </DailyDequeContext.Provider>
   )

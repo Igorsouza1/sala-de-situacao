@@ -18,6 +18,10 @@ export interface RawDataPoint {
     raw: RawDataPoint[]
     isLoading: boolean
     error: string | null
+    trend: {
+      tendencia: "alta" | "baixa" | "estavel"
+      variacao: number
+    }
   }
   
   export interface BrushChangeEvent {
@@ -31,5 +35,4 @@ export interface RawDataPoint {
   export interface ChartRange {
     start: number
     end: number
-  }
-  
+  }  

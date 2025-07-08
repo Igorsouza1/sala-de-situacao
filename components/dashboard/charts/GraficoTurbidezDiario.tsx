@@ -13,6 +13,7 @@ import {
 } from "recharts"
 import { format, parseISO, differenceInCalendarDays } from "date-fns"
 import { useState, useMemo, useCallback, JSX } from "react"
+import { ArrowUp, ArrowDown, Minus } from "lucide-react"
 import { useDailyDeque } from "@/context/DailyDequeContext"
 import { ChartContainer } from "@/components/ui/chart"
 import { Badge } from "@/components/ui/badge"
@@ -47,7 +48,7 @@ const TURBIDEZ_BANDS = [
 ]
 
 export function GraficoTurbidezDiario(): JSX.Element {
-  const { raw, isLoading, error } = useDailyDeque()
+  const { raw, isLoading, error, trend } = useDailyDeque()
 
   const [presetDias, setPresetDias] = useState<PresetValue>(30) // Default 30 dias
 
@@ -129,11 +130,19 @@ export function GraficoTurbidezDiario(): JSX.Element {
         <CardHeader className="pb-4">
           <CardTitle className="text-white flex items-center justify-between">
             <span>Monitoramento de Turbidez</span>
-            {lastInfo?.outdated && (
-              <Badge variant="outline" className="border-amber-500 text-amber-400 bg-amber-500/10">
-                Última leitura: {lastInfo.dataFmt} ({lastInfo.dias} d)
+            <div className="flex items-center gap-2">
+              {lastInfo?.outdated && (
+                <Badge variant="outline" className="border-amber-500 text-amber-400 bg-amber-500/10">
+                  Última leitura: {lastInfo.dataFmt} ({lastInfo.dias} d)
+                </Badge>
+              )}
+              <Badge variant="outline" className="border-blue-500 text-blue-400 bg-blue-500/10 flex items-center gap-1">
+                {trend.tendencia === "alta" && <ArrowUp className="h-4 w-4 text-green-400" />}
+                {trend.tendencia === "baixa" && <ArrowDown className="h-4 w-4 text-red-400" />}
+                {trend.tendencia === "estavel" && <Minus className="h-4 w-4 text-yellow-400" />}
+                {trend.variacao} NTU
               </Badge>
-            )}
+            </div>
           </CardTitle>
         </CardHeader>
 
