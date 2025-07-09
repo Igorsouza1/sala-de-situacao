@@ -358,6 +358,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
           Object.entries(filteredAcoes).map(([acao, fc]) =>
             visibleActions.includes(acao) &&
             fc.features.map((feature, index) => {
+              
               const coords = feature.geometry.coordinates as number[]
               if (Array.isArray(coords) && coords.length >= 2) {
                 return (
@@ -371,7 +372,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
                       fillOpacity: 0.9,
                     }}
                     eventHandlers={{
-                      click: () => handleFeatureClick(feature.properties, "acoes"),
+                      click: () => handleFeatureClick({ ...feature.properties, id: feature.properties.id }, "acoes"),
                     }}
                     >
                     <Tooltip>{feature.properties.name || feature.properties.nome}</Tooltip>

@@ -58,3 +58,25 @@ export async function PUT(request: Request, { params }: RouteContext) {
 }
 
 
+export async function GET(request: Request, { params }: RouteContext) {
+  try {
+    const id = Number(params.id);
+
+    if (isNaN(id)) {
+      return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+    }
+
+    const result = await db.execute(sql`
+      SELECT id, acao_id, url, created_at
+      FROM rio_da_prata.fotos_acoes
+      WHERE acao_id = ${id}
+      ORDER BY created_at DESC
+    `);
+    
+    const imagens = Array.isArray(result) ? result : result?.rows || [];
+    return NextResponse.json({ imagens });
+  } catch (error) {
+    console.error("Erro ao buscar imagens:", error);
+    return NextResponse.json({ error: "Erro ao buscar imagens" }, { status: 500 });
+  }
+}
