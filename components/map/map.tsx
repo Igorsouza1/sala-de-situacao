@@ -15,8 +15,9 @@ import ReactDOMServer from "react-dom/server"
 import { MapPin } from "lucide-react"
 import L from "leaflet"
 import { FeatureDetails } from "./feature-details"
-
 import { Modal } from "./Modal"
+import { EditAcaoModal } from "./EditAcaoModal"
+import { useUserRole } from "@/hooks/useUserRole"
 
 const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false })
@@ -102,7 +103,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     "banhado",
   ])
   const [visibleActions, setVisibleActions] = useState<string[]>([])
-  const { mapData, isLoading, error, modalData, openModal, closeModal, dateFilter, setDateFilter, expedicoesData, acoesData } =
+  const { mapData, isLoading, error, modalData, openModal, closeModal, dateFilter, setDateFilter, expedicoesData, acoesData, refreshAcoesData } =
     useMapContext()
 
   useEffect(() => {
@@ -118,8 +119,17 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
   }
 
   // Modal de detalhes do feature
+  const [selectedAcao, setSelectedAcao] = useState<any | null>(null)
+  const [isEditOpen, setIsEditOpen] = useState(false)
+  const { isAdmin } = useUserRole()
+
   const handleFeatureClick = useCallback(
     (properties: Record<string, unknown>, layerType: string) => {
+      if (layerType === "acoes") {
+        setSelectedAcao(properties)
+      } else {
+        setSelectedAcao(null)
+      }
       const content = <FeatureDetails layerType={layerType} properties={properties} />
       openModal("", content)
     },
@@ -348,6 +358,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
           Object.entries(filteredAcoes).map(([acao, fc]) =>
             visibleActions.includes(acao) &&
             fc.features.map((feature, index) => {
+              
               const coords = feature.geometry.coordinates as number[]
               if (Array.isArray(coords) && coords.length >= 2) {
                 return (
@@ -361,7 +372,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
                       fillOpacity: 0.9,
                     }}
                     eventHandlers={{
-                      click: () => handleFeatureClick(feature.properties, "acoes"),
+                      click: () => handleFeatureClick({ ...feature.properties, id: feature.properties.id }, "acoes"),
                     }}
                     >
                     <Tooltip>{feature.properties.name || feature.properties.nome}</Tooltip>
@@ -429,9 +440,27 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
         <ActionsLayerCard title="Ações" options={actionOptions} onLayerToggle={handleActionToggle} />
       </div>
 
-      <Modal isOpen={modalData.isOpen} onClose={closeModal} >
+      <Modal
+        isOpen={modalData.isOpen}
+        onClose={closeModal}
+        showEdit={isAdmin && !!selectedAcao}
+        onEdit={() => setIsEditOpen(true)}
+      >
         {modalData.content}
       </Modal>
+      <EditAcaoModal
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
+        acao={selectedAcao}
+        onSave={async (data, files) => {
+          const form = new FormData()
+          Object.entries(data).forEach(([k, v]) => form.append(k, String(v)))
+          files.forEach(f => form.append("files", f))
+          await fetch(`/api/acoes/${data.id}`, { method: "PUT", body: form })
+          await refreshAcoesData()
+          setIsEditOpen(false)
+          closeModal()
+        }}
+      />
     </div>
-  )
-}
+  )}
