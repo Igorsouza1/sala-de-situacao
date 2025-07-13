@@ -5,7 +5,8 @@ import { BlobServiceClient } from "@azure/storage-blob";
 
 type RouteContext = { params: Record<string, string> }
 
-export async function PUT(request: Request, { params }: RouteContext) {
+export async function PUT(request: Request, props: RouteContext) {
+  const params = await props.params;
   try {
     const id = Number(params.id);
     const formData = await request.formData();
@@ -58,7 +59,8 @@ export async function PUT(request: Request, { params }: RouteContext) {
 }
 
 
-export async function GET(request: Request, { params }: RouteContext) {
+export async function GET(request: Request, props: RouteContext) {
+  const params = await props.params;
   try {
     const id = Number(params.id);
 
