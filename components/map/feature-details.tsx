@@ -318,7 +318,7 @@ export function FeatureDetails({ layerType, properties }: { layerType: string; p
   useEffect(() => {
     if (layerType === "acoes" && properties?.id) {
       setLoading(true)
-      fetch(`/api/acoes/${properties.id}`)
+      fetch(`/api/dashboard/acoes/${properties.id}`)
         .then((res) => res.json())
         .then((data) => {
           const urls = Array.isArray(data.imagens) ? data.imagens.map((img: any) => img.url) : []

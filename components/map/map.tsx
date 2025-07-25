@@ -456,7 +456,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
           const form = new FormData()
           Object.entries(data).forEach(([k, v]) => form.append(k, String(v)))
           files.forEach(f => form.append("files", f))
-          await fetch(`/api/acoes/${data.id}`, { method: "PUT", body: form })
+          await fetch(`/api/dashboard/acoes/${data.id}`, { method: "PUT", body: form })
           await refreshAcoesData()
           setIsEditOpen(false)
           closeModal()
