@@ -21,7 +21,7 @@ const commonNavItems = [
   { name: "Dashboard", href: "/protected/dashboard", icon: ChartNetwork },
 ]
 
-const adminNavItems = [{ name: "Painel do Administrador", href: "/protected/admin", icon: HardDrive }]
+const adminNavItems = [{ name: "Painel do Administrador", href: "/protected/admin/data", icon: HardDrive }]
 
 export function Navbar() {
   const pathname = usePathname()

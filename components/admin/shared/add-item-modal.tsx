@@ -18,10 +18,8 @@ export function AddItemModal({ isOpen, onClose, onAdd, table }: AddItemModalProp
 
   useEffect(() => {
     if (table && isOpen) {
-      // Fetch fields when modal opens and table is selected
       fetchTableFields(table)
     } else if (!isOpen) {
-      // Clear form data when modal closes
       setFormData({})
       setFields([])
     }
@@ -30,17 +28,13 @@ export function AddItemModal({ isOpen, onClose, onAdd, table }: AddItemModalProp
   const fetchTableFields = async (tableName: string) => {
     try {
       const response = await fetch(`/api/admin/table-fields?table=${tableName}`)
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
       const data = await response.json()
-      // Filter out 'id' and 'geom' fields
       setFields(data.filter((field: string) => field !== "id" && field !== "geom"))
-      setFormData({}) // Reset form data for new fields
+      setFormData({})
     } catch (error) {
       console.error("Error fetching table fields:", error)
-      // Optionally, show a toast message to the user
-      setFields([]) // Clear fields on error
+      setFields([])
     }
   }
 
@@ -50,20 +44,14 @@ export function AddItemModal({ isOpen, onClose, onAdd, table }: AddItemModalProp
 
   const handleSubmit = () => {
     const formattedData = { ...formData }
-
-    // Converte o formato do datetime-local para um formato mais padronizado
-    // Apenas se o campo 'time' existir nos campos atuais (evita erro se 'time' não for um campo da tabela)
     if (fields.includes("time") && formattedData.time) {
       try {
         formattedData.time = new Date(formattedData.time).toISOString()
       } catch (e) {
         console.error("Error formatting time:", e)
-        // Handle invalid date string if necessary, e.g., show an error
       }
     }
-
     onAdd(formattedData)
-    // onClose(); // onClose is typically called by the parent after successful onAdd
   }
 
   return (
@@ -74,7 +62,7 @@ export function AddItemModal({ isOpen, onClose, onAdd, table }: AddItemModalProp
         </DialogHeader>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4 max-h-[60vh] overflow-y-auto">
           {fields.length === 0 && (
-            <p className="text-muted-foreground col-span-full text-center">Carregando campos da tabela...</p>
+            <p className="text-muted-foreground col-span-full text-center">Carregando campos...</p>
           )}
           {fields.map((field) => (
             <div key={field} className="grid grid-cols-1 items-start gap-2 md:grid-cols-3 md:items-center md:gap-4">

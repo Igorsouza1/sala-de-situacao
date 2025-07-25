@@ -1,8 +1,8 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
+import * as XLSX from "xlsx"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -16,41 +16,43 @@ import {
 import { Label } from "@/components/ui/label"
 import { UploadCloud } from "lucide-react"
 
-interface CsvUploadModalProps {
+interface XlsxUploadModalProps {
   isOpen: boolean
   onClose: () => void
-  onUpload: (data: string) => void // Assuming CSV data is passed as a string
+  onUpload: (data: any[]) => void
 }
 
-export function CsvUploadModal({ isOpen, onClose, onUpload }: CsvUploadModalProps) {
+export function XlsxUploadModal({ isOpen, onClose, onUpload }: XlsxUploadModalProps) {
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setError(null)
-    if (e.target.files && e.target.files[0]) {
-      const selectedFile = e.target.files[0]
-      if (selectedFile.type === "text/csv" || selectedFile.name.endsWith(".csv")) {
+    const selectedFile = e.target.files?.[0]
+    if (selectedFile) {
+      const fileType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      if (selectedFile.type === fileType || selectedFile.name.endsWith(".xlsx")) {
         setFile(selectedFile)
       } else {
-        setError("Por favor, selecione um arquivo .csv válido.")
+        setError("Por favor, selecione um arquivo .xlsx válido.")
         setFile(null)
       }
-    } else {
-      setFile(null)
     }
   }
 
   const handleUpload = async () => {
     if (file) {
       try {
-        const text = await file.text()
-        onUpload(text)
-        setFile(null) // Reset file input after successful upload
-        // onClose(); // Parent should close after successful onUpload
+        const arrayBuffer = await file.arrayBuffer()
+        const workbook = XLSX.read(arrayBuffer, { type: "buffer" })
+        const worksheetName = workbook.SheetNames[0]
+        const worksheet = workbook.Sheets[worksheetName]
+        const data = XLSX.utils.sheet_to_json(worksheet)
+        onUpload(data)
+        onClose()
       } catch (err) {
-        console.error("Error reading file:", err)
-        setError("Falha ao ler o arquivo. Tente novamente.")
+        console.error("Error reading or parsing XLSX file:", err)
+        setError("Falha ao processar o arquivo XLSX. Verifique o formato.")
       }
     }
   }
@@ -65,15 +67,15 @@ export function CsvUploadModal({ isOpen, onClose, onUpload }: CsvUploadModalProp
     <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Upload de Arquivo CSV</DialogTitle>
-          <DialogDescription>Selecione um arquivo CSV para importar dados para a tabela selecionada.</DialogDescription>
+          <DialogTitle>Upload de Arquivo XLSX</DialogTitle>
+          <DialogDescription>Selecione um arquivo XLSX (.xlsx) para importar dados.</DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-4">
-          <Label htmlFor="csv-file-input" className="sr-only">
-            Escolher arquivo CSV
+          <Label htmlFor="xlsx-file-input" className="sr-only">
+            Escolher arquivo XLSX
           </Label>
-          <Input id="csv-file-input" type="file" accept=".csv" onChange={handleFileChange} />
-          {file && <p className="text-sm text-muted-foreground">Arquivo selecionado: {file.name}</p>}
+          <Input id="xlsx-file-input" type="file" accept=".xlsx" onChange={handleFileChange} />
+          {file && <p className="text-sm text-muted-foreground">Arquivo: {file.name}</p>}
           {error && <p className="text-sm text-destructive">{error}</p>}
         </div>
         <DialogFooter>
@@ -81,8 +83,7 @@ export function CsvUploadModal({ isOpen, onClose, onUpload }: CsvUploadModalProp
             Cancelar
           </Button>
           <Button onClick={handleUpload} disabled={!file}>
-            <UploadCloud className="h-4 w-4 mr-2" />
-            Upload
+            <UploadCloud className="h-4 w-4 mr-2" /> Upload
           </Button>
         </DialogFooter>
       </DialogContent>
