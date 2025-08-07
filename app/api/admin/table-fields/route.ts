@@ -1,22 +1,5 @@
 import { NextResponse } from "next/server"
-import { db, sql } from "@/db"
-
-interface ColumnResult {
-  command: string
-  rowCount: number
-  oid: null
-  rows: Array<{ column_name: string }>
-  fields: Array<{
-    name: string
-    tableID: number
-    columnID: number
-    dataTypeID: number
-    dataTypeSize: number
-    dataTypeModifier: number
-    format: string
-  }>
-  [key: string]: unknown;
-}
+import { genericRepo } from "@/lib/repo/generic-repo"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -27,18 +10,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await db.execute<ColumnResult>(sql`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_schema = 'rio_da_prata'
-        AND table_name = ${table}
-    `)
-
-    if (!Array.isArray(result.rows)) {
-      throw new Error("Unexpected result structure")
-    }
-
-    const fields = result.rows.map(row => row.column_name)
+    const fields = await genericRepo.listarCampos(table)
     return NextResponse.json(fields)
   } catch (error) {
     console.error(`Error fetching fields for table ${table}:`, error)

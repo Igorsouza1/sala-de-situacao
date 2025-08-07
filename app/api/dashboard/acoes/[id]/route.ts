@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
 import { BlobServiceClient } from "@azure/storage-blob";
+import { getAllAcoesImagesData } from "@/lib/service/acoesService";
 
 type RouteContext = { params: Record<string, string> }
 
@@ -59,24 +60,13 @@ export async function PUT(request: Request, props: RouteContext) {
 }
 
 
-export async function GET(request: Request, props: RouteContext) {
-  const params = await props.params;
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
   try {
-    const id = Number(params.id);
+    const id = Number(searchParams.get('startDate'))
 
-    if (isNaN(id)) {
-      return NextResponse.json({ error: "ID inválido" }, { status: 400 });
-    }
-
-    const result = await db.execute(sql`
-      SELECT id, acao_id, url, created_at
-      FROM rio_da_prata.fotos_acoes
-      WHERE acao_id = ${id}
-      ORDER BY created_at DESC
-    `);
-    
-    const imagens = Array.isArray(result) ? result : result?.rows || [];
-    return NextResponse.json({ imagens });
+    const result = await getAllAcoesImagesData(id);
+    return NextResponse.json({ result });
   } catch (error) {
     console.error("Erro ao buscar imagens:", error);
     return NextResponse.json({ error: "Erro ao buscar imagens" }, { status: 500 });

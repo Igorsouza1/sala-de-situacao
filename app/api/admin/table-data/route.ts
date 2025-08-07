@@ -1,22 +1,5 @@
 import { NextResponse } from "next/server"
-import { db, sql } from "@/db"
-
-interface QueryResult {
-  command: string
-  rowCount: number
-  oid: null
-  rows: any[]
-  fields: Array<{
-    name: string
-    tableID: number
-    columnID: number
-    dataTypeID: number
-    dataTypeSize: number
-    dataTypeModifier: number
-    format: string
-  }>
-  [key: string]: unknown;
-}
+import { genericRepo } from "@/lib/repo/generic-repo"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
@@ -27,11 +10,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    const data = await db.execute<QueryResult>(sql`
-      SELECT *
-      FROM rio_da_prata.${sql.identifier(table)}
-    `)
-    return NextResponse.json(data.rows)
+    const data = await genericRepo.listarDados(table)
+    return NextResponse.json(data)
   } catch (error) {
     console.error(`Error fetching data from table ${table}:`, error)
     return NextResponse.json({ error: `Failed to fetch data from table ${table}` }, { status: 500 })

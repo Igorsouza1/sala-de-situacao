@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server"
-import { db, sql } from "@/db"
+import { genericRepo } from "@/lib/repo/generic-repo"
 
 export async function DELETE(request: Request) {
   const { searchParams } = new URL(request.url)
   const tableName = searchParams.get("table")
   const body = await request.json()
-
 
   if (!tableName) {
     return NextResponse.json({ error: "Table name is required" }, { status: 400 })
@@ -18,12 +17,9 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Item ID is required" }, { status: 400 })
     }
 
-    const result = await db.execute(sql`
-      DELETE FROM rio_da_prata.${sql.identifier(tableName)}
-      WHERE id = ${body.id}
-    `)
+    const success = await genericRepo.remover(tableName, id)
 
-    if (result.rowCount === 0) {
+    if (!success) {
       return NextResponse.json({ error: "Item not found" }, { status: 404 })
     }
 

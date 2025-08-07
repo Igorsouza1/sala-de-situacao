@@ -1,5 +1,5 @@
 import { dequeDePedrasInRioDaPrata } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@/db";
 
 
