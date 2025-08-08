@@ -7,7 +7,7 @@ import { getAllAcoesImagesData } from "@/lib/service/acoesService";
 type RouteContext = { params: Record<string, string> }
 
 export async function PUT(request: Request, props: RouteContext) {
-  const params = await props.params;
+  const params = props.params;
   try {
     const id = Number(params.id);
     const formData = await request.formData();
@@ -60,13 +60,19 @@ export async function PUT(request: Request, props: RouteContext) {
 }
 
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
+export async function GET(request: Request, props: RouteContext) {
+  const params = props.params;
   try {
-    const id = Number(searchParams.get('startDate'))
+    const id = Number(params.id);
+
+    
+    if (isNaN(id)) {
+      return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+    }
 
     const result = await getAllAcoesImagesData(id);
     return NextResponse.json({ result });
+
   } catch (error) {
     console.error("Erro ao buscar imagens:", error);
     return NextResponse.json({ error: "Erro ao buscar imagens" }, { status: 500 });
