@@ -3,11 +3,12 @@ import { db } from "@/db";
 import { sql } from "drizzle-orm";
 import { BlobServiceClient } from "@azure/storage-blob";
 import { getAllAcoesImagesData } from "@/lib/service/acoesService";
+import { apiError, apiSuccess } from "@/lib/api/responses";
 
 type RouteContext = { params: Record<string, string> }
 
 export async function PUT(request: Request, props: RouteContext) {
-  const params = props.params;
+  const params = await props.params;
   try {
     const id = Number(params.id);
     const formData = await request.formData();
@@ -61,20 +62,27 @@ export async function PUT(request: Request, props: RouteContext) {
 
 
 export async function GET(request: Request, props: RouteContext) {
-  const params = props.params;
+  const params = await props.params;
   try {
     const id = Number(params.id);
 
     
     if (isNaN(id)) {
-      return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+      return apiError("ID inválido", 400);
     }
+    
 
     const result = await getAllAcoesImagesData(id);
-    return NextResponse.json({ result });
+
+    if (!result || result.length === 0){ 
+      return apiError("Imagens não encontradas", 404);
+    }
+    
+    return apiSuccess(result);
+
 
   } catch (error) {
     console.error("Erro ao buscar imagens:", error);
-    return NextResponse.json({ error: "Erro ao buscar imagens" }, { status: 500 });
+    return apiError("Erro ao buscar imagens", 500);
   }
 }
