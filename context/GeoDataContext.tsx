@@ -110,12 +110,14 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
 
   const fetchAcoesData = async () => {
     try {
-      const response = await fetch("/api/map/acao")
-      if (!response.ok) {
-        throw new Error("Failed to fetch actions data")
+      const response = await fetch("/api/acoes?view=map")
+      const apiResponse = await response.json()
+
+      if(apiResponse.success){
+        setAcoesData(apiResponse.data)
+      } else {
+        throw new Error(apiResponse.error?.message || "Erro retornado pela API");
       }
-      const data = await response.json()
-      setAcoesData(data)
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred")
     }

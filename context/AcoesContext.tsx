@@ -36,7 +36,7 @@ export function AcoesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function fetchAcoes() {
       try {
-        const response = await fetch("/api/dashboard/acoes")
+        const response = await fetch("/api/acoes?view=dashboard")
         if (!response.ok) {
           throw new Error("Falha ao buscar dados")
         }

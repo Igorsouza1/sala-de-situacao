@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { acoesInRioDaPrata, fotosAcoesInRioDaPrata } from "@/db/schema" // Usando a tabela que você definiu
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 // Uma função que busca todos os dados
 export async function findAllAcoesData() {
@@ -11,9 +11,6 @@ export async function findAllAcoesData() {
     .select({
       id: acoesInRioDaPrata.id,
       name: acoesInRioDaPrata.name,
-      latitude: acoesInRioDaPrata.latitude,
-      longitude: acoesInRioDaPrata.longitude,
-      elevation: acoesInRioDaPrata.elevation,
       time: acoesInRioDaPrata.time,
       descricao: acoesInRioDaPrata.descricao,
       mes: acoesInRioDaPrata.mes,
@@ -24,6 +21,16 @@ export async function findAllAcoesData() {
     .execute()
   
   return result;
+}
+
+export async function findAllAcoesDataWithGeometry(){
+
+  const result = await db.execute(`
+    SELECT id, acao, name, descricao, mes, time, ST_AsGeoJSON(geom) as geojson
+    FROM "rio_da_prata"."acoes"
+  `)
+
+    return result.rows
 }
 
 
@@ -41,5 +48,13 @@ export async function findAllAcoesImagesData(id: number) {
     .execute()
 
     return result
+}
+
+export async function deleteAcaoById(id: number) {
+  const result = await db
+    .delete(acoesInRioDaPrata)
+    .where(eq(acoesInRioDaPrata.id, id))
+    .execute()
+  return result
 }
 

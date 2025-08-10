@@ -11,8 +11,6 @@ import { ActionsLayerCard } from "./ActionLayerCard"
 import { MapPlaceholder } from "./MapPlaceholder"
 import { DateFilterControl } from "./DateFilterControl"
 import { useMapContext } from "@/context/GeoDataContext"
-import ReactDOMServer from "react-dom/server"
-import { MapPin } from "lucide-react"
 import L from "leaflet"
 import { FeatureDetails } from "./feature-details"
 import { Modal } from "./Modal"
@@ -358,7 +356,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
           Object.entries(filteredAcoes).map(([acao, fc]) =>
             visibleActions.includes(acao) &&
             fc.features.map((feature, index) => {
-              
+              console.log(feature)
               const coords = feature.geometry.coordinates as number[]
               if (Array.isArray(coords) && coords.length >= 2) {
                 return (
