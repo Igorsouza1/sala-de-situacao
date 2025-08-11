@@ -36,18 +36,25 @@ export function AcoesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function fetchAcoes() {
       try {
-        const response = await fetch("/api/acoes?view=dashboard")
-        if (!response.ok) {
-          throw new Error("Falha ao buscar dados")
+        const response = await fetch("/api/acoes?view=dashboard");
+        const apiResponse = await response.json(); // Renomeado para clareza
+    
+        // 1. Verificamos o campo 'success' do nosso envelope
+        if (apiResponse.success) {
+          // 2. Se for sucesso, colocamos o conteúdo de 'apiResponse.data' no estado
+          const acoesData = apiResponse.data || []; // Garante que seja um array
+          setAcoes(acoesData);
+          setFilteredAcoes(acoesData);
+        } else {
+          // 3. Se a API retornou um erro, nós usamos a mensagem de erro do envelope
+          throw new Error(apiResponse.error?.message || "Erro retornado pela API");
         }
-        const data = await response.json()
-        setAcoes(data)
-        setFilteredAcoes(data)
+    
       } catch (err) {
-        setError("Erro ao carregar dados de ações")
-        console.error(err)
+        setError(err instanceof Error ? err.message : "Erro ao carregar dados de ações");
+        console.error(err);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     }
 
