@@ -16,3 +16,5 @@ export async function uploadAzure(file: File, path: string) {
   await block.uploadData(buffer, { blobHTTPHeaders: { blobContentType: file.type } });
   return `${baseUrl}/${path}`;
 }
+
+

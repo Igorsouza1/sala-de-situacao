@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { acoesInRioDaPrata, fotosAcoesInRioDaPrata } from "@/db/schema" // Usando a tabela que você definiu
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc} from "drizzle-orm";
 
 // Uma função que busca todos os dados
 export async function findAllAcoesData() {
@@ -58,3 +58,25 @@ export async function deleteAcaoById(id: number) {
   return result
 }
 
+export async function updateAcaoById(id: number, data: any) {
+  const result = await db
+    .update(acoesInRioDaPrata)
+    .set(data)
+    .where(eq(acoesInRioDaPrata.id, id))
+    .execute()
+  return result
+}
+
+export async function addAcaoImageById(acaoId: number, url: string, descricao: string) {
+  const result = await db
+    .insert(fotosAcoesInRioDaPrata)
+    .values({
+      acaoId,
+      url,
+      descricao,
+      createdAt: new Date().toISOString(),
+    })
+    .execute()
+
+  return result
+}

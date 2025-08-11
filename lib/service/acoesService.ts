@@ -1,7 +1,8 @@
 
 
-import { findAllAcoesData, findAllAcoesDataWithGeometry } from "@/lib/repositories/acoesRepository";
+import { addAcaoImageById, findAllAcoesData, findAllAcoesDataWithGeometry, updateAcaoById } from "@/lib/repositories/acoesRepository";
 import { findAllAcoesImagesData } from "@/lib/repositories/acoesRepository";
+import { uploadAzure } from "../azure";
 
 
 
@@ -27,7 +28,35 @@ export async function getAllAcoesImagesData(id: number) {
 }
 
 
+export async function updateAcaoAndUploadImageById(id: number,  formData: FormData) {
+  // 1. Separamos os campos de texto dos arquivos
+  const textUpdates: Record<string, any> = {};
+  const files: File[] = [];
 
+  for (const [key, value] of formData.entries()) {
+    if (value instanceof File) {
+      files.push(value);
+    } else {
+      textUpdates[key] = value;
+    }
+  }
+
+  //    Só atualizamos o banco se houver campos de texto para atualizar.
+  if (Object.keys(textUpdates).length > 0) {
+    await updateAcaoById(id, textUpdates);
+  }
+
+  //    Só executamos a lógica de upload se houver arquivos.
+  if (files.length > 0) {
+    for (const file of files) {
+      const path = `${id}/${Date.now()}-${file.name}`;
+      const imageUrl = await uploadAzure(file, path);
+      await addAcaoImageById(id, imageUrl, textUpdates.descricao || "");
+    }
+  }
+
+  return { message: "Ação atualizada com sucesso!" };
+}
 
 
 // -----------------------------------------

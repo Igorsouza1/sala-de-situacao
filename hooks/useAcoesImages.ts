@@ -20,7 +20,7 @@ export const useAcoesImages = (acaoId: string | undefined | null) => {
       setError(null);
 
       try {
-        const res = await fetch(`/api/dashboard/acoes/${acaoId}`);
+        const res = await fetch(`/api/acoes/${acaoId}`);
         const responseData = await res.json();
 
         // >>> AQUI ESTÁ A CONEXÃO COM NOSSA NOVA API <<<
