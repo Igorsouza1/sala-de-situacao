@@ -6,7 +6,7 @@ export async function getAllExpedicoesData(){
     const { trilhas, waypoints } = await findAllExpedicoesData();
 
 
-    // PRECISA DE REFATORAÇÃ
+    // PRECISA DE REFATORAÇÃO?
     const trilhasGeoJSON = {
         type: "FeatureCollection",
         features: trilhas.map((row: any) => ({
