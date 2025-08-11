@@ -356,7 +356,6 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
           Object.entries(filteredAcoes).map(([acao, fc]) =>
             visibleActions.includes(acao) &&
             fc.features.map((feature, index) => {
-              console.log(feature)
               const coords = feature.geometry.coordinates as number[]
               if (Array.isArray(coords) && coords.length >= 2) {
                 return (
