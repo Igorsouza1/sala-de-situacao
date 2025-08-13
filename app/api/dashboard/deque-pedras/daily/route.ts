@@ -2,35 +2,20 @@ import { NextResponse } from "next/server"
 import { db } from "@/db"
 import { dequeDePedrasInRioDaPrata } from "@/db/schema"
 import { and, gte, lte } from "drizzle-orm"
+import { apiError } from "@/lib/api/responses"
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const startDate = searchParams.get("startDate")
   const endDate = searchParams.get("endDate")
 
-  const conditions = [] as any[]
-  if (startDate) {
-    conditions.push(gte(dequeDePedrasInRioDaPrata.data, startDate))
-  }
-  if (endDate) {
-    conditions.push(lte(dequeDePedrasInRioDaPrata.data, endDate))
-  }
-
   try {
-    const query = db
-      .select({
-        id: dequeDePedrasInRioDaPrata.id,
-        local: dequeDePedrasInRioDaPrata.local,
-        data: dequeDePedrasInRioDaPrata.data,
-        turbidez: dequeDePedrasInRioDaPrata.turbidez,
-        secchiVertical: dequeDePedrasInRioDaPrata.secchiVertical,
-        secchiHorizontal: dequeDePedrasInRioDaPrata.secchiHorizontal,
-        chuva: dequeDePedrasInRioDaPrata.chuva,
-      })
-      .from(dequeDePedrasInRioDaPrata)
+    let query = db
+      .select()
+      .from(dequeDePedrasInRioDaPrata).$dynamic()
 
-    if (conditions.length > 0) {
-      query.where(and(...conditions))
+    if(startDate && endDate){
+        query = query.where(and(gte(dequeDePedrasInRioDaPrata.data, startDate), lte(dequeDePedrasInRioDaPrata.data, endDate)))
     }
 
     const result = await query.execute()

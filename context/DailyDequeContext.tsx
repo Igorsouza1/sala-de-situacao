@@ -60,10 +60,18 @@ export function DailyDequeProvider({ children }: { children: ReactNode }) {
   const fetchData = async () => {
     setIsLoading(true)
     try {
-      const res = await fetch("/api/dashboard/deque-pedras/daily")
-      if (!res.ok) throw new Error("Falha ao buscar dados diários")
-      setRaw(await res.json())
-      setError(null)
+      const res = await fetch("/api/deque-pedras/daily")
+      if(!res.ok){
+        throw new Error("Falha ao buscar dados diários")
+      }
+
+      const apiResponse = await res.json()
+
+      if(apiResponse.success){
+        setRaw(apiResponse.data)
+      }else{
+        throw new Error(apiResponse.error)
+      }
     } catch (e: any) {
       console.error(e)
       setError(e.message)

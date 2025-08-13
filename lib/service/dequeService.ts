@@ -1,4 +1,4 @@
-import { findAllDequeData } from "../repositories/dequeRepository"
+import { findAllDequeData, findDequeDataByDateRange } from "../repositories/dequeRepository"
 
 interface MonthData {
     chuva: number
@@ -49,4 +49,11 @@ export async function getAllDequeDataGroupedByMonth(){
 
 
     return groupedData
+}
+
+
+
+export async function getDequeDataByDateRange(startDate: string, endDate: string){
+    const dequeData = await findDequeDataByDateRange(startDate, endDate)
+    return dequeData
 }
