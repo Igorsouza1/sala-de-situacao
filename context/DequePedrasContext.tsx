@@ -30,12 +30,13 @@ export function DequePedrasProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function fetchDequePedrasData() {
       try {
-        const response = await fetch('/api/dashboard/deque-pedras');
+        const response = await fetch('/api/deque-pedras');
         if (!response.ok) {
           throw new Error('Falha ao buscar dados');
         }
         const data = await response.json();
-        setDequePedrasData(data);
+        console.log(data.data);
+        setDequePedrasData(data.data);
       } catch (err) {
         setError('Erro ao carregar dados do Deque de Pedras');
         console.error(err);
