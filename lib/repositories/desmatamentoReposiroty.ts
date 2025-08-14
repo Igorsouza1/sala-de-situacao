@@ -1,4 +1,5 @@
 import { db } from "@/db"
+import { desmatamentoInRioDaPrata } from "@/db/schema"
 
 
 export async function findAllDesmatamentoDataWithGeometry(){ 
@@ -8,4 +9,19 @@ export async function findAllDesmatamentoDataWithGeometry(){
     `)
 
     return result
+}
+
+export async function findAllDesmatamentoData(){
+  const result = await db.select(
+    {
+      alertid: desmatamentoInRioDaPrata.alertid,
+      alertha: desmatamentoInRioDaPrata.alertha,
+      detectat: desmatamentoInRioDaPrata.detectat,
+      detectyear: desmatamentoInRioDaPrata.detectyear,
+      state: desmatamentoInRioDaPrata.state,
+      stateha: desmatamentoInRioDaPrata.stateha,
+    }
+  ).from(desmatamentoInRioDaPrata).execute()
+  
+  return result
 }

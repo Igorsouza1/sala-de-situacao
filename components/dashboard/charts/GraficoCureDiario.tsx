@@ -84,7 +84,6 @@ export function GraficoPonteCure(): JSX.Element {
   const serieCompleta: SerieDia[] = useMemo(() => {
     if (!raw.length) return []
 
-    console.log(raw)
     const sorted = raw
       .slice()
       .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())

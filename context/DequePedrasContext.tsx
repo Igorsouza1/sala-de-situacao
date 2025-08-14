@@ -34,9 +34,12 @@ export function DequePedrasProvider({ children }: { children: ReactNode }) {
         if (!response.ok) {
           throw new Error('Falha ao buscar dados');
         }
-        const data = await response.json();
-        console.log(data.data);
-        setDequePedrasData(data.data);
+        const apiResponse = await response.json();
+        if(apiResponse.success){
+          setDequePedrasData(apiResponse.data)
+        } else {
+          throw new Error(apiResponse.error?.message || "Erro retornado pela API")
+        }
       } catch (err) {
         setError('Erro ao carregar dados do Deque de Pedras');
         console.error(err);
