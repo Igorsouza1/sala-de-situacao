@@ -1,4 +1,4 @@
-import { findAllPonteData } from "../repositories/ponteRepository";
+import { findAllPonteData, findPonteDataByDateRange } from "../repositories/ponteRepository";
 
 interface MonthData {
     chuva: number
@@ -72,4 +72,10 @@ export async function getAllPonteData(){
       })
 
       return groupedData
+}
+
+
+export async function getPonteDataByDateRange(startDate: string, endDate: string){
+  const dequeData = await findPonteDataByDateRange(startDate, endDate)
+  return dequeData
 }

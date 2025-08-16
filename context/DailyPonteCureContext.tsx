@@ -28,9 +28,10 @@ export function DailyPonteCureProvider({ children }: { children: ReactNode }) {
   const fetchData = async () => {
     setIsLoading(true)
     try {
-      const res = await fetch("/api/dashboard/ponte-cure/daily")
+      const res = await fetch("/api/ponte-cure/daily")
       if (!res.ok) throw new Error("Falha ao buscar dados diários")
-      setRaw(await res.json())
+      const apiResponse = await res.json()
+      setRaw(apiResponse.data)
       setError(null)
     } catch (e: any) {
       console.error(e)
