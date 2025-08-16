@@ -33,12 +33,12 @@ export function PonteCureProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function fetchPonteCureData() {
       try {
-        const response = await fetch("/api/dashboard/ponte-cure")
+        const response = await fetch("/api/ponte-cure")
         if (!response.ok) {
           throw new Error("Falha ao buscar dados")
         }
-        const data = await response.json()
-        setPonteCureData(data)
+        const apiResponse = await response.json()
+        setPonteCureData(apiResponse.data)
       } catch (err) {
         setError("Erro ao carregar dados da Ponte do Cure")
         console.error(err)
