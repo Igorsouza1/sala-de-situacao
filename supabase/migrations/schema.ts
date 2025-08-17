@@ -1,10 +1,12 @@
-import { pgTable, pgSchema, serial, geometry, bigint, doublePrecision, integer, varchar, numeric, text, timestamp, date, foreignKey, unique, time, uuid } from "drizzle-orm/pg-core"
-import { sql } from "drizzle-orm"
+import { pgSchema, serial, geometry, bigint, doublePrecision, integer, varchar, numeric, text, timestamp, date, foreignKey, unique, time, uuid } from "drizzle-orm/pg-core"
+
 
 export const rioDaPrata = pgSchema("rio_da_prata");
 
 export const baciaRioDaPrataIdSeqInRioDaPrata = rioDaPrata.sequence("Bacia_RioDaPrata_id_seq", {  startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
 export const rioDaPrataLeitoIdSeqInRioDaPrata = rioDaPrata.sequence("Rio da Prata - Leito_id_seq", {  startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
+
+
 
 export const baciaRioDaPrataInRioDaPrata = rioDaPrata.table("Bacia_Rio_Da_Prata", {
 	id: serial().primaryKey().notNull(),
@@ -475,3 +477,5 @@ export const fotosAcoesInRioDaPrata = rioDaPrata.table("fotos_acoes", {
 			name: "fotos_acoes_acao_id_acoes_id_fk"
 		}),
 ]);
+
+

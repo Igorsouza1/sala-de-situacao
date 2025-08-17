@@ -29,7 +29,7 @@ export function useUserRole() {
           const { data, error } = await supabase
             .from("profiles")
             .select("role")
-            .eq("id", user.id) // Changed from user_ref to id since that's now the column name
+            .eq("id", user.id) 
             .maybeSingle()
 
 

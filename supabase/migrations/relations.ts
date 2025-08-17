@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm/relations";
-import { trilhasInRioDaPrata, waypointsInRioDaPrata, acoesInRioDaPrata, fotosAcoesInRioDaPrata } from "./schema";
+import { trilhasInRioDaPrata, waypointsInRioDaPrata, acoesInRioDaPrata, fotosAcoesInRioDaPrata, usersInAuth, profilesInRioDaPrata } from "./schema";
 
 export const waypointsInRioDaPrataRelations = relations(waypointsInRioDaPrata, ({one}) => ({
 	trilhasInRioDaPrata: one(trilhasInRioDaPrata, {
@@ -21,4 +21,15 @@ export const fotosAcoesInRioDaPrataRelations = relations(fotosAcoesInRioDaPrata,
 
 export const acoesInRioDaPrataRelations = relations(acoesInRioDaPrata, ({many}) => ({
 	fotosAcoesInRioDaPratas: many(fotosAcoesInRioDaPrata),
+}));
+
+export const profilesInRioDaPrataRelations = relations(profilesInRioDaPrata, ({one}) => ({
+	usersInAuth: one(usersInAuth, {
+		fields: [profilesInRioDaPrata.id],
+		references: [usersInAuth.id]
+	}),
+}));
+
+export const usersInAuthRelations = relations(usersInAuth, ({many}) => ({
+	profilesInRioDaPratas: many(profilesInRioDaPrata),
 }));
