@@ -12,7 +12,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 
 import { useUserRole } from "@/hooks/useUserRole"
 import { createClient } from "@/utils/supabase/client"
-import { GpxUploadModal } from "@/components/gpx-upload-modal"
+  import { DataInsertDialog } from "@/components/data-insert/DataInsertDialog"
 import { UserProfileModal } from "@/components/user-profile-modal"
 
 /* ───────── itens de navegação ───────── */
@@ -138,10 +138,10 @@ export function Navbar() {
       </nav>
 
       {/* modal de upload GPX */}
-      <GpxUploadModal isOpen={isGpxModalOpen} onClose={() => setIsGpxModalOpen(false)} />
+      <DataInsertDialog isOpen={isGpxModalOpen} onClose={() => setIsGpxModalOpen(false)} />
 
       {/* modal de perfil do usuário */}
-      <UserProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
+      <DataInsertDialog isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
     </TooltipProvider>
   )
 }
