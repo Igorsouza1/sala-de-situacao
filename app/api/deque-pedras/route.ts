@@ -1,6 +1,6 @@
 import { apiError, apiSuccess } from "@/lib/api/responses"
 import {  getAllDequeDataGroupedByMonth } from "@/lib/service/dequeService"
-
+import { NextRequest } from "next/server"
 
 
 export async function GET() {
@@ -13,3 +13,9 @@ export async function GET() {
     }
     
 }
+
+
+export async function POST(req: NextRequest) {
+    const formData = await req.formData()
+    
+ }
