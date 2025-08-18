@@ -27,3 +27,11 @@ export async function findDequeDataByDateRange(startDate: string, endDate: strin
 
     return result
 }
+
+
+
+export async function insertDequeData(data: DequeData){
+    const result = await db.insert(dequeDePedrasInRioDaPrata).values(data)
+
+    return result
+}
