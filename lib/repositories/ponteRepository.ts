@@ -2,6 +2,7 @@ import { db } from "@/db"
 import { ponteDoCureInRioDaPrata } from "@/db/schema"
 import { gte, lte } from "drizzle-orm"
 
+export type NewPonteData = typeof ponteDoCureInRioDaPrata.$inferInsert;
 
 
 export async function findAllPonteData(){
@@ -36,4 +37,15 @@ export async function findPonteDataByDateRange(startDate: string, endDate: strin
   const result = await query.execute()
 
   return result
+}
+
+
+
+export async function insertPonteData(data: NewPonteData){
+  const [newRecord] = await db
+  .insert(ponteDoCureInRioDaPrata)
+  .values(data)
+  .returning();
+
+return newRecord;
 }

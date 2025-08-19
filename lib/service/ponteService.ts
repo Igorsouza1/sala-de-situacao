@@ -1,4 +1,6 @@
-import { findAllPonteData, findPonteDataByDateRange } from "../repositories/ponteRepository";
+import { findAllPonteData, findPonteDataByDateRange, insertPonteData } from "../repositories/ponteRepository";
+import { createPonteSchema } from "../validations/ponte";
+import Zod  from "zod"
 
 interface MonthData {
     chuva: number
@@ -78,4 +80,27 @@ export async function getAllPonteData(){
 export async function getPonteDataByDateRange(startDate: string, endDate: string){
   const dequeData = await findPonteDataByDateRange(startDate, endDate)
   return dequeData
+}
+
+
+type DequeInput = Zod.infer<typeof createPonteSchema>;
+
+export async function createPonteData(input: DequeInput){
+  const validatedData = createPonteSchema.parse(input);
+
+  const mes = validatedData.data.toLocaleString('pt-BR', { month: 'long' });
+
+  const completeData = {
+    data: validatedData.data.toISOString().split('T')[0],
+    local: "Ponte do Cure",
+    mes: mes,
+
+    chuva: validatedData.chuva.toString(),
+    nivel: validatedData.nivel.toString(),
+    visbilidade: validatedData.visibilidade.toString(),
+  };
+
+const newEntry = await insertPonteData(completeData);
+
+return newEntry;
 }

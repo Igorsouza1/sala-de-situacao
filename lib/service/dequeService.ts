@@ -71,7 +71,7 @@ export async function createDequeData(input: DequeInput){
 
     const completeData = {
       data: validatedData.data.toISOString().split('T')[0],
-      local: "Rio da Prata",
+      local: "Deque de Pedras",
       mes: mes,
   
       turbidez: validatedData.turbidez.toString(),

@@ -69,7 +69,7 @@ export function DataInsertDialog({ isOpen, onClose }: DataInsertDialogProps) {
     try {
       const endpoint = {
         estrada: "/api/estradas",
-        ponteCure: "/api/ponte-do-cure",
+        ponteCure: "/api/ponte-cure",
         dequePedras: "/api/deque-pedras",
         acoes: "/api/acoes",
       }[selectedType]

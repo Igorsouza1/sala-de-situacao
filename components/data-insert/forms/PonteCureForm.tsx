@@ -8,9 +8,15 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { TablePreview } from "../preview/TablePreview"
 import { useToast } from "@/hooks/use-toast"
 import { deriveMes } from "../utils/date"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 type PonteCureFormValues = {
-  local: string
   data: string
   chuva?: number | null
   nivel?: number | null
@@ -24,7 +30,6 @@ interface PonteCureFormProps {
 
 export function PonteCureForm({ onValidate, onPreview }: PonteCureFormProps) {
   const [formData, setFormData] = useState<PonteCureFormValues>({
-    local: "",
     data: new Date().toISOString().split("T")[0],
     chuva: null,
     nivel: null,
@@ -33,20 +38,12 @@ export function PonteCureForm({ onValidate, onPreview }: PonteCureFormProps) {
   const [previewData, setPreviewData] = useState<any>(null)
   const { toast } = useToast()
 
-  const handleInputChange = (field: keyof PonteCureFormValues, value: string | number) => {
+  const handleInputChange = (field: keyof PonteCureFormValues, value: string | number | null) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     onValidate(false) // Reset validation when form changes
   }
 
   const handleValidate = () => {
-    if (!formData.local.trim()) {
-      toast({
-        title: "Campo obrigatório",
-        description: "O local é obrigatório.",
-        variant: "destructive",
-      })
-      return
-    }
 
     if (!formData.data) {
       toast({
@@ -84,15 +81,6 @@ export function PonteCureForm({ onValidate, onPreview }: PonteCureFormProps) {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="local">Local *</Label>
-              <Input
-                id="local"
-                value={formData.local}
-                onChange={(e) => handleInputChange("local", e.target.value)}
-                placeholder="Ex: Ponte do Cure - Rio Miranda"
-              />
-            </div>
-            <div className="space-y-2">
               <Label htmlFor="data">Data *</Label>
               <Input
                 id="data"
@@ -128,16 +116,23 @@ export function PonteCureForm({ onValidate, onPreview }: PonteCureFormProps) {
             </div>
             <div className="space-y-2">
               <Label htmlFor="visibilidade">Visibilidade</Label>
-              <Input
-                id="visibilidade"
-                value={formData.visibilidade || ""}
-                onChange={(e) => handleInputChange("visibilidade", e.target.value)}
-                placeholder="Ex: Boa, Regular, Ruim"
-              />
+              <Select
+                onValueChange={(value) => handleInputChange("visibilidade", value)}
+                value={formData.visibilidade ?? ""}
+              >
+                <SelectTrigger id="visibilidade">
+                  <SelectValue placeholder="Selecione a visibilidade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Cristalino">Cristalino</SelectItem>
+                  <SelectItem value="Turvo">Turvo</SelectItem>
+                  <SelectItem value="Muito Turvo">Muito Turvo</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <Button onClick={handleValidate} disabled={!formData.local.trim() || !formData.data} className="w-full">
+          <Button onClick={handleValidate} disabled={!formData.data} className="w-full">
             Validar Dados
           </Button>
         </CardContent>
