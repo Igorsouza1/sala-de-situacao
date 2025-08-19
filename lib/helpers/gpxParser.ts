@@ -60,6 +60,7 @@ export function extractTrackAsWKT(geojson: FeatureCollection): string {
 
 
 
+
 // Uma "Type Guard" para checar se uma geometria é um Ponto
 const isPoint = (g: Geometry): g is Point => g.type === "Point";
 

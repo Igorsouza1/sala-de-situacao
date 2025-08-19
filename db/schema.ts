@@ -397,7 +397,7 @@ export const estradasInRioDaPrata = rioDaPrata.table("estradas", {
 	nome: varchar({ length: 255 }),
 	tipo: varchar({ length: 100 }),
 	codigo: varchar({ length: 50 }),
-	geom: geometry({ type: "geometry", srid: 4326 }),
+	geom: geometry({ type: "multilinestringz", srid: 4326 })
 });
 
 export const waypointsInRioDaPrata = rioDaPrata.table("waypoints", {
