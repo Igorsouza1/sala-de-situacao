@@ -8,8 +8,20 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Upload, FileText, XCircle } from "lucide-react"
-import { MapPreview } from "../preview/MapPreview"
 import { useToast } from "@/hooks/use-toast"
+import { convertGpxToGeoJSON, extractTrackAsWKT, extractWaipointsAsWKT } from "@/lib/helpers/gpxParser"
+import dynamic from "next/dynamic"
+import L, { LatLngBounds } from "leaflet" // Importe 'L' do leaflet
+
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+
+
+const MapPreview = dynamic(
+  () => import("../../mapPreview").then((mod) => mod.MapPreview),
+  { ssr: false }
+)
 
 type EstradaFormValues = {
   nome: string
@@ -23,6 +35,14 @@ interface EstradaFormProps {
   onPreview: (data: any) => void
 }
 
+// @ts-ignore
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconUrl: markerIcon.src,
+    iconRetinaUrl: markerIcon2x.src,
+    shadowUrl: markerShadow.src,
+});
+
 export function EstradaForm({ onValidate, onPreview }: EstradaFormProps) {
   const [formData, setFormData] = useState<EstradaFormValues>({
     nome: "",
@@ -33,6 +53,7 @@ export function EstradaForm({ onValidate, onPreview }: EstradaFormProps) {
   const [previewGeometry, setPreviewGeometry] = useState<any>(null)
   const [isValidating, setIsValidating] = useState(false)
   const { toast } = useToast()
+  const [waypointWarning, setWaypointWarning] = useState<string | null>(null); 
 
   const handleInputChange = (field: keyof EstradaFormValues, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
@@ -75,40 +96,39 @@ export function EstradaForm({ onValidate, onPreview }: EstradaFormProps) {
     }
 
     setIsValidating(true)
+    setWaypointWarning(null);
     try {
       const formDataToSend = new FormData()
       formDataToSend.append("gpx", formData.gpx)
       formDataToSend.append("nome", formData.nome)
       if (formData.tipo) formDataToSend.append("tipo", formData.tipo)
       if (formData.codigo) formDataToSend.append("codigo", formData.codigo)
+      const geojson = await convertGpxToGeoJSON(formData.gpx);
+      extractTrackAsWKT(geojson); 
+      
+      const waypoints = extractWaipointsAsWKT(geojson);
 
-      const response = await fetch("/api/estradas/validate", {
-        method: "POST",
-        body: formDataToSend,
-      })
-
-      if (!response.ok) {
-        throw new Error("Erro na validação do GPX")
+      if (waypoints.length > 0) {
+        // Em vez de 'toast', nós definimos a mensagem no estado
+        setWaypointWarning(
+          `Seu arquivo contém ${waypoints.length} ponto(s) que serão ignorados, pois estradas não possuem waypoints.`
+        );
       }
 
-      const result = await response.json()
+      setPreviewGeometry(geojson);
+      
 
-      if (!result.hasTrack) {
-        throw new Error("GPX sem track válido para estrada")
-      }
-
-      setPreviewGeometry(result.geometry)
       onPreview({
         ...formData,
-        geometry: result.geometry,
+        geometry: geojson, // Passamos o geojson para o preview
         validated: true,
-      })
-      onValidate(true)
-
+      });
+      onValidate(true);
+  
       toast({
-        title: "Validação concluída",
-        description: "GPX validado com sucesso!",
-      })
+        title: "Validação local concluída",
+        description: "GPX processado com sucesso!",
+      });
     } catch (error: any) {
       toast({
         title: "Erro na validação",
@@ -209,6 +229,12 @@ export function EstradaForm({ onValidate, onPreview }: EstradaFormProps) {
           >
             {isValidating ? "Validando..." : "Validar GPX"}
           </Button>
+          {waypointWarning && (
+          <div className="mt-4 p-4 bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 rounded-md">
+            <p className="font-bold">Aviso</p>
+            <p>{waypointWarning}</p>
+          </div>
+        )}
         </CardContent>
       </Card>
 
