@@ -97,7 +97,7 @@ export async function createPonteData(input: DequeInput){
 
     chuva: validatedData.chuva.toString(),
     nivel: validatedData.nivel.toString(),
-    visbilidade: validatedData.visibilidade.toString(),
+    visibilidade: validatedData.visibilidade.toString(),
   };
 
 const newEntry = await insertPonteData(completeData);

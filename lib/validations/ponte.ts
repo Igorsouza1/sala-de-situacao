@@ -11,6 +11,5 @@ export const createPonteSchema = z.object({
       nivel: z.coerce.number().min(0, {
         message: "O valor da chuva não pode ser negativo.",
       }),
-      visibilidade: z.enum(['Cristalino', 'Turvo', 'Muito Turvo'], { message: "Visibilidade invalida."
-      })
+      visibilidade: z.enum(['Cristalino', 'Turvo', 'Muito Turvo'])
 })
