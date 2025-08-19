@@ -2,6 +2,9 @@
 import { z } from "zod";
 
 export const createDequeSchema = z.object({
+  data: z.coerce.date({
+    error: () => ({ message: "Por favor, insira uma data válida." }),
+  }),
   turbidez: z.coerce.number().min(0, {
     message: "O valor da turbidez não pode ser negativo.",
   }),
@@ -15,3 +18,6 @@ export const createDequeSchema = z.object({
     message: "O valor da chuva não pode ser negativo.",
   }),
 });
+
+
+export type DequeInput = z.infer<typeof createDequeSchema>;

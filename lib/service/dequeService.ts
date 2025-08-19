@@ -1,4 +1,6 @@
-import { findAllDequeData, findDequeDataByDateRange } from "../repositories/dequeRepository"
+import { findAllDequeData, findDequeDataByDateRange, insertDequeData } from "../repositories/dequeRepository"
+import { createDequeSchema } from "../validations/deque"
+import Zod  from "zod"
 
 interface MonthData {
     chuva: number
@@ -56,4 +58,29 @@ export async function getAllDequeDataGroupedByMonth(){
 export async function getDequeDataByDateRange(startDate: string, endDate: string){
     const dequeData = await findDequeDataByDateRange(startDate, endDate)
     return dequeData
+}
+
+
+type DequeInput = Zod.infer<typeof createDequeSchema>;
+
+
+export async function createDequeData(input: DequeInput){
+    const validatedData = createDequeSchema.parse(input);
+
+    const mes = validatedData.data.toLocaleString('pt-BR', { month: 'long' });
+
+    const completeData = {
+      data: validatedData.data.toISOString().split('T')[0],
+      local: "Rio da Prata",
+      mes: mes,
+  
+      turbidez: validatedData.turbidez.toString(),
+      secchiVertical: validatedData.secchiVertical.toString(),
+      secchiHorizontal: validatedData.secchiHorizontal.toString(),
+      chuva: validatedData.chuva.toString(),
+    };
+
+  const newEntry = await insertDequeData(completeData);
+
+  return newEntry;
 }

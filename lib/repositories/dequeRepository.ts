@@ -3,6 +3,10 @@ import { db } from "@/db"
 import { dequeDePedrasInRioDaPrata } from "@/db/schema"
 import { and, gte, lte } from "drizzle-orm"
 
+
+export type NewDequeData = typeof dequeDePedrasInRioDaPrata.$inferInsert;
+
+
 export async function findAllDequeData(){
     const result = await db.select().from(dequeDePedrasInRioDaPrata)
 
@@ -30,8 +34,11 @@ export async function findDequeDataByDateRange(startDate: string, endDate: strin
 
 
 
-export async function insertDequeData(data: DequeData){
-    const result = await db.insert(dequeDePedrasInRioDaPrata).values(data)
+export async function insertDequeData(data: NewDequeData){
+    const [newRecord] = await db
+    .insert(dequeDePedrasInRioDaPrata)
+    .values(data)
+    .returning();
 
-    return result
+  return newRecord;
 }

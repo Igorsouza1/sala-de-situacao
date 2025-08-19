@@ -10,7 +10,6 @@ import { useToast } from "@/hooks/use-toast"
 import { deriveMes } from "../utils/date"
 
 type DequePedrasFormValues = {
-  local: string
   data: string
   turbidez?: number | null
   secchiVertical?: number | null
@@ -25,31 +24,31 @@ interface DequePedrasFormProps {
 
 export function DequePedrasForm({ onValidate, onPreview }: DequePedrasFormProps) {
   const [formData, setFormData] = useState<DequePedrasFormValues>({
-    local: "",
     data: new Date().toISOString().split("T")[0],
-    turbidez: null,
-    secchiVertical: null,
-    secchiHorizontal: null,
-    chuva: null,
+    turbidez: 0,
+    secchiVertical: 0,
+    secchiHorizontal: 0,
+    chuva: 0,
   })
   const [previewData, setPreviewData] = useState<any>(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
 
-  const handleInputChange = (field: keyof DequePedrasFormValues, value: string | number) => {
+  const handleInputChange = (field: keyof DequePedrasFormValues, value: string | number | null) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
-    onValidate(false) // Reset validation when form changes
+    onValidate(false) // reset validação ao editar
   }
 
-  const handleValidate = () => {
-    if (!formData.local.trim()) {
-      toast({
-        title: "Campo obrigatório",
-        description: "O local é obrigatório.",
-        variant: "destructive",
-      })
-      return
-    }
+  const buildPayload = (base: DequePedrasFormValues) => ({
+    ...base,
+    mes: deriveMes(base.data),
+    turbidez: base.turbidez ?? null,
+    secchiVertical: base.secchiVertical ?? null,
+    secchiHorizontal: base.secchiHorizontal ?? null,
+    chuva: base.chuva ?? null,
+  })
 
+  const handleValidate = () => {
     if (!formData.data) {
       toast({
         title: "Campo obrigatório",
@@ -59,23 +58,55 @@ export function DequePedrasForm({ onValidate, onPreview }: DequePedrasFormProps)
       return
     }
 
-    const processedData = {
-      ...formData,
-      mes: deriveMes(formData.data),
-      turbidez: formData.turbidez || null,
-      secchiVertical: formData.secchiVertical || null,
-      secchiHorizontal: formData.secchiHorizontal || null,
-      chuva: formData.chuva || null,
-    }
-
-    setPreviewData(processedData)
-    onPreview(processedData)
+    const processed = buildPayload(formData)
+    setPreviewData(processed)
+    onPreview(processed)
     onValidate(true)
 
     toast({
       title: "Validação concluída",
       description: "Dados validados com sucesso!",
     })
+  }
+
+  const handleSubmit = async () => {
+    if (!previewData) {
+      toast({
+        title: "Valide antes de salvar",
+        description: "Clique em “Validar Dados” para conferir o payload.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    try {
+      setIsSubmitting(true)
+
+
+      toast({
+        title: "Salvo",
+        description: "Registro criado com sucesso.",
+      })
+
+      // opcional: resetar o formulário
+      setFormData({
+        data: new Date().toISOString().split("T")[0],
+        turbidez: 0,
+        secchiVertical: 0,
+        secchiHorizontal: 0,
+        chuva: 0,
+      })
+      setPreviewData(null)
+      onValidate(false)
+    } catch (err: any) {
+      toast({
+        title: "Erro ao salvar",
+        description: err?.message ?? "Não foi possível salvar agora.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
@@ -86,15 +117,6 @@ export function DequePedrasForm({ onValidate, onPreview }: DequePedrasFormProps)
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label htmlFor="local">Local *</Label>
-              <Input
-                id="local"
-                value={formData.local}
-                onChange={(e) => handleInputChange("local", e.target.value)}
-                placeholder="Ex: Deque de Pedras - Rio da Prata"
-              />
-            </div>
             <div className="space-y-2">
               <Label htmlFor="data">Data *</Label>
               <Input
@@ -113,7 +135,7 @@ export function DequePedrasForm({ onValidate, onPreview }: DequePedrasFormProps)
                 id="turbidez"
                 type="number"
                 step="0.1"
-                value={formData.turbidez || ""}
+                value={formData.turbidez ?? ""}
                 onChange={(e) =>
                   handleInputChange("turbidez", e.target.value ? Number.parseFloat(e.target.value) : null)
                 }
@@ -126,7 +148,7 @@ export function DequePedrasForm({ onValidate, onPreview }: DequePedrasFormProps)
                 id="chuva"
                 type="number"
                 step="0.1"
-                value={formData.chuva || ""}
+                value={formData.chuva ?? ""}
                 onChange={(e) => handleInputChange("chuva", e.target.value ? Number.parseFloat(e.target.value) : null)}
                 placeholder="0.0"
               />
@@ -140,7 +162,7 @@ export function DequePedrasForm({ onValidate, onPreview }: DequePedrasFormProps)
                 id="secchiVertical"
                 type="number"
                 step="0.1"
-                value={formData.secchiVertical || ""}
+                value={formData.secchiVertical ?? ""}
                 onChange={(e) =>
                   handleInputChange("secchiVertical", e.target.value ? Number.parseFloat(e.target.value) : null)
                 }
@@ -153,7 +175,7 @@ export function DequePedrasForm({ onValidate, onPreview }: DequePedrasFormProps)
                 id="secchiHorizontal"
                 type="number"
                 step="0.1"
-                value={formData.secchiHorizontal || ""}
+                value={formData.secchiHorizontal ?? ""}
                 onChange={(e) =>
                   handleInputChange("secchiHorizontal", e.target.value ? Number.parseFloat(e.target.value) : null)
                 }
@@ -162,9 +184,14 @@ export function DequePedrasForm({ onValidate, onPreview }: DequePedrasFormProps)
             </div>
           </div>
 
-          <Button onClick={handleValidate} disabled={!formData.local.trim() || !formData.data} className="w-full">
-            Validar Dados
-          </Button>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <Button onClick={handleValidate} disabled={!formData.data} className="w-full">
+              Validar Dados
+            </Button>
+            <Button onClick={handleSubmit} disabled={!previewData || isSubmitting} className="w-full">
+              {isSubmitting ? "Salvando..." : "Salvar"}
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
