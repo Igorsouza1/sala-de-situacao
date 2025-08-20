@@ -392,6 +392,15 @@ export const propriedadesInRioDaPrata = rioDaPrata.table("propriedades", {
 	geom: geometry({ type: "multipolygon", srid: 4326 }),
 });
 
+import { type InferInsertModel } from 'drizzle-orm';
+
+type BaseEstradaData = InferInsertModel<typeof estradasInRioDaPrata>;
+
+// Garanta que o tipo está sendo exportado!
+export type NewEstradaData = Omit<BaseEstradaData, 'geom'> & {
+  geom: string;
+};
+
 export const estradasInRioDaPrata = rioDaPrata.table("estradas", {
 	id: serial().primaryKey().notNull(),
 	nome: varchar({ length: 255 }),

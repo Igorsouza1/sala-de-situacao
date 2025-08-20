@@ -1,8 +1,7 @@
 import { db, sql } from "@/db"
-import { estradasInRioDaPrata } from "@/db/schema";
+import { estradasInRioDaPrata, type NewEstradaData } from "@/db/schema";
 
 
-export type NewEstradaData = typeof estradasInRioDaPrata.$inferInsert;
 
 export async function findAllEstradasDataWithGeometry(){
     const result = await db.execute(`
@@ -22,8 +21,6 @@ export async function insertEstradaData(data: NewEstradaData){
     nome: data.nome,
     tipo: data.tipo,
     codigo: data.codigo,
-    // Aqui está a mágica!
-    // Usamos a função do PostGIS para converter nosso texto WKT em geometria
     geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4326)`,
   })
   .returning({ id: estradasInRioDaPrata.id });
