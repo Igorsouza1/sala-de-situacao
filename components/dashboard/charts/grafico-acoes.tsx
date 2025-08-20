@@ -3,7 +3,7 @@
 import * as React from "react"
 import { TrendingUp } from "lucide-react"
 import { Pie, PieChart, ResponsiveContainer, Label } from "recharts"
-import { type ChartConfig, ChartContainer, ChartTooltip } from "@/components/ui/chart"
+import { type ChartConfig, ChartContainer, ChartTooltip } from "@/components/ui/chart-components"
 import { useAcoes } from "@/context/AcoesContext"
 
 interface ViewBox {

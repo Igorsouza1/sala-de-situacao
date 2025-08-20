@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from "recharts"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart-components"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useDequePedras } from "@/context/DequePedrasContext"
 import { usePonteCure } from "@/context/PonteCureContext"

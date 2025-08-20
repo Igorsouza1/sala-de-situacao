@@ -33,7 +33,7 @@ import {
   Waves,
   Gauge,
 } from "lucide-react"
-import { GraficoTurbidezDiario } from "./charts/GraficoTurbidezDiario"
+import { GraficoTurbidezComparativo } from "./charts/GraficoTurbidezComparativo"
 import { DailyDequeProvider } from "@/context/DailyDequeContext"
 import { GraficoPonteCure } from "./charts/GraficoCureDiario"
 import { DailyPonteCureProvider } from "@/context/DailyPonteCureContext"
@@ -263,7 +263,7 @@ function DashboardContent() {
             </CardHeader>
             <CardContent>
               <DailyDequeProvider>
-                <GraficoTurbidezDiario />
+                <GraficoTurbidezComparativo />
               </DailyDequeProvider>
             </CardContent>
           </Card>

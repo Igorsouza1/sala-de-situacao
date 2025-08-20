@@ -14,7 +14,7 @@ import {
 import { format, parseISO, differenceInCalendarDays } from "date-fns"
 import { useState, useMemo, useCallback, JSX } from "react"
 import { useDailyDeque } from "@/context/DailyDequeContext"
-import { ChartContainer } from "@/components/ui/chart"
+import { ChartContainer } from "@/components/ui/chart-components"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
