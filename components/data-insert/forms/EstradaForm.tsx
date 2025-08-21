@@ -16,6 +16,13 @@ import L, { LatLngBounds } from "leaflet" // Importe 'L' do leaflet
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
 import markerShadow from 'leaflet/dist/images/marker-shadow.png';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 
 const MapPreview = dynamic(
@@ -158,13 +165,20 @@ export function EstradaForm({ onValidate, onPreview }: EstradaFormProps) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tipo">Tipo</Label>
-              <Input
-                id="tipo"
+            <Label htmlFor="tipo">Tipo</Label>
+            <Select
                 value={formData.tipo || ""}
-                onChange={(e) => handleInputChange("tipo", e.target.value)}
-                placeholder="Ex: Vicinal, Principal"
-              />
+                onValueChange={(value) => handleInputChange("tipo", value)}
+              >
+                <SelectTrigger id="tipo">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Pavimentada">Pavimentada</SelectItem>
+                  <SelectItem value="Não Pavimentada">Não Pavimentada</SelectItem>
+                  <SelectItem value="Implantada">Implantada</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
           <div className="space-y-2">
