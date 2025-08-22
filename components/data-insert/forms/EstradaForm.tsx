@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -11,7 +11,6 @@ import { Upload, FileText, XCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { convertGpxToGeoJSON, extractTrackAsWKT, extractWaipointsAsWKT } from "@/lib/helpers/gpxParser"
 import dynamic from "next/dynamic"
-import L, { LatLngBounds } from "leaflet" // Importe 'L' do leaflet
 
 import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
 import markerIcon from 'leaflet/dist/images/marker-icon.png';
@@ -42,13 +41,7 @@ interface EstradaFormProps {
   onPreview: (data: any) => void
 }
 
-// @ts-ignore
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconUrl: markerIcon.src,
-    iconRetinaUrl: markerIcon2x.src,
-    shadowUrl: markerShadow.src,
-});
+
 
 export function EstradaForm({ onValidate, onPreview }: EstradaFormProps) {
   const [formData, setFormData] = useState<EstradaFormValues>({
@@ -60,7 +53,19 @@ export function EstradaForm({ onValidate, onPreview }: EstradaFormProps) {
   const [previewGeometry, setPreviewGeometry] = useState<any>(null)
   const [isValidating, setIsValidating] = useState(false)
   const { toast } = useToast()
-  const [waypointWarning, setWaypointWarning] = useState<string | null>(null); 
+  const [waypointWarning, setWaypointWarning] = useState<string | null>(null);
+  useEffect(() => {
+    import("leaflet").then(L => {
+      // @ts-ignore
+      delete L.Icon.Default.prototype._getIconUrl;
+  
+      L.Icon.Default.mergeOptions({
+          iconUrl: markerIcon.src,
+          iconRetinaUrl: markerIcon2x.src,
+          shadowUrl: markerShadow.src,
+      });
+    });
+  }, []);
 
   const handleInputChange = (field: keyof EstradaFormValues, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
