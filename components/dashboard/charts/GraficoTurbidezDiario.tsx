@@ -92,7 +92,7 @@ export function GraficoTurbidezDiario(): JSX.Element {
 
   if (isLoading) {
     return (
-      <Card className="bg-gray-900/50 border-gray-700">
+      <Card className="bg-[hsl(var(--dashboard-card))] border-[hsl(var(--dashboard-accent))]">
         <CardContent className="flex items-center justify-center h-64">
           <div className="flex items-center gap-2 text-gray-400">
             <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -115,7 +115,7 @@ export function GraficoTurbidezDiario(): JSX.Element {
 
   if (!serieCompleta.length) {
     return (
-      <Card className="bg-gray-900/50 border-gray-700">
+      <Card className="bg-[hsl(var(--dashboard-card))] border-[hsl(var(--dashboard-accent))]">
         <CardContent className="flex items-center justify-center h-64">
           <p className="text-gray-400">Nenhum dado disponível</p>
         </CardContent>
@@ -125,7 +125,7 @@ export function GraficoTurbidezDiario(): JSX.Element {
 
   return (
     <div className="flex gap-4">
-      <Card className="bg-gray-900/50 border-gray-700 backdrop-blur-sm flex-1">
+      <Card className="bg-[hsl(var(--dashboard-card))] border-[hsl(var(--dashboard-accent))] backdrop-blur-sm flex-1">
         <CardHeader className="pb-4">
           <CardTitle className="text-white flex items-center justify-between">
             <span>Monitoramento de Turbidez</span>
@@ -253,7 +253,7 @@ export function GraficoTurbidezDiario(): JSX.Element {
         </CardContent>
       </Card>
 
-      <Card className="bg-gray-900/50 border-gray-700 backdrop-blur-sm w-64">
+      <Card className="bg-[hsl(var(--dashboard-card))] border-[hsl(var(--dashboard-accent))] backdrop-blur-sm w-64">
         <CardHeader className="pb-3">
           <CardTitle className="text-white text-lg">Faixas de Turbidez</CardTitle>
         </CardHeader>
