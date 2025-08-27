@@ -142,13 +142,17 @@ export function GraficoTurbidezDiario(): JSX.Element {
               <Button
                 key={lbl}
                 size="sm"
-                variant={presetDias === dias ? "default" : "outline"}
+                variant="ghost"
                 onClick={() => handlePresetChange(dias)}
-                className={
-                  presetDias === dias
-                    ? "bg-blue-600 hover:bg-blue-700 text-white"
-                    : "border-gray-600 text-black-300 hover:bg-gray-800 hover:text-white"
-                }
+                className={`
+                  px-4 py-2 rounded-full font-medium transition-all duration-200
+                  ${presetDias === dias
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "bg-transparent text-blue-600 hover:bg-blue-50"}
+                  border border-transparent
+                  focus:outline-none focus:ring-2 focus:ring-blue-300
+                `}
+                aria-pressed={presetDias === dias}
               >
                 {lbl}
               </Button>
