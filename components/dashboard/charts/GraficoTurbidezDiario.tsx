@@ -128,7 +128,6 @@ export function GraficoTurbidezDiario(): JSX.Element {
       <Card className="bg-[hsl(var(--dashboard-card))] border-[hsl(var(--dashboard-accent))] backdrop-blur-sm flex-1">
         <CardHeader className="pb-4">
           <CardTitle className="text-white flex items-center justify-between">
-            <span>Monitoramento de Turbidez</span>
             {lastInfo?.outdated && (
               <Badge variant="outline" className="border-amber-500 text-amber-400 bg-amber-500/10">
                 Última leitura: {lastInfo.dataFmt} ({lastInfo.dias} d)
