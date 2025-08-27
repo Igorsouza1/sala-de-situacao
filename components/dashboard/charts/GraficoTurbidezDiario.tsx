@@ -137,7 +137,7 @@ export function GraficoTurbidezDiario(): JSX.Element {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-nowrap w-full">
             {Object.entries(PRESETS).map(([lbl, dias]) => (
               <Button
                 key={lbl}
@@ -165,7 +165,7 @@ export function GraficoTurbidezDiario(): JSX.Element {
               secchiVert: { label: "Secchi (m)", color: COLORS.secchiVert },
               chuva: { label: "Chuva (mm)", color: COLORS.chuva },
             }}
-            className="h-[400px]"
+            className="h-[400px] w-full"
           >
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={displayData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
