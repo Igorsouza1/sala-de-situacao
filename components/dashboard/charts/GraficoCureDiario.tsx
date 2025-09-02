@@ -176,11 +176,11 @@ export function GraficoPonteCure(): JSX.Element {
 
   return (
     <div className="flex gap-4">
-      <Card className="bg-gray-900/50 border-gray-700 backdrop-blur-sm flex-1">
+      <Card className="bg-[hsl(var(--dashboard-card))] border-[hsl(var(--dashboard-accent))] backdrop-blur-sm flex-1 w-full">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-white">🌊 Ponte do Cure - Últimos Dias</CardTitle>
-            <div className="flex items-center gap-3">
+            {/* Removido o título interno */}
+            <div className="flex items-center gap-3 ml-auto">
               {currentStatus && (
                 <>
                   <Badge
@@ -207,18 +207,22 @@ export function GraficoPonteCure(): JSX.Element {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-nowrap w-full">
             {Object.entries(PRESETS).map(([lbl, dias]) => (
               <Button
                 key={lbl}
                 size="sm"
-                variant={presetDias === dias ? "default" : "outline"}
+                variant="ghost"
                 onClick={() => handlePresetChange(dias)}
-                className={
-                  presetDias === dias
-                    ? "bg-blue-600 hover:bg-blue-700 text-white"
-                    : "border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
-                }
+                className={`
+                  px-4 py-2 rounded-full font-medium transition-all duration-200
+                  ${presetDias === dias
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "bg-transparent text-blue-600 hover:bg-blue-50"}
+                  border border-transparent
+                  focus:outline-none focus:ring-2 focus:ring-blue-300
+                `}
+                aria-pressed={presetDias === dias}
               >
                 {lbl}
               </Button>
@@ -230,7 +234,7 @@ export function GraficoPonteCure(): JSX.Element {
               chuva: { label: "Chuva (mm)", color: COLORS.chuva },
               nivel: { label: "Nível (m)", color: COLORS.nivel },
             }}
-            className="h-[400px]"
+            className="h-[400px] w-full"
           >
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={displayData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
@@ -332,7 +336,7 @@ export function GraficoPonteCure(): JSX.Element {
         </CardContent>
       </Card>
 
-      <Card className="bg-gray-900/50 border-gray-700 backdrop-blur-sm w-64">
+      <Card className="bg-[hsl(var(--dashboard-card))] border-[hsl(var(--dashboard-accent))] backdrop-blur-sm w-64">
         <CardHeader className="pb-3">
           <CardTitle className="text-white text-lg">Visibilidade da Água</CardTitle>
         </CardHeader>
