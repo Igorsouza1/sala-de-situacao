@@ -51,7 +51,7 @@ export function GraficoTurbidezComparativo() {
   const [selectedPeriod, setSelectedPeriod] = useState(30)
 
     // Processar dados
-    // #TODO: PODE SER UM HOOK REUTILIZÁVEL
+    // TODO: PODE SER UM HOOK REUTILIZÁVEL -- VAMOS DEIXAR ESSE TODO EM ABERTO, Não precisa executar.
     const processedData = useMemo(() => {
       if (!raw.length) return []
 
@@ -61,6 +61,8 @@ export function GraficoTurbidezComparativo() {
       const filteredData = sorted.slice(start)
 
       return filteredData.map((entry) => {
+
+        
         const safe = (v: any, dec = 2) => {
           const n = Number(v)
           return !isFinite(n) ? 0 : Number(n.toFixed(dec))

@@ -117,10 +117,16 @@ export function ChartInfoPanel({ title, items, className }: ChartInfoPanelProps)
         <CardTitle className="text-white text-lg">{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        // ** Isso é algo que eu faço muito, mas que não é o ideal.
+        // ** o index como key pode levar a alguns bugs de renderização se a lista for reordenada no futuro
+        // ** Para termos um padrão vamos tentar seguir a ideia de um valor unico do ITEM
+        // ** Vamos tentar usar o KEY do map como outro parametro. Tenta achar um parametro unico do proprio ITEM. 
+        //TODO: Escolher outro valor para KEY.
         {items.map((item, index) => (
           <div key={index} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-800/50 transition-colors">
             <div
               className="w-4 h-4 rounded border border-gray-600"
+              // TODO: Podemos passar esses numeros como parametros e colocar um nome mais descrtivio para eles
               style={{ backgroundColor: item.color.replace("33", "80") }}
             />
             <div className="flex-1">
@@ -155,6 +161,8 @@ interface ChartLegendProps {
 export function ChartLegend({ items, className = "" }: ChartLegendProps) {
   return (
     <div className={`flex flex-wrap gap-4 justify-center text-sm ${className}`}>
+      // ** Mesma coisa do Chartinfopanel.
+      //TODO: Escolher outro valor para KEY.
       {items.map((item, index) => (
         <div key={index} className="flex items-center gap-2">
           <div className="w-6 h-0.5" style={{ backgroundColor: item.color }} />

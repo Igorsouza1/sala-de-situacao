@@ -8,6 +8,10 @@ interface ChartLoadingStateProps {
   height?: string
 }
 
+// ** Aqui ficou excelente, simples, limpo e facil.
+// ** Unico detalhe é que as tipagens são iguais, podemos fazer apenas 1 delas.
+// TODO: Fazer apenas 1 tipagem.
+
 export function ChartLoadingState({ className = "", height = "h-64" }: ChartLoadingStateProps) {
   return (
     <Card className={`bg-gray-900/50 border-gray-700 ${className}`}>

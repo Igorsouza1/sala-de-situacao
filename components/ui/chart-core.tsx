@@ -96,6 +96,7 @@ const ChartTooltipContent = React.forwardRef<
           className
         )}
       >
+        // todo:  O ITEM esta sem tipagem, pode gerar um erro inesperado. item: unknown
         {payload.map((item) => {
           const key = `${nameKey || item.dataKey || "value"}`
           const itemConfig = getPayloadConfigFromPayload(config, item, key)
@@ -139,6 +140,10 @@ const ChartStyle = ({ id, config }: { id: string; config: ChartConfig }) => {
 
   return (
     <style
+    // * * CUIDADO com esse código, permite XSS. Se quiser dar uma pesquisada.
+    // ** COMO estamos la no Grafico de turbidez usando uma CONST (Que nao pode ser mudada pelo usuario) Esta OK utilizar mas sempre podemos evitar.
+    // TODO: Precisamos refatorar. Tem algumas outras abordagens.
+
       dangerouslySetInnerHTML={{
         __html: Object.entries(THEMES)
           .map(
@@ -205,5 +210,4 @@ export {
   ChartTooltipContent,
   ChartStyle,
   useChart,
-  type ChartConfig
 }
