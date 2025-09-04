@@ -50,29 +50,30 @@ export function GraficoTurbidezComparativo() {
   const { raw, isLoading, error } = useDailyDeque()
   const [selectedPeriod, setSelectedPeriod] = useState(30)
 
-  // Processar dados
-  const processedData = useMemo(() => {
-    if (!raw.length) return []
+    // Processar dados
+    // #TODO: PODE SER UM HOOK REUTILIZÁVEL
+    const processedData = useMemo(() => {
+      if (!raw.length) return []
 
-    const sorted = raw.slice().sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())
-    const maxDays = Math.min(selectedPeriod, 30)
-    const start = Math.max(0, sorted.length - maxDays)
-    const filteredData = sorted.slice(start)
+      const sorted = raw.slice().sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime())
+      const maxDays = Math.min(selectedPeriod, 30)
+      const start = Math.max(0, sorted.length - maxDays)
+      const filteredData = sorted.slice(start)
 
-    return filteredData.map((entry) => {
-      const safe = (v: any, dec = 2) => {
-        const n = Number(v)
-        return !isFinite(n) ? 0 : Number(n.toFixed(dec))
-      }
+      return filteredData.map((entry) => {
+        const safe = (v: any, dec = 2) => {
+          const n = Number(v)
+          return !isFinite(n) ? 0 : Number(n.toFixed(dec))
+        }
 
-      return {
-        diaFmt: format(parseISO(entry.data), "dd/MM"),
-        originalDate: entry.data,
-        turbidez: safe(entry.turbidez, 2),
-        secchi: safe(entry.secchiVertical, 2),
-        chuva: safe(entry.chuva, 1),
-      }
-    })
+        return {
+          diaFmt: format(parseISO(entry.data), "dd/MM"),
+          originalDate: entry.data,
+          turbidez: safe(entry.turbidez, 2),
+          secchi: safe(entry.secchiVertical, 2),
+          chuva: safe(entry.chuva, 1),
+        }
+      })
   }, [raw, selectedPeriod])
 
   // Informações de status
