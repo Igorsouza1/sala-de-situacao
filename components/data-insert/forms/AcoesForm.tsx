@@ -2,13 +2,24 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Upload, FileText, XCircle } from "lucide-react"
 import { CardsPreview } from "../preview/CardsPreview"
-import { MapPreview } from "../preview/MapPreview"
 import { useToast } from "@/hooks/use-toast"
+import { convertGpxToGeoJSON, extractTrackAsWKT, extractWaipointsAsWKT } from "@/lib/helpers/gpxParser"
+
+import dynamic from "next/dynamic"
+
+const MapPreview = dynamic(
+  () => import("../../mapPreview").then((mod) => mod.MapPreview),
+  { ssr: false }
+)
+
+import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png';
+import markerIcon from 'leaflet/dist/images/marker-icon.png';
+import markerShadow from 'leaflet/dist/images/marker-shadow.png';
 
 type AcaoDraft = {
   tempId: string
@@ -42,6 +53,20 @@ export function AcoesForm({ onValidate, onPreview }: AcoesFormProps) {
     items: [],
   })
   const [isProcessing, setIsProcessing] = useState(false)
+  const [previewGeometry, setPreviewGeometry] = useState<any>(null)
+  useEffect(() => {
+    import("leaflet").then(L => {
+      // @ts-ignore
+      delete L.Icon.Default.prototype._getIconUrl;
+  
+      L.Icon.Default.mergeOptions({
+          iconUrl: markerIcon.src,
+          iconRetinaUrl: markerIcon2x.src,
+          shadowUrl: markerShadow.src,
+      });
+    });
+  }, []);
+
   const { toast } = useToast()
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -68,32 +93,41 @@ export function AcoesForm({ onValidate, onPreview }: AcoesFormProps) {
       const formData = new FormData()
       formData.append("gpx", gpxFile)
 
-      const response = await fetch("/api/acoes/parse-gpx", {
-        method: "POST",
-        body: formData,
-      })
+      const geojsonP = await convertGpxToGeoJSON(gpxFile);
+      const track = extractTrackAsWKT(geojsonP); 
 
-      if (!response.ok) {
-        throw new Error("Erro ao processar GPX")
+
+      const waypoints = extractWaipointsAsWKT(geojsonP);
+      if (waypoints.length === 0) {
+        throw new Error("Nenhum waypoint encontrado no arquivo GPX.")
       }
 
-      const result = await response.json()
+      setPreviewGeometry(geojsonP);
+      
 
-      if (!result.waypoints || result.waypoints.length === 0) {
-        throw new Error("GPX sem waypoints válidos para ações")
+      onPreview({
+        ...formData,
+        geometry: geojsonP, // Passamos o geojson para o preview
+        validated: true,
+      });
+      onValidate(true);
+
+      const trilhapreviewbox = {
+        bbox: geojsonP.bbox || [],
+        line: track || "",
       }
 
       const newFormState: AcoesFormState = {
-        trilhaPreview: result.trilha || null,
-        items: result.waypoints.map((wp: any, index: number) => ({
+        trilhaPreview: trilhapreviewbox || null,
+        items: waypoints.map((wp: any, index: number) => ({
           tempId: `wp-${index}`,
-          name: wp.name || `Waypoint ${index + 1}`,
+          name: wp.nome || `Waypoint ${index + 1}`,
           descricao: wp.description || null,
           acao: null,
-          latitude: wp.latitude,
-          longitude: wp.longitude,
-          elevation: wp.elevation || null,
-          time: wp.time || null,
+          latitude: wp.lat,
+          longitude: wp.lon,
+          elevation: wp.ele || null,
+          time: wp.horario || null,
           mes: wp.mes || "Janeiro", // Derived from time
           atuacao: "Rio da Prata",
           geom: `POINTZ(${wp.longitude} ${wp.latitude} ${wp.elevation || 0})`,
@@ -107,7 +141,7 @@ export function AcoesForm({ onValidate, onPreview }: AcoesFormProps) {
 
       toast({
         title: "GPX processado",
-        description: `${result.waypoints.length} waypoints encontrados!`,
+        description: `${waypoints.length} waypoints encontrados!`,
       })
     } catch (error: any) {
       toast({
@@ -186,13 +220,13 @@ export function AcoesForm({ onValidate, onPreview }: AcoesFormProps) {
         </CardContent>
       </Card>
 
-      {formState.trilhaPreview && (
+      {previewGeometry && (
         <Card>
           <CardHeader>
             <CardTitle>Preview da Trilha</CardTitle>
           </CardHeader>
           <CardContent>
-            <MapPreview geometry={formState.trilhaPreview.line} />
+            <MapPreview geometry={previewGeometry} />
           </CardContent>
         </Card>
       )}
