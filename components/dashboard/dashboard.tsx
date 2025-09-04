@@ -33,6 +33,7 @@ import {
   Waves,
   Gauge,
 } from "lucide-react"
+import { GraficoTurbidezComparativo } from "./charts/GraficoTurbidezComparativo"
 import { GraficoTurbidezDiario } from "./charts/GraficoTurbidezDiario"
 import { DailyDequeProvider } from "@/context/DailyDequeContext"
 import { GraficoPonteCure } from "./charts/GraficoCureDiario"

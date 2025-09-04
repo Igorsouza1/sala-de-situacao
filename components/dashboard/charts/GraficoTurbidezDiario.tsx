@@ -14,7 +14,7 @@ import {
 import { format, parseISO, differenceInCalendarDays } from "date-fns"
 import { useState, useMemo, useCallback, JSX } from "react"
 import { useDailyDeque } from "@/context/DailyDequeContext"
-import { ChartContainer } from "@/components/ui/chart"
+import { ChartContainer } from "@/components/ui/chart-components"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -92,7 +92,7 @@ export function GraficoTurbidezDiario(): JSX.Element {
 
   if (isLoading) {
     return (
-      <Card className="bg-gray-900/50 border-gray-700">
+      <Card className="bg-[hsl(var(--dashboard-card))] border-[hsl(var(--dashboard-accent))]">
         <CardContent className="flex items-center justify-center h-64">
           <div className="flex items-center gap-2 text-gray-400">
             <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
@@ -115,7 +115,7 @@ export function GraficoTurbidezDiario(): JSX.Element {
 
   if (!serieCompleta.length) {
     return (
-      <Card className="bg-gray-900/50 border-gray-700">
+      <Card className="bg-[hsl(var(--dashboard-card))] border-[hsl(var(--dashboard-accent))]">
         <CardContent className="flex items-center justify-center h-64">
           <p className="text-gray-400">Nenhum dado disponível</p>
         </CardContent>
@@ -125,10 +125,9 @@ export function GraficoTurbidezDiario(): JSX.Element {
 
   return (
     <div className="flex gap-4">
-      <Card className="bg-gray-900/50 border-gray-700 backdrop-blur-sm flex-1">
+      <Card className="bg-[hsl(var(--dashboard-card))] border-[hsl(var(--dashboard-accent))] backdrop-blur-sm flex-1">
         <CardHeader className="pb-4">
           <CardTitle className="text-white flex items-center justify-between">
-            <span>Monitoramento de Turbidez</span>
             {lastInfo?.outdated && (
               <Badge variant="outline" className="border-amber-500 text-amber-400 bg-amber-500/10">
                 Última leitura: {lastInfo.dataFmt} ({lastInfo.dias} d)
@@ -138,18 +137,22 @@ export function GraficoTurbidezDiario(): JSX.Element {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-nowrap w-full">
             {Object.entries(PRESETS).map(([lbl, dias]) => (
               <Button
                 key={lbl}
                 size="sm"
-                variant={presetDias === dias ? "default" : "outline"}
+                variant="ghost"
                 onClick={() => handlePresetChange(dias)}
-                className={
-                  presetDias === dias
-                    ? "bg-blue-600 hover:bg-blue-700 text-white"
-                    : "border-gray-600 text-black-300 hover:bg-gray-800 hover:text-white"
-                }
+                className={`
+                  px-4 py-2 rounded-full font-medium transition-all duration-200
+                  ${presetDias === dias
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "bg-transparent text-blue-600 hover:bg-blue-50"}
+                  border border-transparent
+                  focus:outline-none focus:ring-2 focus:ring-blue-300
+                `}
+                aria-pressed={presetDias === dias}
               >
                 {lbl}
               </Button>
@@ -162,7 +165,7 @@ export function GraficoTurbidezDiario(): JSX.Element {
               secchiVert: { label: "Secchi (m)", color: COLORS.secchiVert },
               chuva: { label: "Chuva (mm)", color: COLORS.chuva },
             }}
-            className="h-[400px]"
+            className="h-[400px] w-full"
           >
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={displayData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
@@ -253,7 +256,7 @@ export function GraficoTurbidezDiario(): JSX.Element {
         </CardContent>
       </Card>
 
-      <Card className="bg-gray-900/50 border-gray-700 backdrop-blur-sm w-64">
+      <Card className="bg-[hsl(var(--dashboard-card))] border-[hsl(var(--dashboard-accent))] backdrop-blur-sm w-64">
         <CardHeader className="pb-3">
           <CardTitle className="text-white text-lg">Faixas de Turbidez</CardTitle>
         </CardHeader>
