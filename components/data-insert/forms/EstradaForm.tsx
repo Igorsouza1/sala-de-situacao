@@ -121,7 +121,6 @@ export function EstradaForm({ onValidate, onPreview }: EstradaFormProps) {
       const waypoints = extractWaipointsAsWKT(geojson);
 
       if (waypoints.length > 0) {
-        // Em vez de 'toast', nós definimos a mensagem no estado
         setWaypointWarning(
           `Seu arquivo contém ${waypoints.length} ponto(s) que serão ignorados, pois estradas não possuem waypoints.`
         );
