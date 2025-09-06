@@ -1,4 +1,5 @@
-import { db } from "@/db"
+import { db, sql } from "@/db"
+import { NewTrilhaData, trilhasInRioDaPrata, waypointsInRioDaPrata, NewWaypointData} from "@/db/schema";
 
 
 
@@ -20,3 +21,35 @@ export async function findAllExpedicoesData(){
         waypoints: waypoints.rows,
     }
 }
+
+
+export async function insertTrilhaData(data: NewTrilhaData){
+  const [newRecord] = await db
+  .insert(trilhasInRioDaPrata)
+  .values({
+    nome: data.nome,
+    dataInicio: data.dataInicio,
+    dataFim: data.dataFim,
+    duracaoMinutos: data.duracaoMinutos,
+    geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4326)`,
+  })
+  .returning({ id: trilhasInRioDaPrata.id });
+
+return newRecord;
+}
+
+
+export async function insertWaypointDataInWaypointsTable(data: NewWaypointData){
+  const [newRecord] = await db
+  .insert(waypointsInRioDaPrata)
+  .values({
+    trilhaId: data.trilhaId,
+    nome: data.nome,
+    ele: data.ele,
+    recordedat: data.recordedat,
+    geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4326)`,
+  })
+  .returning({ id: waypointsInRioDaPrata.id });
+  return newRecord;
+}
+

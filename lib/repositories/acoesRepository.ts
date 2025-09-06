@@ -1,12 +1,10 @@
 // lib/repositories/fogoRepository.ts
 
 import { db } from "@/db"
-import { acoesInRioDaPrata, fotosAcoesInRioDaPrata } from "@/db/schema" // Usando a tabela que você definiu
-import { eq, desc} from "drizzle-orm";
+import { acoesInRioDaPrata, fotosAcoesInRioDaPrata, NewAcoesData } from "@/db/schema"
+import { eq, desc, sql} from "drizzle-orm";
 
-// Uma função que busca todos os dados
 export async function findAllAcoesData() {
-  // A única responsabilidade é executar a query e retornar os dados.
   const result = await db
     .select({
       id: acoesInRioDaPrata.id,
@@ -79,6 +77,26 @@ export async function addAcaoImageById(acaoId: number, url: string, descricao: s
     .execute()
 
   return result
+}
+
+
+export async function insertAcaoData(data: NewAcoesData){
+  const [newRecord] = await db
+  .insert(acoesInRioDaPrata)
+  .values({
+    name: data.name,
+    latitude: data.latitude,
+    longitude: data.longitude,
+    elevation: data.elevation,
+    time: data.time,
+    descricao: data.descricao,
+    mes: data.mes,
+    atuacao: data.atuacao,
+    acao: data.acao,
+    geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4326)`,
+  })
+  .returning({ id: acoesInRioDaPrata.id });
+  return newRecord
 }
 
 

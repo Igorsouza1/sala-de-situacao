@@ -1,6 +1,7 @@
-import { pgTable, pgSchema, serial, geometry, bigint, doublePrecision, integer, varchar, numeric, text, timestamp, date, foreignKey, unique, time, uuid } from "drizzle-orm/pg-core"
-import { sql } from "drizzle-orm"
+import { pgSchema, serial, geometry, bigint, doublePrecision, integer, varchar, numeric, text, timestamp, date, foreignKey, unique, time, uuid } from "drizzle-orm/pg-core"
 
+
+import { type InferInsertModel } from 'drizzle-orm';
 export const rioDaPrata = pgSchema("rio_da_prata");
 
 export const baciaRioDaPrataIdSeqInRioDaPrata = rioDaPrata.sequence("Bacia_RioDaPrata_id_seq", {  startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
@@ -345,6 +346,12 @@ export const leitoRioDaPrataInRioDaPrata = rioDaPrata.table("Leito_Rio_Da_Prata"
 	metros: doublePrecision(),
 });
 
+type BaseTrilhaData = InferInsertModel<typeof trilhasInRioDaPrata>;
+
+export type NewTrilhaData = Omit<BaseTrilhaData, 'geom'> & {
+	geom: string;
+  };
+
 export const trilhasInRioDaPrata = rioDaPrata.table("trilhas", {
 	id: serial().primaryKey().notNull(),
 	nome: text().notNull(),
@@ -392,11 +399,9 @@ export const propriedadesInRioDaPrata = rioDaPrata.table("propriedades", {
 	geom: geometry({ type: "multipolygon", srid: 4326 }),
 });
 
-import { type InferInsertModel } from 'drizzle-orm';
 
 type BaseEstradaData = InferInsertModel<typeof estradasInRioDaPrata>;
 
-// Garanta que o tipo está sendo exportado!
 export type NewEstradaData = Omit<BaseEstradaData, 'geom'> & {
   geom: string;
 };
@@ -408,6 +413,13 @@ export const estradasInRioDaPrata = rioDaPrata.table("estradas", {
 	codigo: varchar({ length: 50 }),
 	geom: geometry({ type: "multilinestringz", srid: 4326 })
 });
+
+
+type BaseWaypointData = InferInsertModel<typeof waypointsInRioDaPrata>;
+
+export type NewWaypointData = Omit<BaseWaypointData, 'geom'> & {
+	geom: string;
+  };
 
 export const waypointsInRioDaPrata = rioDaPrata.table("waypoints", {
 	id: serial().primaryKey().notNull(),
@@ -456,6 +468,13 @@ export const rawFirmsInRioDaPrata = rioDaPrata.table("raw_firms", {
 }, (table) => [
 	unique("raw_firms_id_key").on(table.id),
 ]);
+
+
+type BaseAcoesData = InferInsertModel<typeof acoesInRioDaPrata>;
+
+export type NewAcoesData = Omit<BaseAcoesData, 'geom'> & {
+  geom: string;
+};
 
 export const acoesInRioDaPrata = rioDaPrata.table("acoes", {
 	id: serial().primaryKey().notNull(),
