@@ -37,16 +37,13 @@ export function AcoesProvider({ children }: { children: ReactNode }) {
     async function fetchAcoes() {
       try {
         const response = await fetch("/api/acoes?view=dashboard");
-        const apiResponse = await response.json(); // Renomeado para clareza
+        const apiResponse = await response.json(); 
     
-        // 1. Verificamos o campo 'success' do nosso envelope
         if (apiResponse.success) {
-          // 2. Se for sucesso, colocamos o conteúdo de 'apiResponse.data' no estado
-          const acoesData = apiResponse.data || []; // Garante que seja um array
+          const acoesData = apiResponse.data || [];
           setAcoes(acoesData);
           setFilteredAcoes(acoesData);
         } else {
-          // 3. Se a API retornou um erro, nós usamos a mensagem de erro do envelope
           throw new Error(apiResponse.error?.message || "Erro retornado pela API");
         }
     

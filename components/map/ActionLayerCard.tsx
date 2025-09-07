@@ -137,7 +137,7 @@ export function ActionsLayerCard({ title, options, onLayerToggle }: ActionsLayer
                             {actionIcons[option.label] || <NotebookPen className="w-4 h-4" />}
                           </div>
                           <span className="text-white group-hover:text-pantaneiro-lime transition-colors">
-                            {option.label}
+                          {option.label === "null" ? "Não Informado" : option.label}
                           </span>
                         </Label>
                       </div>
