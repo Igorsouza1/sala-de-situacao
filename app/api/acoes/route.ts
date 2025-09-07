@@ -3,6 +3,7 @@
 import { getAllAcoesData, getAllAcoesForMap, createAcoesWithTrilha } from "@/lib/service/acoesService";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { createAcoesSchema } from "@/lib/validations/acoes";
+import { revalidatePath } from "next/cache";
 
 
 
@@ -67,6 +68,8 @@ export async function POST(request: Request) {
       trilha: parsed.data.trilha,
       waypoints,
     });
+
+    revalidatePath('/protected'); 
 
     return apiSuccess(created, 201);
   } catch (error) {

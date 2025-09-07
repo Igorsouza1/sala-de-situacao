@@ -16,6 +16,8 @@ import { FeatureDetails } from "./feature-details"
 import { Modal } from "./Modal"
 import { EditAcaoModal } from "./EditAcaoModal"
 import { useUserRole } from "@/hooks/useUserRole"
+import { acoesInRioDaPrata } from "@/db/schema"
+import { InferSelectModel } from "drizzle-orm"
 
 const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false })
@@ -27,6 +29,7 @@ const Tooltip = dynamic(() => import("react-leaflet").then((mod) => mod.Tooltip)
 interface MapProps {
   center?: LatLngExpression
   zoom?: number
+  acoesProps: Record<string, GeoJSONFeatureCollection>
 }
 
 const layerColors = {
@@ -89,7 +92,7 @@ const createWaypointIcon = (index: number) =>
     iconAnchor: [14, 14],
   })
 
-export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: MapProps) {
+export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , acoesProps}: MapProps) {
   const [isMounted, setIsMounted] = useState(false)
   const [visibleLayers, setVisibleLayers] = useState<string[]>([
     "estradas",
@@ -101,7 +104,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     "banhado",
   ])
   const [visibleActions, setVisibleActions] = useState<string[]>([])
-  const { mapData, isLoading, error, modalData, openModal, closeModal, dateFilter, setDateFilter, expedicoesData, acoesData, refreshAcoesData } =
+  const { mapData, isLoading, error, modalData, openModal, closeModal, dateFilter, setDateFilter, expedicoesData, refreshAcoesData } =
     useMapContext()
 
   useEffect(() => {
@@ -213,18 +216,38 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
   }, [mapData, dateFilter.startDate, dateFilter.endDate])
 
   const filteredAcoes = useMemo(() => {
-    if (!acoesData) return {}
-    const result: Record<string, GeoJSONFeatureCollection> = {}
-    Object.entries(acoesData).forEach(([acao, fc]) => {
-      result[acao] = {
-        type: "FeatureCollection",
-        features: fc.features.filter((feature) =>
-          isWithinDateRange(feature.properties.time, dateFilter.startDate, dateFilter.endDate),
-        ),
+    const newResult: Record<string, GeoJSONFeatureCollection> = {};
+    if (!acoesProps) {
+      return newResult;
+    }
+  
+    // Usamos Object.entries para pegar a chave (acaoType) e o valor (featureCollection)
+    Object.entries(acoesProps).forEach(([acaoType, featureCollection]) => {
+      // 1. Pula o grupo de ações que a API retornou como "null" ou dados inválidos
+      if (acaoType === 'null' || !featureCollection || !featureCollection.features) {
+        return; // 'continue' para o próximo item do loop
       }
-    })
-    return result
-  }, [acoesData, dateFilter.startDate, dateFilter.endDate])
+  
+      // 2. Filtra os features DENTRO da coleção apenas pela data
+      const filteredFeatures = featureCollection.features.filter(feature => {
+        // Verificação de segurança para garantir que a propriedade 'time' existe
+        if (!feature.properties || !feature.properties.time) {
+          return false;
+        }
+        return isWithinDateRange(feature.properties.time, dateFilter.startDate, dateFilter.endDate);
+      });
+  
+      // 3. Só adiciona ao resultado se houver features após o filtro de data
+      if (filteredFeatures.length > 0) {
+        newResult[acaoType] = {
+          ...featureCollection, // Mantém o 'type' e outras propriedades da coleção
+          features: filteredFeatures,
+        };
+      }
+    });
+  
+    return newResult;
+  }, [acoesProps, dateFilter.startDate, dateFilter.endDate]); // A dependência de isWithinDateRange não é necessária
 
   const layerOptions = [
     { id: "bacia", label: "Bacia", count: mapData?.bacia.features.length || 0, color: layerColors.bacia },

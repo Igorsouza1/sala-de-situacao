@@ -1,25 +1,28 @@
-'use client'
 
-import { createClient } from "@/utils/supabase/server";
-import { redirect } from "next/navigation";
-import dynamic from 'next/dynamic';
+import ProtectedPage from "@/app/protected/client-page";
 
-const DynamicMap = dynamic(() => import('../../components/map/map'), { ssr: false });
+export default async function Page() {
 
-export default function ProtectedPage() {
-  // const supabase = await createClient();
+  async function getAcoesProps(){
+    const acoes = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL}/api/acoes?view=map`);
+    const responseData = await acoes.json();
 
-  // const {
-  //   data: { user },
-  // } = await supabase.auth.getUser();
+    // Verificação de sucesso
+    if (!responseData.success) {
+      // Se a API retornar erro, lançamos um erro para o Next.js
+      throw new Error("Falha ao buscar dados de ações.");
+    }
+    // Retornamos apenas a parte de dados que o componente precisa
+    
+    return responseData.data;
+  }
 
-  // if (!user) {
-  //   return redirect("/sign-in");
-  // }
+
+    const acoesProps = await getAcoesProps();
 
   return (
-    <div className="flex-1 w-full flex flex-col ">
-     <DynamicMap />
+    <div>
+      <ProtectedPage acoesProps={acoesProps} />
     </div>
   );
 }
