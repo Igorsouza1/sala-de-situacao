@@ -63,45 +63,80 @@ export function DataInsertDialog({ isOpen, onClose }: DataInsertDialogProps) {
   }
 
   const handleFinalSubmit = async () => {
-    if (!selectedType || !previewData) return
-
-    setIsSubmitting(true)
+    if (!selectedType || !previewData) return;
+    setIsSubmitting(true);
+  
     try {
       const endpoint = {
         estrada: "/api/estradas",
         ponteCure: "/api/ponte-cure",
         dequePedras: "/api/deque-pedras",
         acoes: "/api/acoes",
-      }[selectedType]
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(previewData),
-      })
-
-      if (!response.ok) {
-        throw new Error("Erro ao salvar dados")
+      }[selectedType];
+  
+      let response: Response;
+  
+      if (selectedType === "acoes") {
+        // ====> ENVIO COMO multipart/form-data <====
+        // 1) monte os objetos conforme seu Zod:
+        const trilha = {
+          nome: "Trilha do GPX", // ajuste se tiver um campo de nome
+          geom: previewData?.trilhaPreview?.line ?? "", // WKT da linha
+          dataInicio: null,
+          dataFim: null,
+          duracaoMinutos: null,
+        };
+  
+        const waypoints = (previewData?.items ?? []).map((wp: any) => ({
+          tempId: wp.tempId,
+          name: wp.name ?? null,
+          descricao: wp.descricao ?? null,
+          acao: wp.acao ?? null,
+          latitude: wp.latitude,
+          longitude: wp.longitude,
+          elevation: wp.elevation ?? null,
+          time: wp.time ?? null,
+          mes: wp.mes,        // seu Zod exige string .min(1)
+          atuacao: wp.atuacao // idem
+        }));
+  
+        const fd = new FormData();
+        fd.append("trilha", JSON.stringify(trilha));
+        fd.append("waypoints", JSON.stringify(waypoints));
+  
+        // 2) anexar fotos se existirem (por tempId)
+        // Obs.: ajuste o campo onde você guarda os File[] (ex.: wp.fotosFiles)
+        for (const wp of previewData.items ?? []) {
+          if (wp.tempId && Array.isArray(wp.fotosFiles)) {
+            for (const file of wp.fotosFiles) {
+              fd.append(`fotos_${wp.tempId}`, file);
+            }
+          }
+        }
+  
+        response = await fetch(endpoint, {
+          method: "POST",
+          body: fd, // <— NÃO coloque headers aqui
+        });
+      } else {
+        // ====> mantém JSON para os outros tipos <====
+        response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(previewData),
+        });
       }
-
-      toast({
-        title: "Sucesso!",
-        description: "Dados salvos com sucesso.",
-      })
-
-      handleClose()
+  
+      if (!response.ok) throw new Error("Erro ao salvar dados");
+  
+      toast({ title: "Sucesso!", description: "Dados salvos com sucesso." });
+      handleClose();
     } catch (error: any) {
-      toast({
-        title: "Erro",
-        description: error.message,
-        variant: "destructive",
-      })
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
+  };
 
   const renderStepContent = () => {
     switch (currentStep) {
