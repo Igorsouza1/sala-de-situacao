@@ -104,3 +104,45 @@ const newEntry = await insertPonteData(completeData);
 
 return newEntry;
 }
+
+
+export async function getNivelRioComparativoPct() {
+  const today = new Date();
+  const year = today.getFullYear();
+  const month = today.getMonth(); // 0..11
+  const day = today.getDate();
+
+  // Faixa deste ano: 01/mês até hoje
+  const startThis = new Date(year, month, 1);
+  const endThis = today;
+
+  // Faixa ano passado: 01/mesmo mês até mesmo dia (ajusta se não existir, tipo 30/02)
+  const lastYear = year - 1;
+  const lastDayOfMonth = new Date(lastYear, month + 1, 0).getDate();
+  const endDay = Math.min(day, lastDayOfMonth);
+  const startLast = new Date(lastYear, month, 1);
+  const endLast = new Date(lastYear, month, endDay);
+
+  const fmt = (d: Date) => d.toISOString().split("T")[0];
+
+  const [rowsAtual, rowsPassado] = await Promise.all([
+    getPonteDataByDateRange(fmt(startThis), fmt(endThis)),
+    getPonteDataByDateRange(fmt(startLast), fmt(endLast)),
+  ]);
+
+  const mean = (rows: any[]) => {
+    const vals = (rows ?? []).map(r => Number(r?.nivel)).filter(v => !isNaN(v));
+    if (!vals.length) return null;
+    return vals.reduce((a, b) => a + b, 0) / vals.length;
+  };
+
+  const mtdAtual = mean(rowsAtual);
+  const mtdPassado = mean(rowsPassado);
+
+  const deltaPct =
+    mtdAtual !== null && mtdPassado
+      ? ((mtdAtual - mtdPassado) / mtdPassado) * 100
+      : null;
+
+  return { mtdAtual, mtdPassado, deltaPct };
+}
