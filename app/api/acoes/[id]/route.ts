@@ -4,14 +4,13 @@ import { getAllAcoesImagesData, updateAcaoAndUploadImageById } from "@/lib/servi
 
 type RouteContext = { params: Record<string, string> }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PUT(request: Request, context: any) {
   try {
-    const id = Number(params.id);
+    const { id } = context.params as { id: string };
+    const numId = Number(id);
+
     const formData = await request.formData();
-    const result = await updateAcaoAndUploadImageById(id, formData);
+    const result = await updateAcaoAndUploadImageById(numId, formData);
     return apiSuccess(result);
   } catch (error) {
     console.error("Erro ao atualizar ação:", error);
@@ -19,19 +18,16 @@ export async function PUT(
   }
 }
 
-export async function GET(
-  _request: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(_request: Request, context: any) {
   try {
-    const id = Number(params.id);
+    const { id } = context.params as { id: string };
+    const numId = Number(id);
 
-    if (Number.isNaN(id)) {
+    if (Number.isNaN(numId)) {
       return apiError("ID inválido", 400);
     }
 
-    const result = await getAllAcoesImagesData(id);
-
+    const result = await getAllAcoesImagesData(numId);
     if (!result || result.length === 0) {
       return apiError("Imagens não encontradas", 404);
     }
