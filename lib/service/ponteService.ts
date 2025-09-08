@@ -106,43 +106,63 @@ return newEntry;
 }
 
 
+
 export async function getNivelRioComparativoPct() {
   const today = new Date();
   const year = today.getFullYear();
-  const month = today.getMonth(); // 0..11
+  const month0 = today.getMonth();
   const day = today.getDate();
 
-  // Faixa deste ano: 01/mês até hoje
-  const startThis = new Date(year, month, 1);
+  const startThis = new Date(year, month0, 1);
   const endThis = today;
 
-  // Faixa ano passado: 01/mesmo mês até mesmo dia (ajusta se não existir, tipo 30/02)
   const lastYear = year - 1;
-  const lastDayOfMonth = new Date(lastYear, month + 1, 0).getDate();
-  const endDay = Math.min(day, lastDayOfMonth);
-  const startLast = new Date(lastYear, month, 1);
-  const endLast = new Date(lastYear, month, endDay);
+  const lastDayLastYear = new Date(lastYear, month0 + 1, 0).getDate();
+  const endLast = new Date(lastYear, month0, Math.min(day, lastDayLastYear));
+  const startLast = new Date(lastYear, month0, 1);
 
   const fmt = (d: Date) => d.toISOString().split("T")[0];
+  const toNum = (v: any) => (v === null || v === undefined ? NaN : Number(v));
 
   const [rowsAtual, rowsPassado] = await Promise.all([
     getPonteDataByDateRange(fmt(startThis), fmt(endThis)),
     getPonteDataByDateRange(fmt(startLast), fmt(endLast)),
   ]);
 
+  const validAtual = (rowsAtual ?? []).filter(r => !isNaN(toNum(r?.nivel)));
+  const validPassado = (rowsPassado ?? []).filter(r => !isNaN(toNum(r?.nivel)));
+
+  const lastRowAtual = validAtual.length ? validAtual[validAtual.length - 1] : null;
+  const lastRowPassado = validPassado.length ? validPassado[validPassado.length - 1] : null;
+
   const mean = (rows: any[]) => {
-    const vals = (rows ?? []).map(r => Number(r?.nivel)).filter(v => !isNaN(v));
+    const vals = rows.map(r => toNum(r?.nivel)).filter(v => Number.isFinite(v));
     if (!vals.length) return null;
     return vals.reduce((a, b) => a + b, 0) / vals.length;
   };
 
-  const mtdAtual = mean(rowsAtual);
-  const mtdPassado = mean(rowsPassado);
-
+  const mtdAtual = mean(validAtual);
+  const mtdPassado = mean(validPassado);
   const deltaPct =
-    mtdAtual !== null && mtdPassado
+    mtdAtual !== null && mtdPassado !== null && mtdPassado !== 0
       ? ((mtdAtual - mtdPassado) / mtdPassado) * 100
       : null;
 
-  return { mtdAtual, mtdPassado, deltaPct };
+  // ✅ só cria Date se tiver string
+  let dadosAtrasados = true;
+  if (lastRowAtual?.data) {
+    const ultimaDate = new Date(lastRowAtual.data);
+    dadosAtrasados = ultimaDate < endThis;
+  }
+
+  return {
+    mtdAtual,
+    mtdPassado,
+    deltaPct,
+    avisos: {
+      dadosAtrasados,
+      ultimaDataUsada: lastRowAtual?.data ?? null,
+      periodoIncompleto: true,
+    },
+  };
 }

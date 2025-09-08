@@ -85,6 +85,7 @@ function IndicatorCard({
   trend,
   unit = "",
   colorScheme = "blue",
+  avisos,
 }: {
   title: string;
   icon: any;
@@ -93,6 +94,11 @@ function IndicatorCard({
   trend: "alta" | "baixa" | "estavel";
   unit?: string;
   colorScheme?: "blue" | "green" | "orange" | "purple";
+  avisos?: {
+    dadosAtrasados: boolean;
+    ultimaDataUsada: string | null;
+    periodoIncompleto: boolean;
+  };
 }) {
   const colorClasses = {
     blue: "bg-blue-500/20 border-blue-500/30 text-blue-400",
@@ -154,6 +160,16 @@ function IndicatorCard({
               {comparison}
             </p>
           )}
+          {avisos?.dadosAtrasados && (
+            <p className="text-xs text-yellow-500">
+              Dados atrasados: última leitura em {avisos.ultimaDataUsada}
+            </p>
+          )}
+          {avisos?.periodoIncompleto && (
+            <p className="text-xs text-orange-500">
+              Período incompleto, comparação parcial
+            </p>
+          )}
         </div>
       </CardContent>
     </Card>
@@ -182,8 +198,12 @@ function DashboardContent() {
     anoPassado: number | null;
     percentual: number | null;
     tendencia: "alta" | "baixa" | "estavel";
+    avisos?: {
+      dadosAtrasados: boolean;
+      ultimaDataUsada: string | null;
+      periodoIncompleto: boolean;
+    };
   } | null>(null);
-
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -215,12 +235,14 @@ function DashboardContent() {
         throw new Error(json?.error?.message || "Falha ao carregar indicador");
       }
 
-      const { mtdAtual, mtdPassado, deltaPct } = json.data || {};
+      const { mtdAtual, mtdPassado, deltaPct, avisos } = json.data || {};
+      console.log(mtdAtual, mtdPassado, deltaPct, avisos);
       setNivelRio({
         atual: mtdAtual ?? null,
         anoPassado: mtdPassado ?? null,
         percentual: Number.isFinite(deltaPct) ? deltaPct : null,
         tendencia: trendFromDelta(deltaPct),
+        avisos,
       });
 
       console.log(nivelRio);
@@ -298,19 +320,35 @@ function DashboardContent() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <IndicatorCard
-              title="Nível do Rio vs Ano Passado"
-              icon={Waves}
-              value={fmtNumber(nivelRio?.atual, 2)} // média MTD atual
-              comparison={
-                nivelRio?.percentual === null
-                  ? "Sem base de comparação"
-                  : `${nivelRio?.percentual! >= 0 ? "+" : ""}${fmtNumber(nivelRio?.percentual, 1)}% vs ano passado (${fmtNumber(nivelRio?.anoPassado, 2)}m)`
-              }
-              trend={nivelRio?.tendencia || "estavel"}
-              unit="m"
-              colorScheme="blue"
-            />
+            {loading ? (
+              <IndicatorCard
+                title="Nível do Rio vs Ano Passado"
+                icon={Waves}
+                value="Carregando..."
+                comparison=""
+                trend="estavel"
+                unit=""
+                colorScheme="blue"
+              />
+            ) : (
+              <IndicatorCard
+                title="Nível do Rio vs Ano Passado"
+                icon={Waves}
+                value={fmtNumber(nivelRio?.atual, 2)}
+                comparison={
+                  nivelRio?.percentual === null
+                    ? "Sem base de comparação"
+                    : `${nivelRio?.percentual! >= 0 ? "+" : ""}${fmtNumber(
+                        nivelRio?.percentual,
+                        1
+                      )}% vs ano passado (${fmtNumber(nivelRio?.anoPassado, 2)}m)`
+                }
+                trend={nivelRio?.tendencia || "estavel"}
+                unit="m"
+                colorScheme="blue"
+                avisos={nivelRio?.avisos}
+              />
+            )}
 
             <IndicatorCard
               title="Chuva vs Ano Passado"
