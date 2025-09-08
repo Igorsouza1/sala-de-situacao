@@ -54,6 +54,7 @@ const actionColors: Record<string, string> = {
   Plantio: "#16a085",
   "Régua Fluvial": "#95a5a6",
   expedicoes: "orange",
+  "Não informado": "#7f8c8d",
 }
 
 type GeoJSONFeature = {
@@ -223,10 +224,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
   
     // Usamos Object.entries para pegar a chave (acaoType) e o valor (featureCollection)
     Object.entries(acoesProps).forEach(([acaoType, featureCollection]) => {
-      // 1. Pula o grupo de ações que a API retornou como "null" ou dados inválidos
-      if (acaoType === 'null' || !featureCollection || !featureCollection.features) {
-        return; // 'continue' para o próximo item do loop
-      }
+      
   
       // 2. Filtra os features DENTRO da coleção apenas pela data
       const filteredFeatures = featureCollection.features.filter(feature => {

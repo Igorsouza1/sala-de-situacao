@@ -28,7 +28,7 @@ import type React from "react"
 
 interface ActionOption {
   id: string
-  label: string
+  label: string 
   count: number
   color: string
   icon?: React.ReactNode
