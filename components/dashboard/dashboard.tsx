@@ -207,6 +207,20 @@ function DashboardContent() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
+  const [loadingChuva, setLoadingChuva] = useState(false)
+
+  const [chuva, setChuva] = useState<{
+    atual: number | null
+    anoPassado: number | null
+    percentual: number | null
+    tendencia: "alta" | "baixa" | "estavel"
+    avisos?: {
+      dadosAtrasados: boolean
+      ultimaDataUsada: string | null
+      periodoIncompleto: boolean
+    }
+  } | null>(null)
+
   // helpers
   function fmtNumber(n: number | null | undefined, dec = 2) {
     if (n === null || n === undefined || Number.isNaN(n)) return "--";
@@ -245,7 +259,6 @@ function DashboardContent() {
         avisos,
       });
 
-      console.log(nivelRio);
     } catch (e: any) {
       setErrorMsg(e?.message || "Erro ao carregar indicador");
       setNivelRio(null);
@@ -254,9 +267,38 @@ function DashboardContent() {
     }
   }
 
+  async function loadIndicadorChuva() {
+    try {
+      setLoadingChuva(true)
+      setErrorMsg(null)
+  
+      const res = await fetch("/api/deque-pedras/indicadores/chuva")
+      const json = await res.json()
+  
+      if (!json?.success) {
+        throw new Error(json?.error?.message || "Falha ao carregar indicador de chuva")
+      }
+  
+      const { mtdAtual, mtdPassado, deltaPct, avisos } = json.data || {}
+      setChuva({
+        atual: mtdAtual ?? null,
+        anoPassado: mtdPassado ?? null,
+        percentual: Number.isFinite(deltaPct) ? deltaPct : null,
+        tendencia: trendFromDelta(deltaPct),
+        avisos,
+      })
+    } catch (e: any) {
+      setErrorMsg(e?.message || "Erro ao carregar indicador de chuva")
+      setChuva(null)
+    } finally {
+      setLoadingChuva(false)
+    }
+  }
+
   useEffect(() => {
-    loadIndicadorNivelRio();
-  }, []);
+    loadIndicadorNivelRio()
+    loadIndicadorChuva()
+  }, [])
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-[hsl(var(--dashboard-bg))] to-[hsl(var(--dashboard-accent))]">
@@ -290,7 +332,10 @@ function DashboardContent() {
             <Button
               variant="outline"
               size="sm"
-              onClick={loadIndicadorNivelRio}
+              onClick={() => {
+                loadIndicadorNivelRio()
+                loadIndicadorChuva()
+              }}
               disabled={loading}
               className="border-[hsl(var(--dashboard-accent))] text-[hsl(var(--dashboard-text))] hover:bg-[hsl(var(--dashboard-accent))] text-black hover:text-white"
             >
@@ -350,20 +395,35 @@ function DashboardContent() {
               />
             )}
 
-            <IndicatorCard
-              title="Chuva vs Ano Passado"
-              icon={CloudRain}
-              value={indicadores.chuvaComparativa.atual}
-              comparison={`${indicadores.chuvaComparativa.percentual > 0 ? "+" : ""}${indicadores.chuvaComparativa.percentual}% vs ano passado`}
-              trend={
-                indicadores.chuvaComparativa.tendencia as
-                  | "alta"
-                  | "baixa"
-                  | "estavel"
-              }
-              unit="mm"
-              colorScheme="green"
-            />
+            {/* Chuva */}
+  {loadingChuva ? (
+    <IndicatorCard
+      title="Chuva vs Ano Passado"
+      icon={CloudRain}
+      value="Carregando..."
+      comparison=""
+      trend="estavel"
+      colorScheme="green"
+    />
+  ) : (
+    <IndicatorCard
+      title="Chuva vs Ano Passado"
+      icon={CloudRain}
+      value={fmtNumber(chuva?.atual, 1)}
+      comparison={
+        chuva?.percentual === null
+          ? "Sem base de comparação"
+          : `${chuva?.percentual! >= 0 ? "+" : ""}${fmtNumber(
+              chuva?.percentual,
+              1
+            )}% vs ano passado (${fmtNumber(chuva?.anoPassado, 1)}mm)`
+      }
+      trend={chuva?.tendencia || "estavel"}
+      unit="mm"
+      colorScheme="green"
+      avisos={chuva?.avisos}
+    />
+  )}
 
             <IndicatorCard
               title="Tendência Nível Rio (7 dias)"

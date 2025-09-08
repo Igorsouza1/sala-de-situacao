@@ -84,3 +84,92 @@ export async function createDequeData(input: DequeInput){
 
   return newEntry;
 }
+
+
+export async function getchuvaComparativoPct() {
+  const today = new Date()
+  const year = today.getFullYear()
+  const month0 = today.getMonth()
+  const day = today.getDate()
+
+  const startThis = new Date(year, month0, 1)
+  const endThis = today
+
+  const lastYear = year - 1
+  const lastDayLastYear = new Date(lastYear, month0 + 1, 0).getDate()
+  const endLast = new Date(lastYear, month0, Math.min(day, lastDayLastYear))
+  const startLast = new Date(lastYear, month0, 1)
+
+  const fmt = (d: Date) => {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, "0")
+    const dd = String(d.getDate()).padStart(2, "0")
+    return `${y}-${m}-${dd}`
+  }
+  const toNum = (v: any) => (v === null || v === undefined ? NaN : Number(v))
+
+  const [rowsAtual, rowsPassado] = await Promise.all([
+    getDequeDataByDateRange(fmt(startThis), fmt(endThis)),
+    getDequeDataByDateRange(fmt(startLast), fmt(endLast)),
+  ])
+
+  // ordene por data para garantir a "última" linha correta
+  const byDateAsc = (a: any, b: any) => new Date(a?.data).getTime() - new Date(b?.data).getTime()
+
+  const validAtual = (rowsAtual ?? [])
+    .filter((r) => !isNaN(toNum(r?.chuva)))
+    .sort(byDateAsc)
+
+  const validPassado = (rowsPassado ?? [])
+    .filter((r) => !isNaN(toNum(r?.chuva)))
+    .sort(byDateAsc)
+
+  const lastRowAtual = validAtual.length ? validAtual[validAtual.length - 1] : null
+
+  const mean = (rows: any[]) => {
+    const vals = rows.map((r) => toNum(r?.chuva)).filter((v) => Number.isFinite(v))
+    if (!vals.length) return null
+    return vals.reduce((a, b) => a + b, 0) / vals.length
+  }
+
+  const mtdAtual = mean(validAtual)
+  const mtdPassado = mean(validPassado)
+  const deltaPct =
+    mtdAtual !== null && mtdPassado !== null && mtdPassado !== 0
+      ? ((mtdAtual - mtdPassado) / mtdPassado) * 100
+      : null
+
+  // ✅ compare por DIA (ignora hora/fuso)
+  let dadosAtrasados = true
+  let ultimaDataUsada: string | null = null
+  let diasSemAtualizar: number | null = null
+
+  if (lastRowAtual?.data) {
+    const lastStr = String(lastRowAtual.data).slice(0, 10) // 'YYYY-MM-DD'
+    ultimaDataUsada = lastStr
+    dadosAtrasados = lastStr !== fmt(endThis)
+
+    // opcional: dias de atraso
+    const parseYmd = (s: string) => {
+      const [y, m, d] = s.split("-").map(Number)
+      return new Date(y, m - 1, d)
+    }
+    const dLast = parseYmd(lastStr).getTime()
+    const dToday = parseYmd(fmt(endThis)).getTime()
+    diasSemAtualizar = Math.max(0, Math.round((dToday - dLast) / 86400000))
+  }
+
+  // mês atual quase sempre está incompleto
+ 
+
+  return {
+    mtdAtual,
+    mtdPassado,
+    deltaPct,
+    avisos: {
+      dadosAtrasados,
+      ultimaDataUsada,
+      diasSemAtualizar, // opcional, mas útil no UI
+    },
+  }
+}

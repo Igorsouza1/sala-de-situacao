@@ -155,6 +155,8 @@ export async function getNivelRioComparativoPct() {
     dadosAtrasados = ultimaDate < endThis;
   }
 
+  const periodoIncompleto = day !== new Date(year, month0 + 1, 0).getDate()
+
   return {
     mtdAtual,
     mtdPassado,
@@ -162,7 +164,7 @@ export async function getNivelRioComparativoPct() {
     avisos: {
       dadosAtrasados,
       ultimaDataUsada: lastRowAtual?.data ?? null,
-      periodoIncompleto: true,
+      periodoIncompleto
     },
   };
 }
