@@ -28,8 +28,8 @@ const mesesMap: Record<number, MesFormato> = {
 }
 
 export function deriveMes(dateString: string): MesFormato {
-  const date = new Date(dateString)
-  const monthIndex = date.getMonth()
+  const [, m] = dateString.split("-").map(Number) // "YYYY-MM-DD"
+  const monthIndex = m - 1 // porque Janeiro = 0
   return mesesMap[monthIndex] || "Janeiro"
 }
 
