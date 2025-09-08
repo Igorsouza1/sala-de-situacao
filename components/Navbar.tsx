@@ -21,7 +21,7 @@ const commonNavItems = [
   { name: "Dashboard", href: "/protected/dashboard", icon: ChartNetwork },
 ]
 
-const adminNavItems = [{ name: "Painel do Administrador", href: "/protected/admin/data", icon: HardDrive }]
+// const adminNavItems = [{ name: "Painel do Administrador", href: "/protected/admin/data", icon: HardDrive }]
 
 export function Navbar() {
   const pathname = usePathname()
@@ -40,7 +40,7 @@ export function Navbar() {
     router.refresh()
   }
 
-  const navItems = isLoading ? commonNavItems : [...commonNavItems, ...(isAdmin ? adminNavItems : [])]
+  const navItems = isLoading ? commonNavItems : [...commonNavItems]
 
   const openProfile = () => {
     setMenuOpen(false)               // fecha o dropdown imediatamente
