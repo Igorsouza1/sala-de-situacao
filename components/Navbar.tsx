@@ -141,7 +141,7 @@ export function Navbar() {
       <DataInsertDialog isOpen={isGpxModalOpen} onClose={() => setIsGpxModalOpen(false)} />
 
       {/* modal de perfil do usuário */}
-      <DataInsertDialog isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
+      <UserProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
     </TooltipProvider>
   )
 }
