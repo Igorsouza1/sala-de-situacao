@@ -271,8 +271,19 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
     const opts: { id: string; label: string; count: number; color: string }[] = []
     
     if (expedicoesData) {
-      opts.push({ id: "expedicoes", label: "Expedições", count: expedicoesData.trilhas.features.length, color: actionColors.expedicoes })
+      const trilhasFiltradas = expedicoesData.trilhas.features.filter(f =>
+        isWithinDateRange(f.properties.data, dateFilter.startDate, dateFilter.endDate)
+      )
+      const waypointsFiltrados = expedicoesData.waypoints.features.filter(f =>
+        isWithinDateRange(f.properties.data, dateFilter.startDate, dateFilter.endDate)
+      )
+  
+      const count = trilhasFiltradas.length + waypointsFiltrados.length
+      if (count > 0) {
+        opts.unshift({ id: "expedicoes", label: "Expedições", count, color: actionColors.expedicoes })
+      }
     }
+  
     if (filteredAcoes) {
       Object.entries(filteredAcoes).forEach(([acao, fc]) => {
         opts.push({ id: acao, label: acao, count: fc.features.length, color: actionColors[acao] || "#000" })
