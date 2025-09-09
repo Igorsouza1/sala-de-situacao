@@ -414,26 +414,20 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
 
         {expedicoesData && visibleActions.includes("expedicoes") && (
           <GeoJSON
-            data={
-              {
-                type: "FeatureCollection",
-                features: expedicoesData.trilhas.features.filter((feature) =>
-                  isWithinDateRange(feature.properties.data, dateFilter.startDate, dateFilter.endDate),
-                ),
-              } as any
-            }
-            style={() => ({
-              color: layerColors.expedicoes,
-              weight: 3,
-              opacity: 0.8,
-            })}
-            onEachFeature={(feature, layer) => {
-              layer.on({
-                click: () => handleFeatureClick(feature.properties, "expedicoes"),
-              })
-            }}
-          />
-        )}
+          key={`expedicoes-${dateFilter.startDate?.toISOString() ?? "null"}-${dateFilter.endDate?.toISOString() ?? "null"}`}
+          data={{
+            type: "FeatureCollection",
+            features: expedicoesData.trilhas.features.filter((f) => {
+              const d = f.properties.data ?? f.properties.recordedat ?? f.properties.created_at
+              return d && isWithinDateRange(d, dateFilter.startDate, dateFilter.endDate)
+            }),
+          } as any}
+          style={() => ({ color: layerColors.expedicoes, weight: 3, opacity: 0.8 })}
+          onEachFeature={(feature, layer) => {
+            layer.on({ click: () => handleFeatureClick(feature.properties, "expedicoes") })
+          }}
+        />
+      )}
 
 {expedicoesData &&
   visibleActions.includes("expedicoes") &&
