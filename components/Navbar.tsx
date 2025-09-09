@@ -56,7 +56,7 @@ export function Navbar() {
             <Tooltip key={item.name}>
               <TooltipTrigger asChild>
                 <Link
-                  href={item.href}
+                  href={item.href} 
                   className={`p-2 rounded-lg transition-colors duration-200 ${
                     pathname === item.href
                       ? "bg-pantaneiro-lime text-pantaneiro-green"
