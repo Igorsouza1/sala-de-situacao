@@ -25,7 +25,7 @@ interface DailyDequeCtx {
   error: string | null
   refetch: () => void
   trend: {
-    tendencia: "alta" | "baixa" | "estavel"
+    tendencia: string
     variacao: number
   }
 }
