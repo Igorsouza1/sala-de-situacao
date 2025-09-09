@@ -163,7 +163,7 @@ export function FeatureDetails({ layerType, properties }: { layerType: string; p
 
             {error && (
               <div className="bg-white border border-gray-100 rounded-lg shadow-sm p-4">
-                <p className="text-sm text-gray-600">Erro ao carregar imagens: {error}</p>
+                <p className="text-sm text-gray-600">{error}</p>
               </div>
             )}
 

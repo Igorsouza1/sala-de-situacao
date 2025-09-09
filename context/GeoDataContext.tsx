@@ -118,7 +118,9 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
 
   const fetchAcoesData = async () => {
     try {
-      const response = await fetch("/api/acoes?view=map")
+      const response = await fetch("/api/acoes?view=map", {
+        next: { tags: ["acoes"] },
+      });
       const apiResponse = await response.json()
 
       if(apiResponse.success){
