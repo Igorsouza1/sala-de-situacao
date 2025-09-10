@@ -64,9 +64,7 @@ function CustomTooltip({ active, payload, label }: any) {
         </div>
         <div className="flex items-center justify-between gap-3">
           <span className="text-gray-300 text-sm">Visibilidade:</span>
-          <span className={`font-medium ${status.cor}`}>
-            {status.emoji} {status.texto}
-          </span>
+          
         </div>
       </div>
     </div>
