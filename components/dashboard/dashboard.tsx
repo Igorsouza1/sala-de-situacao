@@ -391,7 +391,6 @@ function DashboardContent() {
                 trend={nivelRio?.tendencia || "estavel"}
                 unit="m"
                 colorScheme="blue"
-                avisos={nivelRio?.avisos}
               />
             )}
 
