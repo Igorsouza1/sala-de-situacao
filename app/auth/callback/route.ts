@@ -1,5 +1,6 @@
 import { createClient } from "@/utils/supabase/server";
 import { NextResponse } from "next/server";
+import type { Session } from "@supabase/supabase-js";
 
 export async function GET(request: Request) {
   // The `/auth/callback` route is required for the server-side auth flow implemented
@@ -21,4 +22,23 @@ export async function GET(request: Request) {
 
   // URL to redirect to after sign up process completes
   return NextResponse.redirect(`${origin}/protected`);
+}
+
+
+export async function POST(request: Request) {
+  const supabase = await createClient();
+  const { event, session } = (await request.json()) as {
+    event: string;
+    session: Session | null;
+  };
+
+  if (event === "SIGNED_IN" || event === "TOKEN_REFRESHED") {
+    if (session) await supabase.auth.setSession(session);
+  }
+
+  if (event === "SIGNED_OUT") {
+    await supabase.auth.signOut();
+  }
+
+  return NextResponse.json({ ok: true });
 }
