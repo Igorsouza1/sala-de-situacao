@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { useRegiao } from "./RegiaoContext"
 
 interface Acao {
   id: number
@@ -32,11 +33,15 @@ export function AcoesProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedYear, setSelectedYear] = useState<string>("todos")
+  const { selectedRegionId } = useRegiao()
 
   useEffect(() => {
     async function fetchAcoes() {
+      if (!selectedRegionId) return; // Não busca se nenhuma região estiver selecionada
+
+      setIsLoading(true);
       try {
-        const response = await fetch("/api/acoes?view=dashboard");
+        const response = await fetch(`/api/acoes?view=dashboard&regiaoId=${selectedRegionId}`);
         const apiResponse = await response.json(); 
     
         if (apiResponse.success) {
@@ -56,7 +61,7 @@ export function AcoesProvider({ children }: { children: ReactNode }) {
     }
 
     fetchAcoes()
-  }, [])
+  }, [selectedRegionId])
 
   useEffect(() => {
     if (selectedYear === "todos") {

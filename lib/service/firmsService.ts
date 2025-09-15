@@ -3,8 +3,8 @@ import { findAllFirmsData } from "../repositories/firmsRepository"
 
 
 
-export async function getAllFirmsData(){
-    const result = await findAllFirmsData()
+export async function getAllFirmsData(regiaoId: number){
+    const result = await findAllFirmsData(regiaoId)
 
     const groupedData = result.reduce(
         (acc, item) => {

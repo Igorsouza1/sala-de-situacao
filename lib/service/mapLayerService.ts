@@ -2,8 +2,8 @@ import { findAllMapLayersData } from "../repositories/mapLayerRepository";
 
 
 
-export async function getAllMapLayersData(){
-    const { estradas, bacia_rio_da_prata, leito_rio_da_prata, desmatamento, propriedades, firms, banhado_rio_da_prata } = await findAllMapLayersData();
+export async function getAllMapLayersData(regiaoId: number){
+    const { estradas, bacia_rio_da_prata, leito_rio_da_prata, desmatamento, propriedades, firms, banhado_rio_da_prata } = await findAllMapLayersData(regiaoId);
 
     // Função para converter um conjunto de dados para GeoJSON
     const convertToGeoJSON = (rows: any[], properties: string[]) => ({

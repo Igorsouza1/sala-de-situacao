@@ -1,12 +1,14 @@
 import { db } from "@/db";
-import { rawFirmsInRioDaPrata } from "@/db/schema";
+import { rawFirms } from "@/db/schema";
+import { eq, sql } from "drizzle-orm";
 
 
 
-export async function findAllFirmsDataWithGeometry(){
-    const result = await db.execute(`
+export async function findAllFirmsDataWithGeometry(regiaoId: number){
+    const result = await db.execute(sql`
         SELECT  acq_date, acq_time, ST_AsGeoJSON(geom) as geojson
-        FROM "rio_da_prata"."raw_firms"
+        FROM raw_firms
+        WHERE regiao_id = ${regiaoId}
       `)
 
     return result
@@ -14,20 +16,21 @@ export async function findAllFirmsDataWithGeometry(){
     }
 
 
-export async function findAllFirmsData(){
+export async function findAllFirmsData(regiaoId: number){
   const result = await db
       .select({
-        acq_date: rawFirmsInRioDaPrata.acqDate,
-        bright_ti4: rawFirmsInRioDaPrata.brightTi4,
-        scan: rawFirmsInRioDaPrata.scan,
-        track: rawFirmsInRioDaPrata.track,
-        acq_time: rawFirmsInRioDaPrata.acqTime,
-        satellite: rawFirmsInRioDaPrata.satellite,
-        instrument: rawFirmsInRioDaPrata.instrument,
-        confidence: rawFirmsInRioDaPrata.confidence,
-        version: rawFirmsInRioDaPrata.version,
+        acq_date: rawFirms.acqDate,
+        bright_ti4: rawFirms.brightTi4,
+        scan: rawFirms.scan,
+        track: rawFirms.track,
+        acq_time: rawFirms.acqTime,
+        satellite: rawFirms.satellite,
+        instrument: rawFirms.instrument,
+        confidence: rawFirms.confidence,
+        version: rawFirms.version,
       })
-      .from(rawFirmsInRioDaPrata)
+      .from(rawFirms)
+      .where(eq(rawFirms.regiaoId, regiaoId))
       .execute()
 
   return result

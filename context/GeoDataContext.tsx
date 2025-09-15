@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
+import { useRegiao } from "./RegiaoContext"
 
 type GeoJSONFeature = {
   type: "Feature"
@@ -73,16 +74,19 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
     startDate: null,
     endDate: null,
   })
+  const { selectedRegionId } = useRegiao()
 
   useEffect(() => {
-    fetchMapData()
-    fetchExpedicoesData()
-    fetchAcoesData()
-  }, [])
+    if (selectedRegionId) {
+      fetchMapData(selectedRegionId)
+      fetchExpedicoesData(selectedRegionId)
+      fetchAcoesData(selectedRegionId)
+    }
+  }, [selectedRegionId])
 
-  const fetchMapData = async () => {
+  const fetchMapData = async (regiaoId: number) => {
     try {
-      const response = await fetch("/api/mapLayers")
+      const response = await fetch(`/api/mapLayers?regiaoId=${regiaoId}`)
       if (!response.ok) {
         throw new Error("Failed to fetch map data")
       }
@@ -99,9 +103,9 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const fetchExpedicoesData = async () => {
+  const fetchExpedicoesData = async (regiaoId: number) => {
     try {
-      const response = await fetch("/api/expedicoes")
+      const response = await fetch(`/api/expedicoes?regiaoId=${regiaoId}`)
       const apiResponse = await response.json()
       if (!response.ok) {
         throw new Error("Failed to fetch expeditions data")
@@ -116,9 +120,9 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  const fetchAcoesData = async () => {
+  const fetchAcoesData = async (regiaoId: number) => {
     try {
-      const response = await fetch("/api/acoes?view=map", {
+      const response = await fetch(`/api/acoes?view=map&regiaoId=${regiaoId}`, {
         next: { tags: ["acoes"] },
       });
       const apiResponse = await response.json()
@@ -134,7 +138,9 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
   }
 
   const refreshAcoesData = async () => {
-    await fetchAcoesData()
+    if (selectedRegionId) {
+      await fetchAcoesData(selectedRegionId)
+    }
   }
 
 

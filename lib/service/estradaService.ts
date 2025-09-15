@@ -7,16 +7,17 @@ import { type NewEstradaData } from '@/db/schema';
 type EstradaInput = Zod.infer<typeof createEstradaSchema>;
 
 
-export async function createEstradaData(input: EstradaInput){
+export async function createEstradaData(regiaoId: number, input: EstradaInput){
     const validatedData = createEstradaSchema.parse(input);
 
     const geometry = extractTrackAsWKT(validatedData.geometry);
 
     const completeData: NewEstradaData = {
+      regiaoId: regiaoId,
       nome: validatedData.nome.toString(),
       tipo: validatedData.tipo.toString(),
       codigo: validatedData.codigo || null,
-      geom: geometry
+      geom: geometry,
     };
 
   const newEntry = await insertEstradaData(completeData);

@@ -1,27 +1,29 @@
 import { db } from "@/db"
-import { desmatamentoInRioDaPrata } from "@/db/schema"
+import { desmatamento } from "@/db/schema"
+import { eq, sql } from "drizzle-orm"
 
 
-export async function findAllDesmatamentoDataWithGeometry(){ 
-    const result = await db.execute(`
+export async function findAllDesmatamentoDataWithGeometry(regiaoId: number){
+    const result = await db.execute(sql`
       SELECT id, alertid, alertcode, alertha, source, detectat, detectyear, state, stateha, ST_AsGeoJSON(geom) as geojson
-      FROM "rio_da_prata"."desmatamento"
+      FROM desmatamento
+      WHERE regiao_id = ${regiaoId}
     `)
 
     return result
 }
 
-export async function findAllDesmatamentoData(){
+export async function findAllDesmatamentoData(regiaoId: number){
   const result = await db.select(
     {
-      alertid: desmatamentoInRioDaPrata.alertid,
-      alertha: desmatamentoInRioDaPrata.alertha,
-      detectat: desmatamentoInRioDaPrata.detectat,
-      detectyear: desmatamentoInRioDaPrata.detectyear,
-      state: desmatamentoInRioDaPrata.state,
-      stateha: desmatamentoInRioDaPrata.stateha,
+      alertid: desmatamento.alertid,
+      alertha: desmatamento.alertha,
+      detectat: desmatamento.detectat,
+      detectyear: desmatamento.detectyear,
+      state: desmatamento.state,
+      stateha: desmatamento.stateha,
     }
-  ).from(desmatamentoInRioDaPrata).execute()
+  ).from(desmatamento).where(eq(desmatamento.regiaoId, regiaoId)).execute()
   
   return result
 }

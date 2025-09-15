@@ -1,39 +1,38 @@
 import { db, sql } from "@/db"
-import { NewTrilhaData, trilhasInRioDaPrata, waypointsInRioDaPrata, NewWaypointData} from "@/db/schema";
+import { NewTrilhaData, trilhas, waypoints, NewWaypointData} from "@/db/schema";
 
 
 
-export async function findAllExpedicoesData(){
-    const [trilhas, waypoints] = await Promise.all([
-        db.execute(`
+export async function findAllExpedicoesData(regiaoId: number){
+    const [trilhasResult, waypointsResult] = await Promise.all([
+        db.execute(sql`
           SELECT id, nome, data_inicio, data_fim, duracao_minutos, ST_AsGeoJSON(geom) as geojson
-          FROM "rio_da_prata"."trilhas"
+          FROM trilhas
+          WHERE regiao_id = ${regiaoId}
         `),
-        db.execute(`
+        db.execute(sql`
           SELECT w.id, w.trilha_id, w.nome, w.ele, w.recordedat, t.nome as trilha_nome, ST_AsGeoJSON(w.geom) as geojson
-          FROM "rio_da_prata"."waypoints" w
-          JOIN "rio_da_prata"."trilhas" t ON w.trilha_id = t.id
+          FROM waypoints w
+          JOIN trilhas t ON w.trilha_id = t.id
+          WHERE t.regiao_id = ${regiaoId}
         `),
       ])
 
     return {
-        trilhas: trilhas.rows,
-        waypoints: waypoints.rows,
+        trilhas: trilhasResult.rows,
+        waypoints: waypointsResult.rows,
     }
 }
 
 
 export async function insertTrilhaData(data: NewTrilhaData){
   const [newRecord] = await db
-  .insert(trilhasInRioDaPrata)
+  .insert(trilhas)
   .values({
-    nome: data.nome,
-    dataInicio: data.dataInicio,
-    dataFim: data.dataFim,
-    duracaoMinutos: data.duracaoMinutos,
+    ...data,
     geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4326)`,
   })
-  .returning({ id: trilhasInRioDaPrata.id });
+  .returning({ id: trilhas.id });
 
 return newRecord;
 }
@@ -41,7 +40,7 @@ return newRecord;
 
 export async function insertWaypointDataInWaypointsTable(data: NewWaypointData){
   const [newRecord] = await db
-  .insert(waypointsInRioDaPrata)
+  .insert(waypoints)
   .values({
     trilhaId: data.trilhaId,
     nome: data.nome,
@@ -49,7 +48,6 @@ export async function insertWaypointDataInWaypointsTable(data: NewWaypointData){
     recordedat: data.recordedat,
     geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4326)`,
   })
-  .returning({ id: waypointsInRioDaPrata.id });
+  .returning({ id: waypoints.id });
   return newRecord;
 }
-

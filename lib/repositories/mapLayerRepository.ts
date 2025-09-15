@@ -3,25 +3,29 @@ import { findAllDesmatamentoDataWithGeometry } from "./desmatamentoReposiroty"
 import { findAllPropriedadesDataWithGeometry } from "./propriedadesRepository"
 import { findAllFirmsDataWithGeometry } from "./firmsRepository"
 import { findAllEstradasDataWithGeometry } from "./estradasRepository"
+import { sql } from "drizzle-orm"
 
-export async function findAllMapLayersData(){
+export async function findAllMapLayersData(regiaoId: number){
     const [estradas, bacia_rio_da_prata, leito_rio_da_prata, desmatamento, propriedades, firms, banhado_rio_da_prata] = await Promise.all([
-        findAllEstradasDataWithGeometry(),
-        db.execute(`
+        findAllEstradasDataWithGeometry(regiaoId),
+        db.execute(sql`
           SELECT id, ST_AsGeoJSON(geom) as geojson
-          FROM "rio_da_prata"."Bacia_Rio_Da_Prata"
+          FROM "Bacia_Rio_Da_Prata"
+          WHERE regiao_id = ${regiaoId}
         `),
-        db.execute(`
+        db.execute(sql`
           SELECT id, ST_AsGeoJSON(geom) as geojson
-          FROM "rio_da_prata"."Leito_Rio_Da_Prata"
+          FROM "Leito_Rio_Da_Prata"
+          WHERE regiao_id = ${regiaoId}
         `),
-        findAllDesmatamentoDataWithGeometry(),
-        findAllPropriedadesDataWithGeometry(),
-        findAllFirmsDataWithGeometry(),
+        findAllDesmatamentoDataWithGeometry(regiaoId),
+        findAllPropriedadesDataWithGeometry(regiaoId),
+        findAllFirmsDataWithGeometry(regiaoId),
         
-        db.execute(`
+        db.execute(sql`
           SELECT id, ST_AsGeoJSON(geom) as geojson
-          FROM "rio_da_prata"."Banhado_Rio_Da_Prata"
+          FROM "Banhado_Rio_Da_Prata"
+          WHERE regiao_id = ${regiaoId}
         `),
         
       ])

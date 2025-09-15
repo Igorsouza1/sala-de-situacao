@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { useRegiao } from "./RegiaoContext"
 
 interface DesmatamentoData {
   [year: number]: number[]
@@ -23,11 +24,15 @@ export function DesmatamentoProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedYear, setSelectedYear] = useState<string>("todos")
+  const { selectedRegionId } = useRegiao()
 
   useEffect(() => {
     async function fetchDesmatamentoData() {
+      if (!selectedRegionId) return;
+
+      setIsLoading(true);
       try {
-        const response = await fetch("/api/desmatamento")
+        const response = await fetch(`/api/desmatamento?regiaoId=${selectedRegionId}`)
         if (!response.ok) {
           throw new Error("Falha ao buscar dados")
         }
@@ -46,7 +51,7 @@ export function DesmatamentoProvider({ children }: { children: ReactNode }) {
     }
 
     fetchDesmatamentoData()
-  }, [])
+  }, [selectedRegionId])
 
   useEffect(() => {
     if (selectedYear === "todos") {

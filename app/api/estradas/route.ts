@@ -7,7 +7,13 @@ import { ZodError } from "zod";
 export async function POST(req: Request){
     try{
         const body = await req.json()
-        const newEntry = await createEstradaData(body)
+        const { regiaoId, ...estradaData } = body;
+
+        if (!regiaoId) {
+            return apiError("O campo regiaoId é obrigatório.", 400);
+        }
+
+        const newEntry = await createEstradaData(Number(regiaoId), estradaData)
         return apiSuccess(newEntry, 201)
     }catch(error){
         if(error instanceof ZodError){

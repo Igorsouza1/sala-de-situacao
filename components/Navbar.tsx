@@ -1,9 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Plus, Map, BarChartIcon as ChartNetwork, HardDrive, User, Settings, LogOut } from "lucide-react"
+import { Plus, Map, BarChartIcon as ChartNetwork, HardDrive, User, Settings, LogOut, Globe } from "lucide-react"
+import { useRegiao } from "@/context/RegiaoContext"
+import { type Regiao } from "@/db/schema"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -28,6 +30,28 @@ export function Navbar() {
   const router = useRouter()
   const { isAdmin, isLoading } = useUserRole()
   const supabase = createClient()
+  const { selectedRegionId, setSelectedRegionId } = useRegiao()
+  const [regioes, setRegioes] = useState<Regiao[]>([])
+  const [isRegiaoMenuOpen, setIsRegiaoMenuOpen] = useState(false)
+
+  useEffect(() => {
+    const fetchRegioes = async () => {
+      try {
+        const response = await fetch('/api/regioes');
+        if (!response.ok) {
+          throw new Error('Falha ao buscar regiões');
+        }
+        const data: Regiao[] = await response.json();
+        setRegioes(data);
+        if (data.length > 0 && !selectedRegionId) {
+          setSelectedRegionId(data[0].id); // Seleciona a primeira região por padrão
+        }
+      } catch (error) {
+        console.error(error);
+      }
+    };
+    fetchRegioes();
+  }, [selectedRegionId, setSelectedRegionId]);
 
   const [isGpxModalOpen, setIsGpxModalOpen] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
@@ -51,6 +75,40 @@ export function Navbar() {
     <TooltipProvider>
       <nav className="flex flex-col h-screen w-16 bg-pantaneiro-green sticky top-0 left-0 shadow-md z-50">
         <div className="flex-1 flex flex-col items-center pt-6 gap-6">
+          {/* Seletor de Região */}
+          <DropdownMenu open={isRegiaoMenuOpen} onOpenChange={setIsRegiaoMenuOpen}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="p-2 rounded-lg text-white transition-colors duration-200 hover:bg-pantaneiro-lime hover:bg-opacity-20"
+                    aria-label="Selecionar Região"
+                  >
+                    <Globe className="w-5 h-5" strokeWidth={1.5} />
+                  </Button>
+                </DropdownMenuTrigger>
+              </TooltipTrigger>
+              <TooltipContent side="right" className="bg-pantaneiro-lime text-pantaneiro-green">
+                <p>
+                  {regioes.find(r => r.id === selectedRegionId)?.nome || "Selecionar Região"}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+            <DropdownMenuContent side="right" className="w-56 bg-pantaneiro-green text-white z-[1000]">
+              {regioes.map((regiao) => (
+                <DropdownMenuItem
+                  key={regiao.id}
+                  className="flex items-center gap-2 hover:bg-pantaneiro-lime hover:bg-opacity-20"
+                  onSelect={() => setSelectedRegionId(regiao.id)}
+                >
+                  <span>{regiao.nome}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {/* links de navegação */}
           {navItems.map((item) => (
             <Tooltip key={item.name}>

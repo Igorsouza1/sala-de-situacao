@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
+import { useRegiao } from "./RegiaoContext"
 
 interface FogoData {
   [year: number]: number[]
@@ -23,11 +24,15 @@ export function FogoProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [selectedYear, setSelectedYear] = useState<string>("todos")
+  const { selectedRegionId } = useRegiao()
 
   useEffect(() => {
     async function fetchFogoData() {
+      if (!selectedRegionId) return;
+
+      setIsLoading(true);
       try {
-        const response = await fetch("/api/fogo")
+        const response = await fetch(`/api/fogo?regiaoId=${selectedRegionId}`)
         if (!response.ok) {
           throw new Error("Falha ao buscar dados")
         }
@@ -42,7 +47,7 @@ export function FogoProvider({ children }: { children: ReactNode }) {
     }
 
     fetchFogoData()
-  }, [])
+  }, [selectedRegionId])
 
   useEffect(() => {
     if (selectedYear === "todos") {

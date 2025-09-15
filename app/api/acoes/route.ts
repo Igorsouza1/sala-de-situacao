@@ -11,14 +11,19 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const view = searchParams.get("view");
+    const regiaoId = searchParams.get("regiaoId");
+
+    if (!regiaoId) {
+      return apiError("O parâmetro regiaoId é obrigatório.", 400);
+    }
 
     if(view === "dashboard"){
-        const result = await getAllAcoesData();
+        const result = await getAllAcoesData(Number(regiaoId));
         return apiSuccess(result);
     }
 
     if(view === "map"){
-        const result = await getAllAcoesForMap();
+        const result = await getAllAcoesForMap(Number(regiaoId));
         return apiSuccess(result);
     }
 
@@ -37,8 +42,9 @@ export async function POST(request: Request) {
     const formData = await request.formData();
     const trilhaRaw = formData.get("trilha");
     const waypointsRaw = formData.get("waypoints");
+    const regiaoIdRaw = formData.get("regiaoId");
 
-    if (typeof trilhaRaw !== "string" || typeof waypointsRaw !== "string") {
+    if (typeof trilhaRaw !== "string" || typeof waypointsRaw !== "string" || typeof regiaoIdRaw !== "string") {
       return apiError("Dados inválidos.", 400);
     }
 
@@ -65,6 +71,7 @@ export async function POST(request: Request) {
     }));
 
     const created = await createAcoesWithTrilha({
+      regiaoId: Number(regiaoIdRaw),
       trilha: parsed.data.trilha,
       waypoints,
     });

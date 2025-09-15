@@ -1,9 +1,8 @@
-
 import { findAllExpedicoesData } from "../repositories/exepedicoesRepository";
 
 
-export async function getAllExpedicoesData(){
-    const { trilhas, waypoints } = await findAllExpedicoesData();
+export async function getAllExpedicoesData(regiaoId: number){
+    const { trilhas, waypoints } = await findAllExpedicoesData(regiaoId);
 
 
     // PRECISA DE REFATORAÇÃO?

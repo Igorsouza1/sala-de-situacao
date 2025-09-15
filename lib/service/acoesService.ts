@@ -16,14 +16,14 @@ import type { TrilhaInput, WaypointInput } from "@/lib/validations/acoes";
 
 // Retorna todas as ações
 // UTILIZAREMOS PARA O DASHBOARD
-export async function getAllAcoesData() {
-  const acoesData = await findAllAcoesData();
+export async function getAllAcoesData(regiaoId: number) {
+  const acoesData = await findAllAcoesData(regiaoId);
   return acoesData;
 }
 
 // Retorna todas as ações com geometria
-export async function getAllAcoesForMap() {
-  const acoesDataWithGeometry = await findAllAcoesDataWithGeometry();
+export async function getAllAcoesForMap(regiaoId: number) {
+  const acoesDataWithGeometry = await findAllAcoesDataWithGeometry(regiaoId);
   const actionsGeoJSON = formatAcoesToGeojson(acoesDataWithGeometry);
   return actionsGeoJSON;
 }
@@ -67,11 +67,13 @@ export async function updateAcaoAndUploadImageById(
 }
 
 export async function createAcoesWithTrilha(input: {
+  regiaoId: number;
   trilha: TrilhaInput;
   waypoints: (WaypointInput & { fotos?: File[] })[];
 }) {
   const trilhaRecord = await insertTrilhaData({
     nome: input.trilha.nome,
+    regiaoId: input.regiaoId,
     dataInicio: input.trilha.dataInicio ?? null,
     dataFim: input.trilha.dataFim ?? null,
     duracaoMinutos: input.trilha.duracaoMinutos ?? null,
@@ -92,6 +94,7 @@ export async function createAcoesWithTrilha(input: {
     });
 
     const acaoRecord = await insertAcaoData({
+      regiaoId: input.regiaoId,
       name: wp.name ?? null,
       latitude: wp.latitude.toString(),
       longitude: wp.longitude.toString(),

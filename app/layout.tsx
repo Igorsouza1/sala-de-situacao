@@ -1,5 +1,6 @@
 
 import { Geist } from "next/font/google";
+import { RegiaoProvider } from "@/context/RegiaoContext";
 // import { ThemeProvider } from "next-themes";
 import "./globals.css";
 
@@ -32,11 +33,13 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         > */}
+        <RegiaoProvider>
           <main className="">
               <div className="">
                 {children}
               </div>
           </main>
+        </RegiaoProvider>
         {/* </ThemeProvider> */}
       </body>
     </html>
