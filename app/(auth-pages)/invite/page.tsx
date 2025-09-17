@@ -50,7 +50,7 @@ export default async function Invite(props: { searchParams: Promise<Message> }) 
                   Nome
                 </Label>
                 <Input
-                  name="name"
+                  name="full_name"
                   id="name"
                   placeholder="Seu nome"
                   required

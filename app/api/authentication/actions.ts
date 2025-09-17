@@ -141,7 +141,7 @@ export const completeInviteAction = async (formData: FormData) => {
 
   const password = formData.get("password") as string;
   const confirmPassword = formData.get("confirmPassword") as string;
-  const name = formData.get("name") as string;
+  const name = formData.get("full_name") as string;
 
   if (!password || !confirmPassword || !name) {
     return encodedRedirect(
@@ -172,8 +172,8 @@ export const completeInviteAction = async (formData: FormData) => {
 
   const { error } = await supabase.auth.updateUser({
     password,
-    data: { name },
-  });
+    data: { full_name: name }},
+  );
 
   if (error) {
     console.error("completeInviteAction", error);

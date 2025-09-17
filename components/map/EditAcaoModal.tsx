@@ -274,30 +274,31 @@ export function EditAcaoModal({ isOpen, onClose, acao, onSave }: EditAcaoModalPr
         <DialogTitle>Preview</DialogTitle>
           {preview && (
             <DialogContent
-              className="p-0 gap-0 border-none bg-black/90 max-w-none"
-              onEscapeKeyDown={(e) => e.preventDefault()}
-              onPointerDownOutside={(e) => e.preventDefault()}
-            >
-              <div className="relative w-[min(90vw,900px)] h-[min(80vh,700px)] mx-auto">
-                <Image
-                  src={preview.url}
-                  alt={preview.alt}
-                  fill
-                  className="object-contain select-none"
-                  draggable={false}
-                  priority
-                />
-                <button
-                  type="button"
-                  onClick={() => setPreview(null)}
-                  className="absolute top-2 right-2 bg-white text-black rounded-full p-2 shadow"
-                  aria-label="Fechar"
-                  title="Fechar"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-            </DialogContent>
+            // Remove a limitação de tamanho e borda, e usa fundo escuro
+            className="p-0 gap-0 border-none bg-black/90 w-screen h-screen max-w-none"
+            onEscapeKeyDown={(e) => e.preventDefault()}
+            onPointerDownOutside={(e) => e.preventDefault()}
+          >
+            <div className="relative w-full h-full flex items-center justify-center">
+              <Image
+                src={preview.url}
+                alt={preview.alt}
+                fill
+                className="object-contain select-none"
+                draggable={false}
+                priority
+              />
+              <button
+                type="button"
+                onClick={() => setPreview(null)}
+                className="absolute top-4 right-4 bg-white text-black rounded-full p-2 shadow"
+                aria-label="Fechar"
+                title="Fechar"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          </DialogContent>
           )}
         </Dialog>
       </DialogContent>
