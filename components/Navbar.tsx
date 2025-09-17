@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Plus, Map, BarChartIcon as ChartNetwork, HardDrive, User, Settings, LogOut } from "lucide-react"
+import { Plus, Map, BarChartIcon as ChartNetwork, HardDrive, User, Settings, LogOut, UserCog } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -103,8 +103,7 @@ export function Navbar() {
                 className="rounded-lg p-2 text-white hover:bg-pantaneiro-lime hover:bg-opacity-20"
               >
                 <Avatar className="w-8 h-8">
-                  <AvatarImage src="https://github.com/shadcn.png" />
-                  <AvatarFallback className="bg-pantaneiro-lime text-pantaneiro-green">CN</AvatarFallback>
+                  <UserCog className="w-7 h-7" />
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
