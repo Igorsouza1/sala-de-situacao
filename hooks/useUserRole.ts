@@ -13,41 +13,18 @@ export function useUserRole() {
       try {
         const {
           data: { user },
-          error: userError,
         } = await supabase.auth.getUser()
 
-
-        if (userError) {
-          console.error("Error getting user:", userError)
-          setIsAdmin(false)
-          setIsLoading(false)
-          return
-        }
-
         if (user) {
-          // Fixed query syntax for Supabase
-          const { data, error } = await supabase
-            .from("profiles")
-            .select("role")
-            .eq("id", user.id) // Changed from user_ref to id since that's now the column name
-            .maybeSingle()
+          const { data } = await supabase.schema("public").from("profiles").select("role").eq("id", user.id).single()
 
-
-          if (error) {
-            console.error("Error fetching user role:", error)
-            setIsAdmin(false)
-          } else if (data) {
-            // Check if the role is exactly 'Admin' (case-sensitive)
-            const isUserAdmin = data.role === "Admin"
-            setIsAdmin(isUserAdmin)
+          if (data) {
+            setIsAdmin(data.role === "Admin")
           } else {
             setIsAdmin(false)
           }
-        } else {
-          setIsAdmin(false)
-        }
+        } 
       } catch (error) {
-        console.error("Unexpected error in checkUserRole:", error)
         setIsAdmin(false)
       } finally {
         setIsLoading(false)

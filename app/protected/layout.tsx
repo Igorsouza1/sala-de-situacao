@@ -3,6 +3,7 @@ import "@/app/globals.css";
 import { Inter } from "next/font/google";
 import { MapProvider } from "@/context/GeoDataContext";
 import { AcoesProvider } from "@/context/AcoesContext";
+import { DequePedrasProvider } from "@/context/DequePedrasContext";
 
 const inter = Inter({ subsets: ["latin"] });
 

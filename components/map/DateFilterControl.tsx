@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react"
+import { useState, useCallback, useEffect, useRef  } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -27,6 +27,20 @@ export function DateFilterControl({ onDateChange }: DateFilterControlProps) {
   const [endDate, setEndDate] = useState<Date | null>(null)
   const [isExpanded, setIsExpanded] = useState(false)
 
+  const didInitialize = useRef(false) // ← 🔑 controle de inicialização
+
+  useEffect(() => {
+    if (!didInitialize.current) {
+      const now = new Date()
+      const start = startOfMonth(now)
+      const end = endOfMonth(now)
+
+      setStartDate(start)
+      setEndDate(end)
+      onDateChange(start, end)
+      didInitialize.current = true
+    }
+  }, [onDateChange])
   const handleApplyFilter = useCallback(() => {
     onDateChange(startDate, endDate)
     setIsExpanded(false)

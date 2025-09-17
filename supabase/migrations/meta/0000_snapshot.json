@@ -1,5 +1,5 @@
 {
-  "id": "3283d0c3-bef3-40f9-bdef-e7e844610ab9",
+  "id": "e493f8be-ce58-4fcc-afe0-3318af792c02",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -2074,6 +2074,65 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "rio_da_prata.fotos_acoes": {
+      "name": "fotos_acoes",
+      "schema": "rio_da_prata",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "acao_id": {
+          "name": "acao_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "url": {
+          "name": "url",
+          "type": "varchar(1000)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "descricao": {
+          "name": "descricao",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "fotos_acoes_acao_id_acoes_id_fk": {
+          "name": "fotos_acoes_acao_id_acoes_id_fk",
+          "tableFrom": "fotos_acoes",
+          "tableTo": "acoes",
+          "schemaTo": "rio_da_prata",
+          "columnsFrom": [
+            "acao_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "rio_da_prata.Leito_Rio_Da_Prata": {
       "name": "Leito_Rio_Da_Prata",
       "schema": "rio_da_prata",
@@ -2446,10 +2505,138 @@
           "type": "geometry(point)",
           "primaryKey": false,
           "notNull": false
+        },
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
         }
       },
       "indexes": {},
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "raw_firms_id_key": {
+          "name": "raw_firms_id_key",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "rio_da_prata.trilhas": {
+      "name": "trilhas",
+      "schema": "rio_da_prata",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "geom": {
+          "name": "geom",
+          "type": "geometry(point)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data_inicio": {
+          "name": "data_inicio",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data_fim": {
+          "name": "data_fim",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "duracao_minutos": {
+          "name": "duracao_minutos",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "rio_da_prata.waypoints": {
+      "name": "waypoints",
+      "schema": "rio_da_prata",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "trilha_id": {
+          "name": "trilha_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "geom": {
+          "name": "geom",
+          "type": "geometry(point)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ele": {
+          "name": "ele",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recordedat": {
+          "name": "recordedat",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "waypoints_trilha_id_trilhas_id_fk": {
+          "name": "waypoints_trilha_id_trilhas_id_fk",
+          "tableFrom": "waypoints",
+          "tableTo": "trilhas",
+          "schemaTo": "rio_da_prata",
+          "columnsFrom": [
+            "trilha_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},

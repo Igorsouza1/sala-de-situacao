@@ -1,133 +1,11 @@
-import { pgTable, pgSchema, serial, text, doublePrecision, integer, geometry, varchar, date, time, bigint, numeric, timestamp } from "drizzle-orm/pg-core"
-import { sql } from "drizzle-orm"
+import { pgSchema, serial, geometry, bigint, doublePrecision, integer, varchar, numeric, text, timestamp, date, foreignKey, unique, time, uuid } from "drizzle-orm/pg-core"
 
+
+import { type InferInsertModel } from 'drizzle-orm';
 export const rioDaPrata = pgSchema("rio_da_prata");
 
-export const rioDaPrataLeitoIdSeqInRioDaPrata = rioDaPrata.sequence("Rio da Prata - Leito_id_seq", {  startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
 export const baciaRioDaPrataIdSeqInRioDaPrata = rioDaPrata.sequence("Bacia_RioDaPrata_id_seq", {  startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
-
-export const desmatamentoInRioDaPrata = rioDaPrata.table("desmatamento", {
-	id: serial().primaryKey().notNull(),
-	alertid: text(),
-	alertcode: text(),
-	alertha: doublePrecision(),
-	source: text(),
-	detectat: text(),
-	detectyear: integer(),
-	state: text(),
-	stateha: doublePrecision(),
-	geom: geometry({ type: "geometry", srid: 4326 }),
-});
-
-export const propriedadesInRioDaPrata = rioDaPrata.table("propriedades", {
-	id: serial().primaryKey().notNull(),
-	codTema: varchar("cod_tema", { length: 50 }),
-	nomTema: varchar("nom_tema", { length: 100 }),
-	codImovel: varchar("cod_imovel", { length: 100 }),
-	modFiscal: doublePrecision("mod_fiscal"),
-	numArea: doublePrecision("num_area"),
-	indStatus: varchar("ind_status", { length: 20 }),
-	indTipo: varchar("ind_tipo", { length: 20 }),
-	desCondic: text("des_condic"),
-	municipio: varchar({ length: 100 }),
-	geom: geometry({ type: "multipolygon", srid: 4326 }),
-});
-
-export const rawFirmsInRioDaPrata = rioDaPrata.table("raw_firms", {
-	latitude: doublePrecision(),
-	longitude: doublePrecision(),
-	brightTi4: doublePrecision("bright_ti4"),
-	scan: doublePrecision(),
-	track: doublePrecision(),
-	acqDate: date("acq_date"),
-	acqTime: text("acq_time"),
-	satellite: text(),
-	instrument: text(),
-	confidence: text(),
-	version: text(),
-	brightTi5: doublePrecision("bright_ti5"),
-	frp: doublePrecision(),
-	daynight: text(),
-	type: text(),
-	horaDeteccao: time("hora_deteccao"),
-	geom: geometry({ type: "point", srid: 4674 }),
-});
-
-export const estradasInRioDaPrata = rioDaPrata.table("estradas", {
-	id: serial().primaryKey().notNull(),
-	nome: varchar({ length: 255 }),
-	tipo: varchar({ length: 100 }),
-	codigo: varchar({ length: 50 }),
-	geom: geometry({ type: "geometry", srid: 4326 }),
-});
-
-export const leitoRioDaPrataInRioDaPrata = rioDaPrata.table("Leito_Rio_Da_Prata", {
-	id: serial().primaryKey().notNull(),
-	geom: geometry({ type: "multilinestringz", srid: 4326 }),
-	name: varchar({ length: 254 }),
-	descriptio: varchar({ length: 254 }),
-	timestamp: varchar({ length: 24 }),
-	begin: varchar({ length: 24 }),
-	end: varchar({ length: 24 }),
-	altitudemo: varchar({ length: 254 }),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	tessellate: bigint({ mode: "number" }),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	extrude: bigint({ mode: "number" }),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	visibility: bigint({ mode: "number" }),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	draworder: bigint({ mode: "number" }),
-	icon: varchar({ length: 254 }),
-	descript1: varchar("descript_1", { length: 254 }),
-	altitude1: varchar("altitude_1", { length: 254 }),
-	gmLayer: varchar("gm_layer", { length: 254 }),
-	gmType: varchar("gm_type", { length: 254 }),
-	layer: varchar({ length: 254 }),
-	compriment: numeric(),
-	metros: doublePrecision(),
-});
-
-export const ponteDoCureInRioDaPrata = rioDaPrata.table("ponte_do_cure", {
-	id: serial().primaryKey().notNull(),
-	local: varchar({ length: 255 }),
-	mes: varchar({ length: 50 }),
-	data: date(),
-	chuva: numeric({ precision: 5, scale:  2 }),
-	nivel: numeric({ precision: 5, scale:  2 }),
-	visibilidade: varchar({ length: 50 }),
-});
-
-export const dequeDePedrasInRioDaPrata = rioDaPrata.table("deque_de_pedras", {
-	id: serial().primaryKey().notNull(),
-	local: varchar({ length: 255 }),
-	mes: varchar({ length: 50 }),
-	data: date(),
-	turbidez: numeric({ precision: 5, scale:  2 }),
-	secchiVertical: numeric("secchi_vertical", { precision: 5, scale:  2 }),
-	secchiHorizontal: numeric("secchi_horizontal", { precision: 5, scale:  2 }),
-	chuva: numeric({ precision: 5, scale:  2 }),
-});
-
-export const banhadoRioDaPrataInRioDaPrata = rioDaPrata.table("Banhado_Rio_Da_Prata", {
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	id: bigint({ mode: "number" }).primaryKey().notNull(),
-	geom: geometry({ type: "multipolygon", srid: 4326 }),
-});
-
-export const acoesInRioDaPrata = rioDaPrata.table("acoes", {
-	id: serial().primaryKey().notNull(),
-	name: varchar({ length: 255 }),
-	latitude: numeric({ precision: 10, scale:  6 }),
-	longitude: numeric({ precision: 10, scale:  6 }),
-	elevation: numeric({ precision: 8, scale:  2 }),
-	time: timestamp({ mode: 'string' }),
-	descricao: varchar({ length: 255 }),
-	mes: varchar({ length: 50 }),
-	atuacao: varchar({ length: 100 }),
-	acao: varchar({ length: 100 }),
-	geom: geometry({ type: "point", srid: 4326 }),
-});
+export const rioDaPrataLeitoIdSeqInRioDaPrata = rioDaPrata.sequence("Rio da Prata - Leito_id_seq", {  startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
 
 export const baciaRioDaPrataInRioDaPrata = rioDaPrata.table("Bacia_Rio_Da_Prata", {
 	id: serial().primaryKey().notNull(),
@@ -434,3 +312,194 @@ export const baciaRioDaPrataInRioDaPrata = rioDaPrata.table("Bacia_Rio_Da_Prata"
 	gdpUdUsu: bigint("gdp_ud_usu", { mode: "number" }),
 	hdiIxSav: integer("hdi_ix_sav"),
 });
+
+export const banhadoRioDaPrataInRioDaPrata = rioDaPrata.table("Banhado_Rio_Da_Prata", {
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	id: bigint({ mode: "number" }).primaryKey().notNull(),
+	geom: geometry({ type: "multipolygon", srid: 4326 }),
+});
+
+export const leitoRioDaPrataInRioDaPrata = rioDaPrata.table("Leito_Rio_Da_Prata", {
+	id: serial().primaryKey().notNull(),
+	geom: geometry({ type: "multilinestringz", srid: 4326 }),
+	name: varchar({ length: 254 }),
+	descriptio: varchar({ length: 254 }),
+	timestamp: varchar({ length: 24 }),
+	begin: varchar({ length: 24 }),
+	end: varchar({ length: 24 }),
+	altitudemo: varchar({ length: 254 }),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	tessellate: bigint({ mode: "number" }),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	extrude: bigint({ mode: "number" }),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	visibility: bigint({ mode: "number" }),
+	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
+	draworder: bigint({ mode: "number" }),
+	icon: varchar({ length: 254 }),
+	descript1: varchar("descript_1", { length: 254 }),
+	altitude1: varchar("altitude_1", { length: 254 }),
+	gmLayer: varchar("gm_layer", { length: 254 }),
+	gmType: varchar("gm_type", { length: 254 }),
+	layer: varchar({ length: 254 }),
+	compriment: numeric(),
+	metros: doublePrecision(),
+});
+
+type BaseTrilhaData = InferInsertModel<typeof trilhasInRioDaPrata>;
+
+export type NewTrilhaData = Omit<BaseTrilhaData, 'geom'> & {
+	geom: string;
+  };
+
+export const trilhasInRioDaPrata = rioDaPrata.table("trilhas", {
+	id: serial().primaryKey().notNull(),
+	nome: text().notNull(),
+	geom: geometry({ type: "multilinestringz", srid: 4326 }).notNull(),
+	dataInicio: timestamp("data_inicio", { mode: 'string' }),
+	dataFim: timestamp("data_fim", { mode: 'string' }),
+	duracaoMinutos: integer("duracao_minutos"),
+});
+
+export const dequeDePedrasInRioDaPrata = rioDaPrata.table("deque_de_pedras", {
+	id: serial().primaryKey().notNull(),
+	local: varchar({ length: 255 }),
+	mes: varchar({ length: 50 }),
+	data: date(),
+	turbidez: numeric({ precision: 5, scale:  2 }),
+	secchiVertical: numeric("secchi_vertical", { precision: 5, scale:  2 }),
+	secchiHorizontal: numeric("secchi_horizontal", { precision: 5, scale:  2 }),
+	chuva: numeric({ precision: 5, scale:  2 }),
+});
+
+export const desmatamentoInRioDaPrata = rioDaPrata.table("desmatamento", {
+	id: serial().primaryKey().notNull(),
+	alertid: text(),
+	alertcode: text(),
+	alertha: doublePrecision(),
+	source: text(),
+	detectat: text(),
+	detectyear: integer(),
+	state: text(),
+	stateha: doublePrecision(),
+	geom: geometry({ type: "geometry", srid: 4326 }),
+});
+
+export const propriedadesInRioDaPrata = rioDaPrata.table("propriedades", {
+	id: serial().primaryKey().notNull(),
+	codTema: varchar("cod_tema", { length: 50 }),
+	nomTema: varchar("nom_tema", { length: 100 }),
+	codImovel: varchar("cod_imovel", { length: 100 }),
+	modFiscal: doublePrecision("mod_fiscal"),
+	numArea: doublePrecision("num_area"),
+	indStatus: varchar("ind_status", { length: 20 }),
+	indTipo: varchar("ind_tipo", { length: 20 }),
+	desCondic: text("des_condic"),
+	municipio: varchar({ length: 100 }),
+	geom: geometry({ type: "multipolygon", srid: 4326 }),
+});
+
+
+type BaseEstradaData = InferInsertModel<typeof estradasInRioDaPrata>;
+
+export type NewEstradaData = Omit<BaseEstradaData, 'geom'> & {
+  geom: string;
+};
+
+export const estradasInRioDaPrata = rioDaPrata.table("estradas", {
+	id: serial().primaryKey().notNull(),
+	nome: varchar({ length: 255 }),
+	tipo: varchar({ length: 100 }),
+	codigo: varchar({ length: 50 }),
+	geom: geometry({ type: "multilinestringz", srid: 4326 })
+});
+
+
+type BaseWaypointData = InferInsertModel<typeof waypointsInRioDaPrata>;
+
+export type NewWaypointData = Omit<BaseWaypointData, 'geom'> & {
+	geom: string;
+  };
+
+export const waypointsInRioDaPrata = rioDaPrata.table("waypoints", {
+	id: serial().primaryKey().notNull(),
+	trilhaId: integer("trilha_id").notNull(),
+	nome: text(),
+	geom: geometry({ type: "pointz", srid: 4326 }).notNull(),
+	ele: doublePrecision(),
+	recordedat: timestamp({ mode: 'string' }),
+}, (table) => [
+	foreignKey({
+			columns: [table.trilhaId],
+			foreignColumns: [trilhasInRioDaPrata.id],
+			name: "waypoints_trilha_id_trilhas_id_fk"
+		}).onDelete("cascade"),
+]);
+
+export const ponteDoCureInRioDaPrata = rioDaPrata.table("ponte_do_cure", {
+	id: serial().primaryKey().notNull(),
+	local: varchar({ length: 255 }),
+	mes: varchar({ length: 50 }),
+	data: date(),
+	chuva: numeric({ precision: 5, scale:  2 }),
+	nivel: numeric({ precision: 5, scale:  2 }),
+	visibilidade: varchar({ length: 50 }),
+});
+
+export const rawFirmsInRioDaPrata = rioDaPrata.table("raw_firms", {
+	latitude: doublePrecision(),
+	longitude: doublePrecision(),
+	brightTi4: doublePrecision("bright_ti4"),
+	scan: doublePrecision(),
+	track: doublePrecision(),
+	acqDate: date("acq_date"),
+	acqTime: text("acq_time"),
+	satellite: text(),
+	instrument: text(),
+	confidence: text(),
+	version: text(),
+	brightTi5: doublePrecision("bright_ti5"),
+	frp: doublePrecision(),
+	daynight: text(),
+	type: text(),
+	horaDeteccao: time("hora_deteccao"),
+	geom: geometry({ type: "point", srid: 4674 }),
+	id: uuid().defaultRandom().primaryKey().notNull(),
+}, (table) => [
+	unique("raw_firms_id_key").on(table.id),
+]);
+
+
+type BaseAcoesData = InferInsertModel<typeof acoesInRioDaPrata>;
+
+export type NewAcoesData = Omit<BaseAcoesData, 'geom'> & {
+  geom: string;
+};
+
+export const acoesInRioDaPrata = rioDaPrata.table("acoes", {
+	id: serial().primaryKey().notNull(),
+	name: varchar({ length: 255 }),
+	latitude: numeric({ precision: 10, scale:  6 }),
+	longitude: numeric({ precision: 10, scale:  6 }),
+	elevation: numeric({ precision: 8, scale:  2 }),
+	time: timestamp({ mode: 'string' }),
+	descricao: varchar({ length: 255 }),
+	mes: varchar({ length: 50 }),
+	atuacao: varchar({ length: 100 }),
+	acao: varchar({ length: 100 }),
+	geom: geometry({ type: "point", srid: 4326 }),
+});
+
+export const fotosAcoesInRioDaPrata = rioDaPrata.table("fotos_acoes", {
+	id: serial().primaryKey().notNull(),
+	acaoId: integer("acao_id").notNull(),
+	url: varchar({ length: 1000 }).notNull(),
+	descricao: varchar({ length: 255 }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+}, (table) => [
+	foreignKey({
+			columns: [table.acaoId],
+			foreignColumns: [acoesInRioDaPrata.id],
+			name: "fotos_acoes_acao_id_acoes_id_fk"
+		}),
+]);

@@ -27,12 +27,12 @@ export function FogoProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function fetchFogoData() {
       try {
-        const response = await fetch("/api/dashboard/fogo")
+        const response = await fetch("/api/fogo")
         if (!response.ok) {
           throw new Error("Falha ao buscar dados")
         }
-        const data = await response.json()
-        setFogoData(data)
+        const apiResponse = await response.json()
+        setFogoData(apiResponse.data)
       } catch (err) {
         setError("Erro ao carregar dados de focos de incêndio")
         console.error(err)

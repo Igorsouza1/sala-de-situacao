@@ -14,6 +14,11 @@ Para rodar o projeto, você precisa configurar as seguintes variáveis de ambien
 NEXT_PUBLIC_SUPABASE_URL=<sua_supabase_url>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<sua_supabase_anon_key>
 DATABASE_URL=<sua_database_url>
+AZURE_STORAGE_ACCOUNT_NAME=<sua_conta_azure>
+AZURE_STORAGE_CONTAINER_NAME=<seu_container>
+AZURE_STORAGE_ACCOUNT_KEY=<sua_chave>
+AZURE_STORAGE_CONNECTION_STRING=<sua_connection_string>
+AZURE_STORAGE_BASE_URL=<url_base_blob>
 ```
 
 ---

@@ -27,42 +27,41 @@ export default function LandingPage() {
   return (
     <div className="flex min-h-screen flex-col w-full bg-white">
       {/* Header */}
-      <header className="sticky top-0 z-50 w-full border-b bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/95">
+      <header className="sticky top-0 z-50 w-full border-b bg-[#00291B]">
         <div className="container flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
-            <Image src="/prismalogo.png" alt="PRISMA AMBIENTAL Logo" width={50} height={50} className="rounded" />
-            <h3 className="text-1xl font-bold text-[#003C2C]">PRISMA AMBIENTAL</h3> 
+            <Image src="/prismalogo.png" alt="PRISMA AMBIENTAL Logo" width={260} height={50} className="rounded" />
           </div>
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center gap-8">
             <Link
               href="#plataforma"
-              className="text-sm font-medium text-slate-700 hover:text-[#003C2C] transition-colors"
+              className="text-sm font-medium text-white hover:text-[#46CD62] transition-colors"
             >
               Plataforma
             </Link>
             <Link
               href="#recursos"
-              className="text-sm font-medium text-slate-700 hover:text-[#003C2C] transition-colors"
+              className="text-sm font-medium text-white hover:text-[#46CD62] transition-colors"
             >
               Recursos
             </Link>
-            <Link href="#casos" className="text-sm font-medium text-slate-700 hover:text-[#003C2C] transition-colors">
+            <Link href="#casos" className="text-sm font-medium text-white hover:text-[#46CD62] transition-colors">
               Casos de Uso
             </Link>
-            <Link href="#contato" className="text-sm font-medium text-slate-700 hover:text-[#003C2C] transition-colors">
+            <Link href="#contato" className="text-sm font-medium text-white hover:text-[#46CD62] transition-colors">
               Contato
             </Link>
           </nav>
 
           <div className="flex items-center gap-4">
             <Link href="/sign-in">
-              <Button variant="ghost" className="hidden md:flex text-slate-700 hover:text-[#003C2C]">
+              <Button variant="ghost" className="hidden md:flex text-white hover:text-[#003C2C]">
                 Entrar
               </Button>
             </Link>
-            <Button className="hidden md:flex bg-[#003C2C] hover:bg-[#003C2C]/90">Solicitar Demo</Button>
+            <Button className="hidden md:flex text-[#00291B] bg-[#46CD62] hover:text-white hover:bg-[#003C2C]/90">Solicitar Demo</Button>
             <MobileNav />
           </div>
         </div>

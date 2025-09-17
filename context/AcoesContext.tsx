@@ -36,18 +36,22 @@ export function AcoesProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function fetchAcoes() {
       try {
-        const response = await fetch("/api/dashboard/acoes")
-        if (!response.ok) {
-          throw new Error("Falha ao buscar dados")
+        const response = await fetch("/api/acoes?view=dashboard");
+        const apiResponse = await response.json(); 
+    
+        if (apiResponse.success) {
+          const acoesData = apiResponse.data || [];
+          setAcoes(acoesData);
+          setFilteredAcoes(acoesData);
+        } else {
+          throw new Error(apiResponse.error?.message || "Erro retornado pela API");
         }
-        const data = await response.json()
-        setAcoes(data)
-        setFilteredAcoes(data)
+    
       } catch (err) {
-        setError("Erro ao carregar dados de ações")
-        console.error(err)
+        setError(err instanceof Error ? err.message : "Erro ao carregar dados de ações");
+        console.error(err);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
     }
 

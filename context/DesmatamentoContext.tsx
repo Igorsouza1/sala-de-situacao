@@ -27,12 +27,16 @@ export function DesmatamentoProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     async function fetchDesmatamentoData() {
       try {
-        const response = await fetch("/api/dashboard/desmatamento")
+        const response = await fetch("/api/desmatamento")
         if (!response.ok) {
           throw new Error("Falha ao buscar dados")
         }
-        const data = await response.json()
-        setDesmatamentoData(data)
+        const apiResponse = await response.json()
+        if(apiResponse.success){
+          setDesmatamentoData(apiResponse.data)
+        } else {
+          throw new Error(apiResponse.error?.message || "Erro retornado pela API")
+        }
       } catch (err) {
         setError("Erro ao carregar dados de desmatamento")
         console.error(err)

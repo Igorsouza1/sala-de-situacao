@@ -59,16 +59,25 @@ export const signInAction = async (formData: FormData) => {
 export const forgotPasswordAction = async (formData: FormData) => {
   const email = formData.get("email")?.toString();
   const supabase = await createClient();
-  const origin = (await headers()).get("origin");
+  const origin = process.env.NODE_ENV === 'production'
+  ? 'https://sala-de-situacao.vercel.app'
+  : 'http://localhost:3000';
   const callbackUrl = formData.get("callbackUrl")?.toString();
+  
 
   if (!email) {
     return encodedRedirect("error", "/forgot-password", "Email is required");
   }
+  
+  const redirectTo = `${origin}/auth/callback?redirect_to=/protected/reset-password`;
+  console.log('redirectTo ENVIADO:', redirectTo); // <-- confira no console
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${origin}/auth/callback?redirect_to=/protected/reset-password`,
+    
   });
+
+  
 
   if (error) {
     console.error(error.message);
@@ -125,6 +134,61 @@ export const resetPasswordAction = async (formData: FormData) => {
   }
 
   encodedRedirect("success", "/protected/reset-password", "Password updated");
+};
+
+export const completeInviteAction = async (formData: FormData) => {
+  const supabase = await createClient();
+
+  const password = formData.get("password") as string;
+  const confirmPassword = formData.get("confirmPassword") as string;
+  const name = formData.get("full_name") as string;
+
+  if (!password || !confirmPassword || !name) {
+    return encodedRedirect(
+      "error",
+      "/invite",
+      "Nome, senha e confirmação são obrigatórios",
+    );
+  }
+
+  if (password !== confirmPassword) {
+    return encodedRedirect(
+      "error",
+      "/invite",
+      "As senhas não coincidem",
+    );
+  }
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) {
+    return encodedRedirect(
+      "error",
+      "/invite",
+      "Sessão de autenticação ausente. Use o link de convite novamente",
+    );
+  }
+
+  const { error } = await supabase.auth.updateUser({
+    password,
+    data: { full_name: name }},
+  );
+
+  if (error) {
+    console.error("completeInviteAction", error);
+    return encodedRedirect(
+      "error",
+      "/invite",
+      error.message || "Não foi possível ativar a conta",
+    );
+  }
+
+  return encodedRedirect(
+    "success",
+    "/sign-in",
+    "Conta ativada com sucesso",
+  );
 };
 
 export const signOutAction = async () => {
