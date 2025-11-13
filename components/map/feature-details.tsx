@@ -24,6 +24,7 @@ import { formatDate } from "@/lib/helpers/formatter/formatDate"
 import { formatTime } from "@/lib/helpers/formatter/formatTime"
 import { formatDuration } from "@/lib/helpers/formatter/formatDuration"
 import { useAcoesImages } from "@/hooks/useAcoesImages"
+import { AcaoDossie } from "./acaoDossie"
 
 // Style configuration for each layer type
 const layerStyles: { [key: string]: { icon: React.ElementType; title: string; color: string; bgColor: string } } = {
@@ -143,37 +144,10 @@ export function FeatureDetails({ layerType, properties }: { layerType: string; p
             <DetailItem icon={Calendar} label="Data" value={formatDate(properties.data)} />
           </>
         )
-      case "acoes":
-        return (
-          <>
-            {/* Image carousel - only shows if there are images */}
-            {!loading && imagens.length > 0 && <ImageCarousel images={imagens} />}
-
-
-
-            {/* Loading state for images */}
-            {loading && (
-              <div className="bg-white border border-gray-100 rounded-lg shadow-sm p-4">
-                <div className="flex items-center space-x-2">
-                  <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                  <span className="text-sm text-gray-600">Carregando imagens...</span>
-                </div>
-              </div>
-            )}
-
-            {error && (
-              <div className="bg-white border border-gray-100 rounded-lg shadow-sm p-4">
-                <p className="text-sm text-gray-600">{error}</p>
-              </div>
-            )}
-
-            {/* Action details */}
-            <DetailItem icon={FileText} label="Nome" value={properties.name} />
-            <DetailItem icon={Tag} label="Ação" value={properties.acao} />
-            <DetailItem icon={Calendar} label="Data" value={formatDate(properties.time)} />
-            <DetailItem icon={FileText} label="Descrição" value={properties.descricao} />
-          </>
-        )
+        case "acoes":
+          return (
+            <AcaoDossie acaoId={properties.id} />
+          )
       default:
         return (
           <div className="col-span-full text-center py-8">

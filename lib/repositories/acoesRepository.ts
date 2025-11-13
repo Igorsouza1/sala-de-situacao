@@ -4,6 +4,16 @@ import { db } from "@/db"
 import { acoesInRioDaPrata, fotosAcoesInRioDaPrata, NewAcoesData } from "@/db/schema"
 import { eq, desc, sql} from "drizzle-orm";
 
+
+export async function findAcaoById(id: number) {
+  const result = await db
+    .select() // Pega todas as colunas da ação principal
+    .from(acoesInRioDaPrata)
+    .where(eq(acoesInRioDaPrata.id, id))
+    .execute();
+  return result[0]; // Retorna apenas o primeiro (ou undefined)
+}
+
 export async function findAllAcoesData() {
   const result = await db
     .select({
@@ -24,11 +34,30 @@ export async function findAllAcoesData() {
 export async function findAllAcoesDataWithGeometry(){
 
   const result = await db.execute(`
-    SELECT id, acao, name, descricao, mes, time, ST_AsGeoJSON(geom) as geojson
+    SELECT id, acao, name, descricao, mes, time, status, ST_AsGeoJSON(geom) as geojson
     FROM "rio_da_prata"."acoes"
   `)
 
     return result.rows
+}
+
+
+export async function findAllAcoesUpdates(id: number) {
+  const result = await db
+    .select({
+      id: fotosAcoesInRioDaPrata.id,
+      acaoId: fotosAcoesInRioDaPrata.acaoId,
+      descricao: fotosAcoesInRioDaPrata.descricao,  // <-- O comentário ou legenda
+      url: fotosAcoesInRioDaPrata.url,   // <-- A URL da mídia
+      timestamp: fotosAcoesInRioDaPrata.atualizacao,
+      createdAt: fotosAcoesInRioDaPrata.createdAt,
+    })
+    .from(fotosAcoesInRioDaPrata)
+    .where(eq(fotosAcoesInRioDaPrata.acaoId, id))
+    .orderBy(desc(fotosAcoesInRioDaPrata.createdAt)) // Mais recente primeiro
+    .execute();
+    
+  return result;
 }
 
 
@@ -39,6 +68,8 @@ export async function findAllAcoesImagesData(id: number) {
       acaoId: fotosAcoesInRioDaPrata.acaoId,
       url: fotosAcoesInRioDaPrata.url,
       created_at: fotosAcoesInRioDaPrata.createdAt,
+      descricao: fotosAcoesInRioDaPrata.descricao,
+      atualizacao: fotosAcoesInRioDaPrata.atualizacao,
     })
     .from(fotosAcoesInRioDaPrata)
     .where(eq(fotosAcoesInRioDaPrata.acaoId, id))

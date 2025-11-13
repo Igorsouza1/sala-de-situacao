@@ -1,5 +1,5 @@
 import { apiError, apiSuccess } from "@/lib/api/responses";
-import { getAllAcoesImagesData, updateAcaoAndUploadImageById } from "@/lib/service/acoesService";
+import { getAcaoDossie, getAllAcoesImagesData, updateAcaoAndUploadImageById } from "@/lib/service/acoesService";
 import {  revalidateTag } from "next/cache";
 
 
@@ -29,13 +29,21 @@ export async function GET(_request: Request, context: any) {
       return apiError("ID inválido", 400);
     }
 
-    const result = await getAllAcoesImagesData(numId);
-    if (!result || result.length === 0) {
-      return apiError("Não Encontramos nenhuma imagem para essa ação", 404);
+    // AQUI ESTÁ A MUDANÇA:
+    // Trocamos `getAllAcoesImagesData` por `getAcaoDossie`
+    const result = await getAcaoDossie(numId); 
+    // `result` agora contém: { id, name, ..., history: [...] }
+
+    if (!result) { // O service já lança erro, mas é bom checar
+      return apiError("Ação não encontrada", 404);
     }
 
     return apiSuccess(result);
-  } catch (error) {
-    return apiError("Erro ao buscar imagens", 500);
+  } catch (error: any) {
+    if (error.message === "Ação não encontrada") {
+        return apiError(error.message, 404);
+    }
+    console.error("Erro ao buscar dossiê da ação:", error);
+    return apiError("Erro ao buscar dossiê da ação", 500);
   }
 }

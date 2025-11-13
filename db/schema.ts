@@ -496,6 +496,7 @@ export const fotosAcoesInRioDaPrata = rioDaPrata.table("fotos_acoes", {
 	url: varchar({ length: 1000 }).notNull(),
 	descricao: varchar({ length: 255 }),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	atualizacao: date(),
 }, (table) => [
 	foreignKey({
 			columns: [table.acaoId],

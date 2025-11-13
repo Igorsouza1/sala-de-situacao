@@ -5,6 +5,8 @@ import {
   updateAcaoById,
   findAllAcoesImagesData,
   insertAcaoData,
+  findAcaoById,
+  findAllAcoesUpdates,
 } from "@/lib/repositories/acoesRepository";
 import {
   insertTrilhaData,
@@ -116,6 +118,31 @@ export async function createAcoesWithTrilha(input: {
 
   return { trilhaId };
 }
+
+
+
+export async function getAcaoDossie(id: number) {
+  // 1. Busca os dados principais e o histórico em paralelo
+  const [acaoPrincipal, historico] = await Promise.all([
+    findAcaoById(id),
+    findAllAcoesUpdates(id)
+  ]);
+
+  // 2. Regra de negócio: se a ação principal não existe, é um erro
+  if (!acaoPrincipal) {
+    // O handler da API vai transformar isso em um 404
+    throw new Error("Ação não encontrada"); 
+  }
+
+  // 3. Combina tudo em um único objeto para o frontend
+  return {
+    ...acaoPrincipal,
+    history: historico,
+  };
+}
+
+
+
 
 // -----------------------------------------
 
