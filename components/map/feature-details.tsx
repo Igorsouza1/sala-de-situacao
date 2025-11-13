@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import type React from "react"
 import {
   Flame,
@@ -19,7 +18,6 @@ import {
   FileText,
 } from "lucide-react"
 import { DetailItem } from "../ui/detail-Item"
-import { ImageCarousel } from "../ui/image-carousel"
 import { formatDate } from "@/lib/helpers/formatter/formatDate"
 import { formatTime } from "@/lib/helpers/formatter/formatTime"
 import { formatDuration } from "@/lib/helpers/formatter/formatDuration"
@@ -81,7 +79,6 @@ const layerStyles: { [key: string]: { icon: React.ElementType; title: string; co
 export function FeatureDetails({ layerType, properties }: { layerType: string; properties: Record<string, any> }) {
   
   const acaoId = layerType === "acoes" ? properties?.id : null;
-  const { imagens, loading, error } = useAcoesImages(acaoId);
 
   // Differentiate between an expedition track and a waypoint
   const isWaypoint = layerType === "expedicoes" && properties.name

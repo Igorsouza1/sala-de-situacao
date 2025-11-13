@@ -27,6 +27,7 @@ export type AcaoDossie = {
   atuacao: string | null;
   acao: string | null;
   geom: any | null;
+  status: string | null;
   history: AcaoUpdate[];
 };
 
