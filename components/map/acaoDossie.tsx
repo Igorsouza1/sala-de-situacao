@@ -30,6 +30,8 @@ interface Dossie {
   history: HistoryUpdate[]
 }
 
+
+
 const getStatusColor = (status: string): { bg: string; text: string; icon: React.ReactNode } => {
   const normalizedStatus = status?.toLowerCase() || ""
 
@@ -292,6 +294,7 @@ const AddHistoryForm = ({ acaoId, onSuccess, onCancel }: { acaoId: number; onSuc
 export function AcaoDossie({ acaoId }: { acaoId: number }) {
   const { dossie, isLoading, error, refetch } = useAcaoHistory(acaoId)
   const [showAddForm, setShowAddForm] = useState(false)
+  const { toast } = useToast()
 
   if (isLoading) {
     return <LoadingState />
@@ -310,6 +313,33 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
   const handleAddSuccess = () => {
     setShowAddForm(false)
     refetch()
+  }
+
+  const handleDelete = async (updateId: string) => {
+    try {
+      const response = await fetch(`/api/acoes/${acaoId}/updates?updateId=${updateId}`, {
+        method: "DELETE",
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error?.message || "Erro ao excluir item do histórico")
+      }
+
+      toast({
+        title: "Item removido",
+        description: "O registro do histórico foi excluído com sucesso.",
+      })
+
+      refetch()
+    } catch (error: any) {
+      toast({
+        title: "Erro ao excluir",
+        description: error.message || "Não foi possível excluir este item.",
+        variant: "destructive",
+      })
+    }
   }
 
   return (
@@ -373,7 +403,7 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
           </div>
         )}
 
-        {dossie.history && dossie.history.length > 0 ? <HistoryTimeline history={dossie.history as HistoryUpdate[]} /> : <EmptyState />}
+        {dossie.history && dossie.history.length > 0 ? <HistoryTimeline history={dossie.history as HistoryUpdate[]} onDelete={handleDelete} /> : <EmptyState />}
       </div>
     </div>
   )

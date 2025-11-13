@@ -3,10 +3,10 @@ import {
   findAllAcoesData,
   findAllAcoesDataWithGeometry,
   updateAcaoById,
-  findAllAcoesImagesData,
   insertAcaoData,
   findAcaoById,
   findAllAcoesUpdates,
+  deleteAcaoUpdateById,
 } from "@/lib/repositories/acoesRepository";
 import {
   insertTrilhaData,
@@ -30,9 +30,9 @@ export async function getAllAcoesForMap() {
   return actionsGeoJSON;
 }
 
-export async function getAllAcoesImagesData(id: number) {
-  const acoesImagesData = await findAllAcoesImagesData(id);
-  return acoesImagesData;
+export async function deleteAcaoItemHistoryById(id: number){
+  const result = await deleteAcaoUpdateById(id);
+  return result;
 }
 
 export async function updateAcaoAndUploadImageById(
@@ -136,7 +136,7 @@ export async function getAcaoDossie(id: number) {
 
   // 3. Transforma o histórico para o formato esperado pelo frontend
   const formattedHistory = historico.map((update: any) => ({
-    id: `foto-${update.id}`,
+    id: String(update.id), // <-- simples, sem prefixo
     tipoUpdate: update.url && update.url.trim() !== "" && update.url !== "text-only-update" ? "midia" : "criacao",
     descricao: update.descricao,
     urlMidia: update.url && update.url !== "text-only-update" ? update.url : null,

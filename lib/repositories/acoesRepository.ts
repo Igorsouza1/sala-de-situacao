@@ -61,22 +61,12 @@ export async function findAllAcoesUpdates(id: number) {
 }
 
 
-export async function findAllAcoesImagesData(id: number) {
+export async function deleteAcaoUpdateById(id: number){
   const result = await db
-    .select({
-      id: fotosAcoesInRioDaPrata.id,
-      acaoId: fotosAcoesInRioDaPrata.acaoId,
-      url: fotosAcoesInRioDaPrata.url,
-      created_at: fotosAcoesInRioDaPrata.createdAt,
-      descricao: fotosAcoesInRioDaPrata.descricao,
-      atualizacao: fotosAcoesInRioDaPrata.atualizacao,
-    })
-    .from(fotosAcoesInRioDaPrata)
-    .where(eq(fotosAcoesInRioDaPrata.acaoId, id))
-    .orderBy(desc(fotosAcoesInRioDaPrata.createdAt))
+    .delete(fotosAcoesInRioDaPrata)
+    .where(eq(fotosAcoesInRioDaPrata.id, id))
     .execute()
-
-    return result
+  return result
 }
 
 export async function deleteAcaoById(id: number) {
