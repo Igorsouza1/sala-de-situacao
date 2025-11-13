@@ -284,6 +284,7 @@ const AddHistoryForm = ({ acaoId, onSuccess, onCancel }: { acaoId: number; onSuc
           </p>
         )}
       </div>
+      
 
       <div className="space-y-2">
         <label htmlFor="descricao" className="text-xs font-medium text-slate-700">
