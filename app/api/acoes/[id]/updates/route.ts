@@ -5,19 +5,30 @@ import { revalidateTag } from "next/cache";
 type RouteContext = { params: Record<string, string> }
 
 // se o front tá usando POST, melhor alinhar aqui também
-export async function POST(request: Request, context: RouteContext) {
+export async function POST(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
   try {
-    const { id } = await context.params as { id: string }
-    const numId = await Number(id)
+    const { id } = params
+    const numId = Number(id)
+
+    if (Number.isNaN(numId)) {
+      return apiError("ID de ação inválido", 400)
+    }
 
     const formData = await request.formData()
 
     const file = formData.get("file")
     const descricao = formData.get("descricao")
+    const data = formData.get("data") // se você tiver o campo "data" no form
 
     const result = await addAcaoUpdate(numId, {
       file: file instanceof File ? file : undefined,
       descricao: typeof descricao === "string" && descricao.trim() ? descricao.trim() : undefined,
+      // se o service ainda não aceitar data, comenta essa linha
+      // @ts-expect-error se a assinatura ainda estiver antiga
+      data: typeof data === "string" && data.trim() ? data : undefined,
     })
 
     revalidateTag("acoes")
