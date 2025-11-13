@@ -6,7 +6,7 @@ import { useState } from "react"
 import { useAcaoHistory } from "@/hooks/useAcaoHistory"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDate } from "@/lib/helpers/formatter/formatDate"
-import { MapPin, Calendar, Tag, Camera, PlusCircle, AlertCircle, CheckCircle2, Clock, X } from "lucide-react"
+import { MapPin, Calendar, Tag, Camera, PlusCircle, AlertCircle, CheckCircle2, Clock, X, Trash2  } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -117,50 +117,65 @@ const EmptyState = () => (
   </div>
 )
 
-const HistoryTimeline = ({ history }: { history: HistoryUpdate[] }) => (
+const HistoryTimeline = ({ history, onDelete }: { history: HistoryUpdate[]; onDelete: (id: string) => void }) => (
   <div className="space-y-4">
     {history.map((update, index) => (
-      <div key={update.id} className="flex gap-4">
-        {/* Timeline connector */}
-        <div className="flex flex-col items-center">
-          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center border-2 border-blue-200">
-            {update.tipoUpdate === "midia" ? (
-              <Camera className="w-5 h-5 text-blue-600" />
-            ) : (
-              <PlusCircle className="w-5 h-5 text-blue-600" />
-            )}
-          </div>
-          {index < history.length - 1 && <div className="w-0.5 h-12 bg-slate-200 mt-2" />}
-        </div>
+  <div key={update.id} className="flex gap-4">
+    {/* Timeline connector */}
+    <div className="flex flex-col items-center">
+      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center border-2 border-blue-200">
+        {update.tipoUpdate === "midia" ? (
+          <Camera className="w-5 h-5 text-blue-600" />
+        ) : (
+          <PlusCircle className="w-5 h-5 text-blue-600" />
+        )}
+      </div>
+      {index < history.length - 1 && <div className="w-0.5 h-12 bg-slate-200 mt-2" />}
+    </div>
 
-        {/* Content */}
-        <div className="flex-1 pb-4">
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
+    {/* Content + botão lixeira */}
+    <div className="flex-1 pb-4">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
             {update.tipoUpdate === "criacao" ? "📝 Ação Criada" : "📸 Foto Adicionada"}
           </p>
-          <p className="text-xs text-slate-500 mb-3">{formatDate(update.timestamp || "")}</p>
+          <p className="text-xs text-slate-500 mb-3">
+            {formatDate(update.timestamp || "")}
+          </p>
+        </div>
 
-          {/* Imagem */}
-          {update.tipoUpdate === "midia" && update.urlMidia && (
-            <div className="space-y-2 mb-3">
-              <ImageDisplay src={update.urlMidia || "/placeholder.svg"} alt="Mídia do dossiê" />
-              {update.descricao && (
-                <p className="text-sm text-slate-700 italic px-3 py-2 bg-slate-50 rounded-lg border-l-2 border-blue-300">
-                  "{update.descricao}"
-                </p>
-              )}
-            </div>
-          )}
+        <button
+          type="button"
+          onClick={() => onDelete(update.id)}
+          className="inline-flex items-center justify-center rounded-full p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+          aria-label="Excluir item do histórico"
+        >
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
 
-          {/* Descrição de Criação */}
-          {update.tipoUpdate === "criacao" && update.descricao && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-slate-800">{update.descricao}</p>
-            </div>
+      {/* Imagem */}
+      {update.tipoUpdate === "midia" && update.urlMidia && (
+        <div className="space-y-2 mb-3">
+          <ImageDisplay src={update.urlMidia || "/placeholder.svg"} alt="Mídia do dossiê" />
+          {update.descricao && (
+            <p className="text-sm text-slate-700 italic px-3 py-2 bg-slate-50 rounded-lg border-l-2 border-blue-300">
+              "{update.descricao}"
+            </p>
           )}
         </div>
-      </div>
-    ))}
+      )}
+
+      {/* Descrição de Criação */}
+      {update.tipoUpdate === "criacao" && update.descricao && (
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p className="text-sm text-slate-800">{update.descricao}</p>
+        </div>
+      )}
+    </div>
+  </div>
+))}
   </div>
 )
 
@@ -354,6 +369,7 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
         {showAddForm && (
           <div className="mb-4">
             <AddHistoryForm acaoId={acaoId} onSuccess={handleAddSuccess} onCancel={() => setShowAddForm(false)} />
+              
           </div>
         )}
 
