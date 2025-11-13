@@ -29,12 +29,9 @@ export async function GET(_request: Request, context: any) {
       return apiError("ID inválido", 400);
     }
 
-    // AQUI ESTÁ A MUDANÇA:
-    // Trocamos `getAllAcoesImagesData` por `getAcaoDossie`
     const result = await getAcaoDossie(numId); 
-    // `result` agora contém: { id, name, ..., history: [...] }
 
-    if (!result) { // O service já lança erro, mas é bom checar
+    if (!result) { 
       return apiError("Ação não encontrada", 404);
     }
 

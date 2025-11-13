@@ -169,7 +169,7 @@ export function FeatureDetails({ layerType, properties }: { layerType: string; p
       </div>
 
       {/* Content with scroll */}
-      <div className="max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+      <div className="overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
         <div className="grid grid-cols-1 gap-4 pr-2">{renderContent()}</div>
       </div>
     </div>
