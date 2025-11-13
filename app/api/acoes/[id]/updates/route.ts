@@ -4,7 +4,6 @@ import { revalidateTag } from "next/cache";
 
 type RouteContext = { params: Record<string, string> }
 
-// se o front tá usando POST, melhor alinhar aqui também
 export async function POST(
   request: Request,
   { params }: { params: { id: string } }
