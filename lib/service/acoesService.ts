@@ -134,11 +134,51 @@ export async function getAcaoDossie(id: number) {
     throw new Error("Ação não encontrada"); 
   }
 
-  // 3. Combina tudo em um único objeto para o frontend
+  // 3. Transforma o histórico para o formato esperado pelo frontend
+  const formattedHistory = historico.map((update: any) => ({
+    id: `foto-${update.id}`,
+    tipoUpdate: update.url && update.url.trim() !== "" && update.url !== "text-only-update" ? "midia" : "criacao",
+    descricao: update.descricao,
+    urlMidia: update.url && update.url !== "text-only-update" ? update.url : null,
+    timestamp: update.timestamp || update.createdAt || null,
+  }));
+
+  // 4. Combina tudo em um único objeto para o frontend
   return {
     ...acaoPrincipal,
-    history: historico,
+    history: formattedHistory,
   };
+}
+
+/**
+ * Adiciona um novo update ao histórico de uma ação
+ * Pode ser uma mídia (com ou sem descrição) ou apenas uma descrição
+ */
+export async function addAcaoUpdate(
+  acaoId: number,
+  input: {
+    file?: File;
+    descricao?: string;
+  }
+) {
+  // Se houver arquivo, faz upload e adiciona como mídia
+  if (input.file) {
+    const path = `${acaoId}/${Date.now()}-${input.file.name}`;
+    const imageUrl = await uploadAzure(input.file, path);
+    await addAcaoImageById(acaoId, imageUrl, input.descricao || "");
+    return { message: "Mídia adicionada com sucesso!" };
+  }
+
+  // Se não houver arquivo mas houver descrição, adiciona apenas a descrição
+  if (input.descricao) {
+    // Como a URL é obrigatória no schema, usamos um placeholder
+    // que indica que é apenas texto (sem mídia)
+    const placeholderUrl = "text-only-update";
+    await addAcaoImageById(acaoId, placeholderUrl, input.descricao);
+    return { message: "Descrição adicionada com sucesso!" };
+  }
+
+  throw new Error("É necessário fornecer uma mídia ou uma descrição");
 }
 
 

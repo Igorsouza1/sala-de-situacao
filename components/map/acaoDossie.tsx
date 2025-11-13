@@ -1,11 +1,16 @@
 "use client"
 
 import type React from "react"
+import { useState } from "react"
 
 import { useAcaoHistory } from "@/hooks/useAcaoHistory"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDate } from "@/lib/helpers/formatter/formatDate"
-import { MapPin, Calendar, Tag, Camera, PlusCircle, AlertCircle, CheckCircle2, Clock } from "lucide-react"
+import { MapPin, Calendar, Tag, Camera, PlusCircle, AlertCircle, CheckCircle2, Clock, X } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { useToast } from "@/hooks/use-toast"
 
 interface HistoryUpdate {
   id: string
@@ -159,8 +164,119 @@ const HistoryTimeline = ({ history }: { history: HistoryUpdate[] }) => (
   </div>
 )
 
+const AddHistoryForm = ({ acaoId, onSuccess, onCancel }: { acaoId: number; onSuccess: () => void; onCancel: () => void }) => {
+  const [file, setFile] = useState<File | null>(null)
+  const [descricao, setDescricao] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { toast } = useToast()
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!file && !descricao.trim()) {
+      toast({
+        title: "Erro",
+        description: "É necessário fornecer uma mídia ou uma descrição",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSubmitting(true)
+
+    try {
+      const formData = new FormData()
+      if (file) {
+        formData.append("file", file)
+      }
+      if (descricao.trim()) {
+        formData.append("descricao", descricao.trim())
+      }
+
+      const response = await fetch(`/api/acoes/${acaoId}/updates`, {
+        method: "POST",
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (data.success) {
+        toast({
+          title: "Sucesso",
+          description: data.data?.message || "Item adicionado ao histórico com sucesso!",
+        })
+        setFile(null)
+        setDescricao("")
+        onSuccess()
+      } else {
+        throw new Error(data.error?.message || "Erro ao adicionar item")
+      }
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message || "Falha ao adicionar item ao histórico",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
+      <div className="flex items-center justify-between">
+        <h5 className="font-semibold text-sm text-slate-900">Adicionar ao Histórico</h5>
+        <Button type="button" variant="ghost" size="icon" onClick={onCancel} className="h-6 w-6">
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+
+      <div className="space-y-2">
+        <label htmlFor="file" className="text-xs font-medium text-slate-700">
+          Mídia (opcional)
+        </label>
+        <Input
+          id="file"
+          type="file"
+          accept="image/*,video/*"
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
+          className="text-xs"
+        />
+        {file && (
+          <p className="text-xs text-slate-600 truncate">
+            {file.name}
+          </p>
+        )}
+      </div>
+
+      <div className="space-y-2">
+        <label htmlFor="descricao" className="text-xs font-medium text-slate-700">
+          Descrição (opcional)
+        </label>
+        <Textarea
+          id="descricao"
+          value={descricao}
+          onChange={(e) => setDescricao(e.target.value)}
+          placeholder="Adicione uma descrição ou legenda..."
+          className="min-h-[80px] text-sm"
+        />
+      </div>
+
+      <div className="flex gap-2">
+        <Button type="submit" disabled={isSubmitting} className="flex-1">
+          {isSubmitting ? "Adicionando..." : "Adicionar"}
+        </Button>
+        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+          Cancelar
+        </Button>
+      </div>
+    </form>
+  )
+}
+
 export function AcaoDossie({ acaoId }: { acaoId: number }) {
-  const { dossie, isLoading, error } = useAcaoHistory(acaoId)
+  const { dossie, isLoading, error, refetch } = useAcaoHistory(acaoId)
+  const [showAddForm, setShowAddForm] = useState(false)
 
   if (isLoading) {
     return <LoadingState />
@@ -175,6 +291,11 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
   }
 
   const statusColor = getStatusColor(dossie.status || 'Sem Status')
+
+  const handleAddSuccess = () => {
+    setShowAddForm(false)
+    refetch()
+  }
 
   return (
     <div className="space-y-6">
@@ -212,10 +333,29 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
       <hr className="border-slate-200" />
 
       <div>
-        <h4 className="text-base font-bold text-slate-900 mb-4 flex items-center gap-2">
-          <Clock className="w-5 h-5 text-blue-600" />
-          Histórico do Dossiê
-        </h4>
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-base font-bold text-slate-900 flex items-center gap-2">
+            <Clock className="w-5 h-5 text-blue-600" />
+            Histórico do Dossiê
+          </h4>
+          {!showAddForm && (
+            <Button
+              onClick={() => setShowAddForm(true)}
+              size="sm"
+              variant="outline"
+              className="flex items-center gap-2"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Adicionar
+            </Button>
+          )}
+        </div>
+
+        {showAddForm && (
+          <div className="mb-4">
+            <AddHistoryForm acaoId={acaoId} onSuccess={handleAddSuccess} onCancel={() => setShowAddForm(false)} />
+          </div>
+        )}
 
         {dossie.history && dossie.history.length > 0 ? <HistoryTimeline history={dossie.history as HistoryUpdate[]} /> : <EmptyState />}
       </div>
