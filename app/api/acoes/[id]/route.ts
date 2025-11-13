@@ -1,5 +1,5 @@
 import { apiError, apiSuccess } from "@/lib/api/responses";
-import { getAcaoDossie, getAllAcoesImagesData, updateAcaoAndUploadImageById } from "@/lib/service/acoesService";
+import { getAcaoDossie, updateAcaoAndUploadImageById } from "@/lib/service/acoesService";
 import {  revalidateTag } from "next/cache";
 
 
