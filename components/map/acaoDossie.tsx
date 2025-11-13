@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
+import { ImageModal } from "@/components/ui/image-modal"
 
 interface HistoryUpdate {
   id: string
@@ -74,12 +75,18 @@ const DetailItem = ({ icon: Icon, label, value }: { icon: any; label: string; va
   </div>
 )
 
-const ImageDisplay = ({ src, alt }: { src: string; alt: string }) => (
-  <img
-    src={src || "/placeholder.svg"}
-    alt={alt}
-    className="w-full h-48 object-cover rounded-lg border border-slate-200"
-  />
+const ImageDisplay = ({ src, alt, onClick }: { src: string; alt: string; onClick?: () => void }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="w-full focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg"
+  >
+    <img
+      src={src || "/placeholder.svg"}
+      alt={alt}
+      className="w-full h-48 object-cover rounded-lg border border-slate-200"
+    />
+  </button>
 )
 
 const LoadingState = () => (
@@ -119,65 +126,77 @@ const EmptyState = () => (
   </div>
 )
 
-const HistoryTimeline = ({ history, onDelete }: { history: HistoryUpdate[]; onDelete: (id: string) => void }) => (
+const HistoryTimeline = ({
+  history,
+  onDelete,
+  onImageClick,
+}: {
+  history: HistoryUpdate[]
+  onDelete: (id: string) => void
+  onImageClick: (url: string) => void
+}) => (
   <div className="space-y-4">
     {history.map((update, index) => (
-  <div key={update.id} className="flex gap-4">
-    {/* Timeline connector */}
-    <div className="flex flex-col items-center">
-      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center border-2 border-blue-200">
-        {update.tipoUpdate === "midia" ? (
-          <Camera className="w-5 h-5 text-blue-600" />
-        ) : (
-          <PlusCircle className="w-5 h-5 text-blue-600" />
-        )}
-      </div>
-      {index < history.length - 1 && <div className="w-0.5 h-12 bg-slate-200 mt-2" />}
-    </div>
-
-    {/* Content + botão lixeira */}
-    <div className="flex-1 pb-4">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-            {update.tipoUpdate === "criacao" ? "📝 Ação Criada" : "📸 Foto Adicionada"}
-          </p>
-          <p className="text-xs text-slate-500 mb-3">
-            {formatDate(update.timestamp || "")}
-          </p>
+      <div key={update.id} className="flex gap-4">
+        {/* Timeline connector */}
+        <div className="flex flex-col items-center">
+          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center border-2 border-blue-200">
+            {update.tipoUpdate === "midia" ? (
+              <Camera className="w-5 h-5 text-blue-600" />
+            ) : (
+              <PlusCircle className="w-5 h-5 text-blue-600" />
+            )}
+          </div>
+          {index < history.length - 1 && <div className="w-0.5 h-12 bg-slate-200 mt-2" />}
         </div>
 
-        <button
-          type="button"
-          onClick={() => onDelete(update.id)}
-          className="inline-flex items-center justify-center rounded-full p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-          aria-label="Excluir item do histórico"
-        >
-          <Trash2 className="w-4 h-4" />
-        </button>
-      </div>
+        {/* Content + botão lixeira */}
+        <div className="flex-1 pb-4">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
+                {update.tipoUpdate === "criacao" ? "📝 Ação Criada" : "📸 Foto Adicionada"}
+              </p>
+              <p className="text-xs text-slate-500 mb-3">
+                {formatDate(update.timestamp || "")}
+              </p>
+            </div>
 
-      {/* Imagem */}
-      {update.tipoUpdate === "midia" && update.urlMidia && (
-        <div className="space-y-2 mb-3">
-          <ImageDisplay src={update.urlMidia || "/placeholder.svg"} alt="Mídia do dossiê" />
-          {update.descricao && (
-            <p className="text-sm text-slate-700 italic px-3 py-2 bg-slate-50 rounded-lg border-l-2 border-blue-300">
-              "{update.descricao}"
-            </p>
+            <button
+              type="button"
+              onClick={() => onDelete(update.id)}
+              className="inline-flex items-center justify-center rounded-full p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+              aria-label="Excluir item do histórico"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          </div>
+
+          {/* Imagem clicável */}
+          {update.tipoUpdate === "midia" && update.urlMidia && (
+            <div className="space-y-2 mb-3">
+              <ImageDisplay
+                src={update.urlMidia || "/placeholder.svg"}
+                alt="Mídia do dossiê"
+                onClick={() => onImageClick(update.urlMidia!)}
+              />
+              {update.descricao && (
+                <p className="text-sm text-slate-700 italic px-3 py-2 bg-slate-50 rounded-lg border-l-2 border-blue-300">
+                  "{update.descricao}"
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Descrição de Criação */}
+          {update.tipoUpdate === "criacao" && update.descricao && (
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-slate-800">{update.descricao}</p>
+            </div>
           )}
         </div>
-      )}
-
-      {/* Descrição de Criação */}
-      {update.tipoUpdate === "criacao" && update.descricao && (
-        <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p className="text-sm text-slate-800">{update.descricao}</p>
-        </div>
-      )}
-    </div>
-  </div>
-))}
+      </div>
+    ))}
   </div>
 )
 
@@ -296,6 +315,15 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
   const [showAddForm, setShowAddForm] = useState(false)
   const { toast } = useToast()
 
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false)
+  const [activeImage, setActiveImage] = useState<string | null>(null)
+
+  const handleImageClick = (url: string) => {
+    setActiveImage(url)
+    setIsImageModalOpen(true)
+  }
+
+
   if (isLoading) {
     return <LoadingState />
   }
@@ -403,7 +431,19 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
           </div>
         )}
 
-        {dossie.history && dossie.history.length > 0 ? <HistoryTimeline history={dossie.history as HistoryUpdate[]} onDelete={handleDelete} /> : <EmptyState />}
+        {dossie.history && dossie.history.length > 0 ? <HistoryTimeline history={dossie.history as HistoryUpdate[]} onDelete={handleDelete} onImageClick={handleImageClick} /> : <EmptyState />}
+      
+        {/* Modal de imagem */}
+      {activeImage && (
+        <ImageModal
+          isOpen={isImageModalOpen}
+          onClose={() => setIsImageModalOpen(false)}
+          images={[activeImage]}
+          currentIndex={0}
+          onNavigate={() => {}}
+        />
+      )}
+      
       </div>
     </div>
   )

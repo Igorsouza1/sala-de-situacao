@@ -21,7 +21,6 @@ import { DetailItem } from "../ui/detail-Item"
 import { formatDate } from "@/lib/helpers/formatter/formatDate"
 import { formatTime } from "@/lib/helpers/formatter/formatTime"
 import { formatDuration } from "@/lib/helpers/formatter/formatDuration"
-import { useAcoesImages } from "@/hooks/useAcoesImages"
 import { AcaoDossie } from "./acaoDossie"
 
 // Style configuration for each layer type
@@ -157,16 +156,6 @@ export function FeatureDetails({ layerType, properties }: { layerType: string; p
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className={`flex items-center space-x-4 p-4 rounded-lg border-2 ${style.bgColor}`}>
-        <div className="flex-shrink-0 w-12 h-12 bg-white rounded-lg flex items-center justify-center shadow-sm">
-          <Icon className={`h-7 w-7 ${style.color}`} />
-        </div>
-        <div>
-          <h3 className="text-xl font-bold text-gray-900">{style.title}</h3>
-          <p className="text-sm text-gray-600">Detalhes da camada selecionada</p>
-        </div>
-      </div>
 
       {/* Content with scroll */}
       <div className="overflow-y-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
