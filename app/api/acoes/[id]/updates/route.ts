@@ -1,15 +1,14 @@
-import { apiError, apiSuccess } from "@/lib/api/responses";
-import { addAcaoUpdate, deleteAcaoItemHistoryById } from "@/lib/service/acoesService";
-import { revalidateTag } from "next/cache";
+import { apiError, apiSuccess } from "@/lib/api/responses"
+import { addAcaoUpdate, deleteAcaoItemHistoryById } from "@/lib/service/acoesService"
+import { revalidateTag } from "next/cache"
 
-type RouteContext = { params: Record<string, string> }
-
+// POST /api/acoes/[id]/updates
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  context: any, // <- deixa como any / sem tipo
 ) {
   try {
-    const { id } = params
+    const { id } = context.params as { id: string }
     const numId = Number(id)
 
     if (Number.isNaN(numId)) {
@@ -20,13 +19,16 @@ export async function POST(
 
     const file = formData.get("file")
     const descricao = formData.get("descricao")
-    const data = formData.get("data") // se você tiver o campo "data" no form
+    const data = formData.get("data")
 
     const result = await addAcaoUpdate(numId, {
       file: file instanceof File ? file : undefined,
-      descricao: typeof descricao === "string" && descricao.trim() ? descricao.trim() : undefined,
-      // se o service ainda não aceitar data, comenta essa linha
-      // @ts-expect-error se a assinatura ainda estiver antiga
+      descricao:
+        typeof descricao === "string" && descricao.trim()
+          ? descricao.trim()
+          : undefined,
+      // se o service já aceita data, beleza; se não, comenta essa linha
+      // @ts-expect-error se a assinatura ainda não tiver data
       data: typeof data === "string" && data.trim() ? data : undefined,
     })
 
@@ -38,35 +40,37 @@ export async function POST(
   }
 }
 
+// DELETE /api/acoes/[id]/updates?updateId=123
+export async function DELETE(
+  request: Request,
+  context: any, // <- mesmo esquema aqui
+) {
+  try {
+    const { id } = context.params as { id: string }
+    const acaoId = Number(id)
 
-
-export async function DELETE(request: Request, context: RouteContext) {
-    try {
-      // se quiser, pode validar o id só pra garantir que veio algo
-      const { id } = await context.params as { id: string }
-      const acaoId = Number(id)
-      if (Number.isNaN(acaoId)) {
-        return apiError("ID de ação inválido", 400)
-      }
-  
-      const url = new URL(request.url)
-      const updateIdParam = url.searchParams.get("updateId")
-  
-      if (!updateIdParam) {
-        return apiError("Parâmetro 'updateId' é obrigatório", 400)
-      }
-  
-      const updateId = Number(updateIdParam)
-      if (Number.isNaN(updateId)) {
-        return apiError("ID de update inválido", 400)
-      }
-  
-      const result = await deleteAcaoItemHistoryById(updateId)
-  
-      revalidateTag("acoes")
-      return apiSuccess(result)
-    } catch (error) {
-      console.error("Erro ao excluir update:", error)
-      return apiError("Erro ao excluir update", 500)
+    if (Number.isNaN(acaoId)) {
+      return apiError("ID de ação inválido", 400)
     }
+
+    const url = new URL(request.url)
+    const updateIdParam = url.searchParams.get("updateId")
+
+    if (!updateIdParam) {
+      return apiError("Parâmetro 'updateId' é obrigatório", 400)
+    }
+
+    const updateId = Number(updateIdParam)
+    if (Number.isNaN(updateId)) {
+      return apiError("ID de update inválido", 400)
+    }
+
+    const result = await deleteAcaoItemHistoryById(updateId)
+
+    revalidateTag("acoes")
+    return apiSuccess(result)
+  } catch (error) {
+    console.error("Erro ao excluir update:", error)
+    return apiError("Erro ao excluir update", 500)
   }
+}
