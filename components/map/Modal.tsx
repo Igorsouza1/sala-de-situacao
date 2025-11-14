@@ -37,7 +37,7 @@ export function Modal({ isOpen, onClose, children, title = "Detalhes da Camada",
         <div className="flex justify-between items-center p-4 bg-pantaneiro-green rounded-t-xl">
           <h2 className="text-lg font-semibold text-white">{title}</h2>
           <div className="flex items-center gap-2">
-            {showEdit && (
+            {/* {showEdit && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -49,7 +49,7 @@ export function Modal({ isOpen, onClose, children, title = "Detalhes da Camada",
                 </svg>
                 <span className="sr-only">Editar</span>
               </Button>
-            )}
+            )} */}
             <Button
               variant="ghost"
               size="icon"

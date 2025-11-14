@@ -35,89 +35,91 @@ export async function deleteAcaoItemHistoryById(id: number){
   return result;
 }
 
-export async function updateAcaoAndUploadImageById(
-  id: number,
-  formData: FormData
-) {
-  // 1. Separamos os campos de texto dos arquivos
-  const textUpdates: Record<string, any> = {};
-  const files: File[] = [];
+// export async function updateAcaoAndUploadImageById(
+//   id: number,
+//   formData: FormData
+// ) {
+//   // 1. Separamos os campos de texto dos arquivos
+//   const textUpdates: Record<string, any> = {};
+//   const files: File[] = [];
 
-  for (const [key, value] of formData.entries()) {
-    if (value instanceof File) {
-      files.push(value);
-    } else {
-      textUpdates[key] = value;
-    }
-  }
+//   for (const [key, value] of formData.entries()) {
+//     if (value instanceof File) {
+//       files.push(value);
+//     } else {
+//       textUpdates[key] = value;
+//     }
+//   }
 
-  //    Só atualizamos o banco se houver campos de texto para atualizar.
-  if (Object.keys(textUpdates).length > 0) {
-    await updateAcaoById(id, textUpdates);
-  }
+//   //    Só atualizamos o banco se houver campos de texto para atualizar.
+//   if (Object.keys(textUpdates).length > 0) {
+//     await updateAcaoById(id, textUpdates);
+//   }
 
-  //    Só executamos a lógica de upload se houver arquivos.
-  if (files.length > 0) {
-    for (const file of files) {
-      const path = `${id}/${Date.now()}-${file.name}`;
-      const imageUrl = await uploadAzure(file, path);
-      await addAcaoImageById(id, imageUrl, textUpdates.descricao || "");
-    }
-  }
+//   //    Só executamos a lógica de upload se houver arquivos.
+//   if (files.length > 0) {
+//     for (const file of files) {
+//       const path = `${id}/${Date.now()}-${file.name}`;
+//       const imageUrl = await uploadAzure(file, path);
+//       await addAcaoImageById(id, imageUrl, textUpdates.descricao || "");
+//     }
+//   }
 
-  return { message: "Ação atualizada com sucesso!" };
-}
+//   return { message: "Ação atualizada com sucesso!" };
+// }
 
-export async function createAcoesWithTrilha(input: {
-  trilha: TrilhaInput;
-  waypoints: (WaypointInput & { fotos?: File[] })[];
-}) {
-  const trilhaRecord = await insertTrilhaData({
-    nome: input.trilha.nome,
-    dataInicio: input.trilha.dataInicio ?? null,
-    dataFim: input.trilha.dataFim ?? null,
-    duracaoMinutos: input.trilha.duracaoMinutos ?? null,
-    geom: input.trilha.geom,
-  });
 
-  const trilhaId = trilhaRecord.id;
+// REMOVER ESSA FUNÇÃO
+// export async function createAcoesWithTrilha(input: {
+//   trilha: TrilhaInput;
+//   waypoints: (WaypointInput & { fotos?: File[] })[];
+// }) {
+//   const trilhaRecord = await insertTrilhaData({
+//     nome: input.trilha.nome,
+//     dataInicio: input.trilha.dataInicio ?? null,
+//     dataFim: input.trilha.dataFim ?? null,
+//     duracaoMinutos: input.trilha.duracaoMinutos ?? null,
+//     geom: input.trilha.geom,
+//   });
 
-  for (const wp of input.waypoints) {
-    const pointWkt = `POINTZ(${wp.longitude} ${wp.latitude} ${wp.elevation ?? 0})`;
+//   const trilhaId = trilhaRecord.id;
 
-    await insertWaypointDataInWaypointsTable({
-      trilhaId,
-      nome: wp.name ?? null,
-      ele: wp.elevation ?? null,
-      recordedat: wp.time ?? null,
-      geom: pointWkt,
-    });
+//   for (const wp of input.waypoints) {
+//     const pointWkt = `POINTZ(${wp.longitude} ${wp.latitude} ${wp.elevation ?? 0})`;
 
-    const acaoRecord = await insertAcaoData({
-      name: wp.name ?? null,
-      latitude: wp.latitude.toString(),
-      longitude: wp.longitude.toString(),
-      elevation: wp.elevation?.toString() ?? '0',
-      time: wp.time ?? null,
-      descricao: wp.descricao ?? null,
-      mes: wp.mes,
-      atuacao: wp.atuacao,
-      acao: wp.acao ?? null,
-      geom: pointWkt,
-    });
+//     await insertWaypointDataInWaypointsTable({
+//       trilhaId,
+//       nome: wp.name ?? null,
+//       ele: wp.elevation ?? null,
+//       recordedat: wp.time ?? null,
+//       geom: pointWkt,
+//     });
 
-    const acaoId = acaoRecord.id;
-    if (wp.fotos) {
-      for (const file of wp.fotos) {
-        const path = `${acaoId}/${Date.now()}-${file.name}`;
-        const imageUrl = await uploadAzure(file, path);
-        await addAcaoImageById(acaoId, imageUrl, wp.descricao ?? "");
-      }
-    }
-  }
+//     const acaoRecord = await insertAcaoData({
+//       name: wp.name ?? null,
+//       latitude: wp.latitude.toString(),
+//       longitude: wp.longitude.toString(),
+//       elevation: wp.elevation?.toString() ?? '0',
+//       time: wp.time ?? null,
+//       descricao: wp.descricao ?? null,
+//       mes: wp.mes,
+//       atuacao: wp.atuacao,
+//       acao: wp.acao ?? null,
+//       geom: pointWkt,
+//     });
 
-  return { trilhaId };
-}
+//     const acaoId = acaoRecord.id;
+//     if (wp.fotos) {
+//       for (const file of wp.fotos) {
+//         const path = `${acaoId}/${Date.now()}-${file.name}`;
+//         const imageUrl = await uploadAzure(file, path);
+//         await addAcaoImageById(acaoId, imageUrl, wp.descricao ?? "");
+//       }
+//     }
+//   }
+
+//   return { trilhaId };
+// }
 
 
 
@@ -157,28 +159,44 @@ export async function getAcaoDossie(id: number) {
 export async function addAcaoUpdate(
   acaoId: number,
   input: {
-    file?: File;
-    descricao?: string;
+    file?: File
+    descricao?: string
+    atualizacao?: Date
   }
 ) {
+  // se não vier nada, usa "hoje" como fallback
+  const efetivaAtualizacao = input.atualizacao ?? new Date()
+
   // Se houver arquivo, faz upload e adiciona como mídia
   if (input.file) {
-    const path = `${acaoId}/${Date.now()}-${input.file.name}`;
-    const imageUrl = await uploadAzure(input.file, path);
-    await addAcaoImageById(acaoId, imageUrl, input.descricao || "");
-    return { message: "Mídia adicionada com sucesso!" };
+    const path = `${acaoId}/${Date.now()}-${input.file.name}`
+    const imageUrl = await uploadAzure(input.file, path)
+
+    await addAcaoImageById(
+      acaoId,
+      imageUrl,
+      input.descricao || "",
+      efetivaAtualizacao,       // 👈 AGORA VAI
+    )
+
+    return { message: "Mídia adicionada com sucesso!" }
   }
 
   // Se não houver arquivo mas houver descrição, adiciona apenas a descrição
   if (input.descricao) {
-    // Como a URL é obrigatória no schema, usamos um placeholder
-    // que indica que é apenas texto (sem mídia)
-    const placeholderUrl = "text-only-update";
-    await addAcaoImageById(acaoId, placeholderUrl, input.descricao);
-    return { message: "Descrição adicionada com sucesso!" };
+    const placeholderUrl = "text-only-update"
+
+    await addAcaoImageById(
+      acaoId,
+      placeholderUrl,
+      input.descricao,
+      efetivaAtualizacao,       // 👈 AQUI TAMBÉM
+    )
+
+    return { message: "Descrição adicionada com sucesso!" }
   }
 
-  throw new Error("É necessário fornecer uma mídia ou uma descrição");
+  throw new Error("É necessário fornecer uma mídia ou uma descrição")
 }
 
 

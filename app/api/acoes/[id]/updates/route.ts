@@ -8,7 +8,7 @@ export async function POST(
   context: any, // <- deixa como any / sem tipo
 ) {
   try {
-    const { id } = context.params as { id: string }
+    const { id } = await context.params as { id: string }
     const numId = Number(id)
 
     if (Number.isNaN(numId)) {
@@ -19,24 +19,27 @@ export async function POST(
 
     const file = formData.get("file")
     const descricao = formData.get("descricao")
-    const data = formData.get("data")
+    const dataStr = formData.get("data") as string | null
 
+    let atualizacao: Date | undefined = undefined
+    if (typeof dataStr === "string" && dataStr.trim() !== "") {
+      // "2025-11-10" -> Date
+      atualizacao = new Date(dataStr)
+    }
     const result = await addAcaoUpdate(numId, {
       file: file instanceof File ? file : undefined,
       descricao:
         typeof descricao === "string" && descricao.trim()
           ? descricao.trim()
           : undefined,
-      // se o service já aceita data, beleza; se não, comenta essa linha
-      // @ts-expect-error se a assinatura ainda não tiver data
-      data: typeof data === "string" && data.trim() ? data : undefined,
+      atualizacao,
     })
 
     revalidateTag("acoes")
     return apiSuccess(result)
   } catch (error) {
-    console.error("Erro ao atualizar ação:", error)
-    return apiError("Erro ao atualizar ação", 500)
+    console.error("Erro ao adicionar update de ação:", error)
+    return apiError("Erro ao adicionar update de ação", 500)
   }
 }
 

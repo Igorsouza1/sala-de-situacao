@@ -212,12 +212,19 @@ const HistoryTimeline = ({
 const AddHistoryForm = ({ acaoId, onSuccess, onCancel }: { acaoId: number; onSuccess: () => void; onCancel: () => void }) => {
   const [file, setFile] = useState<File | null>(null)
   const [descricao, setDescricao] = useState("")
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date()
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, "0")
+    const day = String(today.getDate()).padStart(2, "0")
+    return `${year}-${month}-${day}` // formato yyyy-mm-dd pro input date
+  })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-
+  
     if (!file && !descricao.trim()) {
       toast({
         title: "Erro",
@@ -226,35 +233,41 @@ const AddHistoryForm = ({ acaoId, onSuccess, onCancel }: { acaoId: number; onSuc
       })
       return
     }
-
+  
     setIsSubmitting(true)
-
+  
     try {
       const formData = new FormData()
+  
       if (file) {
         formData.append("file", file)
       }
+  
       if (descricao.trim()) {
         formData.append("descricao", descricao.trim())
       }
-
+  
+      if (selectedDate) {
+        formData.append("data", selectedDate) // 👈 agora é a data do form, não o JSON
+      }
+  
       const response = await fetch(`/api/acoes/${acaoId}/updates`, {
         method: "POST",
         body: formData,
       })
-
-      const data = await response.json()
-
-      if (data.success) {
+  
+      const responseData = await response.json() // 👈 renomeado
+  
+      if (responseData.success) {
         toast({
           title: "Sucesso",
-          description: data.data?.message || "Item adicionado ao histórico com sucesso!",
+          description: responseData.data?.message || "Item adicionado ao histórico com sucesso!",
         })
         setFile(null)
         setDescricao("")
         onSuccess()
       } else {
-        throw new Error(data.error?.message || "Erro ao adicionar item")
+        throw new Error(responseData.error?.message || "Erro ao adicionar item")
       }
     } catch (error: any) {
       toast({
@@ -275,6 +288,22 @@ const AddHistoryForm = ({ acaoId, onSuccess, onCancel }: { acaoId: number; onSuc
           <X className="h-4 w-4" />
         </Button>
       </div>
+
+      <div className="space-y-2">
+  <label htmlFor="data" className="text-xs font-medium text-slate-700">
+    Data do acontecimento
+  </label>
+  <Input
+    id="data"
+    type="date"
+    value={selectedDate}
+    onChange={(e) => setSelectedDate(e.target.value)}
+    className="text-xs"
+  />
+  <p className="text-[11px] text-slate-500">
+    Por padrão usamos a data de hoje, mas você pode ajustar para quando o evento realmente aconteceu.
+  </p>
+</div>
 
       <div className="space-y-2">
         <label htmlFor="file" className="text-xs font-medium text-slate-700">

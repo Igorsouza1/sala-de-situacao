@@ -86,7 +86,7 @@ export async function updateAcaoById(id: number, data: any) {
   return result
 }
 
-export async function addAcaoImageById(acaoId: number, url: string, descricao: string) {
+export async function addAcaoImageById(acaoId: number, url: string, descricao: string, atualizacao: Date) {
   const result = await db
     .insert(fotosAcoesInRioDaPrata)
     .values({
@@ -94,6 +94,7 @@ export async function addAcaoImageById(acaoId: number, url: string, descricao: s
       url,
       descricao,
       createdAt: new Date().toISOString(),
+      atualizacao: atualizacao.toISOString(),
     })
     .execute()
 
