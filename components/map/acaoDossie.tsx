@@ -1,18 +1,21 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { useAcaoHistory } from "@/hooks/useAcaoHistory"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDate } from "@/lib/helpers/formatter/formatDate"
-import { MapPin, Calendar, Tag, Camera, PlusCircle, AlertCircle, CheckCircle2, Clock, X, Trash2  } from "lucide-react"
+import { MapPin, Calendar, Tag, Camera, PlusCircle, AlertCircle, CheckCircle2, Clock, X, Trash2, LocateFixed, Loader2  } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { ImageModal } from "@/components/ui/image-modal"
 import { ConfirmDestructive } from "@/components/ui/confirm-destructive"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { useUserRole } from "@/hooks/useUserRole"
 
 interface HistoryUpdate {
   id: string
@@ -33,24 +36,51 @@ interface Dossie {
 }
 
 
+const STATUS_OPTIONS = ["Identificado", "Monitoramento", "Concluido"] as const
+
+const ACTION_TYPE_OPTIONS = [
+  "Passivo Ambiental",
+  "Ponto de Referencia",
+  "Crime Ambiental",
+  "Nascente",
+  "Plantio",
+  "Régua Fluvial",
+] as const
+
+
 
 const getStatusColor = (status: string): { bg: string; text: string; icon: React.ReactNode } => {
-  const normalizedStatus = status?.toLowerCase() || ""
+  const normalizedStatus = status
+    ? status
+        .normalize("NFD")
+        .replace(/\p{Diacritic}/gu, "")
+        .toLowerCase()
+    : ""
 
-  if (normalizedStatus.includes("concluído") || normalizedStatus.includes("ativo")) {
+  if (normalizedStatus.includes("concluido") || normalizedStatus.includes("ativo")) {
     return {
       bg: "bg-emerald-100",
       text: "text-emerald-800",
       icon: <CheckCircle2 className="w-4 h-4" />,
     }
   }
-  if (normalizedStatus.includes("pendente") || normalizedStatus.includes("aguardando")) {
+
+  if (normalizedStatus.includes("monitoramento") || normalizedStatus.includes("pendente") || normalizedStatus.includes("aguardando")) {
     return {
       bg: "bg-amber-100",
       text: "text-amber-800",
       icon: <Clock className="w-4 h-4" />,
     }
   }
+
+  if (normalizedStatus.includes("identificado")) {
+    return {
+      bg: "bg-blue-100",
+      text: "text-blue-800",
+      icon: <Tag className="w-4 h-4" />,
+    }
+  }
+
   if (normalizedStatus.includes("erro") || normalizedStatus.includes("cancelado")) {
     return {
       bg: "bg-red-100",
@@ -403,13 +433,96 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
   const { dossie, isLoading, error, refetch } = useAcaoHistory(acaoId)
   const [showAddForm, setShowAddForm] = useState(false)
   const { toast } = useToast()
+  const { isAdmin } = useUserRole()
+  const [isEditing, setIsEditing] = useState(false)
+  const [isSaving, setIsSaving] = useState(false)
+  const [editableFields, setEditableFields] = useState({
+    status: undefined as string | undefined,
+    acao: undefined as string | undefined,
+    latitude: "",
+    longitude: "",
+  })
 
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
   const [activeImage, setActiveImage] = useState<string | null>(null)
 
+  useEffect(() => {
+    if (dossie) {
+      setEditableFields({
+        status: dossie.status ?? undefined,
+        acao: dossie.acao ?? undefined,
+        latitude: dossie.latitude ?? "",
+        longitude: dossie.longitude ?? "",
+      })
+    }
+  }, [dossie])
+
   const handleImageClick = (url: string) => {
     setActiveImage(url)
     setIsImageModalOpen(true)
+  }
+
+  const handleSelectChange = (field: "status" | "acao") => (value: string) => {
+    setEditableFields((prev) => ({
+      ...prev,
+      [field]: value,
+    }))
+  }
+
+  const handleCoordinateChange = (field: "latitude" | "longitude") => (event: React.ChangeEvent<HTMLInputElement>) => {
+    setEditableFields((prev) => ({
+      ...prev,
+      [field]: event.target.value,
+    }))
+  }
+
+  const handleCancelEdit = () => {
+    if (dossie) {
+      setEditableFields({
+        status: dossie.status ?? undefined,
+        acao: dossie.acao ?? undefined,
+        latitude: dossie.latitude ?? "",
+        longitude: dossie.longitude ?? "",
+      })
+    }
+    setIsEditing(false)
+  }
+
+  const handleSave = async () => {
+    setIsSaving(true)
+    try {
+      const formData = new FormData()
+      formData.append("status", editableFields.status ?? "")
+      formData.append("acao", editableFields.acao ?? "")
+      formData.append("latitude", editableFields.latitude ?? "")
+      formData.append("longitude", editableFields.longitude ?? "")
+
+      const response = await fetch(`/api/acoes/${acaoId}`, {
+        method: "PUT",
+        body: formData,
+      })
+
+      const data = await response.json()
+
+      if (!response.ok || !data.success) {
+        throw new Error(data.error?.message || "Não foi possível salvar as alterações")
+      }
+
+      await refetch()
+      setIsEditing(false)
+      toast({
+        title: "Informações atualizadas",
+        description: "Os dados da ação foram salvos com sucesso.",
+      })
+    } catch (error: any) {
+      toast({
+        title: "Erro ao salvar",
+        description: error.message || "Tente novamente mais tarde.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSaving(false)
+    }
   }
 
 
@@ -425,7 +538,8 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
     return <EmptyState />
   }
 
-  const statusColor = getStatusColor(dossie.status || 'Sem Status')
+  const statusDisplayValue = (isEditing ? editableFields.status : dossie.status) || "Sem Status"
+  const statusColor = getStatusColor(statusDisplayValue)
 
   const handleAddSuccess = () => {
     setShowAddForm(false)
@@ -462,34 +576,128 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
   return (
     <div className="space-y-6">
       <div className="space-y-4 p-4 bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border border-slate-200">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex-1 min-w-0">
             <h3 className="font-bold text-lg text-slate-900">{dossie.name}</h3>
             <p className="text-xs text-slate-600 mt-1">ID: {acaoId}</p>
           </div>
 
-          <div
-            className={`flex items-center gap-2 px-3 py-2 rounded-full font-semibold text-sm flex-shrink-0 whitespace-nowrap ${statusColor.bg} ${statusColor.text}`}
-          >
-            {statusColor.icon}
-            <span>{dossie.status || "Sem Status"}</span>
+          <div className="flex flex-col items-start gap-2 sm:items-end">
+            <div
+              className={`flex items-center gap-2 px-3 py-2 rounded-full font-semibold text-sm flex-shrink-0 whitespace-nowrap ${statusColor.bg} ${statusColor.text}`}
+            >
+              {statusColor.icon}
+              <span>{statusDisplayValue}</span>
+            </div>
+
+            {isAdmin && (
+              <div className="flex gap-2">
+                {isEditing ? (
+                  <>
+                    <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={isSaving}>
+                      Cancelar
+                    </Button>
+                    <Button size="sm" onClick={handleSave} disabled={isSaving}>
+                      {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Salvar
+                    </Button>
+                  </>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
+                    Editar informações
+                  </Button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <DetailItem icon={Tag} label="Tipo de Ação" value={dossie.acao || "Sem Tipo de Ação"} />
-          <DetailItem icon={Calendar} label="Data Criação" value={formatDate(dossie.time || "")} />
-          <DetailItem
-            icon={MapPin}
-            label="Latitude"
-            value={dossie.latitude ? Number.parseFloat(dossie.latitude).toFixed(6) : "N/A"}
-          />
-          <DetailItem
-            icon={MapPin}
-            label="Longitude"
-            value={dossie.longitude ? Number.parseFloat(dossie.longitude).toFixed(6) : "N/A"}
-          />
-        </div>
+        {isEditing ? (
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Status</Label>
+              <Select value={editableFields.status || undefined} onValueChange={handleSelectChange("status")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {STATUS_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Tipo de Ação</Label>
+              <Select value={editableFields.acao || undefined} onValueChange={handleSelectChange("acao")}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ACTION_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Latitude</Label>
+              <div className="flex gap-2">
+                <Input value={editableFields.latitude} onChange={handleCoordinateChange("latitude")} placeholder="-21.360685" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0"
+                  title="Selecionar localização (em breve)"
+                >
+                  <LocateFixed className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <Label className="text-xs text-slate-500">Longitude</Label>
+              <div className="flex gap-2">
+                <Input value={editableFields.longitude} onChange={handleCoordinateChange("longitude")} placeholder="-56.596663" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="shrink-0"
+                  title="Selecionar localização (em breve)"
+                >
+                  <LocateFixed className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="md:col-span-2">
+              <DetailItem icon={Calendar} label="Data Criação" value={formatDate(dossie.time || "")} />
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <DetailItem icon={Tag} label="Tipo de Ação" value={dossie.acao || "Sem Tipo de Ação"} />
+            <DetailItem icon={Calendar} label="Data Criação" value={formatDate(dossie.time || "")} />
+            <DetailItem
+              icon={MapPin}
+              label="Latitude"
+              value={dossie.latitude ? Number.parseFloat(dossie.latitude).toFixed(6) : "N/A"}
+            />
+            <DetailItem
+              icon={MapPin}
+              label="Longitude"
+              value={dossie.longitude ? Number.parseFloat(dossie.longitude).toFixed(6) : "N/A"}
+            />
+          </div>
+        )}
       </div>
 
       <hr className="border-slate-200" />
