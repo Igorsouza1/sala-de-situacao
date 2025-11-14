@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { ImageModal } from "@/components/ui/image-modal"
+import { ConfirmDestructive } from "@/components/ui/confirm-destructive"
 
 interface HistoryUpdate {
   id: string
@@ -162,14 +163,22 @@ const HistoryTimeline = ({
               </p>
             </div>
 
-            <button
-              type="button"
-              onClick={() => onDelete(update.id)}
-              className="inline-flex items-center justify-center rounded-full p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-              aria-label="Excluir item do histórico"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
+            <ConfirmDestructive
+              onConfirm={() => onDelete(update.id)}
+              title="Excluir item do histórico?"
+              description="Essa ação não pode ser desfeita. O registro será removido permanentemente do histórico deste dossiê."
+              confirmLabel="Excluir"
+              cancelLabel="Cancelar"
+              trigger={
+                <button
+                  type="button"
+                  className="inline-flex items-center justify-center rounded-full p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
+                  aria-label="Excluir item do histórico"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              }
+            />
           </div>
 
           {/* Imagem clicável */}

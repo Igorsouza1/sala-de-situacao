@@ -46,7 +46,7 @@ export async function DELETE(
   context: any, // <- mesmo esquema aqui
 ) {
   try {
-    const { id } = context.params as { id: string }
+    const { id } = await context.params as { id: string }
     const acaoId = Number(id)
 
     if (Number.isNaN(acaoId)) {
