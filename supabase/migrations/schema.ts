@@ -1,4 +1,4 @@
-import { pgTable, pgSchema, unique, serial, varchar, foreignKey, integer, geometry, bigint, doublePrecision, numeric, text, timestamp, date, time, uuid, index, bigserial } from "drizzle-orm/pg-core"
+import { pgTable, pgSchema, serial, geometry, bigint, doublePrecision, integer, varchar, numeric, text, timestamp, date, foreignKey, unique, time, uuid, index } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
 export const rioDaPrata = pgSchema("rio_da_prata");
@@ -6,30 +6,6 @@ export const dossieStatusEnumInRioDaPrata = rioDaPrata.enum("dossie_status_enum"
 
 export const baciaRioDaPrataIdSeqInRioDaPrata = rioDaPrata.sequence("Bacia_RioDaPrata_id_seq", {  startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
 export const rioDaPrataLeitoIdSeqInRioDaPrata = rioDaPrata.sequence("Rio da Prata - Leito_id_seq", {  startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
-
-export const dossieTiposInRioDaPrata = rioDaPrata.table("dossie_tipos", {
-	id: serial().primaryKey().notNull(),
-	nomeAmigavel: varchar("nome_amigavel", { length: 100 }).notNull(),
-	slug: varchar({ length: 100 }).notNull(),
-	icone: varchar({ length: 50 }),
-}, (table) => [
-	unique("dossie_tipos_slug_key").on(table.slug),
-]);
-
-export const dossieSubtiposInRioDaPrata = rioDaPrata.table("dossie_subtipos", {
-	id: serial().primaryKey().notNull(),
-	tipoId: integer("tipo_id").notNull(),
-	nomeAmigavel: varchar("nome_amigavel", { length: 100 }).notNull(),
-	slug: varchar({ length: 100 }).notNull(),
-	icone: varchar({ length: 50 }),
-}, (table) => [
-	foreignKey({
-			columns: [table.tipoId],
-			foreignColumns: [dossieTiposInRioDaPrata.id],
-			name: "dossie_subtipos_tipo_id_fkey"
-		}).onDelete("cascade"),
-	unique("dossie_subtipos_slug_key").on(table.slug),
-]);
 
 export const baciaRioDaPrataInRioDaPrata = rioDaPrata.table("Bacia_Rio_Da_Prata", {
 	id: serial().primaryKey().notNull(),
@@ -411,19 +387,20 @@ export const estradasInRioDaPrata = rioDaPrata.table("estradas", {
 	geom: geometry({ type: "multilinestringz", srid: 4326 }),
 });
 
-export const acoesInRioDaPrata = rioDaPrata.table("acoes", {
+export const fotosAcoesInRioDaPrata = rioDaPrata.table("fotos_acoes", {
 	id: serial().primaryKey().notNull(),
-	name: varchar({ length: 255 }),
-	latitude: numeric({ precision: 10, scale:  6 }),
-	longitude: numeric({ precision: 10, scale:  6 }),
-	elevation: numeric({ precision: 8, scale:  2 }),
-	time: timestamp({ mode: 'string' }),
+	acaoId: integer("acao_id").notNull(),
+	url: varchar({ length: 1000 }).notNull(),
 	descricao: varchar({ length: 255 }),
-	mes: varchar({ length: 50 }),
-	atuacao: varchar({ length: 100 }),
-	acao: varchar({ length: 100 }),
-	geom: geometry({ type: "pointz", srid: 4326 }),
-});
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	atualizacao: date(),
+}, (table) => [
+	foreignKey({
+			columns: [table.acaoId],
+			foreignColumns: [acoesInRioDaPrata.id],
+			name: "fotos_acoes_acao_id_acoes_id_fk"
+		}),
+]);
 
 export const propriedadesInRioDaPrata = rioDaPrata.table("propriedades", {
 	id: serial().primaryKey().notNull(),
@@ -438,6 +415,30 @@ export const propriedadesInRioDaPrata = rioDaPrata.table("propriedades", {
 	municipio: varchar({ length: 100 }),
 	geom: geometry({ type: "multipolygon", srid: 4326 }),
 });
+
+export const acoesInRioDaPrata = rioDaPrata.table("acoes", {
+	id: serial().primaryKey().notNull(),
+	name: varchar({ length: 255 }),
+	latitude: numeric({ precision: 10, scale:  6 }),
+	longitude: numeric({ precision: 10, scale:  6 }),
+	elevation: numeric({ precision: 8, scale:  2 }),
+	time: timestamp({ mode: 'string' }),
+	descricao: varchar({ length: 255 }),
+	mes: varchar({ length: 50 }),
+	atuacao: varchar({ length: 100 }),
+	acao: varchar({ length: 100 }),
+	geom: geometry({ type: "pointz", srid: 4326 }),
+	status: text(),
+	regiaoId: integer("regiao_id"),
+	subTipo: text("sub_tipo"),
+	icone: text(),
+}, (table) => [
+	foreignKey({
+			columns: [table.regiaoId],
+			foreignColumns: [regioesInRioDaPrata.id],
+			name: "acoes_regiao_id_fkey"
+		}).onUpdate("cascade"),
+]);
 
 export const waypointsInRioDaPrata = rioDaPrata.table("waypoints", {
 	id: serial().primaryKey().notNull(),
@@ -487,53 +488,6 @@ export const rawFirmsInRioDaPrata = rioDaPrata.table("raw_firms", {
 	unique("raw_firms_id_key").on(table.id),
 ]);
 
-export const fotosAcoesInRioDaPrata = rioDaPrata.table("fotos_acoes", {
-	id: serial().primaryKey().notNull(),
-	acaoId: integer("acao_id").notNull(),
-	url: varchar({ length: 1000 }).notNull(),
-	descricao: varchar({ length: 255 }),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-}, (table) => [
-	foreignKey({
-			columns: [table.acaoId],
-			foreignColumns: [acoesInRioDaPrata.id],
-			name: "fotos_acoes_acao_id_acoes_id_fk"
-		}),
-]);
-
-export const dossiesUpdatesInRioDaPrata = rioDaPrata.table("dossies_updates", {
-	id: bigserial({ mode: "bigint" }).primaryKey().notNull(),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	dossieId: bigint("dossie_id", { mode: "number" }).notNull(),
-	dataOcorrencia: timestamp("data_ocorrencia", { mode: 'string' }).defaultNow().notNull(),
-	titulo: varchar({ length: 255 }).notNull(),
-	descricao: text(),
-	statusNovo: text("status_novo"),
-}, (table) => [
-	index("idx_updates_dossie_id").using("btree", table.dossieId.asc().nullsLast().op("int8_ops")),
-	foreignKey({
-			columns: [table.dossieId],
-			foreignColumns: [dossiesAmbientaisInRioDaPrata.id],
-			name: "dossies_updates_dossie_id_fkey"
-		}).onDelete("cascade"),
-]);
-
-export const dossiesMidiaInRioDaPrata = rioDaPrata.table("dossies_midia", {
-	id: bigserial({ mode: "bigint" }).primaryKey().notNull(),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	updateId: bigint("update_id", { mode: "number" }).notNull(),
-	urlMidia: varchar("url_midia", { length: 1000 }).notNull(),
-	descricaoMidia: varchar("descricao_midia", { length: 255 }),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-}, (table) => [
-	index("idx_midia_update_id").using("btree", table.updateId.asc().nullsLast().op("int8_ops")),
-	foreignKey({
-			columns: [table.updateId],
-			foreignColumns: [dossiesUpdatesInRioDaPrata.id],
-			name: "dossies_midia_update_id_fkey"
-		}).onDelete("cascade"),
-]);
-
 export const regioesInRioDaPrata = rioDaPrata.table("regioes", {
 	id: serial().primaryKey().notNull(),
 	nome: varchar({ length: 255 }).notNull(),
@@ -544,45 +498,4 @@ export const regioesInRioDaPrata = rioDaPrata.table("regioes", {
 	cor: text(),
 }, (table) => [
 	index("idx_regioes_geom").using("gist", table.geom.asc().nullsLast().op("gist_geometry_ops_2d")),
-]);
-
-export const dossiesAmbientaisInRioDaPrata = rioDaPrata.table("dossies_ambientais", {
-	id: bigserial({ mode: "bigint" }).primaryKey().notNull(),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	regiaoId: bigint("regiao_id", { mode: "number" }),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	trilhaId: bigint("trilha_id", { mode: "number" }),
-	tipoId: integer("tipo_id").notNull(),
-	subtipoId: integer("subtipo_id"),
-	statusAtual: dossieStatusEnumInRioDaPrata("status_atual").default('Aberto').notNull(),
-	dataIdentificacao: timestamp("data_identificacao", { mode: 'string' }).defaultNow().notNull(),
-	geom: geometry({ type: "pointz", srid: 4326 }).notNull(),
-	lat: text(),
-	lon: text(),
-}, (table) => [
-	index("idx_dossies_geom").using("gist", table.geom.asc().nullsLast().op("gist_geometry_ops_2d")),
-	index("idx_dossies_regiao_id").using("btree", table.regiaoId.asc().nullsLast().op("int8_ops")),
-	index("idx_dossies_subtipo_id").using("btree", table.subtipoId.asc().nullsLast().op("int4_ops")),
-	index("idx_dossies_tipo_id").using("btree", table.tipoId.asc().nullsLast().op("int4_ops")),
-	index("idx_dossies_trilha_id").using("btree", table.trilhaId.asc().nullsLast().op("int8_ops")),
-	foreignKey({
-			columns: [table.regiaoId],
-			foreignColumns: [regioesInRioDaPrata.id],
-			name: "dossies_ambientais_regiao_id_fkey"
-		}).onDelete("set null"),
-	foreignKey({
-			columns: [table.subtipoId],
-			foreignColumns: [dossieSubtiposInRioDaPrata.id],
-			name: "dossies_ambientais_subtipo_id_fkey"
-		}),
-	foreignKey({
-			columns: [table.tipoId],
-			foreignColumns: [dossieTiposInRioDaPrata.id],
-			name: "dossies_ambientais_tipo_id_fkey"
-		}),
-	foreignKey({
-			columns: [table.trilhaId],
-			foreignColumns: [trilhasInRioDaPrata.id],
-			name: "dossies_ambientais_trilha_id_fkey"
-		}).onDelete("set null"),
 ]);

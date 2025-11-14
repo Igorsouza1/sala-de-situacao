@@ -4,6 +4,16 @@ import { db } from "@/db"
 import { acoesInRioDaPrata, fotosAcoesInRioDaPrata, NewAcoesData } from "@/db/schema"
 import { eq, desc, sql} from "drizzle-orm";
 
+
+export async function findAcaoById(id: number) {
+  const result = await db
+    .select() // Pega todas as colunas da ação principal
+    .from(acoesInRioDaPrata)
+    .where(eq(acoesInRioDaPrata.id, id))
+    .execute();
+  return result[0]; // Retorna apenas o primeiro (ou undefined)
+}
+
 export async function findAllAcoesData() {
   const result = await db
     .select({
@@ -24,7 +34,7 @@ export async function findAllAcoesData() {
 export async function findAllAcoesDataWithGeometry(){
 
   const result = await db.execute(`
-    SELECT id, acao, name, descricao, mes, time, ST_AsGeoJSON(geom) as geojson
+    SELECT id, acao, name, descricao, mes, time, status, ST_AsGeoJSON(geom) as geojson
     FROM "rio_da_prata"."acoes"
   `)
 
@@ -32,20 +42,31 @@ export async function findAllAcoesDataWithGeometry(){
 }
 
 
-export async function findAllAcoesImagesData(id: number) {
+export async function findAllAcoesUpdates(id: number) {
   const result = await db
     .select({
       id: fotosAcoesInRioDaPrata.id,
       acaoId: fotosAcoesInRioDaPrata.acaoId,
-      url: fotosAcoesInRioDaPrata.url,
-      created_at: fotosAcoesInRioDaPrata.createdAt,
+      descricao: fotosAcoesInRioDaPrata.descricao,  // <-- O comentário ou legenda
+      url: fotosAcoesInRioDaPrata.url,   // <-- A URL da mídia
+      timestamp: fotosAcoesInRioDaPrata.atualizacao,
+      createdAt: fotosAcoesInRioDaPrata.createdAt,
     })
     .from(fotosAcoesInRioDaPrata)
     .where(eq(fotosAcoesInRioDaPrata.acaoId, id))
-    .orderBy(desc(fotosAcoesInRioDaPrata.createdAt))
-    .execute()
+    .orderBy(desc(fotosAcoesInRioDaPrata.createdAt)) // Mais recente primeiro
+    .execute();
+    
+  return result;
+}
 
-    return result
+
+export async function deleteAcaoUpdateById(id: number){
+  const result = await db
+    .delete(fotosAcoesInRioDaPrata)
+    .where(eq(fotosAcoesInRioDaPrata.id, id))
+    .execute()
+  return result
 }
 
 export async function deleteAcaoById(id: number) {
@@ -65,7 +86,7 @@ export async function updateAcaoById(id: number, data: any) {
   return result
 }
 
-export async function addAcaoImageById(acaoId: number, url: string, descricao: string) {
+export async function addAcaoImageById(acaoId: number, url: string, descricao: string, atualizacao: Date) {
   const result = await db
     .insert(fotosAcoesInRioDaPrata)
     .values({
@@ -73,6 +94,7 @@ export async function addAcaoImageById(acaoId: number, url: string, descricao: s
       url,
       descricao,
       createdAt: new Date().toISOString(),
+      atualizacao: atualizacao.toISOString(),
     })
     .execute()
 
