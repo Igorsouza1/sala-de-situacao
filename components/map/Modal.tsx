@@ -19,12 +19,25 @@ export function Modal({ isOpen, onClose, children, title = "Detalhes da Camada",
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000] flex justify-center items-center p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl border border-gray-200 transform transition-all duration-200 animate-in fade-in-0 zoom-in-95">
+      <div
+  className="
+    bg-white rounded-xl shadow-2xl
+    w-full
+    max-w-[75vw]       /* celular: quase tela toda */
+    sm:max-w-[60vw]    /* sm: um pouco de margem */
+    md:max-w-[80vw]    /* tablet/medio: bem largo */
+    lg:max-w-[50vw]    /* desktop: ainda grande */
+    xl:max-w-[50vw]    /* monitorzão: não vira TV */
+    border border-gray-200
+    transform transition-all duration-200
+    animate-in fade-in-0 zoom-in-95
+  "
+>
         {/* Header */}
         <div className="flex justify-between items-center p-4 bg-pantaneiro-green rounded-t-xl">
           <h2 className="text-lg font-semibold text-white">{title}</h2>
           <div className="flex items-center gap-2">
-            {showEdit && (
+            {/* {showEdit && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -36,7 +49,7 @@ export function Modal({ isOpen, onClose, children, title = "Detalhes da Camada",
                 </svg>
                 <span className="sr-only">Editar</span>
               </Button>
-            )}
+            )} */}
             <Button
               variant="ghost"
               size="icon"
@@ -50,7 +63,8 @@ export function Modal({ isOpen, onClose, children, title = "Detalhes da Camada",
         </div>
         
         {/* Content */}
-        <ScrollArea className="p-6 max-h-[75vh]">
+        <ScrollArea className="p-6 h-[75vh]">
+
           {children}
         </ScrollArea>
       </div>

@@ -3,8 +3,10 @@ import {
   findAllAcoesData,
   findAllAcoesDataWithGeometry,
   updateAcaoById,
-  findAllAcoesImagesData,
   insertAcaoData,
+  findAcaoById,
+  findAllAcoesUpdates,
+  deleteAcaoUpdateById,
 } from "@/lib/repositories/acoesRepository";
 import {
   insertTrilhaData,
@@ -28,11 +30,14 @@ export async function getAllAcoesForMap() {
   return actionsGeoJSON;
 }
 
-export async function getAllAcoesImagesData(id: number) {
-  const acoesImagesData = await findAllAcoesImagesData(id);
-  return acoesImagesData;
+export async function deleteAcaoItemHistoryById(id: number){
+  const result = await deleteAcaoUpdateById(id);
+  return result;
 }
 
+
+
+// REMOVER ?????
 export async function updateAcaoAndUploadImageById(
   id: number,
   formData: FormData
@@ -59,13 +64,15 @@ export async function updateAcaoAndUploadImageById(
     for (const file of files) {
       const path = `${id}/${Date.now()}-${file.name}`;
       const imageUrl = await uploadAzure(file, path);
-      await addAcaoImageById(id, imageUrl, textUpdates.descricao || "");
+      // await addAcaoImageById(id, imageUrl, textUpdates.descricao || "");
     }
   }
 
   return { message: "Ação atualizada com sucesso!" };
 }
 
+
+// REMOVER ESSA FUNÇÃO
 export async function createAcoesWithTrilha(input: {
   trilha: TrilhaInput;
   waypoints: (WaypointInput & { fotos?: File[] })[];
@@ -109,13 +116,72 @@ export async function createAcoesWithTrilha(input: {
       for (const file of wp.fotos) {
         const path = `${acaoId}/${Date.now()}-${file.name}`;
         const imageUrl = await uploadAzure(file, path);
-        await addAcaoImageById(acaoId, imageUrl, wp.descricao ?? "");
+        // await addAcaoImageById(acaoId, imageUrl, wp.descricao ?? "");
       }
     }
   }
 
   return { trilhaId };
 }
+
+
+
+export async function getAcaoDossie(id: number) {
+  // 1. Busca os dados principais e o histórico em paralelo
+  const [acaoPrincipal, historico] = await Promise.all([
+    findAcaoById(id),
+    findAllAcoesUpdates(id)
+  ]);
+
+  // 2. Regra de negócio: se a ação principal não existe, é um erro
+  if (!acaoPrincipal) {
+    // O handler da API vai transformar isso em um 404
+    throw new Error("Ação não encontrada"); 
+  }
+
+  // 3. Transforma o histórico para o formato esperado pelo frontend
+  const formattedHistory = historico.map((update: any) => ({
+    id: String(update.id), // <-- simples, sem prefixo
+    tipoUpdate: update.url && update.url.trim() !== "" && update.url !== "text-only-update" ? "midia" : "criacao",
+    descricao: update.descricao,
+    urlMidia: update.url && update.url !== "text-only-update" ? update.url : null,
+    timestamp: update.timestamp || update.createdAt || null,
+  }));
+
+  // 4. Combina tudo em um único objeto para o frontend
+  return {
+    ...acaoPrincipal,
+    history: formattedHistory,
+  };
+}
+
+/**
+ * Adiciona um novo update ao histórico de uma ação
+ * Pode ser uma mídia (com ou sem descrição) ou apenas uma descrição
+ */
+export async function addAcaoUpdate(
+  acaoId: number,
+  input: {
+    urlMidia?: string
+    descricao?: string
+    atualizacao?: Date
+  },
+) {
+  const url = input.urlMidia ?? "text-only-update"
+  const atualizacaoFinal = input.atualizacao ?? new Date()
+
+  await addAcaoImageById(
+    acaoId,
+    url,
+    input.descricao || "",
+    atualizacaoFinal, 
+  )
+
+  return { message: "Registro adicionado com sucesso!" }
+}
+
+
+
 
 // -----------------------------------------
 
