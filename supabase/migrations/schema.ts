@@ -1,5 +1,5 @@
 import { pgTable, pgSchema, serial, geometry, bigint, doublePrecision, integer, varchar, numeric, text, timestamp, date, foreignKey, unique, time, uuid, index } from "drizzle-orm/pg-core"
-import { sql } from "drizzle-orm"
+import { sql, InferInsertModel} from "drizzle-orm"
 
 export const rioDaPrata = pgSchema("rio_da_prata");
 export const dossieStatusEnumInRioDaPrata = rioDaPrata.enum("dossie_status_enum", ['Aberto', 'Em Monitoramento', 'Resolvido', 'Inválido'])
@@ -500,3 +500,33 @@ export const regioesInRioDaPrata = rioDaPrata.table("regioes", {
 }, (table) => [
 	index("idx_regioes_geom").using("gist", table.geom.asc().nullsLast().op("gist_geometry_ops_2d")),
 ]);
+
+
+
+type BaseAcoesData = InferInsertModel<typeof acoesInRioDaPrata>;
+
+export type NewAcoesData = Omit<BaseAcoesData, 'geom'> & {
+  geom: string;
+};
+
+
+type BaseWaypointData = InferInsertModel<typeof waypointsInRioDaPrata>;
+
+export type NewWaypointData = Omit<BaseWaypointData, 'geom'> & {
+	geom: string;
+  };
+
+
+  type BaseEstradaData = InferInsertModel<typeof estradasInRioDaPrata>;
+
+export type NewEstradaData = Omit<BaseEstradaData, 'geom'> & {
+  geom: string;
+};
+
+
+
+type BaseTrilhaData = InferInsertModel<typeof trilhasInRioDaPrata>;
+
+export type NewTrilhaData = Omit<BaseTrilhaData, 'geom'> & {
+	geom: string;
+  };

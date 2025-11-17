@@ -16,6 +16,9 @@ import { ConfirmDestructive } from "@/components/ui/confirm-destructive"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { useUserRole } from "@/hooks/useUserRole"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 
 interface HistoryUpdate {
   id: string
@@ -492,22 +495,23 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
     setIsSaving(true)
     try {
       const formData = new FormData()
+  
       formData.append("status", editableFields.status ?? "")
       formData.append("acao", editableFields.acao ?? "")
       formData.append("latitude", editableFields.latitude ?? "")
       formData.append("longitude", editableFields.longitude ?? "")
-
+  
       const response = await fetch(`/api/acoes/${acaoId}`, {
         method: "PUT",
         body: formData,
       })
-
+  
       const data = await response.json()
-
+  
       if (!response.ok || !data.success) {
         throw new Error(data.error?.message || "Não foi possível salvar as alterações")
       }
-
+  
       await refetch()
       setIsEditing(false)
       toast({
@@ -524,7 +528,6 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
       setIsSaving(false)
     }
   }
-
 
   if (isLoading) {
     return <LoadingState />
@@ -575,132 +578,209 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4 p-4 bg-gradient-to-br from-slate-50 to-blue-50 rounded-xl border border-slate-200">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-bold text-lg text-slate-900">{dossie.name}</h3>
-            <p className="text-xs text-slate-600 mt-1">ID: {acaoId}</p>
-          </div>
-
-          <div className="flex flex-col items-start gap-2 sm:items-end">
-            <div
-              className={`flex items-center gap-2 px-3 py-2 rounded-full font-semibold text-sm flex-shrink-0 whitespace-nowrap ${statusColor.bg} ${statusColor.text}`}
-            >
-              {statusColor.icon}
-              <span>{statusDisplayValue}</span>
+      {/* CARD PRINCIPAL DO DOSSIÊ */}
+      <Card className="relative overflow-hidden border-slate-200/80 bg-white shadow-sm">
+        {/* Barrinha colorida no topo */}
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-sky-500 via-emerald-500 to-blue-500" />
+  
+        <CardHeader className="pb-4 pt-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex items-start gap-3 min-w-0">
+              {/* Ícone do dossiê */}
+              <div className="hidden sm:flex h-10 w-10 items-center justify-center rounded-full border border-sky-100 bg-sky-50 text-sky-600 flex-shrink-0">
+                <MapPin className="h-5 w-5" />
+              </div>
+  
+              <div className="flex-1 min-w-0 space-y-1">
+                <CardTitle className="text-base sm:text-lg tracking-tight text-slate-900">
+                  {dossie.name}
+                </CardTitle>
+  
+                <div className="flex flex-wrap items-center gap-2">
+                  <CardDescription className="text-xs text-slate-500">
+                    Dossiê ambiental
+                  </CardDescription>
+  
+                  <Badge
+                    variant="outline"
+                    className="text-[11px] font-mono px-2 py-0.5 rounded-full border-slate-200 bg-slate-50 text-slate-600"
+                  >
+                    ID #{acaoId}
+                  </Badge>
+                </div>
+              </div>
             </div>
-
-            {isAdmin && (
-              <div className="flex gap-2">
-                {isEditing ? (
-                  <>
-                    <Button variant="outline" size="sm" onClick={handleCancelEdit} disabled={isSaving}>
-                      Cancelar
+  
+            <div className="flex flex-col items-start gap-2 sm:items-end">
+              <Badge
+                variant="outline"
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-semibold text-[11px] border-none shadow-sm ${statusColor.bg} ${statusColor.text}`}
+              >
+                {statusColor.icon}
+                <span>{statusDisplayValue}</span>
+              </Badge>
+  
+              {isAdmin && (
+                <div className="flex gap-2">
+                  {isEditing ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleCancelEdit}
+                        disabled={isSaving}
+                      >
+                        Cancelar
+                      </Button>
+                      <Button size="sm" onClick={handleSave} disabled={isSaving}>
+                        {isSaving && (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        )}
+                        Salvar
+                      </Button>
+                    </>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setIsEditing(true)}
+                    >
+                      Editar informações
                     </Button>
-                    <Button size="sm" onClick={handleSave} disabled={isSaving}>
-                      {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      Salvar
-                    </Button>
-                  </>
-                ) : (
-                  <Button size="sm" variant="outline" onClick={() => setIsEditing(true)}>
-                    Editar informações
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </CardHeader>
+  
+        <CardContent className="pt-0 pb-4">
+          {isEditing ? (
+            <div className="grid gap-4 md:grid-cols-2 mt-1">
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-slate-500">Status</Label>
+                <Select
+                  value={editableFields.status || undefined}
+                  onValueChange={handleSelectChange("status")}
+                >
+                  <SelectTrigger className="h-9 text-sm bg-slate-50/80 border-slate-200">
+                    <SelectValue placeholder="Selecione o status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {STATUS_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+  
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-slate-500">Tipo de Ação</Label>
+                <Select
+                  value={editableFields.acao || undefined}
+                  onValueChange={handleSelectChange("acao")}
+                >
+                  <SelectTrigger className="h-9 text-sm bg-slate-50/80 border-slate-200">
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ACTION_TYPE_OPTIONS.map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+  
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-slate-500">Latitude</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={editableFields.latitude}
+                    onChange={handleCoordinateChange("latitude")}
+                    placeholder="-21.360685"
+                    className="h-9 text-sm bg-slate-50/80 border-slate-200"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0 h-9 w-9"
+                    title="Selecionar localização (em breve)"
+                  >
+                    <LocateFixed className="h-4 w-4" />
                   </Button>
-                )}
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-
-        {isEditing ? (
-          <div className="grid gap-3 md:grid-cols-2">
-            <div className="space-y-1">
-              <Label className="text-xs text-slate-500">Status</Label>
-              <Select value={editableFields.status || undefined} onValueChange={handleSelectChange("status")}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs text-slate-500">Tipo de Ação</Label>
-              <Select value={editableFields.acao || undefined} onValueChange={handleSelectChange("acao")}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione o tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ACTION_TYPE_OPTIONS.map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs text-slate-500">Latitude</Label>
-              <div className="flex gap-2">
-                <Input value={editableFields.latitude} onChange={handleCoordinateChange("latitude")} placeholder="-21.360685" />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0"
-                  title="Selecionar localização (em breve)"
-                >
-                  <LocateFixed className="h-4 w-4" />
-                </Button>
+  
+              <div className="space-y-1.5">
+                <Label className="text-[11px] text-slate-500">Longitude</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={editableFields.longitude}
+                    onChange={handleCoordinateChange("longitude")}
+                    placeholder="-56.596663"
+                    className="h-9 text-sm bg-slate-50/80 border-slate-200"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="shrink-0 h-9 w-9"
+                    title="Selecionar localização (em breve)"
+                  >
+                    <LocateFixed className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+  
+              <div className="md:col-span-2">
+                <DetailItem
+                  icon={Calendar}
+                  label="Data Criação"
+                  value={formatDate(dossie.time || "")}
+                />
               </div>
             </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs text-slate-500">Longitude</Label>
-              <div className="flex gap-2">
-                <Input value={editableFields.longitude} onChange={handleCoordinateChange("longitude")} placeholder="-56.596663" />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  className="shrink-0"
-                  title="Selecionar localização (em breve)"
-                >
-                  <LocateFixed className="h-4 w-4" />
-                </Button>
-              </div>
+          ) : (
+            <div className="mt-1 grid grid-cols-1 gap-2 sm:grid-cols-2">
+              <DetailItem
+                icon={Tag}
+                label="Tipo de Ação"
+                value={dossie.acao || "Sem Tipo de Ação"}
+              />
+              <DetailItem
+                icon={Calendar}
+                label="Data Criação"
+                value={formatDate(dossie.time || "")}
+              />
+              <DetailItem
+                icon={MapPin}
+                label="Latitude"
+                value={
+                  dossie.latitude
+                    ? Number.parseFloat(dossie.latitude).toFixed(6)
+                    : "N/A"
+                }
+              />
+              <DetailItem
+                icon={MapPin}
+                label="Longitude"
+                value={
+                  dossie.longitude
+                    ? Number.parseFloat(dossie.longitude).toFixed(6)
+                    : "N/A"
+                }
+              />
             </div>
-
-            <div className="md:col-span-2">
-              <DetailItem icon={Calendar} label="Data Criação" value={formatDate(dossie.time || "")} />
-            </div>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            <DetailItem icon={Tag} label="Tipo de Ação" value={dossie.acao || "Sem Tipo de Ação"} />
-            <DetailItem icon={Calendar} label="Data Criação" value={formatDate(dossie.time || "")} />
-            <DetailItem
-              icon={MapPin}
-              label="Latitude"
-              value={dossie.latitude ? Number.parseFloat(dossie.latitude).toFixed(6) : "N/A"}
-            />
-            <DetailItem
-              icon={MapPin}
-              label="Longitude"
-              value={dossie.longitude ? Number.parseFloat(dossie.longitude).toFixed(6) : "N/A"}
-            />
-          </div>
-        )}
-      </div>
-
-      <hr className="border-slate-200" />
+          )}
+        </CardContent>
+      </Card>
+  
+      <Separator className="bg-slate-200" />
 
       <div>
         <div className="flex items-center justify-between mb-4">

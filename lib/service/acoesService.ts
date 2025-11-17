@@ -37,38 +37,27 @@ export async function deleteAcaoItemHistoryById(id: number){
 
 
 
-// REMOVER ?????
-export async function updateAcaoAndUploadImageById(
+export async function updateAcaoFieldsById(
   id: number,
   formData: FormData
 ) {
-  // 1. Separamos os campos de texto dos arquivos
-  const textUpdates: Record<string, any> = {};
-  const files: File[] = [];
+  const textUpdates: Record<string, string> = {}
 
   for (const [key, value] of formData.entries()) {
-    if (value instanceof File) {
-      files.push(value);
-    } else {
-      textUpdates[key] = value;
-    }
+    if (value instanceof File) continue
+
+    const str = String(value).trim()
+    if (!str) continue // ignora vazio
+
+    textUpdates[key] = str
   }
 
-  //    Só atualizamos o banco se houver campos de texto para atualizar.
-  if (Object.keys(textUpdates).length > 0) {
-    await updateAcaoById(id, textUpdates);
+  if (Object.keys(textUpdates).length === 0) {
+    return { message: "Nenhum campo enviado para atualização." }
   }
 
-  //    Só executamos a lógica de upload se houver arquivos.
-  if (files.length > 0) {
-    for (const file of files) {
-      const path = `${id}/${Date.now()}-${file.name}`;
-      const imageUrl = await uploadAzure(file, path);
-      // await addAcaoImageById(id, imageUrl, textUpdates.descricao || "");
-    }
-  }
-
-  return { message: "Ação atualizada com sucesso!" };
+  await updateAcaoById(id, textUpdates)
+  return { message: "Ação atualizada com sucesso!" }
 }
 
 

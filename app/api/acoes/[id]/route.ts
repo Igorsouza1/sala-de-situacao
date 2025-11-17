@@ -1,5 +1,5 @@
 import { apiError, apiSuccess } from "@/lib/api/responses";
-import { getAcaoDossie, updateAcaoAndUploadImageById } from "@/lib/service/acoesService";
+import { getAcaoDossie, updateAcaoFieldsById } from "@/lib/service/acoesService";
 import {  revalidateTag } from "next/cache";
 
 
@@ -11,7 +11,7 @@ export async function PUT(request: Request, context: any) {
     const numId = Number(id);
 
     const formData = await request.formData();
-    const result = await updateAcaoAndUploadImageById(numId, formData);
+    const result = await updateAcaoFieldsById(numId, formData);
     revalidateTag("acoes"); 
     return apiSuccess(result);
   } catch (error) {
