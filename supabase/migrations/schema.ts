@@ -1,12 +1,11 @@
-import { pgSchema, serial, geometry, bigint, doublePrecision, integer, varchar, numeric, text, timestamp, date, foreignKey, unique, time, uuid } from "drizzle-orm/pg-core"
-
+import { pgTable, pgSchema, serial, geometry, bigint, doublePrecision, integer, varchar, numeric, text, timestamp, date, foreignKey, unique, time, uuid, index } from "drizzle-orm/pg-core"
+import { sql, InferInsertModel} from "drizzle-orm"
 
 export const rioDaPrata = pgSchema("rio_da_prata");
+export const dossieStatusEnumInRioDaPrata = rioDaPrata.enum("dossie_status_enum", ['Aberto', 'Em Monitoramento', 'Resolvido', 'Inválido'])
 
 export const baciaRioDaPrataIdSeqInRioDaPrata = rioDaPrata.sequence("Bacia_RioDaPrata_id_seq", {  startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
 export const rioDaPrataLeitoIdSeqInRioDaPrata = rioDaPrata.sequence("Rio da Prata - Leito_id_seq", {  startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
-
-
 
 export const baciaRioDaPrataInRioDaPrata = rioDaPrata.table("Bacia_Rio_Da_Prata", {
 	id: serial().primaryKey().notNull(),
@@ -380,6 +379,29 @@ export const desmatamentoInRioDaPrata = rioDaPrata.table("desmatamento", {
 	geom: geometry({ type: "geometry", srid: 4326 }),
 });
 
+export const estradasInRioDaPrata = rioDaPrata.table("estradas", {
+	id: serial().primaryKey().notNull(),
+	nome: varchar({ length: 255 }),
+	tipo: varchar({ length: 100 }),
+	codigo: varchar({ length: 50 }),
+	geom: geometry({ type: "multilinestringz", srid: 4326 }),
+});
+
+export const fotosAcoesInRioDaPrata = rioDaPrata.table("fotos_acoes", {
+	id: serial().primaryKey().notNull(),
+	acaoId: integer("acao_id").notNull(),
+	url: varchar({ length: 1000 }).notNull(),
+	descricao: varchar({ length: 255 }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	atualizacao: date(),
+}, (table) => [
+	foreignKey({
+			columns: [table.acaoId],
+			foreignColumns: [acoesInRioDaPrata.id],
+			name: "fotos_acoes_acao_id_acoes_id_fk"
+		}),
+]);
+
 export const propriedadesInRioDaPrata = rioDaPrata.table("propriedades", {
 	id: serial().primaryKey().notNull(),
 	codTema: varchar("cod_tema", { length: 50 }),
@@ -392,16 +414,32 @@ export const propriedadesInRioDaPrata = rioDaPrata.table("propriedades", {
 	desCondic: text("des_condic"),
 	municipio: varchar({ length: 100 }),
 	geom: geometry({ type: "multipolygon", srid: 4326 }),
+	nome: text(),
 });
 
-
-export const estradasInRioDaPrata = rioDaPrata.table("estradas", {
+export const acoesInRioDaPrata = rioDaPrata.table("acoes", {
 	id: serial().primaryKey().notNull(),
-	nome: varchar({ length: 255 }),
-	tipo: varchar({ length: 100 }),
-	codigo: varchar({ length: 50 }),
-	geom: geometry({ type: "multilinestringz", srid: 4326 }),
-});
+	name: varchar({ length: 255 }),
+	latitude: numeric({ precision: 10, scale:  6 }),
+	longitude: numeric({ precision: 10, scale:  6 }),
+	elevation: numeric({ precision: 8, scale:  2 }),
+	time: timestamp({ mode: 'string' }),
+	descricao: varchar({ length: 255 }),
+	mes: varchar({ length: 50 }),
+	atuacao: varchar({ length: 100 }),
+	acao: varchar({ length: 100 }),
+	geom: geometry({ type: "pointz", srid: 4326 }),
+	status: text(),
+	regiaoId: integer("regiao_id"),
+	subTipo: text("sub_tipo"),
+	icone: text(),
+}, (table) => [
+	foreignKey({
+			columns: [table.regiaoId],
+			foreignColumns: [regioesInRioDaPrata.id],
+			name: "acoes_regiao_id_fkey"
+		}).onUpdate("cascade"),
+]);
 
 export const waypointsInRioDaPrata = rioDaPrata.table("waypoints", {
 	id: serial().primaryKey().notNull(),
@@ -451,32 +489,44 @@ export const rawFirmsInRioDaPrata = rioDaPrata.table("raw_firms", {
 	unique("raw_firms_id_key").on(table.id),
 ]);
 
-export const acoesInRioDaPrata = rioDaPrata.table("acoes", {
+export const regioesInRioDaPrata = rioDaPrata.table("regioes", {
 	id: serial().primaryKey().notNull(),
-	name: varchar({ length: 255 }),
-	latitude: numeric({ precision: 10, scale:  6 }),
-	longitude: numeric({ precision: 10, scale:  6 }),
-	elevation: numeric({ precision: 8, scale:  2 }),
-	time: timestamp({ mode: 'string' }),
-	descricao: varchar({ length: 255 }),
-	mes: varchar({ length: 50 }),
-	atuacao: varchar({ length: 100 }),
-	acao: varchar({ length: 100 }),
-	geom: geometry({ type: "point", srid: 4326 }),
-});
-
-export const fotosAcoesInRioDaPrata = rioDaPrata.table("fotos_acoes", {
-	id: serial().primaryKey().notNull(),
-	acaoId: integer("acao_id").notNull(),
-	url: varchar({ length: 1000 }).notNull(),
-	descricao: varchar({ length: 255 }),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	nome: varchar({ length: 255 }).notNull(),
+	descricao: text(),
+	geom: geometry({ type: "multipolygon", srid: 4326 }),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	cor: text(),
 }, (table) => [
-	foreignKey({
-			columns: [table.acaoId],
-			foreignColumns: [acoesInRioDaPrata.id],
-			name: "fotos_acoes_acao_id_acoes_id_fk"
-		}),
+	index("idx_regioes_geom").using("gist", table.geom.asc().nullsLast().op("gist_geometry_ops_2d")),
 ]);
 
 
+
+type BaseAcoesData = InferInsertModel<typeof acoesInRioDaPrata>;
+
+export type NewAcoesData = Omit<BaseAcoesData, 'geom'> & {
+  geom: string;
+};
+
+
+type BaseWaypointData = InferInsertModel<typeof waypointsInRioDaPrata>;
+
+export type NewWaypointData = Omit<BaseWaypointData, 'geom'> & {
+	geom: string;
+  };
+
+
+  type BaseEstradaData = InferInsertModel<typeof estradasInRioDaPrata>;
+
+export type NewEstradaData = Omit<BaseEstradaData, 'geom'> & {
+  geom: string;
+};
+
+
+
+type BaseTrilhaData = InferInsertModel<typeof trilhasInRioDaPrata>;
+
+export type NewTrilhaData = Omit<BaseTrilhaData, 'geom'> & {
+	geom: string;
+  };

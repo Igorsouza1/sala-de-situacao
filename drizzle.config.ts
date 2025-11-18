@@ -8,6 +8,7 @@ export default defineConfig({
   dialect: 'postgresql',
   dbCredentials: {
     url: process.env.DATABASE_URL_PROD!,
+    
   },
   schemaFilter: ['rio_da_prata'],
 });
