@@ -16,8 +16,6 @@ import { FeatureDetails } from "./feature-details"
 import { Modal } from "./Modal"
 import { EditAcaoModal } from "./EditAcaoModal"
 import { useUserRole } from "@/hooks/useUserRole"
-import { acoesInRioDaPrata } from "@/db/schema"
-import { InferSelectModel } from "drizzle-orm"
 
 const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false })
@@ -29,7 +27,6 @@ const Tooltip = dynamic(() => import("react-leaflet").then((mod) => mod.Tooltip)
 interface MapProps {
   center?: LatLngExpression
   zoom?: number
-  acoesProps: Record<string, GeoJSONFeatureCollection>
 }
 
 const layerColors = {
@@ -68,6 +65,39 @@ type GeoJSONFeatureCollection = {
   features: GeoJSONFeature[]
 }
 
+const STATIC_LAYER_STYLES = {
+  bacia: {
+    color: layerColors.bacia,
+    fillColor: layerColors.bacia,
+    weight: 2,
+    opacity: 0.65,
+    fillOpacity: 0.2,
+  },
+  banhado: {
+    color: layerColors.banhado,
+    fillColor: layerColors.banhado,
+    weight: 2,
+    opacity: 0.65,
+    fillOpacity: 0.2,
+  },
+  propriedades: {
+    color: "black",
+    fillColor: layerColors.propriedades,
+    weight: 2,
+    opacity: 0.65,
+    fillOpacity: 0.2,
+  },
+  leito: { color: layerColors.leito, weight: 4, opacity: 0.65 },
+  estradas: { color: layerColors.estradas, weight: 4, opacity: 0.65 },
+  desmatamento: { // Usado no bloco filtrado
+    color: layerColors.desmatamento,
+    fillColor: layerColors.desmatamento,
+    weight: 2,
+    opacity: 0.65,
+    fillOpacity: 0.1,
+  },
+}
+
 const createWaypointIcon = (index: number) =>
   L.divIcon({
     html: `
@@ -93,7 +123,7 @@ const createWaypointIcon = (index: number) =>
     iconAnchor: [14, 14],
   })
 
-export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , acoesProps}: MapProps) {
+export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: MapProps) {
   const [isMounted, setIsMounted] = useState(false)
   const [visibleLayers, setVisibleLayers] = useState<string[]>([
     "estradas",
@@ -105,7 +135,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
     "banhado",
   ])
   const [visibleActions, setVisibleActions] = useState<string[]>([])
-  const { mapData, isLoading, error, modalData, openModal, closeModal, dateFilter, setDateFilter, expedicoesData, refreshAcoesData } =
+  const { mapData, isLoading, error, modalData, openModal, closeModal, dateFilter, setDateFilter, expedicoesData, refreshAcoesData, acoesData } =
     useMapContext()
 
   useEffect(() => {
@@ -165,45 +195,11 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
     () =>
       mapData
         ? [
-            {
-              id: "bacia",
-              data: mapData.bacia,
-              style: {
-                color: layerColors.bacia,
-                fillColor: layerColors.bacia,
-                weight: 2,
-                opacity: 0.65,
-                fillOpacity: 0.2,
-              },
-            },
-            {
-              id: "banhado",
-              data: mapData.banhado,
-              style: {
-                color: layerColors.banhado,
-                fillColor: layerColors.banhado,
-                weight: 2,
-                opacity: 0.65,
-                fillOpacity: 0.2,
-              },
-            },
-            {
-              id: "propriedades",
-              data: mapData.propriedades,
-              style: {
-                color: "black",
-                fillColor: layerColors.propriedades,
-                weight: 2,
-                opacity: 0.65,
-                fillOpacity: 0.2,
-              },
-            },
-            { id: "leito", data: mapData.leito, style: { color: layerColors.leito, weight: 4, opacity: 0.65 } },
-            {
-              id: "estradas",
-              data: mapData.estradas,
-              style: { color: layerColors.estradas, weight: 4, opacity: 0.65 },
-            },
+            { id: "bacia", data: mapData.bacia, style: STATIC_LAYER_STYLES.bacia },
+            { id: "banhado", data: mapData.banhado, style: STATIC_LAYER_STYLES.banhado },
+            { id: "propriedades", data: mapData.propriedades, style: STATIC_LAYER_STYLES.propriedades },
+            { id: "leito", data: mapData.leito, style: STATIC_LAYER_STYLES.leito },
+            { id: "estradas", data: mapData.estradas, style: STATIC_LAYER_STYLES.estradas },
           ]
         : [],
     [mapData],
@@ -218,12 +214,12 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
 
   const filteredAcoes = useMemo(() => {
     const newResult: Record<string, GeoJSONFeatureCollection> = {};
-    if (!acoesProps) {
+    if (!acoesData) {
       return newResult;
     }
   
     // Usamos Object.entries para pegar a chave (acaoType) e o valor (featureCollection)
-    Object.entries(acoesProps).forEach(([acaoType, featureCollection]) => {
+    Object.entries(acoesData).forEach(([acaoType, featureCollection]) => {
       
   
       // 2. Filtra os features DENTRO da coleção apenas pela data
@@ -245,7 +241,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
     });
   
     return newResult;
-  }, [acoesProps, dateFilter.startDate, dateFilter.endDate]); // A dependência de isWithinDateRange não é necessária
+  }, [acoesData, dateFilter.startDate, dateFilter.endDate]); // A dependência de isWithinDateRange não é necessária
 
   const layerOptions = [
     { id: "bacia", label: "Bacia", count: mapData?.bacia.features.length || 0, color: layerColors.bacia },
@@ -322,7 +318,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
               <GeoJSON
                 key={layer.id}
                 data={layer.data}
-                style={() => layer.style}
+                style={layer.style}
                 onEachFeature={(feature, l) => {
                   l.on({
                     click: () => handleFeatureClick(feature.properties, layer.id),
@@ -335,13 +331,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
           <GeoJSON
             key={`desmatamento-${dateFilter.startDate?.toISOString()}-${dateFilter.endDate?.toISOString()}`}
             data={filteredDesmatamentoData}
-            style={() => ({
-              color: layerColors.desmatamento,
-              fillColor: layerColors.desmatamento,
-              weight: 2,
-              opacity: 0.65,
-              fillOpacity: 0.1,
-            })}
+            style={STATIC_LAYER_STYLES.desmatamento}
             onEachFeature={(feature, layer) => {
               layer.on({
                 click: () => handleFeatureClick(feature.properties, "desmatamento"),
