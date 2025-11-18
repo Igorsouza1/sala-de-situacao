@@ -27,7 +27,6 @@ const Tooltip = dynamic(() => import("react-leaflet").then((mod) => mod.Tooltip)
 interface MapProps {
   center?: LatLngExpression
   zoom?: number
-  acoesProps: Record<string, GeoJSONFeatureCollection>
 }
 
 const layerColors = {
@@ -91,7 +90,7 @@ const createWaypointIcon = (index: number) =>
     iconAnchor: [14, 14],
   })
 
-export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , acoesProps}: MapProps) {
+export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: MapProps) {
   const [isMounted, setIsMounted] = useState(false)
   const [visibleLayers, setVisibleLayers] = useState<string[]>([
     "estradas",
@@ -103,7 +102,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
     "banhado",
   ])
   const [visibleActions, setVisibleActions] = useState<string[]>([])
-  const { mapData, isLoading, error, modalData, openModal, closeModal, dateFilter, setDateFilter, expedicoesData, refreshAcoesData } =
+  const { mapData, isLoading, error, modalData, openModal, closeModal, dateFilter, setDateFilter, expedicoesData, refreshAcoesData, acoesData } =
     useMapContext()
 
   useEffect(() => {
@@ -216,12 +215,12 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
 
   const filteredAcoes = useMemo(() => {
     const newResult: Record<string, GeoJSONFeatureCollection> = {};
-    if (!acoesProps) {
+    if (!acoesData) {
       return newResult;
     }
   
     // Usamos Object.entries para pegar a chave (acaoType) e o valor (featureCollection)
-    Object.entries(acoesProps).forEach(([acaoType, featureCollection]) => {
+    Object.entries(acoesData).forEach(([acaoType, featureCollection]) => {
       
   
       // 2. Filtra os features DENTRO da coleção apenas pela data
@@ -243,7 +242,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
     });
   
     return newResult;
-  }, [acoesProps, dateFilter.startDate, dateFilter.endDate]); // A dependência de isWithinDateRange não é necessária
+  }, [acoesData, dateFilter.startDate, dateFilter.endDate]); // A dependência de isWithinDateRange não é necessária
 
   const layerOptions = [
     { id: "bacia", label: "Bacia", count: mapData?.bacia.features.length || 0, color: layerColors.bacia },
