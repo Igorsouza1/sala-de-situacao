@@ -65,6 +65,39 @@ type GeoJSONFeatureCollection = {
   features: GeoJSONFeature[]
 }
 
+const STATIC_LAYER_STYLES = {
+  bacia: {
+    color: layerColors.bacia,
+    fillColor: layerColors.bacia,
+    weight: 2,
+    opacity: 0.65,
+    fillOpacity: 0.2,
+  },
+  banhado: {
+    color: layerColors.banhado,
+    fillColor: layerColors.banhado,
+    weight: 2,
+    opacity: 0.65,
+    fillOpacity: 0.2,
+  },
+  propriedades: {
+    color: "black",
+    fillColor: layerColors.propriedades,
+    weight: 2,
+    opacity: 0.65,
+    fillOpacity: 0.2,
+  },
+  leito: { color: layerColors.leito, weight: 4, opacity: 0.65 },
+  estradas: { color: layerColors.estradas, weight: 4, opacity: 0.65 },
+  desmatamento: { // Usado no bloco filtrado
+    color: layerColors.desmatamento,
+    fillColor: layerColors.desmatamento,
+    weight: 2,
+    opacity: 0.65,
+    fillOpacity: 0.1,
+  },
+}
+
 const createWaypointIcon = (index: number) =>
   L.divIcon({
     html: `
@@ -162,45 +195,11 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     () =>
       mapData
         ? [
-            {
-              id: "bacia",
-              data: mapData.bacia,
-              style: {
-                color: layerColors.bacia,
-                fillColor: layerColors.bacia,
-                weight: 2,
-                opacity: 0.65,
-                fillOpacity: 0.2,
-              },
-            },
-            {
-              id: "banhado",
-              data: mapData.banhado,
-              style: {
-                color: layerColors.banhado,
-                fillColor: layerColors.banhado,
-                weight: 2,
-                opacity: 0.65,
-                fillOpacity: 0.2,
-              },
-            },
-            {
-              id: "propriedades",
-              data: mapData.propriedades,
-              style: {
-                color: "black",
-                fillColor: layerColors.propriedades,
-                weight: 2,
-                opacity: 0.65,
-                fillOpacity: 0.2,
-              },
-            },
-            { id: "leito", data: mapData.leito, style: { color: layerColors.leito, weight: 4, opacity: 0.65 } },
-            {
-              id: "estradas",
-              data: mapData.estradas,
-              style: { color: layerColors.estradas, weight: 4, opacity: 0.65 },
-            },
+            { id: "bacia", data: mapData.bacia, style: STATIC_LAYER_STYLES.bacia },
+            { id: "banhado", data: mapData.banhado, style: STATIC_LAYER_STYLES.banhado },
+            { id: "propriedades", data: mapData.propriedades, style: STATIC_LAYER_STYLES.propriedades },
+            { id: "leito", data: mapData.leito, style: STATIC_LAYER_STYLES.leito },
+            { id: "estradas", data: mapData.estradas, style: STATIC_LAYER_STYLES.estradas },
           ]
         : [],
     [mapData],
@@ -319,7 +318,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
               <GeoJSON
                 key={layer.id}
                 data={layer.data}
-                style={() => layer.style}
+                style={layer.style}
                 onEachFeature={(feature, l) => {
                   l.on({
                     click: () => handleFeatureClick(feature.properties, layer.id),
@@ -332,13 +331,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
           <GeoJSON
             key={`desmatamento-${dateFilter.startDate?.toISOString()}-${dateFilter.endDate?.toISOString()}`}
             data={filteredDesmatamentoData}
-            style={() => ({
-              color: layerColors.desmatamento,
-              fillColor: layerColors.desmatamento,
-              weight: 2,
-              opacity: 0.65,
-              fillOpacity: 0.1,
-            })}
+            style={STATIC_LAYER_STYLES.desmatamento}
             onEachFeature={(feature, layer) => {
               layer.on({
                 click: () => handleFeatureClick(feature.properties, "desmatamento"),

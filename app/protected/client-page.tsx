@@ -16,7 +16,7 @@ type GeoJSONFeatureCollection = {
   }
 
 
-export default function ProtectedPage({ acoesProps }: { acoesProps: Record<string, GeoJSONFeatureCollection> }) {
+export default function ProtectedPage() {
   // const supabase = await createClient();
 
   // const {
@@ -29,7 +29,7 @@ export default function ProtectedPage({ acoesProps }: { acoesProps: Record<strin
 
   return (
     <div className="flex-1 w-full flex flex-col ">
-     <DynamicMap acoesProps={acoesProps} />
+     <DynamicMap  />
     </div>
   );
 }
