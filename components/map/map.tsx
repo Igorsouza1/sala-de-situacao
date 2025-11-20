@@ -16,8 +16,9 @@ import { FeatureDetails } from "./feature-details"
 import { Modal } from "./Modal"
 import { EditAcaoModal } from "./EditAcaoModal"
 import { useUserRole } from "@/hooks/useUserRole"
-// ✅ Importação do Hook
 import { useMapFilters } from "@/hooks/useMapFilters"
+import { ACTION_CATEGORIES, ActionCategory, STATUS_STYLES, ActionStatus } from "./config/actions-config"
+import { renderToStaticMarkup } from "react-dom/server"
 
 // Imports Dinâmicos
 const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
@@ -44,21 +45,7 @@ const layerColors = {
   expedicoes: "orange",
 }
 
-const actionColors: Record<string, string> = {
-  "Fazenda": "#2ecc71",
-  "Passivo Ambiental": "#f1c40f",
-  Pesca: "#3498db",
-  "Pesca - Crime Ambiental": "#9b59b6",
-  "Ponto de Referência": "#e67e22",
-  "Crime Ambiental": "#e74c3c",
-  Nascente: "#1abc9c",
-  Plantio: "#16a085",
-  "Régua Fluvial": "#95a5a6",
-  expedicoes: "orange",
-  "Não informado": "#7f8c8d",
-}
-
-// --- ✅ ESTILOS ESTÁTICOS (Mantido para evitar o erro de appendChild) ---
+// --- ESTILOS ESTÁTICOS ---
 const STATIC_LAYER_STYLES = {
   bacia: {
     color: layerColors.bacia,
@@ -118,6 +105,59 @@ const createWaypointIcon = (index: number) =>
     iconAnchor: [14, 14],
   })
 
+// Helper to create Action Icon
+const createActionIcon = (category: ActionCategory, status: ActionStatus) => {
+  const config = ACTION_CATEGORIES[category] || ACTION_CATEGORIES['Monitoramento'];
+  const statusStyle = STATUS_STYLES[status] || STATUS_STYLES['Ativo'];
+  const IconComponent = config.icon;
+  
+  const iconHtml = renderToStaticMarkup(
+    <IconComponent 
+      size={16} 
+      color="white" 
+      strokeWidth={2.5}
+    />
+  );
+
+  // Extract border color from status class or map it manually if needed
+  // For simplicity, we use the category color for background and status style for border/effect
+  // Since we can't easily parse tailwind classes in JS for L.divIcon styles without a parser,
+  // we will use inline styles that approximate the status styles.
+  
+  let borderColor = 'white';
+  let borderStyle = 'solid';
+  let animation = '';
+
+  if (status === 'Monitorando') borderColor = '#eab308'; // yellow-500
+  if (status === 'Resolvido') borderColor = '#22c55e'; // green-500
+  if (status === 'Crítico') {
+    borderColor = '#dc2626'; // red-600
+    // animation = '...'; // CSS animation would need a global class
+  }
+
+  return L.divIcon({
+    html: `
+      <div style="
+        background-color: ${config.color};
+        border: 2px ${borderStyle} ${borderColor};
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        ${status === 'Resolvido' ? 'opacity: 0.7; filter: grayscale(0.5);' : ''}
+      ">
+        ${iconHtml}
+      </div>
+    `,
+    className: `action-marker-${category} ${status === 'Crítico' ? 'animate-pulse' : ''}`,
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
+};
+
 export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: MapProps) {
   const [isMounted, setIsMounted] = useState(false)
   const [visibleLayers, setVisibleLayers] = useState<string[]>([
@@ -129,29 +169,50 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     "firms",
     "banhado",
   ])
-  const [visibleActions, setVisibleActions] = useState<string[]>([])
+  
+  // New Visibility State: Array of "Category:Type" strings
+  const [visibleActionTypes, setVisibleActionTypes] = useState<string[]>([])
   
   const { mapData, isLoading, error, modalData, openModal, closeModal, dateFilter, setDateFilter, expedicoesData, refreshAcoesData, acoesData } =
     useMapContext()
 
-  // ✅ HOOK: Recupera dados filtrados e memoizados (Limpeza de código)
+  // ✅ HOOK: Recupera dados filtrados e agrupados
   const {
     filteredDesmatamentoData,
     filteredFirms,
-    filteredAcoes,
-    actionOptions
+    filteredAcoesFeatures,
+    groupedActions
   } = useMapFilters({ mapData, acoesData, expedicoesData, dateFilter });
 
   useEffect(() => {
     setIsMounted(true)
   }, [])
 
+  
+
   const handleLayerToggle = (id: string, isChecked: boolean) => {
     setVisibleLayers((prev) => (isChecked ? [...prev, id] : prev.filter((layerId) => layerId !== id)))
   }
 
-  const handleActionToggle = (id: string, isChecked: boolean) => {
-    setVisibleActions((prev) => (isChecked ? [...prev, id] : prev.filter((layerId) => layerId !== id)))
+  // Toggle a specific Type within a Category
+  const handleActionTypeToggle = (categoryId: string, typeId: string, isChecked: boolean) => {
+    const uniqueId = `${categoryId}:${typeId}`
+    setVisibleActionTypes(prev => 
+      isChecked ? [...prev, uniqueId] : prev.filter(id => id !== uniqueId)
+    )
+  }
+
+  // Toggle all types within a Category
+  const handleCategoryToggle = (categoryId: string, isChecked: boolean) => {
+    const category = groupedActions.find(c => c.id === categoryId)
+    if (!category) return
+
+    const allTypeIds = category.types.map(t => `${categoryId}:${t.id}`)
+    
+    setVisibleActionTypes(prev => {
+      const withoutCategory = prev.filter(id => !id.startsWith(`${categoryId}:`))
+      return isChecked ? [...withoutCategory, ...allTypeIds] : withoutCategory
+    })
   }
 
   // Modal e Permissões
@@ -172,7 +233,6 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     [openModal],
   )
 
-  // ✅ layerConfigs usando estilos estáticos
   const layerConfigs = useMemo(
     () =>
       mapData
@@ -210,7 +270,6 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
   }
 
   return (
-    // ✅ CSS ORIGINAL MANTIDO: Isso garante que o layout não quebre o header/sidebar
     <div className="w-full h-screen relative z-10">
       <MapContainer 
         center={center} 
@@ -234,7 +293,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
               <GeoJSON
                 key={layer.id}
                 data={layer.data}
-                style={layer.style} // ✅ Estilo Estável
+                style={layer.style}
                 onEachFeature={(feature, l) => {
                   l.on({
                     click: () => handleFeatureClick(feature.properties, layer.id),
@@ -247,10 +306,9 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
         {/* Desmatamento */}
         {filteredDesmatamentoData && visibleLayers.includes("desmatamento") && (
           <GeoJSON
-            // A chave continua usando data para forçar refresh apenas quando filtro muda
             key={`desmatamento-${dateFilter.startDate?.toISOString()}-${dateFilter.endDate?.toISOString()}`}
             data={filteredDesmatamentoData}
-            style={STATIC_LAYER_STYLES.desmatamento} // ✅ Estilo Estável
+            style={STATIC_LAYER_STYLES.desmatamento}
             onEachFeature={(feature, layer) => {
               layer.on({
                 click: () => handleFeatureClick(feature.properties, "desmatamento"),
@@ -262,7 +320,6 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
         {/* Focos de Incêndio */}
         {visibleLayers.includes("firms") &&
           filteredFirms.map((firm, index) => {
-            // ✅ BLINDAGEM DE DADOS: Uso de Optional Chaining (?.)
             const coords = firm.geometry?.coordinates
             if (
               Array.isArray(coords) &&
@@ -295,46 +352,41 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
             return null
           })}
 
-        {/* Ações */}
-        {filteredAcoes &&
-          Object.entries(filteredAcoes).map(([acao, fc]) =>
-            visibleActions.includes(acao) &&
-            fc.features.map((feature, index) => {
-              // ✅ BLINDAGEM DE DADOS: Uso de Optional Chaining (?.)
-              const coords = feature.geometry?.coordinates as number[] | undefined
-              if (Array.isArray(coords) && coords.length >= 2) {
-                return (
-                  <CircleMarker
-                    key={`acao-${acao}-${index}`}
-                    center={[coords[1], coords[0]]}
-                    radius={6}
-                    pathOptions={{
-                      color: actionColors[acao],
-                      fillColor: actionColors[acao],
-                      fillOpacity: 0.9,
-                    }}
-                    eventHandlers={{
-                      click: () => handleFeatureClick({ ...feature.properties, id: feature.properties.id }, "acoes"),
-                    }}
-                  >
-                    <Tooltip>{feature.properties.name || feature.properties.nome}</Tooltip>
-                  </CircleMarker>
-                )
-              }
-              return null
-            }),
-          )}
+        {/* Ações (Refatorado) */}
+        {filteredAcoesFeatures.map((feature, index) => {
+          const cat = (feature.properties.categoria as ActionCategory) || 'Monitoramento';
+          const type = feature.properties.tipo || 'Outros';
+          const uniqueId = `${cat}:${type}`;
+          const status = (feature.properties.status as ActionStatus) || 'Ativo';
 
-        {/* Expedições - Trilhas (Mantido filtragem manual pois estrutura pode variar) */}
-        {expedicoesData && visibleActions.includes("expedicoes") && (
+          if (!visibleActionTypes.includes(uniqueId)) return null;
+
+          const coords = feature.geometry?.coordinates as number[] | undefined;
+          if (Array.isArray(coords) && coords.length >= 2) {
+            return (
+              <Marker
+                key={`acao-${feature.properties.id || index}`}
+                position={[coords[1], coords[0]]}
+                icon={createActionIcon(cat, status)}
+                eventHandlers={{
+                  click: () => handleFeatureClick({ ...feature.properties, id: feature.properties.id }, "acoes"),
+                }}
+              >
+                <Tooltip>{feature.properties.name || feature.properties.nome}</Tooltip>
+              </Marker>
+            );
+          }
+          return null;
+        })}
+
+        {/* Expedições - Trilhas */}
+        {expedicoesData && visibleLayers.includes("expedicoes") && (
           <GeoJSON
             key={`expedicoes-${dateFilter.startDate?.toISOString() ?? "null"}-${dateFilter.endDate?.toISOString() ?? "null"}`}
             data={{
               type: "FeatureCollection",
               features: expedicoesData.trilhas.features.filter((f) => {
-                // Importante importar isDatePropWithinRange no topo ou usar lógica local se preferir não importar o helper
                 const d = f.properties.data ?? f.properties.recordedat ?? f.properties.created_at
-                // Aqui estou assumindo que o helper foi importado, senão recrie a lógica simples:
                 const itemDate = new Date(d)
                 if (dateFilter.startDate && itemDate < dateFilter.startDate) return false
                 if (dateFilter.endDate) {
@@ -345,7 +397,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
                 return true
               }),
             } as any}
-            style={STATIC_LAYER_STYLES.expedicoes} // ✅ Estilo Estável
+            style={STATIC_LAYER_STYLES.expedicoes}
             onEachFeature={(feature, layer) => {
               layer.on({ click: () => handleFeatureClick(feature.properties, "expedicoes") })
             }}
@@ -354,7 +406,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
 
         {/* Expedições - Waypoints */}
         {expedicoesData &&
-          visibleActions.includes("expedicoes") &&
+          visibleLayers.includes("expedicoes") &&
           [...expedicoesData.waypoints.features]
             .filter((wp) => {
                 const d = wp.properties.data
@@ -369,7 +421,6 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
             })
             .sort((a, b) => new Date(a.properties.recordedat).getTime() - new Date(b.properties.recordedat).getTime())
             .map((wp, index) => {
-              // ✅ BLINDAGEM DE DADOS: Uso de Optional Chaining (?.)
               const coords = wp.geometry?.coordinates as number[] | undefined
               if (Array.isArray(coords) && coords.length >= 2) {
                 return (
@@ -395,7 +446,13 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
 
       <div className="absolute bottom-4 left-4 z-[1000] gap-3 flex flex-col">
         <MapLayersCard title="Camadas" options={layerOptions} onLayerToggle={handleLayerToggle} />
-        <ActionsLayerCard title="Ações" options={actionOptions} onLayerToggle={handleActionToggle} />
+        <ActionsLayerCard 
+          title="Ações" 
+          categories={groupedActions} 
+          visibleActionTypes={visibleActionTypes}
+          onToggleType={handleActionTypeToggle}
+          onToggleCategory={handleCategoryToggle}
+        />
       </div>
 
       <Modal
