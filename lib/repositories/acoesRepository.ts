@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { acoesInRioDaPrata, fotosAcoesInRioDaPrata, NewAcoesData } from "@/db/schema"
-import { eq, desc, sql} from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 
 
 export async function findAcaoById(id: number) {
@@ -27,18 +27,18 @@ export async function findAllAcoesData() {
     })
     .from(acoesInRioDaPrata)
     .execute()
-  
+
   return result;
 }
 
-export async function findAllAcoesDataWithGeometry(){
+export async function findAllAcoesDataWithGeometry() {
 
   const result = await db.execute(`
-    SELECT id, acao, name, descricao, mes, time, status, ST_AsGeoJSON(geom) as geojson
+    SELECT id, acao, name, descricao, mes, time, status, categoria, tipo, ST_AsGeoJSON(geom) as geojson
     FROM "rio_da_prata"."acoes"
   `)
 
-    return result.rows
+  return result.rows
 }
 
 
@@ -56,12 +56,12 @@ export async function findAllAcoesUpdates(id: number) {
     .where(eq(fotosAcoesInRioDaPrata.acaoId, id))
     .orderBy(desc(fotosAcoesInRioDaPrata.createdAt)) // Mais recente primeiro
     .execute();
-    
+
   return result;
 }
 
 
-export async function deleteAcaoUpdateById(id: number){
+export async function deleteAcaoUpdateById(id: number) {
   const result = await db
     .delete(fotosAcoesInRioDaPrata)
     .where(eq(fotosAcoesInRioDaPrata.id, id))
@@ -102,22 +102,22 @@ export async function addAcaoImageById(acaoId: number, url: string, descricao: s
 }
 
 
-export async function insertAcaoData(data: NewAcoesData){
+export async function insertAcaoData(data: NewAcoesData) {
   const [newRecord] = await db
-  .insert(acoesInRioDaPrata)
-  .values({
-    name: data.name,
-    latitude: data.latitude,
-    longitude: data.longitude,
-    elevation: data.elevation,
-    time: data.time,
-    descricao: data.descricao,
-    mes: data.mes,
-    atuacao: data.atuacao,
-    acao: data.acao,
-    geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4326)`,
-  })
-  .returning({ id: acoesInRioDaPrata.id });
+    .insert(acoesInRioDaPrata)
+    .values({
+      name: data.name,
+      latitude: data.latitude,
+      longitude: data.longitude,
+      elevation: data.elevation,
+      time: data.time,
+      descricao: data.descricao,
+      mes: data.mes,
+      atuacao: data.atuacao,
+      acao: data.acao,
+      geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4326)`,
+    })
+    .returning({ id: acoesInRioDaPrata.id });
   return newRecord
 }
 

@@ -1,25 +1,9 @@
 // hooks/useMapFilters.ts
 
 import { useMemo } from "react";
-import { isDatePropWithinRange } from "@/lib/helpers/map-filters"; 
+import { isDatePropWithinRange } from "@/lib/helpers/map-filters";
 import { useMapContext } from "@/context/GeoDataContext";
-
-// --- Constantes Extraídas de components/map/map.tsx ---
-// (Em um futuro PR, moveremos estas constantes para um arquivo de config)
-const actionColors: Record<string, string> = {
-    "Fazenda": "#2ecc71",
-    "Passivo Ambiental": "#f1c40f",
-    Pesca: "#3498db",
-    "Pesca - Crime Ambiental": "#9b59b6",
-    "Ponto de Referência": "#e67e22",
-    "Crime Ambiental": "#e74c3c",
-    Nascente: "#1abc9c",
-    Plantio: "#16a085",
-    "Régua Fluvial": "#95a5a6",
-    expedicoes: "orange",
-    "Não informado": "#7f8c8d",
-}
-type GeoJSONFeatureCollection = { type: "FeatureCollection", features: any[] };
+import { ACTION_CATEGORIES, ActionCategory, GroupedActionCategory, GroupedActionType } from "@/components/map/config/actions-config";
 
 // --- Tipagens do Hook ---
 interface MapFiltersInput {
@@ -29,16 +13,9 @@ interface MapFiltersInput {
     dateFilter: ReturnType<typeof useMapContext>['dateFilter'];
 }
 
-interface ActionOption {
-    id: string
-    label: string
-    count: number
-    color: string
-}
-
 export function useMapFilters({ mapData, acoesData, expedicoesData, dateFilter }: MapFiltersInput) {
 
-    // 1. FILTERED DESMATAMENTO DATA (Lógica original de components/map/map.tsx)
+    // 1. FILTERED DESMATAMENTO DATA
     const filteredDesmatamentoData = useMemo(() => {
         if (mapData && mapData.desmatamento) {
             return {
@@ -46,12 +23,12 @@ export function useMapFilters({ mapData, acoesData, expedicoesData, dateFilter }
                 features: mapData.desmatamento.features.filter((feature: any) =>
                     isDatePropWithinRange(feature.properties.detectat, dateFilter.startDate, dateFilter.endDate),
                 ),
-            } as GeoJSONFeatureCollection
+            } as any
         }
         return null
     }, [mapData, dateFilter.startDate, dateFilter.endDate])
 
-    // 2. FILTERED FIRMS DATA (Lógica original de components/map/map.tsx)
+    // 2. FILTERED FIRMS DATA
     const filteredFirms = useMemo(() => {
         if (!mapData) return []
         return mapData.firms.features.filter((firm: any) =>
@@ -59,62 +36,64 @@ export function useMapFilters({ mapData, acoesData, expedicoesData, dateFilter }
         )
     }, [mapData, dateFilter.startDate, dateFilter.endDate])
 
-    // 3. FILTERED AÇÕES (Lógica original de components/map/map.tsx)
-    const filteredAcoes = useMemo(() => {
-        const newResult: Record<string, GeoJSONFeatureCollection> = {};
-        if (!acoesData) {
-            return newResult;
-        }
+    // 3. FILTERED AÇÕES (Flattened & Grouped)
+    const { filteredAcoesFeatures, groupedActions } = useMemo(() => {
+        const features: any[] = [];
+        const groups: Record<string, {
+            count: number,
+            types: Record<string, number>
+        }> = {};
 
-        Object.entries(acoesData).forEach(([acaoType, featureCollection]) => {
-            const filteredFeatures = featureCollection.features.filter((feature: any) => {
-                if (!feature.properties || !feature.properties.time) {
-                    return false;
-                }
-                return isDatePropWithinRange(feature.properties.time, dateFilter.startDate, dateFilter.endDate);
+        if (acoesData) {
+            // Flatten all features first
+            Object.values(acoesData).forEach((featureCollection: any) => {
+                featureCollection.features.forEach((feature: any) => {
+                    if (feature.properties && feature.properties.time &&
+                        isDatePropWithinRange(feature.properties.time, dateFilter.startDate, dateFilter.endDate)) {
+
+                        features.push(feature);
+
+                        // Grouping Logic
+                        const cat = (feature.properties.categoria as ActionCategory) || 'Monitoramento'; // Fallback
+                        const type = feature.properties.tipo || 'Outros';
+
+                        if (!groups[cat]) {
+                            groups[cat] = { count: 0, types: {} };
+                        }
+                        groups[cat].count++;
+                        groups[cat].types[type] = (groups[cat].types[type] || 0) + 1;
+                    }
+                });
             });
+        }
 
-            if (filteredFeatures.length > 0) {
-                newResult[acaoType] = {
-                    ...featureCollection,
-                    features: filteredFeatures,
-                };
-            }
-        });
-        return newResult;
+        // Transform groups object to array
+        const groupedResult: GroupedActionCategory[] = Object.entries(groups).map(([catId, data]) => {
+            const categoryConfig = ACTION_CATEGORIES[catId as ActionCategory] || ACTION_CATEGORIES['Monitoramento'];
+
+            const types: GroupedActionType[] = Object.entries(data.types).map(([typeId, count]) => ({
+                id: typeId,
+                label: typeId,
+                count
+            })).sort((a, b) => a.label.localeCompare(b.label));
+
+            return {
+                id: catId as ActionCategory,
+                label: categoryConfig.label,
+                count: data.count,
+                color: categoryConfig.color,
+                icon: categoryConfig.icon,
+                types
+            };
+        }).sort((a, b) => a.label.localeCompare(b.label));
+
+        return { filteredAcoesFeatures: features, groupedActions: groupedResult };
     }, [acoesData, dateFilter.startDate, dateFilter.endDate]);
-
-    // 4. ACTION OPTIONS (Lógica original de components/map/map.tsx)
-    const actionOptions = useMemo(() => {
-        const opts: ActionOption[] = []
-        
-        if (expedicoesData) {
-            const trilhasFiltradas = expedicoesData.trilhas.features.filter((f: any) =>
-                isDatePropWithinRange(f.properties.data, dateFilter.startDate, dateFilter.endDate)
-            )
-            const waypointsFiltrados = expedicoesData.waypoints.features.filter((f: any) =>
-                isDatePropWithinRange(f.properties.data, dateFilter.startDate, dateFilter.endDate)
-            )
-
-            const count = trilhasFiltradas.length + waypointsFiltrados.length
-            if (count > 0) {
-                opts.unshift({ id: "expedicoes", label: "Expedições", count, color: actionColors.expedicoes || "#000" })
-            }
-        }
-        
-        if (filteredAcoes) {
-            Object.entries(filteredAcoes).forEach(([acao, fc]) => {
-                opts.push({ id: acao, label: acao, count: fc.features.length, color: actionColors[acao] || "#000" })
-            })
-        }
-        return opts
-    }, [filteredAcoes, expedicoesData, dateFilter]);
-
 
     return {
         filteredDesmatamentoData,
         filteredFirms,
-        filteredAcoes,
-        actionOptions,
+        filteredAcoesFeatures, // Flat list for map rendering
+        groupedActions, // Hierarchical list for UI
     };
 }

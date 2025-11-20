@@ -1,11 +1,12 @@
-import {pgSchema, serial, geometry, bigint, doublePrecision, integer, varchar, numeric, text, timestamp, date, foreignKey, unique, time, uuid, index } from "drizzle-orm/pg-core"
-import { InferInsertModel} from "drizzle-orm"
+import { pgSchema, serial, geometry, bigint, doublePrecision, integer, varchar, numeric, text, timestamp, date, foreignKey, unique, time, uuid, index } from "drizzle-orm/pg-core"
+import { InferInsertModel } from "drizzle-orm"
 
 export const rioDaPrata = pgSchema("rio_da_prata");
-export const dossieStatusEnumInRioDaPrata = rioDaPrata.enum("dossie_status_enum", ['Aberto', 'Em Monitoramento', 'Resolvido', 'Inválido'])
+export const categoriaAcaoInRioDaPrata = rioDaPrata.enum("categoria_acao", ['Fiscalização', 'Recuperação', 'Incidente', 'Monitoramento', 'Infraestrutura'])
+export const statusAcaoInRioDaPrata = rioDaPrata.enum("status_acao", ['Ativo', 'Monitorando', 'Resolvido', 'Crítico'])
 
-export const baciaRioDaPrataIdSeqInRioDaPrata = rioDaPrata.sequence("Bacia_RioDaPrata_id_seq", {  startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
-export const rioDaPrataLeitoIdSeqInRioDaPrata = rioDaPrata.sequence("Rio da Prata - Leito_id_seq", {  startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
+export const baciaRioDaPrataIdSeqInRioDaPrata = rioDaPrata.sequence("Bacia_RioDaPrata_id_seq", { startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
+export const rioDaPrataLeitoIdSeqInRioDaPrata = rioDaPrata.sequence("Rio da Prata - Leito_id_seq", { startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
 
 export const baciaRioDaPrataInRioDaPrata = rioDaPrata.table("Bacia_Rio_Da_Prata", {
 	id: serial().primaryKey().notNull(),
@@ -360,10 +361,10 @@ export const dequeDePedrasInRioDaPrata = rioDaPrata.table("deque_de_pedras", {
 	local: varchar({ length: 255 }),
 	mes: varchar({ length: 50 }),
 	data: date(),
-	turbidez: numeric({ precision: 5, scale:  2 }),
-	secchiVertical: numeric("secchi_vertical", { precision: 5, scale:  2 }),
-	secchiHorizontal: numeric("secchi_horizontal", { precision: 5, scale:  2 }),
-	chuva: numeric({ precision: 5, scale:  2 }),
+	turbidez: numeric({ precision: 5, scale: 2 }),
+	secchiVertical: numeric("secchi_vertical", { precision: 5, scale: 2 }),
+	secchiHorizontal: numeric("secchi_horizontal", { precision: 5, scale: 2 }),
+	chuva: numeric({ precision: 5, scale: 2 }),
 });
 
 export const desmatamentoInRioDaPrata = rioDaPrata.table("desmatamento", {
@@ -396,10 +397,10 @@ export const fotosAcoesInRioDaPrata = rioDaPrata.table("fotos_acoes", {
 	atualizacao: date(),
 }, (table) => [
 	foreignKey({
-			columns: [table.acaoId],
-			foreignColumns: [acoesInRioDaPrata.id],
-			name: "fotos_acoes_acao_id_acoes_id_fk"
-		}),
+		columns: [table.acaoId],
+		foreignColumns: [acoesInRioDaPrata.id],
+		name: "fotos_acoes_acao_id_acoes_id_fk"
+	}),
 ]);
 
 export const propriedadesInRioDaPrata = rioDaPrata.table("propriedades", {
@@ -420,25 +421,25 @@ export const propriedadesInRioDaPrata = rioDaPrata.table("propriedades", {
 export const acoesInRioDaPrata = rioDaPrata.table("acoes", {
 	id: serial().primaryKey().notNull(),
 	name: varchar({ length: 255 }),
-	latitude: numeric({ precision: 10, scale:  6 }),
-	longitude: numeric({ precision: 10, scale:  6 }),
-	elevation: numeric({ precision: 8, scale:  2 }),
+	latitude: numeric({ precision: 10, scale: 6 }),
+	longitude: numeric({ precision: 10, scale: 6 }),
+	elevation: numeric({ precision: 8, scale: 2 }),
 	time: timestamp({ mode: 'string' }),
 	descricao: varchar({ length: 255 }),
 	mes: varchar({ length: 50 }),
 	atuacao: varchar({ length: 100 }),
 	acao: varchar({ length: 100 }),
 	geom: geometry({ type: "pointz", srid: 4326 }),
-	status: text(),
 	regiaoId: integer("regiao_id"),
-	subTipo: text("sub_tipo"),
-	icone: text(),
+	categoria: categoriaAcaoInRioDaPrata(),
+	tipo: text(),
+	status: statusAcaoInRioDaPrata(),
 }, (table) => [
 	foreignKey({
-			columns: [table.regiaoId],
-			foreignColumns: [regioesInRioDaPrata.id],
-			name: "acoes_regiao_id_fkey"
-		}).onUpdate("cascade"),
+		columns: [table.regiaoId],
+		foreignColumns: [regioesInRioDaPrata.id],
+		name: "acoes_regiao_id_fkey"
+	}).onUpdate("cascade"),
 ]);
 
 export const waypointsInRioDaPrata = rioDaPrata.table("waypoints", {
@@ -450,10 +451,10 @@ export const waypointsInRioDaPrata = rioDaPrata.table("waypoints", {
 	recordedat: timestamp({ mode: 'string' }),
 }, (table) => [
 	foreignKey({
-			columns: [table.trilhaId],
-			foreignColumns: [trilhasInRioDaPrata.id],
-			name: "waypoints_trilha_id_trilhas_id_fk"
-		}).onDelete("cascade"),
+		columns: [table.trilhaId],
+		foreignColumns: [trilhasInRioDaPrata.id],
+		name: "waypoints_trilha_id_trilhas_id_fk"
+	}).onDelete("cascade"),
 ]);
 
 export const ponteDoCureInRioDaPrata = rioDaPrata.table("ponte_do_cure", {
@@ -461,8 +462,8 @@ export const ponteDoCureInRioDaPrata = rioDaPrata.table("ponte_do_cure", {
 	local: varchar({ length: 255 }),
 	mes: varchar({ length: 50 }),
 	data: date(),
-	chuva: numeric({ precision: 5, scale:  2 }),
-	nivel: numeric({ precision: 5, scale:  2 }),
+	chuva: numeric({ precision: 5, scale: 2 }),
+	nivel: numeric({ precision: 5, scale: 2 }),
 	visibilidade: varchar({ length: 50 }),
 });
 
@@ -506,7 +507,7 @@ export const regioesInRioDaPrata = rioDaPrata.table("regioes", {
 type BaseAcoesData = InferInsertModel<typeof acoesInRioDaPrata>;
 
 export type NewAcoesData = Omit<BaseAcoesData, 'geom'> & {
-  geom: string;
+	geom: string;
 };
 
 
@@ -514,13 +515,13 @@ type BaseWaypointData = InferInsertModel<typeof waypointsInRioDaPrata>;
 
 export type NewWaypointData = Omit<BaseWaypointData, 'geom'> & {
 	geom: string;
-  };
+};
 
 
-  type BaseEstradaData = InferInsertModel<typeof estradasInRioDaPrata>;
+type BaseEstradaData = InferInsertModel<typeof estradasInRioDaPrata>;
 
 export type NewEstradaData = Omit<BaseEstradaData, 'geom'> & {
-  geom: string;
+	geom: string;
 };
 
 
@@ -529,4 +530,4 @@ type BaseTrilhaData = InferInsertModel<typeof trilhasInRioDaPrata>;
 
 export type NewTrilhaData = Omit<BaseTrilhaData, 'geom'> & {
 	geom: string;
-  };
+};
