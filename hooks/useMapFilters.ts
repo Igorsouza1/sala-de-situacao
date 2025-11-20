@@ -48,20 +48,31 @@ export function useMapFilters({ mapData, acoesData, expedicoesData, dateFilter }
             // Flatten all features first
             Object.values(acoesData).forEach((featureCollection: any) => {
                 featureCollection.features.forEach((feature: any) => {
-                    if (feature.properties && feature.properties.time &&
-                        isDatePropWithinRange(feature.properties.time, dateFilter.startDate, dateFilter.endDate)) {
+                    if (feature.properties) {
+                        const props = feature.properties;
 
-                        features.push(feature);
+                        // Verifica se a data de criação da ação está no range
+                        const isActionInRange = props.time &&
+                            isDatePropWithinRange(props.time, dateFilter.startDate, dateFilter.endDate);
 
-                        // Grouping Logic
-                        const cat = (feature.properties.categoria as ActionCategory) || 'Monitoramento'; // Fallback
-                        const type = feature.properties.tipo || 'Outros';
+                        // Verifica se a data da última foto está no range (se existir)
+                        // Atenção: o banco pode retornar null se não tiver fotos
+                        const isPhotoInRange = props.ultima_foto_em &&
+                            isDatePropWithinRange(props.ultima_foto_em, dateFilter.startDate, dateFilter.endDate);
 
-                        if (!groups[cat]) {
-                            groups[cat] = { count: 0, types: {} };
+                        if (isActionInRange || isPhotoInRange) {
+                            features.push(feature);
+
+                            // Grouping Logic
+                            const cat = (feature.properties.categoria as ActionCategory) || 'Monitoramento'; // Fallback
+                            const type = feature.properties.tipo || 'Outros';
+
+                            if (!groups[cat]) {
+                                groups[cat] = { count: 0, types: {} };
+                            }
+                            groups[cat].count++;
+                            groups[cat].types[type] = (groups[cat].types[type] || 0) + 1;
                         }
-                        groups[cat].count++;
-                        groups[cat].types[type] = (groups[cat].types[type] || 0) + 1;
                     }
                 });
             });

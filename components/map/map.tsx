@@ -188,6 +188,8 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     setIsMounted(true)
   }, [])
 
+  
+
   const handleLayerToggle = (id: string, isChecked: boolean) => {
     setVisibleLayers((prev) => (isChecked ? [...prev, id] : prev.filter((layerId) => layerId !== id)))
   }

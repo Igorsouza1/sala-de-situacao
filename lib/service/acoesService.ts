@@ -195,6 +195,7 @@ function formatAcoesToGeojson(acoes: any[]) {
           categoria: action.categoria,
           tipo: action.tipo,       // ex: "Pesca Ilegal"
           status: action.status,
+          ultima_foto_em: action.ultima_foto_em,
         },
         geometry: action.geojson ? JSON.parse(action.geojson) : null,
       });

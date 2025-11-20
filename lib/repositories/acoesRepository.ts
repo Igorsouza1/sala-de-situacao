@@ -34,8 +34,11 @@ export async function findAllAcoesData() {
 export async function findAllAcoesDataWithGeometry() {
 
   const result = await db.execute(`
-    SELECT id, acao, name, descricao, mes, time, status, categoria, tipo, ST_AsGeoJSON(geom) as geojson
-    FROM "rio_da_prata"."acoes"
+    SELECT a.id, a.acao, a.name, a.descricao, a.mes, a.atuacao, a.time, a.status, a.categoria, a.tipo, ST_AsGeoJSON(a.geom) as geojson,
+    MAX(f.created_at) as ultima_foto_em
+    FROM "rio_da_prata"."acoes" a
+    LEFT JOIN "rio_da_prata"."fotos_acoes" f ON a.id = f.acao_id
+    GROUP BY a.id
   `)
 
   return result.rows
@@ -115,6 +118,7 @@ export async function insertAcaoData(data: NewAcoesData) {
       mes: data.mes,
       atuacao: data.atuacao,
       acao: data.acao,
+
       geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4326)`,
     })
     .returning({ id: acoesInRioDaPrata.id });

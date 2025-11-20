@@ -13,6 +13,7 @@ interface Acao {
   mes: string
   atuacao: string
   acao: string
+  ultima_foto_em?: string | null
 }
 
 interface AcoesContextType {
