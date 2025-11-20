@@ -30,7 +30,7 @@ export async function getAllAcoesForMap() {
   return actionsGeoJSON;
 }
 
-export async function deleteAcaoItemHistoryById(id: number){
+export async function deleteAcaoItemHistoryById(id: number) {
   const result = await deleteAcaoUpdateById(id);
   return result;
 }
@@ -125,7 +125,7 @@ export async function getAcaoDossie(id: number) {
   // 2. Regra de negócio: se a ação principal não existe, é um erro
   if (!acaoPrincipal) {
     // O handler da API vai transformar isso em um 404
-    throw new Error("Ação não encontrada"); 
+    throw new Error("Ação não encontrada");
   }
 
   // 3. Transforma o histórico para o formato esperado pelo frontend
@@ -163,7 +163,7 @@ export async function addAcaoUpdate(
     acaoId,
     url,
     input.descricao || "",
-    atualizacaoFinal, 
+    atualizacaoFinal,
   )
 
   return { message: "Registro adicionado com sucesso!" }
@@ -192,6 +192,9 @@ function formatAcoesToGeojson(acoes: any[]) {
           descricao: action.descricao,
           mes: action.mes,
           time: action.time,
+          categoria: action.categoria,
+          tipo: action.tipo,       // ex: "Pesca Ilegal"
+          status: action.status,
         },
         geometry: action.geojson ? JSON.parse(action.geojson) : null,
       });
