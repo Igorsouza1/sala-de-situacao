@@ -33,6 +33,8 @@ interface MapProps {
   zoom?: number
 }
 
+
+
 // --- Constantes de Cor ---
 const layerColors = {
   estradas: "#FFFFF0",
@@ -108,53 +110,76 @@ const createWaypointIcon = (index: number) =>
 // Helper to create Action Icon
 const createActionIcon = (category: ActionCategory, status: ActionStatus) => {
   const config = ACTION_CATEGORIES[category] || ACTION_CATEGORIES['Monitoramento'];
-  const statusStyle = STATUS_STYLES[status] || STATUS_STYLES['Ativo'];
+  const statusConfig = STATUS_STYLES[status] || STATUS_STYLES['Ativo'];
   const IconComponent = config.icon;
   
+  // Colors
+  // If resolved, use a muted gray for the main pin to indicate inactivity, but keep the badge green
+  const mainColor = status === 'Resolvido' ? '#64748b' : config.color; 
+  const statusColor = statusConfig.color;
+
   const iconHtml = renderToStaticMarkup(
     <IconComponent 
-      size={16} 
+      size={18} 
       color="white" 
       strokeWidth={2.5}
     />
   );
 
-  // Extract border color from status class or map it manually if needed
-  // For simplicity, we use the category color for background and status style for border/effect
-  // Since we can't easily parse tailwind classes in JS for L.divIcon styles without a parser,
-  // we will use inline styles that approximate the status styles.
-  
-  let borderColor = 'white';
-  let borderStyle = 'solid';
-  let animation = '';
-
-  if (status === 'Monitorando') borderColor = '#eab308'; // yellow-500
-  if (status === 'Resolvido') borderColor = '#22c55e'; // green-500
-  if (status === 'Crítico') {
-    borderColor = '#dc2626'; // red-600
-    // animation = '...'; // CSS animation would need a global class
-  }
+  // SVG Path for a Map Pin (FontAwesome style)
+  // ViewBox 0 0 384 512
+  const pinPath = "M172.268 501.67C26.97 291.031 0 269.413 0 192 0 85.961 85.961 0 192 0s192 85.961 192 192c0 77.413-26.97 99.031-172.268 309.67-9.535 13.774-29.93 13.773-39.464 0z";
 
   return L.divIcon({
     html: `
       <div style="
-        background-color: ${config.color};
-        border: 2px ${borderStyle} ${borderColor};
-        border-radius: 50%;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-        ${status === 'Resolvido' ? 'opacity: 0.7; filter: grayscale(0.5);' : ''}
-      ">
-        ${iconHtml}
+        position: relative;
+        width: 40px;
+        height: 48px;
+        filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3));
+        transition: all 0.2s ease;
+      " class="group hover:-translate-y-1">
+        
+        <!-- Main Pin -->
+        <svg width="40" height="48" viewBox="0 0 384 512" xmlns="http://www.w3.org/2000/svg">
+          <path fill="${mainColor}" d="${pinPath}"/>
+          <circle cx="192" cy="192" r="90" fill="rgba(255,255,255,0.2)" />
+        </svg>
+
+        <!-- Icon -->
+        <div style="
+          position: absolute;
+          top: 14px;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 20px;
+          height: 20px;
+        ">
+          ${iconHtml}
+        </div>
+
+        <!-- Status Badge -->
+        <div style="
+          position: absolute;
+          top: 0;
+          right: 0;
+          width: 14px;
+          height: 14px;
+          background-color: ${statusColor};
+          border: 2px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          z-index: 10;
+        "></div>
       </div>
     `,
     className: `action-marker-${category} ${status === 'Crítico' ? 'animate-pulse' : ''}`,
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
+    iconSize: [40, 48],
+    iconAnchor: [20, 48], // Tip of the pin
+    popupAnchor: [0, -48], // Above the pin
   });
 };
 

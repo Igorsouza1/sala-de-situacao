@@ -49,22 +49,26 @@ export const ACTION_CATEGORIES: Record<ActionCategory, CategoryConfig> = {
   }
 };
 
-export const STATUS_STYLES: Record<ActionStatus, StatusConfig> = {
+export const STATUS_STYLES: Record<ActionStatus, StatusConfig & { color: string }> = {
   'Ativo': {
     className: 'border-2 border-blue-500 opacity-100',
-    label: 'Ativo'
+    label: 'Ativo',
+    color: '#3bf69fff' // blue-500
   },
   'Monitorando': {
     className: 'border-2 border-yellow-500 opacity-90',
-    label: 'Monitorando'
+    label: 'Monitorando',
+    color: '#eab308' // yellow-500
   },
   'Resolvido': {
     className: 'border-2 border-green-500 opacity-60 grayscale',
-    label: 'Resolvido'
+    label: 'Resolvido',
+    color: '#22c55e' // green-500
   },
   'Crítico': {
     className: 'border-2 border-red-600 animate-pulse',
-    label: 'Crítico'
+    label: 'Crítico',
+    color: '#dc2626' // red-600
   }
 };
 

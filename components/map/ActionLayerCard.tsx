@@ -37,7 +37,17 @@ export function ActionsLayerCard({
     )
   }
 
-  const activeActionsCount = visibleActionTypes.length
+  const activeActionsCount = categories.reduce((acc, cat) => {
+  // filtra os tipos que estão visíveis
+  const visibleTypes = cat.types.filter((type) =>
+    visibleActionTypes.includes(`${cat.id}:${type.id}`)
+  );
+
+  // soma o count de cada tipo visível
+  const visibleCount = visibleTypes.reduce((sum, type) => sum + type.count, 0);
+
+  return acc + visibleCount;
+}, 0);
   const totalActionsCount = categories.reduce((acc, cat) => acc + cat.count, 0)
 
   return (
