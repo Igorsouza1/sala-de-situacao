@@ -1,18 +1,18 @@
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { getAcaoDossie, updateAcaoFieldsById } from "@/lib/service/acoesService";
-import {  revalidateTag } from "next/cache";
+import { revalidateTag } from "next/cache";
 
 
 type RouteContext = { params: Record<string, string> }
 
-export async function PUT(request: Request, context: any) {
+export async function PUT(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params as { id: string };
     const numId = Number(id);
 
     const formData = await request.formData();
     const result = await updateAcaoFieldsById(numId, formData);
-    revalidateTag("acoes"); 
+    revalidateTag("acoes");
     return apiSuccess(result);
   } catch (error) {
     console.error("Erro ao atualizar ação:", error);
@@ -29,16 +29,16 @@ export async function GET(_request: Request, context: any) {
       return apiError("ID inválido", 400);
     }
 
-    const result = await getAcaoDossie(numId); 
+    const result = await getAcaoDossie(numId);
 
-    if (!result) { 
+    if (!result) {
       return apiError("Ação não encontrada", 404);
     }
 
     return apiSuccess(result);
   } catch (error: any) {
     if (error.message === "Ação não encontrada") {
-        return apiError(error.message, 404);
+      return apiError(error.message, 404);
     }
     console.error("Erro ao buscar dossiê da ação:", error);
     return apiError("Erro ao buscar dossiê da ação", 500);
