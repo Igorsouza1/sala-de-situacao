@@ -2,12 +2,15 @@ import { apiError, apiSuccess } from "@/lib/api/responses";
 import { getAcaoDossie, updateAcaoFieldsById } from "@/lib/service/acoesService";
 import { revalidateTag } from "next/cache";
 
-
-type RouteContext = { params: Record<string, string> }
+// Update this type definition
+type RouteContext = {
+  params: Promise<{ id: string }>
+}
 
 export async function PUT(request: Request, context: RouteContext) {
   try {
-    const { id } = await context.params as { id: string };
+    // Await the params directly from context
+    const { id } = await context.params;
     const numId = Number(id);
 
     const formData = await request.formData();
@@ -22,7 +25,8 @@ export async function PUT(request: Request, context: RouteContext) {
 
 export async function GET(_request: Request, context: RouteContext) {
   try {
-    const { id } = await context.params as { id: string };
+    // Await the params directly from context
+    const { id } = await context.params;
     const numId = Number(id);
 
     if (Number.isNaN(numId)) {
