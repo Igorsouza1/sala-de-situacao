@@ -20,7 +20,7 @@ export async function PUT(request: Request, context: RouteContext) {
   }
 }
 
-export async function GET(_request: Request, context: any) {
+export async function GET(_request: Request, context: RouteContext) {
   try {
     const { id } = await context.params as { id: string };
     const numId = Number(id);
