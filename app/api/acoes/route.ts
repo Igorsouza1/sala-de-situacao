@@ -12,20 +12,20 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const view = searchParams.get("view");
 
-    if(view === "dashboard"){
-        const result = await getAllAcoesData();
-        return apiSuccess(result);
+    if (view === "dashboard") {
+      const result = await getAllAcoesData();
+      return apiSuccess(result);
     }
 
-    if(view === "map"){
-        const result = await getAllAcoesForMap();
-        return apiSuccess(result);
+    if (view === "map") {
+      const result = await getAllAcoesForMap();
+      return apiSuccess(result);
     }
 
     return apiError("Visualização não especificada ou inválida.", 400);
 
   } catch (error) {
-    
+
     console.error("Erro ao buscar dados de Ações:", error);
     return apiError("Falha ao obter os dados de Ações.", 500);
   }
@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       waypoints,
     });
 
-    revalidatePath('/protected'); 
+    revalidatePath('/protected');
 
     return apiSuccess(created, 201);
   } catch (error) {

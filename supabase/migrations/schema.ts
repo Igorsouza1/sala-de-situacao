@@ -1,8 +1,9 @@
 import { pgTable, pgSchema, serial, geometry, bigint, doublePrecision, integer, varchar, numeric, text, timestamp, date, foreignKey, unique, time, uuid, index } from "drizzle-orm/pg-core"
-import { sql, InferInsertModel} from "drizzle-orm"
+import { sql } from "drizzle-orm"
 
 export const rioDaPrata = pgSchema("rio_da_prata");
-export const dossieStatusEnumInRioDaPrata = rioDaPrata.enum("dossie_status_enum", ['Aberto', 'Em Monitoramento', 'Resolvido', 'Inválido'])
+export const categoriaAcaoInRioDaPrata = rioDaPrata.enum("categoria_acao", ['Fiscalização', 'Recuperação', 'Incidente', 'Monitoramento', 'Infraestrutura'])
+export const statusAcaoInRioDaPrata = rioDaPrata.enum("status_acao", ['Ativo', 'Monitorando', 'Resolvido', 'Crítico'])
 
 export const baciaRioDaPrataIdSeqInRioDaPrata = rioDaPrata.sequence("Bacia_RioDaPrata_id_seq", {  startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
 export const rioDaPrataLeitoIdSeqInRioDaPrata = rioDaPrata.sequence("Rio da Prata - Leito_id_seq", {  startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
@@ -429,10 +430,10 @@ export const acoesInRioDaPrata = rioDaPrata.table("acoes", {
 	atuacao: varchar({ length: 100 }),
 	acao: varchar({ length: 100 }),
 	geom: geometry({ type: "pointz", srid: 4326 }),
-	status: text(),
 	regiaoId: integer("regiao_id"),
-	subTipo: text("sub_tipo"),
-	icone: text(),
+	categoria: categoriaAcaoInRioDaPrata(),
+	tipo: text(),
+	status: statusAcaoInRioDaPrata(),
 }, (table) => [
 	foreignKey({
 			columns: [table.regiaoId],
@@ -500,33 +501,3 @@ export const regioesInRioDaPrata = rioDaPrata.table("regioes", {
 }, (table) => [
 	index("idx_regioes_geom").using("gist", table.geom.asc().nullsLast().op("gist_geometry_ops_2d")),
 ]);
-
-
-
-type BaseAcoesData = InferInsertModel<typeof acoesInRioDaPrata>;
-
-export type NewAcoesData = Omit<BaseAcoesData, 'geom'> & {
-  geom: string;
-};
-
-
-type BaseWaypointData = InferInsertModel<typeof waypointsInRioDaPrata>;
-
-export type NewWaypointData = Omit<BaseWaypointData, 'geom'> & {
-	geom: string;
-  };
-
-
-  type BaseEstradaData = InferInsertModel<typeof estradasInRioDaPrata>;
-
-export type NewEstradaData = Omit<BaseEstradaData, 'geom'> & {
-  geom: string;
-};
-
-
-
-type BaseTrilhaData = InferInsertModel<typeof trilhasInRioDaPrata>;
-
-export type NewTrilhaData = Omit<BaseTrilhaData, 'geom'> & {
-	geom: string;
-  };

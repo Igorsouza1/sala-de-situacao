@@ -16,9 +16,11 @@ import { FeatureDetails } from "./feature-details"
 import { Modal } from "./Modal"
 import { EditAcaoModal } from "./EditAcaoModal"
 import { useUserRole } from "@/hooks/useUserRole"
-import { acoesInRioDaPrata } from "@/db/schema"
-import { InferSelectModel } from "drizzle-orm"
+import { useMapFilters } from "@/hooks/useMapFilters"
+import { ACTION_CATEGORIES, ActionCategory, STATUS_STYLES, ActionStatus } from "./config/actions-config"
+import { renderToStaticMarkup } from "react-dom/server"
 
+// Imports Dinâmicos
 const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false })
 const GeoJSON = dynamic(() => import("react-leaflet").then((mod) => mod.GeoJSON), { ssr: false })
@@ -29,9 +31,11 @@ const Tooltip = dynamic(() => import("react-leaflet").then((mod) => mod.Tooltip)
 interface MapProps {
   center?: LatLngExpression
   zoom?: number
-  acoesProps: Record<string, GeoJSONFeatureCollection>
 }
 
+
+
+// --- Constantes de Cor ---
 const layerColors = {
   estradas: "#FFFFF0",
   bacia: "#33FF57",
@@ -43,29 +47,39 @@ const layerColors = {
   expedicoes: "orange",
 }
 
-const actionColors: Record<string, string> = {
-  "Fazenda": "#2ecc71",
-  "Passivo Ambiental": "#f1c40f",
-  Pesca: "#3498db",
-  "Pesca - Crime Ambiental": "#9b59b6",
-  "Ponto de Referência": "#e67e22",
-  "Crime Ambiental": "#e74c3c",
-  Nascente: "#1abc9c",
-  Plantio: "#16a085",
-  "Régua Fluvial": "#95a5a6",
-  expedicoes: "orange",
-  "Não informado": "#7f8c8d",
-}
-
-type GeoJSONFeature = {
-  type: "Feature"
-  properties: { [key: string]: any }
-  geometry: { type: string; coordinates: number[] | number[][] | number[][][] }
-}
-
-type GeoJSONFeatureCollection = {
-  type: "FeatureCollection"
-  features: GeoJSONFeature[]
+// --- ESTILOS ESTÁTICOS ---
+const STATIC_LAYER_STYLES = {
+  bacia: {
+    color: layerColors.bacia,
+    fillColor: layerColors.bacia,
+    weight: 2,
+    opacity: 0.65,
+    fillOpacity: 0.2,
+  },
+  banhado: {
+    color: layerColors.banhado,
+    fillColor: layerColors.banhado,
+    weight: 2,
+    opacity: 0.65,
+    fillOpacity: 0.2,
+  },
+  propriedades: {
+    color: "black",
+    fillColor: layerColors.propriedades,
+    weight: 2,
+    opacity: 0.65,
+    fillOpacity: 0.2,
+  },
+  leito: { color: layerColors.leito, weight: 4, opacity: 0.65 },
+  estradas: { color: layerColors.estradas, weight: 4, opacity: 0.65 },
+  desmatamento: {
+    color: layerColors.desmatamento,
+    fillColor: layerColors.desmatamento,
+    weight: 2,
+    opacity: 0.65,
+    fillOpacity: 0.1,
+  },
+  expedicoes: { color: layerColors.expedicoes, weight: 3, opacity: 0.8 },
 }
 
 const createWaypointIcon = (index: number) =>
@@ -93,7 +107,83 @@ const createWaypointIcon = (index: number) =>
     iconAnchor: [14, 14],
   })
 
-export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , acoesProps}: MapProps) {
+// Helper to create Action Icon
+const createActionIcon = (category: ActionCategory, status: ActionStatus) => {
+  const config = ACTION_CATEGORIES[category] || ACTION_CATEGORIES['Monitoramento'];
+  const statusConfig = STATUS_STYLES[status] || STATUS_STYLES['Ativo'];
+  const IconComponent = config.icon;
+  
+  // Colors
+  // If resolved, use a muted gray for the main pin to indicate inactivity, but keep the badge green
+  const mainColor = status === 'Resolvido' ? '#64748b' : config.color; 
+  const statusColor = statusConfig.color;
+
+  const iconHtml = renderToStaticMarkup(
+    <IconComponent 
+      size={18} 
+      color="white" 
+      strokeWidth={2.5}
+    />
+  );
+
+  // SVG Path for a Map Pin (FontAwesome style)
+  // ViewBox 0 0 384 512
+  const pinPath = "M172.268 501.67C26.97 291.031 0 269.413 0 192 0 85.961 85.961 0 192 0s192 85.961 192 192c0 77.413-26.97 99.031-172.268 309.67-9.535 13.774-29.93 13.773-39.464 0z";
+
+  return L.divIcon({
+    html: `
+      <div style="
+        position: relative;
+        width: 40px;
+        height: 48px;
+        filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3));
+        transition: all 0.2s ease;
+      " class="group hover:-translate-y-1">
+        
+        <!-- Main Pin -->
+        <svg width="40" height="48" viewBox="0 0 384 512" xmlns="http://www.w3.org/2000/svg">
+          <path fill="${mainColor}" d="${pinPath}"/>
+          <circle cx="192" cy="192" r="90" fill="rgba(255,255,255,0.2)" />
+        </svg>
+
+        <!-- Icon -->
+        <div style="
+          position: absolute;
+          top: 14px;
+          left: 50%;
+          transform: translateX(-50%);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 20px;
+          height: 20px;
+        ">
+          ${iconHtml}
+        </div>
+
+        <!-- Status Badge -->
+        <div style="
+          position: absolute;
+          top: 0;
+          right: 0;
+          width: 14px;
+          height: 14px;
+          background-color: ${statusColor};
+          border: 2px solid white;
+          border-radius: 50%;
+          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+          z-index: 10;
+        "></div>
+      </div>
+    `,
+    className: `action-marker-${category} ${status === 'Crítico' ? 'animate-pulse' : ''}`,
+    iconSize: [40, 48],
+    iconAnchor: [20, 48], // Tip of the pin
+    popupAnchor: [0, -48], // Above the pin
+  });
+};
+
+export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: MapProps) {
   const [isMounted, setIsMounted] = useState(false)
   const [visibleLayers, setVisibleLayers] = useState<string[]>([
     "estradas",
@@ -104,23 +194,53 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
     "firms",
     "banhado",
   ])
-  const [visibleActions, setVisibleActions] = useState<string[]>([])
-  const { mapData, isLoading, error, modalData, openModal, closeModal, dateFilter, setDateFilter, expedicoesData, refreshAcoesData } =
+  
+  // New Visibility State: Array of "Category:Type" strings
+  const [visibleActionTypes, setVisibleActionTypes] = useState<string[]>([])
+  
+  const { mapData, isLoading, error, modalData, openModal, closeModal, dateFilter, setDateFilter, expedicoesData, refreshAcoesData, acoesData } =
     useMapContext()
+
+  // ✅ HOOK: Recupera dados filtrados e agrupados
+  const {
+    filteredDesmatamentoData,
+    filteredFirms,
+    filteredAcoesFeatures,
+    groupedActions
+  } = useMapFilters({ mapData, acoesData, expedicoesData, dateFilter });
 
   useEffect(() => {
     setIsMounted(true)
   }, [])
 
+  
+
   const handleLayerToggle = (id: string, isChecked: boolean) => {
     setVisibleLayers((prev) => (isChecked ? [...prev, id] : prev.filter((layerId) => layerId !== id)))
   }
 
-  const handleActionToggle = (id: string, isChecked: boolean) => {
-    setVisibleActions((prev) => (isChecked ? [...prev, id] : prev.filter((layerId) => layerId !== id)))
+  // Toggle a specific Type within a Category
+  const handleActionTypeToggle = (categoryId: string, typeId: string, isChecked: boolean) => {
+    const uniqueId = `${categoryId}:${typeId}`
+    setVisibleActionTypes(prev => 
+      isChecked ? [...prev, uniqueId] : prev.filter(id => id !== uniqueId)
+    )
   }
 
-  // Modal de detalhes do feature
+  // Toggle all types within a Category
+  const handleCategoryToggle = (categoryId: string, isChecked: boolean) => {
+    const category = groupedActions.find(c => c.id === categoryId)
+    if (!category) return
+
+    const allTypeIds = category.types.map(t => `${categoryId}:${t.id}`)
+    
+    setVisibleActionTypes(prev => {
+      const withoutCategory = prev.filter(id => !id.startsWith(`${categoryId}:`))
+      return isChecked ? [...withoutCategory, ...allTypeIds] : withoutCategory
+    })
+  }
+
+  // Modal e Permissões
   const [selectedAcao, setSelectedAcao] = useState<any | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const { isAdmin } = useUserRole()
@@ -138,159 +258,29 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
     [openModal],
   )
 
-  const isWithinDateRange = (date: string, startDate: Date | null, endDate: Date | null) => {
-    const itemDate = new Date(date)
-    if (startDate && itemDate < startDate) return false
-    if (endDate) {
-      const adjustedEndDate = new Date(endDate)
-      adjustedEndDate.setHours(23, 59, 59, 999)
-      if (itemDate > adjustedEndDate) return false
-    }
-    return true
-  }
-
-  const filteredDesmatamentoData = useMemo(() => {
-    if (mapData && mapData.desmatamento) {
-      return {
-        type: "FeatureCollection",
-        features: mapData.desmatamento.features.filter((feature) =>
-          isWithinDateRange(feature.properties.detectat, dateFilter.startDate, dateFilter.endDate),
-        ),
-      } as GeoJSONFeatureCollection
-    }
-    return null
-  }, [mapData, dateFilter.startDate, dateFilter.endDate])
-
   const layerConfigs = useMemo(
     () =>
       mapData
         ? [
-            {
-              id: "bacia",
-              data: mapData.bacia,
-              style: {
-                color: layerColors.bacia,
-                fillColor: layerColors.bacia,
-                weight: 2,
-                opacity: 0.65,
-                fillOpacity: 0.2,
-              },
-            },
-            {
-              id: "banhado",
-              data: mapData.banhado,
-              style: {
-                color: layerColors.banhado,
-                fillColor: layerColors.banhado,
-                weight: 2,
-                opacity: 0.65,
-                fillOpacity: 0.2,
-              },
-            },
-            {
-              id: "propriedades",
-              data: mapData.propriedades,
-              style: {
-                color: "black",
-                fillColor: layerColors.propriedades,
-                weight: 2,
-                opacity: 0.65,
-                fillOpacity: 0.2,
-              },
-            },
-            { id: "leito", data: mapData.leito, style: { color: layerColors.leito, weight: 4, opacity: 0.65 } },
-            {
-              id: "estradas",
-              data: mapData.estradas,
-              style: { color: layerColors.estradas, weight: 4, opacity: 0.65 },
-            },
+            { id: "bacia", data: mapData.bacia, style: STATIC_LAYER_STYLES.bacia },
+            { id: "banhado", data: mapData.banhado, style: STATIC_LAYER_STYLES.banhado },
+            { id: "propriedades", data: mapData.propriedades, style: STATIC_LAYER_STYLES.propriedades },
+            { id: "leito", data: mapData.leito, style: STATIC_LAYER_STYLES.leito },
+            { id: "estradas", data: mapData.estradas, style: STATIC_LAYER_STYLES.estradas },
           ]
         : [],
     [mapData],
   )
 
-  const filteredFirms = useMemo(() => {
-    if (!mapData) return []
-    return mapData.firms.features.filter((firm) =>
-      isWithinDateRange(firm.properties.acq_date, dateFilter.startDate, dateFilter.endDate),
-    )
-  }, [mapData, dateFilter.startDate, dateFilter.endDate])
-
-  const filteredAcoes = useMemo(() => {
-    const newResult: Record<string, GeoJSONFeatureCollection> = {};
-    if (!acoesProps) {
-      return newResult;
-    }
-  
-    // Usamos Object.entries para pegar a chave (acaoType) e o valor (featureCollection)
-    Object.entries(acoesProps).forEach(([acaoType, featureCollection]) => {
-      
-  
-      // 2. Filtra os features DENTRO da coleção apenas pela data
-      const filteredFeatures = featureCollection.features.filter(feature => {
-        // Verificação de segurança para garantir que a propriedade 'time' existe
-        if (!feature.properties || !feature.properties.time) {
-          return false;
-        }
-        return isWithinDateRange(feature.properties.time, dateFilter.startDate, dateFilter.endDate);
-      });
-  
-      // 3. Só adiciona ao resultado se houver features após o filtro de data
-      if (filteredFeatures.length > 0) {
-        newResult[acaoType] = {
-          ...featureCollection, // Mantém o 'type' e outras propriedades da coleção
-          features: filteredFeatures,
-        };
-      }
-    });
-  
-    return newResult;
-  }, [acoesProps, dateFilter.startDate, dateFilter.endDate]); // A dependência de isWithinDateRange não é necessária
-
   const layerOptions = [
     { id: "bacia", label: "Bacia", count: mapData?.bacia.features.length || 0, color: layerColors.bacia },
     { id: "banhado", label: "Banhado", count: mapData?.banhado.features.length || 0, color: layerColors.banhado },
-    {
-      id: "propriedades",
-      label: "Propriedades",
-      count: mapData?.propriedades.features.length || 0,
-      color: layerColors.propriedades,
-    },
+    { id: "propriedades", label: "Propriedades", count: mapData?.propriedades.features.length || 0, color: layerColors.propriedades },
     { id: "leito", label: "Leito", count: mapData?.leito.features.length || 0, color: layerColors.leito },
     { id: "estradas", label: "Estradas", count: mapData?.estradas.features.length || 0, color: layerColors.estradas },
-    {
-      id: "desmatamento",
-      label: "Desmatamento",
-      count: mapData?.desmatamento.features.length || 0,
-      color: layerColors.desmatamento,
-    },
+    { id: "desmatamento", label: "Desmatamento", count: mapData?.desmatamento.features.length || 0, color: layerColors.desmatamento },
     { id: "firms", label: "Focos de Incêndio", count: mapData?.firms.features.length || 0, color: layerColors.firms },
   ]
-
-  const actionOptions = useMemo(() => {
-    const opts: { id: string; label: string; count: number; color: string }[] = []
-    
-    if (expedicoesData) {
-      const trilhasFiltradas = expedicoesData.trilhas.features.filter(f =>
-        isWithinDateRange(f.properties.data, dateFilter.startDate, dateFilter.endDate)
-      )
-      const waypointsFiltrados = expedicoesData.waypoints.features.filter(f =>
-        isWithinDateRange(f.properties.data, dateFilter.startDate, dateFilter.endDate)
-      )
-  
-      const count = trilhasFiltradas.length + waypointsFiltrados.length
-      if (count > 0) {
-        opts.unshift({ id: "expedicoes", label: "Expedições", count, color: actionColors.expedicoes })
-      }
-    }
-  
-    if (filteredAcoes) {
-      Object.entries(filteredAcoes).forEach(([acao, fc]) => {
-        opts.push({ id: acao, label: acao, count: fc.features.length, color: actionColors[acao] || "#000" })
-      })
-    }
-    return opts
-  }, [filteredAcoes, expedicoesData])
 
   if (!isMounted || isLoading) {
     return <MapPlaceholder />
@@ -306,7 +296,12 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
 
   return (
     <div className="w-full h-screen relative z-10">
-      <MapContainer center={center} zoom={zoom} zoomControl={false} className="w-full h-full">
+      <MapContainer 
+        center={center} 
+        zoom={zoom} 
+        zoomControl={false} 
+        className="w-full h-full"
+      >
         <TileLayer
           url="https://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}"
           maxZoom={20}
@@ -316,13 +311,14 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
         <CustomZoomControl />
         <CustomLayerControl />
 
+        {/* Camadas Estáticas */}
         {layerConfigs.map(
           (layer) =>
             visibleLayers.includes(layer.id) && (
               <GeoJSON
                 key={layer.id}
                 data={layer.data}
-                style={() => layer.style}
+                style={layer.style}
                 onEachFeature={(feature, l) => {
                   l.on({
                     click: () => handleFeatureClick(feature.properties, layer.id),
@@ -331,17 +327,13 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
               />
             ),
         )}
+
+        {/* Desmatamento */}
         {filteredDesmatamentoData && visibleLayers.includes("desmatamento") && (
           <GeoJSON
             key={`desmatamento-${dateFilter.startDate?.toISOString()}-${dateFilter.endDate?.toISOString()}`}
             data={filteredDesmatamentoData}
-            style={() => ({
-              color: layerColors.desmatamento,
-              fillColor: layerColors.desmatamento,
-              weight: 2,
-              opacity: 0.65,
-              fillOpacity: 0.1,
-            })}
+            style={STATIC_LAYER_STYLES.desmatamento}
             onEachFeature={(feature, layer) => {
               layer.on({
                 click: () => handleFeatureClick(feature.properties, "desmatamento"),
@@ -349,9 +341,11 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
             }}
           />
         )}
+
+        {/* Focos de Incêndio */}
         {visibleLayers.includes("firms") &&
           filteredFirms.map((firm, index) => {
-            const coords = firm.geometry.coordinates
+            const coords = firm.geometry?.coordinates
             if (
               Array.isArray(coords) &&
               coords.length === 2 &&
@@ -371,7 +365,6 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
                   eventHandlers={{
                     click: () => handleFeatureClick(firm.properties, "firms"),
                   }}
-
                 >
                   <Tooltip>
                     {firm.properties.acq_date
@@ -384,74 +377,92 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
             return null
           })}
 
-        {filteredAcoes &&
-          Object.entries(filteredAcoes).map(([acao, fc]) =>
-            visibleActions.includes(acao) &&
-            fc.features.map((feature, index) => {
-              const coords = feature.geometry.coordinates as number[]
+        {/* Ações (Refatorado) */}
+        {filteredAcoesFeatures.map((feature, index) => {
+          const cat = (feature.properties.categoria as ActionCategory) || 'Monitoramento';
+          const type = feature.properties.tipo || 'Outros';
+          const uniqueId = `${cat}:${type}`;
+          const status = (feature.properties.status as ActionStatus) || 'Ativo';
+
+          if (!visibleActionTypes.includes(uniqueId)) return null;
+
+          const coords = feature.geometry?.coordinates as number[] | undefined;
+          if (Array.isArray(coords) && coords.length >= 2) {
+            return (
+              <Marker
+                key={`acao-${feature.properties.id || index}`}
+                position={[coords[1], coords[0]]}
+                icon={createActionIcon(cat, status)}
+                eventHandlers={{
+                  click: () => handleFeatureClick({ ...feature.properties, id: feature.properties.id }, "acoes"),
+                }}
+              >
+                <Tooltip>{feature.properties.name || feature.properties.nome}</Tooltip>
+              </Marker>
+            );
+          }
+          return null;
+        })}
+
+        {/* Expedições - Trilhas */}
+        {expedicoesData && visibleLayers.includes("expedicoes") && (
+          <GeoJSON
+            key={`expedicoes-${dateFilter.startDate?.toISOString() ?? "null"}-${dateFilter.endDate?.toISOString() ?? "null"}`}
+            data={{
+              type: "FeatureCollection",
+              features: expedicoesData.trilhas.features.filter((f) => {
+                const d = f.properties.data ?? f.properties.recordedat ?? f.properties.created_at
+                const itemDate = new Date(d)
+                if (dateFilter.startDate && itemDate < dateFilter.startDate) return false
+                if (dateFilter.endDate) {
+                    const end = new Date(dateFilter.endDate)
+                    end.setHours(23, 59, 59, 999)
+                    if (itemDate > end) return false
+                }
+                return true
+              }),
+            } as any}
+            style={STATIC_LAYER_STYLES.expedicoes}
+            onEachFeature={(feature, layer) => {
+              layer.on({ click: () => handleFeatureClick(feature.properties, "expedicoes") })
+            }}
+          />
+        )}
+
+        {/* Expedições - Waypoints */}
+        {expedicoesData &&
+          visibleLayers.includes("expedicoes") &&
+          [...expedicoesData.waypoints.features]
+            .filter((wp) => {
+                const d = wp.properties.data
+                const itemDate = new Date(d)
+                if (dateFilter.startDate && itemDate < dateFilter.startDate) return false
+                if (dateFilter.endDate) {
+                    const end = new Date(dateFilter.endDate)
+                    end.setHours(23, 59, 59, 999)
+                    if (itemDate > end) return false
+                }
+                return true
+            })
+            .sort((a, b) => new Date(a.properties.recordedat).getTime() - new Date(b.properties.recordedat).getTime())
+            .map((wp, index) => {
+              const coords = wp.geometry?.coordinates as number[] | undefined
               if (Array.isArray(coords) && coords.length >= 2) {
                 return (
-                  <CircleMarker
-                    key={`acao-${acao}-${index}`}
-                    center={[coords[1], coords[0]]}
-                    radius={6}
-                    pathOptions={{
-                      color: actionColors[acao],
-                      fillColor: actionColors[acao],
-                      fillOpacity: 0.9,
-                    }}
+                  <Marker
+                    key={`exp-wp-${index}`}
+                    position={[coords[1], coords[0]]}
+                    icon={createWaypointIcon(index + 1)}
                     eventHandlers={{
-                      click: () => handleFeatureClick({ ...feature.properties, id: feature.properties.id }, "acoes"),
+                      click: () => handleFeatureClick(wp.properties, "expedicoes"),
                     }}
-                    >
-                    <Tooltip>{feature.properties.name || feature.properties.nome}</Tooltip>
-                  </CircleMarker>
+                  >
+                    <Tooltip>{wp.properties.name || wp.properties.nome}</Tooltip>
+                  </Marker>
                 )
               }
               return null
-            }),
-          )}
-
-        {expedicoesData && visibleActions.includes("expedicoes") && (
-          <GeoJSON
-          key={`expedicoes-${dateFilter.startDate?.toISOString() ?? "null"}-${dateFilter.endDate?.toISOString() ?? "null"}`}
-          data={{
-            type: "FeatureCollection",
-            features: expedicoesData.trilhas.features.filter((f) => {
-              const d = f.properties.data ?? f.properties.recordedat ?? f.properties.created_at
-              return d && isWithinDateRange(d, dateFilter.startDate, dateFilter.endDate)
-            }),
-          } as any}
-          style={() => ({ color: layerColors.expedicoes, weight: 3, opacity: 0.8 })}
-          onEachFeature={(feature, layer) => {
-            layer.on({ click: () => handleFeatureClick(feature.properties, "expedicoes") })
-          }}
-        />
-      )}
-
-{expedicoesData &&
-  visibleActions.includes("expedicoes") &&
-  [...expedicoesData.waypoints.features]
-    .filter((wp) => isWithinDateRange(wp.properties.data, dateFilter.startDate, dateFilter.endDate))
-    .sort((a, b) => new Date(a.properties.recordedat).getTime() - new Date(b.properties.recordedat).getTime())
-    .map((wp, index) => {
-      const coords = wp.geometry.coordinates as number[]
-      if (Array.isArray(coords) && coords.length >= 2) {
-        return (
-          <Marker
-            key={`exp-wp-${index}`}
-            position={[coords[1], coords[0]]}
-            icon={createWaypointIcon(index + 1)}
-            eventHandlers={{
-              click: () => handleFeatureClick(wp.properties, "expedicoes"),
-            }}
-            >
-            <Tooltip>{wp.properties.name || wp.properties.nome}</Tooltip>
-          </Marker>
-        )
-      }
-      return null
-    })}
+            })}
       </MapContainer>
 
       <div className="absolute top-4 left-4 z-[1000]">
@@ -460,7 +471,13 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
 
       <div className="absolute bottom-4 left-4 z-[1000] gap-3 flex flex-col">
         <MapLayersCard title="Camadas" options={layerOptions} onLayerToggle={handleLayerToggle} />
-        <ActionsLayerCard title="Ações" options={actionOptions} onLayerToggle={handleActionToggle} />
+        <ActionsLayerCard 
+          title="Ações" 
+          categories={groupedActions} 
+          visibleActionTypes={visibleActionTypes}
+          onToggleType={handleActionTypeToggle}
+          onToggleCategory={handleCategoryToggle}
+        />
       </div>
 
       <Modal
@@ -471,6 +488,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
       >
         {modalData.content}
       </Modal>
+
       <EditAcaoModal
         isOpen={isEditOpen}
         onClose={() => setIsEditOpen(false)}
@@ -486,4 +504,5 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 , aco
         }}
       />
     </div>
-  )}
+  )
+}

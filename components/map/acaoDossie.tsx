@@ -346,6 +346,7 @@ const AddHistoryForm = ({ acaoId, onSuccess, onCancel }: { acaoId: number; onSuc
   
       toast({
         title: "Sucesso",
+        variant: "success",
         description: data.data?.message || "Item adicionado ao histórico com sucesso!",
       })
   
@@ -440,6 +441,7 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [editableFields, setEditableFields] = useState({
+    name: "",
     status: undefined as string | undefined,
     acao: undefined as string | undefined,
     latitude: "",
@@ -452,6 +454,7 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
   useEffect(() => {
     if (dossie) {
       setEditableFields({
+        name: dossie.name ?? "",
         status: dossie.status ?? undefined,
         acao: dossie.acao ?? undefined,
         latitude: dossie.latitude ?? "",
@@ -464,6 +467,13 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
     setActiveImage(url)
     setIsImageModalOpen(true)
   }
+
+  const handleInputChange = (field: "name" | "latitude" | "longitude") => (event: React.ChangeEvent<HTMLInputElement>) => {
+  setEditableFields((prev) => ({
+    ...prev,
+    [field]: event.target.value,
+  }))
+}
 
   const handleSelectChange = (field: "status" | "acao") => (value: string) => {
     setEditableFields((prev) => ({
@@ -482,6 +492,7 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
   const handleCancelEdit = () => {
     if (dossie) {
       setEditableFields({
+        name: dossie.name ?? "",
         status: dossie.status ?? undefined,
         acao: dossie.acao ?? undefined,
         latitude: dossie.latitude ?? "",
@@ -495,7 +506,7 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
     setIsSaving(true)
     try {
       const formData = new FormData()
-  
+      formData.append("name", editableFields.name)
       formData.append("status", editableFields.status ?? "")
       formData.append("acao", editableFields.acao ?? "")
       formData.append("latitude", editableFields.latitude ?? "")
@@ -505,6 +516,15 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
         method: "PUT",
         body: formData,
       })
+
+      if (!editableFields.name.trim()) {
+    toast({
+      title: "Campo obrigatório",
+      description: "O nome da ação não pode ficar vazio.",
+      variant: "destructive"
+    })
+    return
+  }
   
       const data = await response.json()
   
@@ -516,6 +536,7 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
       setIsEditing(false)
       toast({
         title: "Informações atualizadas",
+        variant: "success",
         description: "Os dados da ação foram salvos com sucesso.",
       })
     } catch (error: any) {
@@ -563,6 +584,7 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
 
       toast({
         title: "Item removido",
+        variant: "success",
         description: "O registro do histórico foi excluído com sucesso.",
       })
 
@@ -592,9 +614,19 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
               </div>
   
               <div className="flex-1 min-w-0 space-y-1">
-                <CardTitle className="text-base sm:text-lg tracking-tight text-slate-900">
-                  {dossie.name}
+               <CardTitle className="text-base sm:text-lg tracking-tight text-slate-900 flex-1">
+                  {isEditing ? (
+                    <Input
+                      value={editableFields.name}
+                      onChange={handleInputChange("name")}
+                      className="h-8 font-semibold text-base bg-white border-slate-300 focus-visible:ring-1 focus-visible:ring-sky-500"
+                      placeholder="Nome da ação"
+                    />
+                  ) : (
+                    dossie.name
+                  )}
                 </CardTitle>
+                
   
                 <div className="flex flex-wrap items-center gap-2">
                   <CardDescription className="text-xs text-slate-500">
@@ -607,6 +639,7 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
                   >
                     ID #{acaoId}
                   </Badge>
+                  
                 </div>
               </div>
             </div>
