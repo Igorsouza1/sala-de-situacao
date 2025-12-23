@@ -3,15 +3,15 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Plus, Map, BarChartIcon as ChartNetwork, HardDrive, User, Settings, LogOut, UserCog } from "lucide-react"
+import { Plus, Map, BarChartIcon as ChartNetwork,  User, Settings, LogOut, UserCog } from "lucide-react"
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 import { useUserRole } from "@/hooks/useUserRole"
-import { createClient } from "@/utils/supabase/client"
+import { createClient } from "@/lib/supabase/client"
   import { DataInsertDialog } from "@/components/data-insert/DataInsertDialog"
 import { UserProfileModal } from "@/components/user-profile-modal"
 

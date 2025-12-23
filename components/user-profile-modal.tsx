@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/hooks/use-toast"
 import { Skeleton } from "@/components/ui/skeleton" // shadcn skeleton
 
-import { createClient } from "@/utils/supabase/client" // ‼️  **ainda usado só para trocar a senha**
+import { createClient } from "@/lib/supabase/client" // ‼️  **ainda usado só para trocar a senha**
 
 /* ──────────────────────────
    Tipagens
