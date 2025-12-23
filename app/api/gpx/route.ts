@@ -69,10 +69,10 @@ export async function POST(request: Request) {
     // ─── Insere trilha no banco ───
     const nomeBase = file.name.replace(/\.gpx$/i, "")
     const { rows } = await db.execute(sql`
-      INSERT INTO rio_da_prata.trilhas (nome, geom, data_inicio, data_fim, duracao_minutos)
+      INSERT INTO monitoramento.trilhas (nome, geom, data_inicio, data_fim, duracao_minutos)
       VALUES (
         ${nomeBase},
-        ST_SetSRID(ST_GeomFromText(${wkt}), 4326),
+        ST_SetSRID(ST_GeomFromText(${wkt}), 4674),
         ${dataInicio},
         ${dataFim},
         ${duracaoMinutos}
@@ -87,11 +87,11 @@ export async function POST(request: Request) {
       if (isPoint(geom)) {
         const [lon, lat, ele] = geom.coordinates
         await db.execute(sql`
-          INSERT INTO rio_da_prata.waypoints (trilha_id, nome, geom, ele, recordedAt)
+          INSERT INTO monitoramento.waypoints (trilha_id, nome, geom, ele, recordedAt)
           VALUES (
             ${trilhaId},
             ${feat.properties?.name ?? null},
-            ST_SetSRID(ST_MakePoint(${lon}, ${lat}, ${ele ?? 0}), 4326),
+            ST_SetSRID(ST_MakePoint(${lon}, ${lat}, ${ele ?? 0}), 4674),
             ${ele ?? null},
             ${feat.properties?.time ?? null}
           )

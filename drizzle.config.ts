@@ -10,5 +10,5 @@ export default defineConfig({
     url: process.env.DATABASE_URL_PROD!,
 
   },
-  schemaFilter: ['rio_da_prata'],
+  schemaFilter: ['monitoramento'],
 });

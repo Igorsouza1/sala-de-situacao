@@ -2,16 +2,16 @@ import { db } from "@/db"
 import { desmatamentoInRioDaPrata } from "@/db/schema"
 
 
-export async function findAllDesmatamentoDataWithGeometry(){ 
-    const result = await db.execute(`
+export async function findAllDesmatamentoDataWithGeometry() {
+  const result = await db.execute(`
       SELECT id, alertid, alertcode, alertha, source, detectat, detectyear, state, stateha, ST_AsGeoJSON(geom) as geojson
-      FROM "rio_da_prata"."desmatamento"
+      FROM "monitoramento"."desmatamento"
     `)
 
-    return result
+  return result
 }
 
-export async function findAllDesmatamentoData(){
+export async function findAllDesmatamentoData() {
   const result = await db.select(
     {
       alertid: desmatamentoInRioDaPrata.alertid,
@@ -22,6 +22,6 @@ export async function findAllDesmatamentoData(){
       stateha: desmatamentoInRioDaPrata.stateha,
     }
   ).from(desmatamentoInRioDaPrata).execute()
-  
+
   return result
 }
