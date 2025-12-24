@@ -1,5 +1,7 @@
 
-import { Geist } from "next/font/google";
+import { Noto_Sans } from "next/font/google";
+
+
 // import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
@@ -14,9 +16,10 @@ export const metadata = {
   description: "Sala de situação para monitormaneto ambiental",
 };
 
-const geistSans = Geist({
-  display: "swap",
+const notoSans = Noto_Sans({
   subsets: ["latin"],
+  variable: "--font-noto-sans", // Variável CSS para o Tailwind
+  display: "swap",
 });
 
 export default function RootLayout({
@@ -25,7 +28,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={geistSans.className} suppressHydrationWarning>
+    <html lang="en" className={notoSans.className} suppressHydrationWarning>
       <body className="bg-background">
         {/* <ThemeProvider
           attribute="class"

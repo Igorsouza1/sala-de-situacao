@@ -48,3 +48,6 @@ UI: Tailwind CSS + ShadcnUI (localizado em components/ui).
 Autenticação/Cliente: Supabase (localizado em utils/supabase).
 
 Configuração: package.json, next.config.ts e tsconfig.json.
+
+
+Schema do banco de dados: https://gemini.google.com/share/e71dd66e1578
