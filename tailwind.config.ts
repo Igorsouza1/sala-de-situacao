@@ -11,7 +11,8 @@ const config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-noto-sans)", "sans-serif"],
+        sans: ["var(--font-inter)", "sans-serif"],
+        mono: ["var(--font-jetbrains-mono)", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",

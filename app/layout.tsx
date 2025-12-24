@@ -1,26 +1,32 @@
-
 import { Noto_Sans } from "next/font/google";
-
+import { Inter, JetBrains_Mono } from "next/font/google"; // This line was missing and is now added.
 
 // import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import type { Metadata } from "next"; // This line was missing and is now added.
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : "http://localhost:3000";
 
-export const metadata = {
-  metadataBase: new URL(defaultUrl),
-  title: "PRISMA AMBIENTAL",
-  description: "Sala de situação para monitormaneto ambiental",
-};
-
-const notoSans = Noto_Sans({
+const inter = Inter({
   subsets: ["latin"],
-  variable: "--font-noto-sans", // Variável CSS para o Tailwind
+  variable: "--font-inter",
   display: "swap",
 });
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
+
+export const metadata: Metadata = {
+  metadataBase: new URL(defaultUrl),
+  title: "PRISMA - Sala de Situação",
+  description: "Centro de Comando Ambiental para gestão estratégica e antecipação de crises.",
+};
 
 export default function RootLayout({
   children,
@@ -28,8 +34,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={notoSans.className} suppressHydrationWarning>
-      <body className="bg-background">
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
+      <body className="bg-background font-sans antialiased">
         {/* <ThemeProvider
           attribute="class"
           defaultTheme="system"
