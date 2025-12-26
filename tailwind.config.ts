@@ -58,6 +58,12 @@ const config = {
           lime: "#9BB61B",
           "lime-hover": "#8ba219",
         },
+        brand: {
+          dark: "#0F172A",
+          "dark-blue": "#111c35",
+          primary: "#3B82F6",
+          whatsapp: "#005c4b",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

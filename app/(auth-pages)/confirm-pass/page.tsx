@@ -9,7 +9,7 @@ export default async function Invite(props: { searchParams: Promise<Message> }) 
   const searchParams = await props.searchParams;
 
   return (
-    <div className="flex min-h-screen w-full bg-[#0F172A]">
+    <div className="flex min-h-screen w-full bg-brand-dark">
       {/* Coluna da esquerda com imagem */}
       <div className="hidden lg:flex lg:w-1/4 relative h-full bg-slate-900">
         <Image
@@ -23,7 +23,7 @@ export default async function Invite(props: { searchParams: Promise<Message> }) 
       </div>
 
       {/* Coluna da direita com formulário */}
-      <div className="w-full lg:w-2/3 flex flex-col items-center justify-center min-h-screen bg-[#0F172A] border-l border-white/5">
+      <div className="w-full lg:w-2/3 flex flex-col items-center justify-center min-h-screen bg-brand-dark border-l border-white/5">
         <div className="w-full max-w-sm space-y-10 px-8">
           <div className="flex flex-col items-center space-y-2">
             <div className="mb-4">
@@ -95,7 +95,7 @@ export default async function Invite(props: { searchParams: Promise<Message> }) 
 
             <SubmitButton
               formAction={completeInviteAction}
-              className="w-full py-3 bg-[#3B82F6] hover:bg-blue-600 text-white font-medium 
+              className="w-full py-3 bg-brand-primary hover:bg-blue-600 text-white font-medium 
                 transition-all duration-200 rounded-lg shadow-lg shadow-blue-900/20"
             >
               Salvar

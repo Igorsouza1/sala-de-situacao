@@ -19,9 +19,9 @@ import {
 
 export default function LandingPage() {
   return (
-    <div className="flex min-h-screen flex-col w-full bg-[#0F172A] font-sans selection:bg-blue-500/30 text-slate-200">
+    <div className="flex min-h-screen flex-col w-full bg-brand-dark font-sans selection:bg-brand-primary/30 text-slate-200">
       {/* Header */}
-      <header className="fixed top-0 z-50 w-full border-b border-white/5 bg-[#0F172A]/80 backdrop-blur-md supports-[backdrop-filter]:bg-[#0F172A]/60">
+      <header className="fixed top-0 z-50 w-full border-b border-white/5 bg-brand-dark/80 backdrop-blur-md supports-[backdrop-filter]:bg-brand-dark/60">
         <div className="container flex h-18 items-center justify-between">
           <div className="flex items-center gap-2 pl-4">
             <Image src="/logo.png" alt="Logo" width={140} height={140} />
@@ -55,7 +55,7 @@ export default function LandingPage() {
                 Acesso Seguro
               </Button>
             </Link>
-            <Button className="bg-[#3B82F6] hover:bg-blue-600 text-white border-0 font-medium">
+            <Button className="bg-brand-primary hover:bg-blue-600 text-white border-0 font-medium">
                 Agendar Apresentação
             </Button>
           </div>
@@ -65,13 +65,13 @@ export default function LandingPage() {
       <main className="flex-1 pt-16">
         
         {/* 1. Hero Section (A Promessa de Autoridade) */}
-        <section className="relative w-full py-24 md:py-32 lg:py-40 overflow-hidden border-b border-white/5 bg-[#0F172A]">
+        <section className="relative w-full py-24 md:py-32 lg:py-40 overflow-hidden border-b border-white/5 bg-brand-dark">
           <div className="container px-4 md:px-6 relative z-10 text-center">
             
             <div className="max-w-4xl mx-auto space-y-6 mb-12">
                 <h1 className="text-4xl md:text-5xl lg:text-7xl font-bold tracking-tight text-white leading-[1.1]">
                   Antecipe crises. <br/>
-                  <span className="text-[#3B82F6]">Governe com dados.</span>
+                  <span className="text-brand-primary">Governe com dados.</span>
                 </h1>
                 
                 <p className="text-xl text-slate-400 leading-relaxed max-w-2xl mx-auto font-light">
@@ -79,7 +79,7 @@ export default function LandingPage() {
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 justify-center pt-4">
-                  <Button size="lg" className="bg-[#3B82F6] hover:bg-blue-600 text-white border-0 px-8 h-12 text-base">
+                  <Button size="lg" className="bg-brand-primary hover:bg-blue-600 text-white border-0 px-8 h-12 text-base">
                     Agendar Apresentação Técnica
                   </Button>
                 </div>
@@ -93,7 +93,7 @@ export default function LandingPage() {
 
             {/* Mockup Interface "Clean Enterprise" */}
             <div className="relative max-w-5xl mx-auto mt-16 group">
-                <div className="absolute -inset-1 bg-gradient-to-t from-[#3B82F6]/20 to-transparent rounded-lg blur-xl opacity-30"></div>
+                <div className="absolute -inset-1 bg-gradient-to-t from-brand-primary/20 to-transparent rounded-lg blur-xl opacity-30"></div>
                 <div className="relative bg-slate-950 rounded-lg border border-white/10 shadow-2xl overflow-hidden aspect-[21/9] flex flex-col">
                   {/* Window Header */}
                   <div className="h-8 bg-slate-900 border-b border-white/5 flex items-center px-4 gap-2">
@@ -105,7 +105,7 @@ export default function LandingPage() {
                   {/* Interface Content */}
                   <div className="flex-1 relative bg-slate-900">
                      {/* Map Background Placeholder */}
-                     <div className="absolute inset-0 bg-[#0F172A] opacity-50">
+                     <div className="absolute inset-0 bg-brand-dark opacity-50">
                         {/* Abstract Map Grid */}
                         <div className="w-full h-full" style={{ backgroundImage: 'radial-gradient(circle, #334155 1px, transparent 1px)', backgroundSize: '40px 40px', opacity: 0.2 }}></div>
                      </div>
@@ -132,11 +132,11 @@ export default function LandingPage() {
         </section>
 
         {/* Nova Seção Proposta: Alianças Estratégicas */}
-        <section className="w-full py-16 bg-[#0F172A] border-b border-white/5">
+        <section className="w-full py-16 bg-brand-dark border-b border-white/5">
           <div className="container px-4 md:px-6">
             <div className="flex flex-col items-center text-center space-y-4 mb-10">
                <h2 className="text-2xl md:text-3xl font-bold text-white">Validação Territorial e Alianças Estratégicas.</h2>
-               <div className="h-0.5 w-24 bg-[#3B82F6]/30 rounded-full"></div>
+               <div className="h-0.5 w-24 bg-brand-primary/30 rounded-full"></div>
                <p className="text-slate-400 max-w-2xl text-sm leading-relaxed">
                   Nossa inteligência é desenvolvida e aprimorada em cooperação direta com organizações que atuam na linha de frente da preservação de biomas críticos e na gestão de ativos de ecoturismo de classe mundial.
                </p>
@@ -175,7 +175,7 @@ export default function LandingPage() {
 
 
         {/* 2. A Realidade da Gestão Pública (O Problema) */}
-        <section id="problema" className="w-full py-24 bg-[#111c35] border-b border-white/5">
+        <section id="problema" className="w-full py-24 bg-brand-dark-blue border-b border-white/5">
            <div className="container px-4 md:px-6">
               <div className="max-w-3xl mx-auto text-center mb-16">
                  <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">A gestão não pode depender da sorte.</h2>
@@ -223,7 +223,7 @@ export default function LandingPage() {
 
 
         {/* 3. A Solução Prisma: Inteligência que Blinda */}
-        <section id="solucao" className="w-full py-24 bg-[#0F172A]">
+        <section id="solucao" className="w-full py-24 bg-brand-dark">
            <div className="container px-4 md:px-6">
               <div className="grid lg:grid-cols-2 gap-16 items-center">
                  <div>
@@ -234,7 +234,7 @@ export default function LandingPage() {
 
                     <div className="space-y-8">
                        <div className="flex gap-4">
-                          <div className="flex-shrink-0 w-12 h-12 bg-[#3B82F6]/10 rounded-lg flex items-center justify-center text-[#3B82F6]">
+                          <div className="flex-shrink-0 w-12 h-12 bg-brand-primary/10 rounded-lg flex items-center justify-center text-brand-primary">
                              <Shield className="w-6 h-6" />
                           </div>
                           <div>
@@ -246,7 +246,7 @@ export default function LandingPage() {
                        </div>
 
                        <div className="flex gap-4">
-                          <div className="flex-shrink-0 w-12 h-12 bg-[#3B82F6]/10 rounded-lg flex items-center justify-center text-[#3B82F6]">
+                          <div className="flex-shrink-0 w-12 h-12 bg-brand-primary/10 rounded-lg flex items-center justify-center text-brand-primary">
                              <Search className="w-6 h-6" />
                           </div>
                           <div>
@@ -258,7 +258,7 @@ export default function LandingPage() {
                        </div>
 
                        <div className="flex gap-4">
-                          <div className="flex-shrink-0 w-12 h-12 bg-[#3B82F6]/10 rounded-lg flex items-center justify-center text-[#3B82F6]">
+                          <div className="flex-shrink-0 w-12 h-12 bg-brand-primary/10 rounded-lg flex items-center justify-center text-brand-primary">
                              <Lock className="w-6 h-6" />
                           </div>
                           <div>
@@ -273,11 +273,11 @@ export default function LandingPage() {
 
                  {/* Visual da "Sala de Situação" - Mockup focado em camadas */}
                  <div className="relative">
-                    <div className="absolute inset-0 bg-gradient-to-tr from-[#3B82F6]/20 to-transparent rounded-2xl blur-2xl opacity-20"></div>
+                     <div className="absolute inset-0 bg-gradient-to-tr from-brand-primary/20 to-transparent rounded-2xl blur-2xl opacity-20"></div>
                     <div className="relative bg-slate-950 border border-white/10 rounded-xl shadow-2xl p-2 aspect-square flex items-center justify-center">
                         <div className="text-center space-y-4">
-                           <div className="w-24 h-24 bg-[#3B82F6]/20 rounded-full mx-auto flex items-center justify-center animate-pulse">
-                              <Shield className="w-10 h-10 text-[#3B82F6]" />
+                           <div className="w-24 h-24 bg-brand-primary/20 rounded-full mx-auto flex items-center justify-center animate-pulse">
+                              <Shield className="w-10 h-10 text-brand-primary" />
                            </div>
                            <div className="text-slate-500 font-mono text-xs uppercase tracking-widest">Interface de Blindagem</div>
                            <div className="text-white font-bold text-lg">Prisma Sala de Situação</div>
@@ -290,7 +290,7 @@ export default function LandingPage() {
 
 
         {/* 4. Funcionalidades Estratégicas (UX B2G) */}
-        <section id="funcionalidades" className="w-full py-24 bg-[#111c35] border-y border-white/5">
+        <section id="funcionalidades" className="w-full py-24 bg-brand-dark-blue border-y border-white/5">
            <div className="container px-4 md:px-6">
               <div className="text-center mb-16">
                  <h2 className="text-3xl font-bold text-white mb-4">Desenhado para a velocidade do gabinete.</h2>
@@ -304,14 +304,14 @@ export default function LandingPage() {
                        <Smartphone className="w-8 h-8 text-emerald-400" />
                     </div>
                     <h3 className="text-xl font-bold text-white mb-2">O Panorama Executivo</h3>
-                    <p className="text-[#3B82F6] font-medium mb-4 text-sm uppercase tracking-wide">Munição para despachar com o Prefeito</p>
+                     <p className="text-brand-primary font-medium mb-4 text-sm uppercase tracking-wide">Munição para despachar com o Prefeito</p>
                     <p className="text-slate-400 text-sm leading-relaxed max-w-md mb-8">
                        Sabemos que o chefe do executivo não faz login. O Prisma gera resumos automáticos via WhatsApp. Situação controlada em poucas linhas.
                     </p>
                     
                     {/* Visual Mockup Chat */}
                     <div className="w-full max-w-xs bg-black/40 rounded-lg border border-white/5 p-4 text-left font-sans text-sm">
-                       <div className="bg-[#005c4b] text-white p-3 rounded-lg rounded-tl-none inline-block max-w-[90%] shadow-sm">
+                        <div className="bg-brand-whatsapp text-white p-3 rounded-lg rounded-tl-none inline-block max-w-[90%] shadow-sm">
                           <p className="font-medium text-[10px] text-emerald-200 mb-1">Prisma Bot</p>
                           Prefeito, update do Prisma: Tivemos 2 ocorrências no Rio da Prata hoje cedo. Já enviamos equipe. Situação sob controle.
                           <div className="text-[10px] text-white/60 text-right mt-1">10:42</div>
@@ -325,7 +325,7 @@ export default function LandingPage() {
                        <FileText className="w-8 h-8 text-purple-400" />
                     </div>
                     <h3 className="text-xl font-bold text-white mb-2">Smart Reporting</h3>
-                    <p className="text-[#3B82F6] font-medium mb-4 text-sm uppercase tracking-wide">Geração de Nota Oficial Instantânea</p>
+                     <p className="text-brand-primary font-medium mb-4 text-sm uppercase tracking-wide">Geração de Nota Oficial Instantânea</p>
                     <p className="text-slate-400 text-sm leading-relaxed max-w-md mb-8">
                        A imprensa questionou? Exporte um Boletim de Inteligência sóbrio em PDF, com mapa e logos oficiais em minutos. Pronto para a ASSECOM.
                     </p>
@@ -349,7 +349,7 @@ export default function LandingPage() {
         {/* 5. O Impacto Econômico (Foco Turismo) */}
         <section className="relative w-full py-32 overflow-hidden">
            {/* Background subtil de rio/água */}
-           <div className="absolute inset-0 bg-[#0F172A]">
+            <div className="absolute inset-0 bg-brand-dark">
                <div className="absolute inset-0 opacity-10 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-blue-900 via-transparent to-transparent"></div>
                {/* Pattern overlay */}
                <div className="absolute inset-0 opacity-[0.03]" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\'60\' height=\'60\' viewBox=\'0 0 60 60\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'none\' fill-rule=\'evenodd\'%3E%3Cg fill=\'%23ffffff\' fill-opacity=\'1\'%3E%3Cpath d=\'M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z\'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")' }}></div>
@@ -374,13 +374,13 @@ export default function LandingPage() {
       </main>
 
       {/* 7. Rodapé e CTA Final */}
-      <footer className="w-full bg-[#0F172A] border-t border-white/5 pt-20 pb-10">
+      <footer className="w-full bg-brand-dark border-t border-white/5 pt-20 pb-10">
         <div className="container px-4 md:px-6 text-center">
            <div className="max-w-4xl mx-auto space-y-8 mb-20">
               <h2 className="text-4xl md:text-5xl font-bold text-white tracking-tight">Elimine o elemento surpresa da sua gestão.</h2>
               <p className="text-xl text-slate-400">Governe com a segurança de quem vê o cenário completo.</p>
               
-              <Button size="lg" className="bg-[#3B82F6] hover:bg-blue-600 text-white border-0 px-10 h-14 text-lg shadow-lg shadow-blue-900/20">
+               <Button size="lg" className="bg-brand-primary hover:bg-blue-600 text-white border-0 px-10 h-14 text-lg shadow-lg shadow-blue-900/20">
                   Solicitar Demonstração do Centro de Comando
               </Button>
            </div>
