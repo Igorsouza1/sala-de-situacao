@@ -15,7 +15,7 @@ export default async function Invite(props: { searchParams: Promise<Message> }) 
       {/* Coluna da esquerda com imagem */}
       <div className="hidden lg:flex lg:w-1/3 relative h-full bg-slate-900">
         <Image
-          src="/signin.png"
+          src="/signin_novo.png"
           alt="Rio da Prata"
           layout="fill"
           objectFit="cover"
