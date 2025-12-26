@@ -11,9 +11,9 @@ export default async function Login(props: { searchParams: Promise<Message> }) {
   return (
     <div className="flex min-h-screen w-full bg-[#0F172A]">
       {/* Coluna da esquerda com imagem */}
-      <div className="hidden lg:flex lg:w-1/3 relative h-full bg-slate-900">
+      <div className="hidden lg:flex lg:w-1/4 relative h-full bg-slate-900">
         <Image
-          src="/signin.png"
+          src="/signin_novo.png"
           alt="Rio da Prata"
           layout="fill"
           objectFit="cover"
