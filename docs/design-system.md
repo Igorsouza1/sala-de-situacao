@@ -1,4 +1,5 @@
 # Design System
+Nosso design system é guiado por caracteristicas profissional, caro e moderno
 
 ## Cores (Brand)
 
