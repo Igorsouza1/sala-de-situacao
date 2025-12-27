@@ -3,31 +3,7 @@
 import type React from "react"
 import { createContext, useContext, useState, useEffect } from "react"
 
-type GeoJSONFeature = {
-  type: "Feature"
-  properties: {
-    [key: string]: any
-  }
-  geometry: {
-    type: string
-    coordinates: number[] | number[][] | number[][][]
-  }
-}
 
-type GeoJSONFeatureCollection = {
-  type: "FeatureCollection"
-  features: GeoJSONFeature[]
-}
-
-type MapData = {
-  estradas: GeoJSONFeatureCollection
-  bacia: GeoJSONFeatureCollection
-  leito: GeoJSONFeatureCollection
-  desmatamento: GeoJSONFeatureCollection
-  propriedades: GeoJSONFeatureCollection
-  firms: GeoJSONFeatureCollection
-  banhado: GeoJSONFeatureCollection
-}
 
 type ModalData = {
   isOpen: boolean
@@ -35,35 +11,21 @@ type ModalData = {
   content: React.ReactNode
 }
 
-type ExpedicoesData = {
-  trilhas: GeoJSONFeatureCollection
-  waypoints: GeoJSONFeatureCollection
-}
-
-type AcoesData = Record<string, GeoJSONFeatureCollection>
+// Legacy Data Types (MapData, ExpedicoesData, AcoesData) Removed
 
 type MapContextType = {
-  mapData: MapData | null
-  expedicoesData: ExpedicoesData | null
-  acoesData: AcoesData | null
-  isLoading: boolean
-  error: string | null
   modalData: ModalData
   openModal: (title: string, content: React.ReactNode) => void
   closeModal: () => void
   dateFilter: { startDate: Date | null; endDate: Date | null }
   setDateFilter: (startDate: Date | null, endDate: Date | null) => void
-  refreshAcoesData: () => Promise<void>
 }
 
 const MapContext = createContext<MapContextType | undefined>(undefined)
 
 export function MapProvider({ children }: { children: React.ReactNode }) {
-  const [mapData, setMapData] = useState<MapData | null>(null)
-  const [expedicoesData, setExpedicoesData] = useState<ExpedicoesData | null>(null)
-  const [acoesData, setAcoesData] = useState<AcoesData | null>(null)
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  // Legacy Data State Removed
+  
   const [modalData, setModalData] = useState<ModalData>({
     isOpen: false,
     title: "",
@@ -74,67 +36,7 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
     endDate: null,
   })
 
-  useEffect(() => {
-    fetchMapData()
-    fetchExpedicoesData()
-  }, [])
-
-  const fetchMapData = async () => {
-    try {
-      const response = await fetch("/api/mapLayers")
-      if (!response.ok) {
-        throw new Error("Failed to fetch map data")
-      }
-      const apiResponse = await response.json()
-      if(apiResponse.success){
-        setMapData(apiResponse.data)
-      } else {
-        throw new Error(apiResponse.error?.message || "Erro retornado pela API");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unknown error occurred")
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  const fetchExpedicoesData = async () => {
-    try {
-      const response = await fetch("/api/expedicoes")
-      const apiResponse = await response.json()
-      if (!response.ok) {
-        throw new Error("Failed to fetch expeditions data")
-      }
-      if(apiResponse.success){
-        setExpedicoesData(apiResponse.data)
-      } else {
-        throw new Error(apiResponse.error?.message || "Erro retornado pela API");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unknown error occurred")
-    }
-  }
-
-  const fetchAcoesData = async () => {
-    try {
-      const response = await fetch("/api/acoes?view=map", {
-        next: { tags: ["acoes"] },
-      });
-      const apiResponse = await response.json()
-
-      if(apiResponse.success){
-        setAcoesData(apiResponse.data)
-      } else {
-        throw new Error(apiResponse.error?.message || "Erro retornado pela API");
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "An unknown error occurred")
-    }
-  }
-
-  const refreshAcoesData = async () => {
-    await fetchAcoesData()
-  }
+  // Legacy Fetch Functions Removed
 
 
   const openModal = (title: string, content: React.ReactNode) => {
@@ -152,17 +54,11 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
   return (
     <MapContext.Provider
       value={{
-        mapData,
-        isLoading,
-        expedicoesData,
-        acoesData,
-        error,
         modalData,
         openModal,
         closeModal,
         dateFilter,
         setDateFilter: setDateFilterFunction,
-        refreshAcoesData,
       }}
     >
       {children}

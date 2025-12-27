@@ -1,7 +1,7 @@
 "use client"
 
 import { ChevronUp, ChevronDown, Layers, Eye, EyeOff, Leaf, Flame, Waves, MapPin, Activity } from "lucide-react"
-import { useEffect, useState, useMemo, useCallback } from "react"
+import { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import dynamic from "next/dynamic"
 import type { LatLngExpression } from "leaflet"
 import "leaflet/dist/leaflet.css"
@@ -15,8 +15,6 @@ import { FeatureDetails } from "./feature-details"
 import { Modal } from "./Modal"
 import { EditAcaoModal } from "./EditAcaoModal"
 import { useUserRole } from "@/hooks/useUserRole"
-import { useMapFilters } from "@/hooks/useMapFilters"
-import { ACTION_CATEGORIES, ActionCategory, STATUS_STYLES, ActionStatus } from "./config/actions-config"
 import { renderToStaticMarkup } from "react-dom/server"
 import { LayerManager, LayerManagerOption } from "./LayerManager"
 import { LayerResponseDTO } from "@/types/map-dto"
@@ -161,81 +159,6 @@ const createWaypointIcon = (index: number) =>
     iconAnchor: [14, 14],
   })
 
-// Helper to create Action Icon
-const createActionIcon = (category: ActionCategory, status: ActionStatus) => {
-  const config = ACTION_CATEGORIES[category] || ACTION_CATEGORIES['Monitoramento'];
-  const statusConfig = STATUS_STYLES[status] || STATUS_STYLES['Ativo'];
-  const IconComponent = config.icon;
-  
-  // Colors
-  // If resolved, use a muted gray for the main pin to indicate inactivity, but keep the badge green
-  const mainColor = status === 'Resolvido' ? '#64748b' : config.color; 
-  const statusColor = statusConfig.color;
-
-  const iconHtml = renderToStaticMarkup(
-    <IconComponent 
-      size={18} 
-      color="white" 
-      strokeWidth={2.5}
-    />
-  );
-
-  // SVG Path for a Map Pin (FontAwesome style)
-  // ViewBox 0 0 384 512
-  const pinPath = "M172.268 501.67C26.97 291.031 0 269.413 0 192 0 85.961 85.961 0 192 0s192 85.961 192 192c0 77.413-26.97 99.031-172.268 309.67-9.535 13.774-29.93 13.773-39.464 0z";
-
-  return L.divIcon({
-    html: `
-      <div style="
-        position: relative;
-        width: 40px;
-        height: 48px;
-        filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3));
-        transition: all 0.2s ease;
-      " class="group hover:-translate-y-1">
-        
-        <!-- Main Pin -->
-        <svg width="40" height="48" viewBox="0 0 384 512" xmlns="http://www.w3.org/2000/svg">
-          <path fill="${mainColor}" d="${pinPath}"/>
-          <circle cx="192" cy="192" r="90" fill="rgba(255,255,255,0.2)" />
-        </svg>
-
-        <!-- Icon -->
-        <div style="
-          position: absolute;
-          top: 14px;
-          left: 50%;
-          transform: translateX(-50%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 20px;
-          height: 20px;
-        ">
-          ${iconHtml}
-        </div>
-
-        <!-- Status Badge -->
-        <div style="
-          position: absolute;
-          top: 0;
-          right: 0;
-          width: 14px;
-          height: 14px;
-          background-color: ${statusColor};
-          border: 2px solid white;
-          border-radius: 50%;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-          z-index: 10;
-        "></div>
-      </div>
-    `,
-    className: `action-marker-${category} ${status === 'Crítico' ? 'animate-pulse' : ''}`,
-    iconSize: [40, 48],
-    iconAnchor: [20, 48], // Tip of the pin
-    popupAnchor: [0, -48], // Above the pin
-  });
-};
 
 export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: MapProps) {
   const [isMounted, setIsMounted] = useState(false)
@@ -249,72 +172,53 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     "banhado",
   ])
   
-  // New Visibility State: Array of "Category:Type" strings
-  const [visibleActionTypes, setVisibleActionTypes] = useState<string[]>([])
+  // New Visibility State: Array of "Category:Type" strings (REMOVED)
   const [dynamicLayers, setDynamicLayers] = useState<LayerResponseDTO[]>([])
   const [visibleDynamicLayers, setVisibleDynamicLayers] = useState<string[]>([])
   const [loadingLayers, setLoadingLayers] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const initializedRef = useRef(false)
   
-  const { mapData, isLoading, error, modalData, openModal, closeModal, dateFilter, setDateFilter, expedicoesData, refreshAcoesData, acoesData } =
+  const { modalData, openModal, closeModal, dateFilter, setDateFilter } =
     useMapContext()
 
-  // ✅ HOOK: Recupera dados filtrados e agrupados
-  const {
-    filteredAcoesFeatures,
-    groupedActions
-  } = useMapFilters({ mapData, acoesData, expedicoesData, dateFilter });
+  // Fetch Dynamic Layers (Moved directly to map component for reuse)
+  const fetchLayers = useCallback(async () => {
+    setLoadingLayers(true)
+    setError(null)
+    try {
+      const response = await fetch("/api/map/layers")
+      if (response.ok) {
+        const data: LayerResponseDTO[] = await response.json()
+        setDynamicLayers(data.sort((a,b) => (a.ordering || 0) - (b.ordering || 0)))
+      } else {
+          console.error("Failed to fetch layers")
+          setError("Falha ao carregar camadas")
+      }
+    } catch (err) {
+      console.error("Error fetching layers:", err)
+      setError("Erro ao conectar com servidor")
+    } finally {
+      setLoadingLayers(false)
+    }
+  }, []) 
+
+  // Initialize visibility once
+  useEffect(() => {
+    if (!initializedRef.current && dynamicLayers.length > 0) {
+        setVisibleDynamicLayers(dynamicLayers.map(l => l.slug))
+        initializedRef.current = true
+    }
+  }, [dynamicLayers])
 
   useEffect(() => {
     setIsMounted(true)
-    
-    // Fetch Dynamic Layers
-    const fetchLayers = async () => {
-      setLoadingLayers(true)
-      try {
-        const response = await fetch("/api/map/layers")
-        if (response.ok) {
-          const data: LayerResponseDTO[] = await response.json()
-      setDynamicLayers(data.sort((a,b) => (a.ordering || 0) - (b.ordering || 0)))
-          // Default to all visible or logic based on requirements
-          setVisibleDynamicLayers(data.map(l => l.slug))
-        } else {
-            console.error("Failed to fetch layers")
-        }
-      } catch (err) {
-        console.error("Error fetching layers:", err)
-      } finally {
-        setLoadingLayers(false)
-      }
-    }
     fetchLayers()
-  }, [])
+  }, [fetchLayers])
+
 
   
 
-  const handleLayerToggle = (id: string, isChecked: boolean) => {
-    setVisibleLayers((prev) => (isChecked ? [...prev, id] : prev.filter((layerId) => layerId !== id)))
-  }
-
-  // Toggle a specific Type within a Category
-  const handleActionTypeToggle = (categoryId: string, typeId: string, isChecked: boolean) => {
-    const uniqueId = `${categoryId}:${typeId}`
-    setVisibleActionTypes(prev => 
-      isChecked ? [...prev, uniqueId] : prev.filter(id => id !== uniqueId)
-    )
-  }
-
-  // Toggle all types within a Category
-  const handleCategoryToggle = (categoryId: string, isChecked: boolean) => {
-    const category = groupedActions.find(c => c.id === categoryId)
-    if (!category) return
-
-    const allTypeIds = category.types.map(t => `${categoryId}:${t.id}`)
-    
-    setVisibleActionTypes(prev => {
-      const withoutCategory = prev.filter(id => !id.startsWith(`${categoryId}:`))
-      return isChecked ? [...withoutCategory, ...allTypeIds] : withoutCategory
-    })
-  }
 
   // Dynamic Layer Toggles
   const handleDynamicLayerToggle = (slug: string, isChecked: boolean) => {
@@ -345,15 +249,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
 
   // Legacy layerConfigs removed
 
-  const layerOptions = [
-    { id: "bacia", label: "Bacia", count: mapData?.bacia.features.length || 0, color: layerColors.bacia },
-    { id: "banhado", label: "Banhado", count: mapData?.banhado.features.length || 0, color: layerColors.banhado },
-    { id: "propriedades", label: "Propriedades", count: mapData?.propriedades.features.length || 0, color: layerColors.propriedades },
-    { id: "leito", label: "Leito", count: mapData?.leito.features.length || 0, color: layerColors.leito },
-    { id: "estradas", label: "Estradas", count: mapData?.estradas.features.length || 0, color: layerColors.estradas },
-    { id: "desmatamento", label: "Desmatamento", count: mapData?.desmatamento.features.length || 0, color: layerColors.desmatamento },
-    { id: "firms", label: "Focos de Incêndio", count: mapData?.firms.features.length || 0, color: layerColors.firms },
-  ]
+  // Legacy layerConfigs and layerOptions removed
 
   const dynamicLayerOptions: LayerManagerOption[] = dynamicLayers.map(layer => ({
     id: String(layer.id),
@@ -363,7 +259,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     color: layer.visualConfig?.color || "#cccccc" 
   }))
 
-  if (!isMounted || isLoading) {
+  if (!isMounted || loadingLayers) {
     return <MapPlaceholder />
   }
 
@@ -399,42 +295,10 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
 
         {/* Legacy Firms Block Removed - Now handled by dynamicLayers */ }
 
-        {/* Ações (Refatorado) */}
-        {filteredAcoesFeatures.map((feature, index) => {
-          const cat = (feature.properties.categoria as ActionCategory) || 'Monitoramento';
-          const type = feature.properties.tipo || 'Outros';
-          const uniqueId = `${cat}:${type}`;
-          const status = (feature.properties.status as ActionStatus) || 'Ativo';
+        {/* Legacy Manual Layers Removed */}
 
-          if (!visibleActionTypes.includes(uniqueId)) return null;
-
-          const coords = feature.geometry?.coordinates as number[] | undefined;
-          if (Array.isArray(coords) && coords.length >= 2) {
-            return (
-              <Marker
-                key={`acao-${feature.properties.id || index}`}
-                position={[coords[1], coords[0]]}
-                icon={createActionIcon(cat, status)}
-                eventHandlers={{
-                  click: () => handleFeatureClick({ ...feature.properties, id: feature.properties.id }, "acoes"),
-                }}
-              >
-                <Tooltip>{feature.properties.name || feature.properties.nome}</Tooltip>
-              </Marker>
-            );
-          }
-          return null;
-        })}
-
-        {/* Legacy Expedicoes Block Removed - Now handled by dynamicLayers */ }
-
-        {/* Legacy Waypoints Block Removed */ }
         {/* Camadas Dinâmicas Unificadas */}
         {dynamicLayers.map(layer => {
-          // Special Case: Ações is handled by a specialized block slightly above (Lines 381+)
-          // We skip it here to avoid double rendering and loss of functionality
-          if (layer.slug === 'acoes') return null;
-
           if (!visibleDynamicLayers.includes(layer.slug)) return null
           
           // Data Filtering Logic
@@ -447,7 +311,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
                features: layer.data.features.filter(f => {
                  // Try common date fields
                  const p = f.properties as any;
-                 const dateVal = p.data || p.date || p.created_at || p.alert_date || p.acq_date || p.recordedat;
+                 const dateVal = p.data || p.date || p.created_at || p.alert_date || p.acq_date || p.recordedat || p.detectat || p.time;
                  if (!dateVal) return true; // Keep if no date found (safe default)
                  
                  const d = new Date(dateVal);
@@ -470,8 +334,8 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
              const sorted = [...displayData.features].sort((a, b) => {
                  const pA = a.properties as any;
                  const pB = b.properties as any;
-                 const dateA = new Date(pA.data || pA.date || pA.created_at || pA.alert_date || pA.acq_date || 0);
-                 const dateB = new Date(pB.data || pB.date || pB.created_at || pB.alert_date || pB.acq_date || 0);
+                 const dateA = new Date(pA.data || pA.date || pA.created_at || pA.alert_date || pA.acq_date || pA.detectat || pA.time || 0);
+                 const dateB = new Date(pB.data || pB.date || pB.created_at || pB.alert_date || pB.acq_date || pB.detectat || pB.time || 0);
                  return dateB.getTime() - dateA.getTime();
              });
              displayData = {
@@ -549,7 +413,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
           Object.entries(data).forEach(([k, v]) => form.append(k, String(v)))
           files.forEach(f => form.append("files", f))
           await fetch(`/api/acoes/${data.id}`, { method: "PUT", body: form })
-          await refreshAcoesData()
+          await fetchLayers()
           setIsEditOpen(false)
           closeModal()
         }}
