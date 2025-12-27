@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronUp, ChevronDown, Layers, Eye, EyeOff, Leaf, Flame, Waves, MapPin, Activity } from "lucide-react"
+import {  Leaf, Flame, Waves, MapPin, Activity } from "lucide-react"
 import { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import dynamic from "next/dynamic"
 import type { LatLngExpression } from "leaflet"
@@ -187,7 +187,11 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     setLoadingLayers(true)
     setError(null)
     try {
-      const response = await fetch("/api/map/layers")
+      const params = new URLSearchParams();
+      if (dateFilter.startDate) params.append('startDate', dateFilter.startDate.toISOString());
+      if (dateFilter.endDate) params.append('endDate', dateFilter.endDate.toISOString());
+
+      const response = await fetch(`/api/map/layers?${params.toString()}`)
       if (response.ok) {
         const data: LayerResponseDTO[] = await response.json()
         setDynamicLayers(data.sort((a,b) => (a.ordering || 0) - (b.ordering || 0)))
@@ -201,7 +205,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     } finally {
       setLoadingLayers(false)
     }
-  }, []) 
+  }, [dateFilter.startDate?.toISOString(), dateFilter.endDate?.toISOString()]) // Re-fetch when dates change - using string primitives for stability 
 
   // Initialize visibility once
   useEffect(() => {
@@ -259,7 +263,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     color: layer.visualConfig?.color || "#cccccc" 
   }))
 
-  if (!isMounted || loadingLayers) {
+  if (!isMounted) {
     return <MapPlaceholder />
   }
 
@@ -288,16 +292,6 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
         <CustomZoomControl />
         <CustomLayerControl />
 
-        {/* Legacy Manual Layers - Removido em favor do sistema dinâmico, mas mantendo código morto limpo */}
-        {/* {layerConfigs.map ... } */} 
-
-        {/* Legacy Desmatamento Block Removed - Now handled by dynamicLayers */ }
-
-        {/* Legacy Firms Block Removed - Now handled by dynamicLayers */ }
-
-        {/* Legacy Manual Layers Removed */}
-
-        {/* Camadas Dinâmicas Unificadas */}
         {dynamicLayers.map(layer => {
           if (!visibleDynamicLayers.includes(layer.slug)) return null
           
@@ -393,6 +387,15 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
             onToggleAll={handleToggleAllDynamic}
         />
       </div>
+
+      {loadingLayers && (
+        <div className="absolute inset-0 z-[2000] bg-black/40 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+            <div className="bg-brand-dark border border-white/10 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+                <span className="text-slate-200 text-sm font-medium">Atualizando dados...</span>
+            </div>
+        </div>
+      )}
 
 
       <Modal

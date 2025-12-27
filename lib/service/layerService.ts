@@ -12,9 +12,10 @@ import { findAllPropriedadesDataWithGeometry } from "../repositories/propriedade
 
 
 // --- 1. CONFIGURAÇÃO DAS ESTRATÉGIAS ---
-const STATIC_STRATEGIES: Record<string, () => Promise<MapFeatureCollection>> = {
-    "acoes": async () => {
-        const data = await findAllAcoesDataWithGeometry();
+// --- 1. CONFIGURAÇÃO DAS ESTRATÉGIAS ---
+const STATIC_STRATEGIES: Record<string, (start?: Date, end?: Date) => Promise<MapFeatureCollection>> = {
+    "acoes": async (start?: Date, end?: Date) => {
+        const data = await findAllAcoesDataWithGeometry(start, end);
         // O helper converte o array de linhas do repo para GeoJSON
         return toFeatureCollection(data.rows || data);
     },
@@ -41,7 +42,7 @@ const STATIC_STRATEGIES: Record<string, () => Promise<MapFeatureCollection>> = {
  * THE MAESTRO: Combines Catalog Configuration + Database GeoJSON
  * Orchestrates the assembly of the final LayerResponseDTO.
  */
-export async function getLayer(slug: string): Promise<LayerResponseDTO | null> {
+export async function getLayer(slug: string, startDate?: Date, endDate?: Date): Promise<LayerResponseDTO | null> {
     try {
         // 1. Busca Metadados no Catálogo
         const catalogEntry = await getLayerCatalog(slug);
@@ -57,14 +58,15 @@ export async function getLayer(slug: string): Promise<LayerResponseDTO | null> {
 
         // CAMINHO A: É uma camada VIP/Especial? (Hardcoded Strategy)
         if (STATIC_STRATEGIES[slug]) {
-            console.log(`🎻 Maestro: Usando Estratégia Estática para ${slug}`);
-            data = await STATIC_STRATEGIES[slug]();
+            // console.log(`🎻 Maestro: Usando Estratégia Estática para ${slug}`);
+            data = await STATIC_STRATEGIES[slug](startDate, endDate);
         }
 
         // CAMINHO B: É uma camada Padrão do Usuário? (Generic Data)
         else {
-            console.log(`🎻 Maestro: Buscando dados genéricos para ${slug} (ID: ${catalogEntry.id})`);
+            // console.log(`🎻 Maestro: Buscando dados genéricos para ${slug} (ID: ${catalogEntry.id})`);
             // Busca SOMENTE na tabela layer_data, usando o ID numérico
+            // TODO: Implementar filtro de data no genericLayerData se necessário
             data = await getGenericLayerData(catalogEntry.id, 'monitoramento');
         }
 
@@ -96,7 +98,7 @@ export async function getLayer(slug: string): Promise<LayerResponseDTO | null> {
  * Fetches ALL layers defined in the catalog.
  * Robust against individual layer failures.
  */
-export async function getAllLayers(): Promise<LayerResponseDTO[]> {
+export async function getAllLayers(startDate?: Date, endDate?: Date): Promise<LayerResponseDTO[]> {
     const catalogEntries = await db
         .select()
         .from(layerCatalogInMonitoramento)
@@ -104,7 +106,7 @@ export async function getAllLayers(): Promise<LayerResponseDTO[]> {
 
     if (!catalogEntries.length) return [];
 
-    const layerPromises = catalogEntries.map(entry => getLayer(entry.slug));
+    const layerPromises = catalogEntries.map(entry => getLayer(entry.slug, startDate, endDate));
     const results = await Promise.allSettled(layerPromises);
 
     const validLayers: LayerResponseDTO[] = [];
