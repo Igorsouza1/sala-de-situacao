@@ -41,7 +41,7 @@ export async function findAllAcoesDataWithGeometry() {
     GROUP BY a.id
   `)
 
-  return result.rows
+  return result
 }
 
 

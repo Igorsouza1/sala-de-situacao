@@ -196,6 +196,7 @@ export const layerCatalogInMonitoramento = monitoramento.table("layer_catalog", 
 	slug: text("slug").notNull().unique(),
 	schemaConfig: jsonb("schema_config"),
 	visualConfig: jsonb("visual_config"),
+	ordering: integer("ordering").notNull(),
 });
 
 export const layerDataInMonitoramento = monitoramento.table("layer_data", {

@@ -77,7 +77,6 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetchMapData()
     fetchExpedicoesData()
-    fetchAcoesData()
   }, [])
 
   const fetchMapData = async () => {

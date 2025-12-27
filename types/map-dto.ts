@@ -39,12 +39,13 @@ export interface MapMarkerConfig {
     fillColor?: string;
     fillOpacity?: number;
     weight?: number;
+    opacity?: number;
     radius?: number; // Required for type: 'circle'
 }
 
 export interface LayerVisualConfig {
     charts?: LayerChartConfig[];
-    mapDisplay?: "latest" | "all"; // 'latest' for sensor data, 'all' for static layers
+    mapDisplay?: "latest" | "all" | "date_filter"; // 'latest' for sensor data, 'all' for static layers
     dateFilter?: boolean; // If true, layer responds to global date selector
     mapMarker?: MapMarkerConfig;
 
@@ -75,7 +76,7 @@ export interface LayerSchemaConfig {
  * Base properties shared by all map layers
  */
 export interface BaseLayerProperties {
-    id: number | string;
+    id?: number | string;
     name?: string;
     description?: string;
     [key: string]: JsonValue | undefined;
