@@ -1,6 +1,7 @@
 "use client"
 
-import {  Leaf, Flame, Waves, MapPin, Activity } from "lucide-react"
+import {  Flame, Waves, MapPin } from "lucide-react"
+import * as LucideIcons from "lucide-react"
 import { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import dynamic from "next/dynamic"
 import type { LatLngExpression } from "leaflet"
@@ -24,31 +25,45 @@ import { LayerResponseDTO } from "@/types/map-dto"
 const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false })
 const GeoJSON = dynamic(() => import("react-leaflet").then((mod) => mod.GeoJSON), { ssr: false })
-const CircleMarker = dynamic(() => import("react-leaflet").then((mod) => mod.CircleMarker), { ssr: false })
-const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false })
-const Tooltip = dynamic(() => import("react-leaflet").then((mod) => mod.Tooltip), { ssr: false })
 
 interface MapProps {
   center?: LatLngExpression
-  zoom?: number
+  zoom?: number 
 }
 
-
-
+// Helper to convert kebab-case or snake_case to PascalCase (e.g., "map-pin" -> "MapPin")
+const toPascalCase = (str: string) => {
+  return str
+    .replace(/([-_][a-z])/ig, ($1) => {
+      return $1.toUpperCase()
+        .replace('-', '')
+        .replace('_', '');
+    })
+    .replace(/^./, (str) => str.toUpperCase());
+};
 
 // --- ESTILOS ESTÁTICOS ---
 
-// NO MAP NAO E LUGAR DE TER ISSO AQUI, É?
-// se vamos remover a logica de icones para o backend, a logica de definição de icones tambem deve ser movida
 const createCustomIcon = (iconName: string, color: string) => {
-  let IconComponent = MapPin;
+  // 1. Normalize name to PascalCase to match Lucide exports
+  const pascalName = toPascalCase(iconName);
+  
+  // 2. Dynamic Lookup
+  // @ts-ignore - Dynamic access to Lucide icons
+  let IconComponent = LucideIcons[pascalName];
+  
+  // 3. Fallback for specific legacy names not matching standard valid Lucide names directly if needed
+  if (!IconComponent) {
+      // Manual mapping for oddball cases or aliases
+      if (iconName === 'water') IconComponent = Waves;
+      if (iconName === 'fire') IconComponent = Flame;
+  }
 
-  // Simple mapping for defaults or configured names
-  // In a real generic system, this mapping might be larger or dynamic
-  if (iconName === 'flame' || iconName === 'fire') IconComponent = Flame;
-  if (iconName === 'waves' || iconName === 'water') IconComponent = Waves;
-  if (iconName === 'activity') IconComponent = Activity;
-  if (iconName === 'leaf') IconComponent = Leaf;
+  // 4. Final Fallback
+  if (!IconComponent) {
+      console.warn(`Icon "${iconName}" (Pascal: "${pascalName}") not found in LucideIcons. Using default.`);
+      IconComponent = MapPin;
+  }
 
   const iconHtml = renderToStaticMarkup(
     <div style={{
@@ -169,7 +184,17 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
   // Initialize visibility once
   useEffect(() => {
     if (!initializedRef.current && dynamicLayers.length > 0) {
-        setVisibleDynamicLayers(dynamicLayers.map(l => l.slug))
+        const initialSlugs: string[] = [];
+        dynamicLayers.forEach(l => {
+            if (l.groups && l.groups.length > 0) {
+                // For grouped layers (like acoes), check all sub-items by default
+                l.groups.forEach(g => initialSlugs.push(`${l.slug}__${g.id}`));
+            }
+            // Always add the parent slug too
+            initialSlugs.push(l.slug);
+        });
+        
+        setVisibleDynamicLayers(initialSlugs)
         initializedRef.current = true
     }
   }, [dynamicLayers])
@@ -188,8 +213,36 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     setVisibleDynamicLayers(prev => isChecked ? [...prev, slug] : prev.filter(s => s !== slug))
   }
 
+  const handleGroupToggle = (slugs: string[], isChecked: boolean) => {
+    setVisibleDynamicLayers(prev => {
+        if (isChecked) {
+            // Add all slugs that are not already present
+            const newSlugs = slugs.filter(s => !prev.includes(s));
+            return [...prev, ...newSlugs];
+        } else {
+            // Remove all slugs
+            return prev.filter(s => !slugs.includes(s));
+        }
+    })
+  }
+
   const handleToggleAllDynamic = (isChecked: boolean) => {
-    setVisibleDynamicLayers(isChecked ? dynamicLayers.map(d => d.slug) : [])
+      if (isChecked) {
+          // Flatten all slugs
+          const allSlugs: string[] = [];
+          dynamicLayers.forEach(l => {
+              if (l.groups && l.groups.length > 0) {
+                  l.groups.forEach(g => allSlugs.push(`${l.slug}__${g.id}`));
+                  // Also include parent slug if needed? Not really, but good for tracking
+                  allSlugs.push(l.slug);
+              } else {
+                  allSlugs.push(l.slug);
+              }
+          });
+          setVisibleDynamicLayers(allSlugs);
+      } else {
+          setVisibleDynamicLayers([]);
+      }
   }
 
   // Modal e Permissões
@@ -215,50 +268,94 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
 
   // TODO: A DETERMINAÇÃO DE ICONES DEVE VIR DO BACKEND
   const dynamicLayerOptions: LayerManagerOption[] = dynamicLayers.map(layer => {
-    // 1. Determine Legend Type & Icon
-    // Default to 'polygon' (generic layer) unless specified
-    let legendType: 'point' | 'line' | 'polygon' | 'circle' = 'polygon';
-    let iconName = layer.visualConfig?.mapMarker?.icon;
+    // Logic extraction helper
+    const getVisuals = (lyr: LayerResponseDTO) => {
+        let legendType: 'point' | 'line' | 'polygon' | 'circle' = 'polygon';
+        let iconName = lyr.visualConfig?.mapMarker?.icon;
+        
+        // Support both nested mapMarker.type AND top-level type (flat JSON)
+        const markerType = lyr.visualConfig?.mapMarker?.type || lyr.visualConfig?.type;
 
-    // Support both nested mapMarker.type AND top-level type (flat JSON)
-    const markerType = layer.visualConfig?.mapMarker?.type || layer.visualConfig?.type;
-
-    if (markerType) {
-        legendType = markerType;
+        if (markerType) {
+            legendType = markerType;
+        } else if (iconName) {
+            legendType = 'point';
+        } else {
+             // Fallbacks
+            if (lyr.slug === 'raw_firms') { iconName = 'flame'; legendType = 'point'; }
+            else if (lyr.slug === 'deque-de-pedras' || lyr.slug === 'ponte-do-cure') { iconName = 'waves'; legendType = 'point'; }
+            else if (lyr.slug === 'acoes') { iconName = 'activity'; legendType = 'point'; }
+            else if (lyr.slug === 'estradas' || lyr.slug === 'leito') { legendType = 'line'; }
+        }
+        return { legendType, iconName };
     }
-    // If explicit icon but no marker type, default to point
-    else if (iconName) {
-        legendType = 'point';
-    } 
+
+    const { legendType, iconName } = getVisuals(layer);
+    const baseColor = layer.visualConfig?.mapMarker?.color || layer.visualConfig?.color || "#3388ff";
+    const baseFill = layer.visualConfig?.mapMarker?.fillColor;
     
-    // Check for Hardcoded Fallbacks (for compatibility with current data)
-    // ONLY APPLY IF NO EXPLICIT VISUAL CONFIG IS PRESENT
-    else {
-        if (layer.slug === 'raw_firms') {
-            iconName = 'flame';
-            legendType = 'point';
-        }
-        else if (layer.slug === 'deque-de-pedras' || layer.slug === 'ponte-do-cure') {
-            iconName = 'waves';
-            legendType = 'point';
-        }
-        else if (layer.slug === 'acoes') {
-            iconName = 'activity';
-            legendType = 'point';
-        }
-        else if (layer.slug === 'estradas' || layer.slug === 'leito') {
-            legendType = 'line';
+    // CASE A: GROUP BY COLUMN (Nest options)
+    const groupByColumn = layer.visualConfig?.groupByColumn;
+
+    if (groupByColumn) {
+        // 1. Use Groups from Backend (or Fallback to Data if missing, though ideally backend provides it)
+        const groups = layer.groups || [];
+        
+        // If no groups returned but we have data, maybe fallback? 
+        // For now, let's rely on backend groups as requested.
+        
+        if (groups.length > 0) {
+             // Generate Sub Options
+            const subOptions: LayerManagerOption[] = groups.map(group => {
+                const value = group.id;
+                
+                // Simple heuristic for default icons based on value name
+                let subIcon = iconName;
+                const v = String(group.label).toLowerCase();
+                
+                if (v.includes('fiscaliz')) subIcon = 'shield';
+                else if (v.includes('recupera')) subIcon = 'sprout';
+                else if (v.includes('monitora')) subIcon = 'eye';
+                else if (v.includes('infra')) subIcon = 'hammer';
+                else if (v.includes('incend') || v.includes('fogo')) subIcon = 'flame';
+                else if (v.includes('agua') || v.includes('rio')) subIcon = 'waves';
+                
+                return {
+                    id: `${layer.slug}__${value}`, // Composite ID
+                    label: group.label, // Use label from backend
+                    slug: `${layer.slug}__${value}`,
+                    color: group.color || baseColor, // Use group color if available
+                    icon: subIcon,
+                    legendType: legendType,
+                    fillColor: baseFill,
+                    category: layer.visualConfig?.category 
+                }
+            });
+
+            // Return Parent Option with SubOptions
+            return {
+                id: String(layer.id),
+                label: layer.name,
+                slug: layer.slug, // Parent slug (acting as container/folder)
+                color: baseColor,
+                icon: iconName,
+                legendType: legendType,
+                fillColor: baseFill,
+                category: layer.visualConfig?.category,
+                subOptions: subOptions
+            };
         }
     }
 
+    // CASE B: STANDARD SINGLE LAYER
     return {
         id: String(layer.id),
         label: layer.name,
         slug: layer.slug,
-        color: layer.visualConfig?.mapMarker?.color || layer.visualConfig?.color || "#3388ff", // Match map style logic
+        color: baseColor,
         icon: iconName,
         legendType: legendType,
-        fillColor: layer.visualConfig?.mapMarker?.fillColor,// Match map style logic
+        fillColor: baseFill,
         category: layer.visualConfig?.category
     }
   })
@@ -293,16 +390,39 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
         <CustomLayerControl />
 
         {dynamicLayers.map(layer => {
-          if (!visibleDynamicLayers.includes(layer.slug)) return null
+            const groupByColumn = layer.visualConfig?.groupByColumn;
+            let isVisible = false;
+            let activeValues: string[] = [];
+
+            if (groupByColumn) {
+                // Check if any sub-items are active (slug__value)
+                activeValues = visibleDynamicLayers
+                    .filter(slug => slug.startsWith(`${layer.slug}__`))
+                    .map(slug => slug.replace(`${layer.slug}__`, ''));
+                
+                if (activeValues.length > 0) isVisible = true;
+            } else {
+                isVisible = visibleDynamicLayers.includes(layer.slug);
+            }
+
+            if (!isVisible) return null;
           
           // Data Filtering Logic
           let displayData = layer.data;
+
+          // Apply Group Filter if active
+          if (groupByColumn && activeValues.length > 0) {
+             displayData = {
+                 ...displayData,
+                 features: displayData.features.filter(f => activeValues.includes(f.properties?.[groupByColumn] as string))
+             }
+          }
           
           if (layer.visualConfig?.dateFilter && (dateFilter.startDate || dateFilter.endDate)) {
             // Find the date field - default to 'created_at' or specific fields known schema
              displayData = {
-               ...layer.data,
-               features: layer.data.features.filter(f => {
+               ...displayData,
+               features: displayData.features.filter(f => {
                  // Try common date fields
                  const p = f.properties as any;
                  const dateVal = p.data || p.date || p.created_at || p.alert_date || p.acq_date || p.recordedat || p.detectat || p.time;
@@ -387,6 +507,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
             activeLayers={visibleDynamicLayers}
             onLayerToggle={handleDynamicLayerToggle}
             onToggleAll={handleToggleAllDynamic}
+            onGroupToggle={handleGroupToggle}
         />
       </div>
 

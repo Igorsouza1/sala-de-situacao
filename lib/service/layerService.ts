@@ -2,7 +2,7 @@ import { LayerResponseDTO, LayerSchemaConfig, LayerVisualConfig, MapFeatureColle
 import { getLayerCatalog, getGenericLayerData } from "../repositories/layerRepository";
 import { layerCatalogInMonitoramento } from "@/db/schema";
 import { db } from "@/db";
-import { desc } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 import { findAllAcoesDataWithGeometry } from "../repositories/acoesRepository";
 import { toFeatureCollection } from "../helpers/geo-utils";
 import { findAllEstradasDataWithGeometry } from "../repositories/estradasRepository";
@@ -37,6 +37,48 @@ const STATIC_STRATEGIES: Record<string, (start?: Date, end?: Date) => Promise<Ma
     },
     // Adicione outras camadas que precisam de tratamento especial
 };
+
+// --- HELPER: BUSCAR GRUPOS DISTINTOS ---
+async function getLayerGroups(slug: string, column: string, schema: string = 'monitoramento'): Promise<{ id: string, label: string }[]> {
+    try {
+        if (slug === 'acoes') {
+            // Caso especial para tabela acoes (Type A)
+            // Assumes column is 'categoria' or 'status' or 'tipo'
+            // We need to match the column name to the schema column
+            const result = await db.execute(sql`
+                SELECT DISTINCT ${sql.identifier(column)} as value
+                FROM "monitoramento"."acoes"
+                WHERE ${sql.identifier(column)} IS NOT NULL
+                ORDER BY 1
+            `);
+            const rows = result.rows || result;
+            // @ts-ignore
+            return rows.map((r: any) => ({
+                id: r.value,
+                label: r.value
+            }));
+        } else {
+            // Caso genérico para layer_data (Type B)
+            // column is inside properties JSONB
+            const result = await db.execute(sql`
+                SELECT DISTINCT properties->>${sql.raw(`'${column}'`)} as value
+                FROM "monitoramento"."layer_data"
+                WHERE layer_id = (SELECT id FROM "monitoramento"."layer_catalog" WHERE slug = ${slug})
+                AND properties->>${sql.raw(`'${column}'`)} IS NOT NULL
+                ORDER BY 1
+             `);
+            const rows = result.rows || result;
+            // @ts-ignore
+            return rows.map((r: any) => ({
+                id: r.value,
+                label: r.value
+            }));
+        }
+    } catch (e) {
+        console.error(`Error fetching groups for ${slug} on column ${column}:`, e);
+        return [];
+    }
+}
 
 /**
  * THE MAESTRO: Combines Catalog Configuration + Database GeoJSON
@@ -75,6 +117,15 @@ export async function getLayer(slug: string, startDate?: Date, endDate?: Date): 
         const schemaConfig = catalogEntry.schemaConfig as LayerSchemaConfig;
         const dateFilter = visualConfig?.dateFilter ?? (visualConfig?.mapDisplay === 'date_filter');
 
+        // Resolve Group By Column
+        // Force 'actions' to use 'categoria', otherwise respect config
+        const groupByColumn = catalogEntry.slug === 'acoes' ? 'categoria' : visualConfig?.groupByColumn;
+
+        let groups: { id: string, label: string }[] | undefined;
+        if (groupByColumn) {
+            groups = await getLayerGroups(slug, groupByColumn);
+        }
+
         return {
             id: catalogEntry.id,
             slug: catalogEntry.slug,
@@ -82,10 +133,12 @@ export async function getLayer(slug: string, startDate?: Date, endDate?: Date): 
             ordering: catalogEntry.ordering || catalogEntry.id,
             visualConfig: {
                 ...visualConfig,
-                dateFilter: dateFilter
+                dateFilter: dateFilter,
+                groupByColumn: groupByColumn
             },
             schemaConfig: schemaConfig,
-            data: data
+            data: data,
+            groups: groups
         };
 
     } catch (error) {

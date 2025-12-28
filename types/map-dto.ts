@@ -57,6 +57,7 @@ export interface LayerVisualConfig {
     fillColor?: string;
     weight?: number;
     opacity?: number;
+    groupByColumn?: string;
     fillOpacity?: number;
 }
 
@@ -163,6 +164,14 @@ export interface LayerResponseDTO<P = BaseLayerProperties> {
 
     // Data (GeoJSON) - Can be populated from distinct tables (acoes, properties) OR layer_data
     data: MapFeatureCollection<P>;
+
+    // Dynamically fetched groups for filtering/display
+    groups?: {
+        id: string;
+        label: string;
+        color?: string; // Optional override color for the group
+        count?: number;
+    }[];
 }
 
 /**
