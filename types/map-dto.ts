@@ -39,23 +39,25 @@ export interface MapMarkerConfig {
     fillColor?: string;
     fillOpacity?: number;
     weight?: number;
+    icon?: string;
     opacity?: number;
     radius?: number; // Required for type: 'circle'
 }
 
 export interface LayerVisualConfig {
     charts?: LayerChartConfig[];
+    category: 'Monitoramento' | 'Operacional' | 'Infraestrutura' | 'Base Territorial';
     mapDisplay?: "latest" | "all" | "date_filter"; // 'latest' for sensor data, 'all' for static layers
     dateFilter?: boolean; // If true, layer responds to global date selector
     mapMarker?: MapMarkerConfig;
 
     // Legacy/Leaflet direct options (kept for compatibility or specific overrides)
     color?: string;
+    type?: "polygon" | "point" | "circle";
     fillColor?: string;
     weight?: number;
     opacity?: number;
     fillOpacity?: number;
-    icon?: string;
 }
 
 /**

@@ -35,21 +35,11 @@ interface MapProps {
 
 
 
-// --- Constantes de Cor ---
-const layerColors = {
-  estradas: "#FFFFF0",
-  bacia: "#33FF57",
-  leito: "#3357FF",
-  desmatamento: "yellow",
-  propriedades: "green",
-  firms: "red",
-  banhado: "darkblue",
-  expedicoes: "orange",
-}
 
 // --- ESTILOS ESTÁTICOS ---
 
-
+// NO MAP NAO E LUGAR DE TER ISSO AQUI, É?
+// se vamos remover a logica de icones para o backend, a logica de definição de icones tambem deve ser movida
 const createCustomIcon = (iconName: string, color: string) => {
   let IconComponent = MapPin;
 
@@ -102,9 +92,10 @@ const getPointToLayer = (visualConfig: LayerResponseDTO['visualConfig'], slug: s
     const color = visualConfig?.color || '#3388ff';
     
     // Explicit Config
-    if (visualConfig?.icon) {
-        return L.marker(latlng, { icon: createCustomIcon(visualConfig.icon, color) });
+    if (visualConfig?.mapMarker?.icon) {
+        return L.marker(latlng, { icon: createCustomIcon(visualConfig.mapMarker?.icon, color) });
     }
+
 
     // Default Fallbacks (The "Rules")
     if (slug === 'firms') {
@@ -134,45 +125,12 @@ const getPointToLayer = (visualConfig: LayerResponseDTO['visualConfig'], slug: s
   }
 }
 
-const createWaypointIcon = (index: number) =>
-  L.divIcon({
-    html: `
-      <div style="
-        background: rgba(255, 165, 0, 0.85);
-        color: white;
-        border: 2px solid white;
-        border-radius: 50%;
-        width: 28px;
-        height: 28px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        font-weight: bold;
-        box-shadow: 0 0 4px rgba(0,0,0,0.5);
-      ">
-        ${index}
-      </div>
-    `,
-    className: "waypoint-icon",
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-  })
+
 
 
 export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: MapProps) {
   const [isMounted, setIsMounted] = useState(false)
-  const [visibleLayers, setVisibleLayers] = useState<string[]>([
-    "estradas",
-    "bacia",
-    "leito",
-    "desmatamento",
-    "propriedades",
-    "firms",
-    "banhado",
-  ])
   
-  // New Visibility State: Array of "Category:Type" strings (REMOVED)
   const [dynamicLayers, setDynamicLayers] = useState<LayerResponseDTO[]>([])
   const [visibleDynamicLayers, setVisibleDynamicLayers] = useState<string[]>([])
   const [loadingLayers, setLoadingLayers] = useState(false)
@@ -183,6 +141,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     useMapContext()
 
   // Fetch Dynamic Layers (Moved directly to map component for reuse)
+  // ISSO NAO DEVIA ESTAR EM UM HOOK?
   const fetchLayers = useCallback(async () => {
     setLoadingLayers(true)
     setError(null)
@@ -238,6 +197,8 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
   const [isEditOpen, setIsEditOpen] = useState(false)
   const { isAdmin } = useUserRole()
 
+
+  
   const handleFeatureClick = useCallback(
     (properties: Record<string, unknown>, layerType: string) => {
       if (layerType === "acoes") {
@@ -251,17 +212,56 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     [openModal],
   )
 
-  // Legacy layerConfigs removed
 
-  // Legacy layerConfigs and layerOptions removed
+  // TODO: A DETERMINAÇÃO DE ICONES DEVE VIR DO BACKEND
+  const dynamicLayerOptions: LayerManagerOption[] = dynamicLayers.map(layer => {
+    // 1. Determine Legend Type & Icon
+    // Default to 'polygon' (generic layer) unless specified
+    let legendType: 'point' | 'line' | 'polygon' | 'circle' = 'polygon';
+    let iconName = layer.visualConfig?.mapMarker?.icon;
 
-  const dynamicLayerOptions: LayerManagerOption[] = dynamicLayers.map(layer => ({
-    id: String(layer.id),
-    label: layer.name,
-    slug: layer.slug,
-    count: layer.data?.features?.length || 0,
-    color: layer.visualConfig?.color || "#cccccc" 
-  }))
+    // Support both nested mapMarker.type AND top-level type (flat JSON)
+    const markerType = layer.visualConfig?.mapMarker?.type || layer.visualConfig?.type;
+
+    if (markerType) {
+        legendType = markerType;
+    }
+    // If explicit icon but no marker type, default to point
+    else if (iconName) {
+        legendType = 'point';
+    } 
+    
+    // Check for Hardcoded Fallbacks (for compatibility with current data)
+    // ONLY APPLY IF NO EXPLICIT VISUAL CONFIG IS PRESENT
+    else {
+        if (layer.slug === 'raw_firms') {
+            iconName = 'flame';
+            legendType = 'point';
+        }
+        else if (layer.slug === 'deque-de-pedras' || layer.slug === 'ponte-do-cure') {
+            iconName = 'waves';
+            legendType = 'point';
+        }
+        else if (layer.slug === 'acoes') {
+            iconName = 'activity';
+            legendType = 'point';
+        }
+        else if (layer.slug === 'estradas' || layer.slug === 'leito') {
+            legendType = 'line';
+        }
+    }
+
+    return {
+        id: String(layer.id),
+        label: layer.name,
+        slug: layer.slug,
+        color: layer.visualConfig?.mapMarker?.color || layer.visualConfig?.color || "#3388ff", // Match map style logic
+        icon: iconName,
+        legendType: legendType,
+        fillColor: layer.visualConfig?.mapMarker?.fillColor,// Match map style logic
+        category: layer.visualConfig?.category
+    }
+  })
 
   if (!isMounted) {
     return <MapPlaceholder />
@@ -322,6 +322,8 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
              }
           }
 
+
+          // TODO: ESSA LÓGICA DEVERIA ESTAR NO BACKEND
           // 'latest' Logic: Keep only the single most recent feature
           // Useful for sensor data like 'deque-de-pedras' or 'ponte-do-cure'
           if (layer.visualConfig?.mapDisplay === 'latest') {
@@ -380,7 +382,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
         {/* <MapLayersCard ... /> Removido */ }
        
         <LayerManager
-            title="Camadas Disponíveis"
+            title="Camadas"
             options={dynamicLayerOptions}
             activeLayers={visibleDynamicLayers}
             onLayerToggle={handleDynamicLayerToggle}

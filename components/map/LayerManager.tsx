@@ -1,20 +1,26 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useMemo } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ChevronUp, ChevronDown, Layers, Eye, EyeOff, Globe } from "lucide-react"
+import { ChevronUp, ChevronDown, Globe, Eye, EyeOff, Flame, Waves, Activity, Leaf, MapPin, Layers } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
+
+
+// pq temos layermanager aqui? nao temos um DTO com isso?
 
 export interface LayerManagerOption {
   id: string
   label: string
-  count: number
   color: string
   slug: string
+  fillColor?: string
+  icon?: string
+  legendType?: 'point' | 'line' | 'polygon' | 'circle'
+  category?: string
 }
 
 interface LayerManagerProps {
@@ -25,19 +31,67 @@ interface LayerManagerProps {
   onToggleAll: (isChecked: boolean) => void
 }
 
+const getLayerIcon = (iconName?: string) => {
+    switch (iconName) {
+        case "flame": return Flame;
+        case "fire": return Flame;
+        case "waves": return Waves;
+        case "water": return Waves;
+        case "activity": return Activity;
+        case "leaf": return Leaf;
+        default: return Layers; // Default generic icon
+    }
+}
+
+const CATEGORY_ORDER = ['Operacional', 'Monitoramento', 'Base Territorial', 'Infraestrutura'];
+const DEFAULT_EXPANDED = ['Operacional', 'Monitoramento'];
+
 export function LayerManager({ 
-  title = "Camadas Dinâmicas", 
+  title = "Camadas", 
   options, 
   activeLayers, 
   onLayerToggle,
   onToggleAll 
 }: LayerManagerProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(DEFAULT_EXPANDED)
 
   const toggleExpand = () => setIsExpanded(!isExpanded)
 
-  const activeLayersCount = options.filter(opt => activeLayers.includes(opt.slug)).length
-  const totalLayersCount = options.length
+  const toggleCategory = (category: string) => {
+    setExpandedCategories(prev => 
+      prev.includes(category) 
+        ? prev.filter(c => c !== category)
+        : [...prev, category]
+    )
+  }
+
+  // Discretize options by category
+  const groupedOptions = useMemo(() => {
+    const groups: Record<string, LayerManagerOption[]> = {};
+    
+    options.forEach(opt => {
+        const cat = opt.category || "Outros";
+        if (!groups[cat]) groups[cat] = [];
+        groups[cat].push(opt);
+    });
+
+    // Sort categories based on predefined order
+    const sortedCategories = Object.keys(groups).sort((a, b) => {
+        const indexA = CATEGORY_ORDER.indexOf(a);
+        const indexB = CATEGORY_ORDER.indexOf(b);
+        
+        if (indexA !== -1 && indexB !== -1) return indexA - indexB; // Prioritize mostly based on order
+        if (indexA !== -1) return -1;
+        if (indexB !== -1) return 1;
+        return a.localeCompare(b);
+    });
+
+    return sortedCategories.map(cat => ({
+        name: cat,
+        items: groups[cat]
+    }));
+  }, [options]);
 
   return (
     <Card className="w-80 max-w-sm bg-brand-dark/95 backdrop-blur-md shadow-2xl z-[1000] overflow-hidden border border-white/10 transition-all duration-300">
@@ -52,14 +106,6 @@ export function LayerManager({
               <CardTitle className="text-base font-semibold text-slate-100 flex items-center gap-2 truncate">
                 {title}
               </CardTitle>
-
-              <p className="text-sm text-slate-400 mt-0.5">
-                Mostrando{" "}
-                <span className="font-semibold text-brand-primary">{activeLayersCount}</span>{" "}
-                de{" "}
-                <span className="font-semibold text-brand-primary">{totalLayersCount}</span>{" "}
-                camadas
-              </p>
             </div>
           </div>
 
@@ -89,59 +135,138 @@ export function LayerManager({
             transition={{ duration: 0.25, ease: "easeInOut" }}
           >
             <CardContent className="p-2.5">
-              <div className="space-y-1.5 max-h-[65vh] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                {options.map((option, index) => {
-                  const isChecked = activeLayers.includes(option.slug)
-
-                  return (
-                    <motion.div
-                      key={option.id}
-                      initial={{ opacity: 0, x: -12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.03 }}
-                      className={`group flex items-center justify-between rounded-lg border transition-colors duration-150 px-2.5 py-2 ${
-                        isChecked
-                          ? "bg-brand-primary/5 border-brand-primary/20"
-                          : "bg-white/[0.02] border-white/5 hover:bg-white/[0.04]"
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Checkbox
-                          id={option.id}
-                          checked={isChecked}
-                          onCheckedChange={(checked) => onLayerToggle(option.slug, checked as boolean)}
-                          className="w-4 h-4 border-slate-600 data-[state=checked]:bg-brand-primary data-[state=checked]:border-brand-primary data-[state=checked]:text-white flex-shrink-0"
-                        />
-
-                        {/* dot da cor da camada */}
-                        <span
-                          className="h-3 w-3 rounded-full flex-shrink-0 ring-1 ring-white/10"
-                          style={{ backgroundColor: option.color }}
-                        />
-
-                        <Label
-                          htmlFor={option.id}
-                          className="text-sm text-slate-300 cursor-pointer select-none flex-1 truncate font-normal"
+              <div className="max-h-[65vh] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                
+                {groupedOptions.map(group => {
+                    const isCatExpanded = expandedCategories.includes(group.name);
+                    
+                    return (
+                    <div key={group.name} className="mb-2 last:mb-0 border border-white/5 rounded-lg overflow-hidden bg-white/[0.02]">
+                        {/* Accordion Header */}
+                        <div 
+                            className="flex items-center justify-between p-2 cursor-pointer hover:bg-white/5 transition-colors select-none"
+                            onClick={() => toggleCategory(group.name)}
                         >
-                          {option.label}
-                        </Label>
-                      </div>
-
-                      <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-                        <Badge className="bg-brand-dark-blue text-brand-primary border border-brand-primary/20 text-xs h-5 px-1.5">
-                          {option.count}
-                        </Badge>
-
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                          {isChecked ? (
-                            <Eye className="h-3 w-3 text-brand-primary" />
-                          ) : (
-                            <EyeOff className="h-3 w-3 text-slate-600" />
-                          )}
+                            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                                {group.name}
+                                <Badge variant="secondary" className="bg-white/10 text-slate-300 text-[10px] h-4 px-1 rounded-sm">
+                                    {group.items.length}
+                                </Badge>
+                            </h4>
+                            {isCatExpanded ? <ChevronUp className="h-3 w-3 text-slate-500" /> : <ChevronDown className="h-3 w-3 text-slate-500" />}
                         </div>
-                      </div>
-                    </motion.div>
-                  )
+
+                        <AnimatePresence>
+                            {isCatExpanded && (
+                                <motion.div
+                                    initial={{ height: 0 }}
+                                    animate={{ height: "auto" }}
+                                    exit={{ height: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="overflow-hidden"
+                                >
+                                    <div className="p-2 pt-0 space-y-1.5 border-t border-white/5">
+                                        {group.items.map((option, index) => {
+                                        const isChecked = activeLayers.includes(option.slug)
+                                        const IconComponent = getLayerIcon(option.icon)
+                                        const legendType = option.legendType || 'polygon'; 
+
+                                        return (
+                                            <motion.div
+                                            key={option.id}
+                                            initial={{ opacity: 0, x: -4 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            transition={{ delay: index * 0.02 }}
+                                            className={`group flex items-center justify-between rounded-md border transition-colors duration-150 px-2 py-1.5 ${
+                                                isChecked
+                                                ? "bg-brand-primary/10 border-brand-primary/20"
+                                                : "bg-transparent border-transparent hover:bg-white/5"
+                                            }`}
+                                            >
+                                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                <Checkbox
+                                                id={option.id}
+                                                checked={isChecked}
+                                                onCheckedChange={(checked) => onLayerToggle(option.slug, checked as boolean)}
+                                                className="w-3.5 h-3.5 border-slate-600 data-[state=checked]:bg-brand-primary data-[state=checked]:border-brand-primary data-[state=checked]:text-white flex-shrink-0"
+                                                />
+
+                                    {legendType === 'point' && (
+                                        <div 
+                                            className="h-5 w-5 rounded flex items-center justify-center flex-shrink-0 bg-white/5 border border-white/10"
+                                            style={{ borderColor: isChecked ? option.color : 'rgba(255,255,255,0.1)' }}
+                                        >
+                                            <IconComponent 
+                                                size={12} 
+                                                style={{ color: option.color }} 
+                                            />
+                                        </div>
+                                    )}
+
+                                    {legendType === 'line' && (
+                                        <div className="h-5 w-5 flex items-center justify-center flex-shrink-0">
+                                            <svg width="20" height="20" viewBox="0 0 20 20" className="opacity-80">
+                                                <path 
+                                                    d="M2 15 C 8 15, 12 5, 18 5" 
+                                                    fill="none" 
+                                                    stroke={option.color} 
+                                                    strokeWidth="2.5" 
+                                                    strokeLinecap="round"
+                                                />
+                                            </svg>
+                                        </div>
+                                    )}
+
+                                    {legendType === 'circle' && (
+                                        <div className="h-5 w-5 flex items-center justify-center flex-shrink-0">
+                                            <span
+                                                className="h-3 w-3 rounded-full shadow-sm ring-2 ring-inset"
+                                                style={{ 
+                                                    borderColor: option.color,
+                                                    backgroundColor: option.color
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {legendType === 'polygon' && (
+                                        <div className="h-5 w-5 flex items-center justify-center flex-shrink-0">
+                                            <span
+                                                className="h-3 w-3 rounded-[2px] shadow-sm ring-1 ring-white/20"
+                                                style={{ 
+                                                    backgroundColor: option.fillColor || option.color, // Fill
+                                                    borderColor: option.color
+                                                }}
+                                            />
+                                        </div>
+                                    )}
+
+                                                <Label
+                                                htmlFor={option.id}
+                                                className="text-ls text-slate-300 cursor-pointer select-none flex-1 truncate font-normal"
+                                                >
+                                                {option.label}
+                                                </Label>
+                                            </div>
+
+                                            <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                                                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                                                {isChecked ? (
+                                                    <Eye className="h-3 w-3 text-brand-primary" />
+                                                ) : (
+                                                    <EyeOff className="h-3 w-3 text-slate-600" />
+                                                )}
+                                                </div>
+                                            </div>
+                                            </motion.div>
+                                        )
+                                        })}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                    )
                 })}
               </div>
 
