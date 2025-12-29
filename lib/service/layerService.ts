@@ -23,12 +23,12 @@ const STATIC_STRATEGIES: Record<string, (start?: Date, end?: Date) => Promise<Ma
         const data = await findAllEstradasDataWithGeometry();
         return toFeatureCollection(data.rows || data);
     },
-    "desmatamento": async () => {
-        const data = await findAllDesmatamentoDataWithGeometry();
+    "desmatamento": async (start?: Date, end?: Date) => {
+        const data = await findAllDesmatamentoDataWithGeometry(start, end);
         return toFeatureCollection(data.rows || data);
     },
-    "raw_firms": async () => {
-        const data = await findAllFirmsDataWithGeometry();
+    "raw_firms": async (start?: Date, end?: Date) => {
+        const data = await findAllFirmsDataWithGeometry(start, end);
         return toFeatureCollection(data.rows || data);
     },
     "propriedades": async () => {
@@ -66,7 +66,7 @@ async function getLayerGroups(slug: string, column: string, schema: string = 'mo
                 WHERE layer_id = (SELECT id FROM "monitoramento"."layer_catalog" WHERE slug = ${slug})
                 AND properties->>${sql.raw(`'${column}'`)} IS NOT NULL
                 ORDER BY 1
-             `);
+            `);
             const rows = result.rows || result;
             // @ts-ignore
             return rows.map((r: any) => ({
@@ -109,10 +109,20 @@ export async function getLayer(slug: string, startDate?: Date, endDate?: Date): 
             // console.log(`🎻 Maestro: Buscando dados genéricos para ${slug} (ID: ${catalogEntry.id})`);
             // Busca SOMENTE na tabela layer_data, usando o ID numérico
 
-            const isLatest = (catalogEntry.visualConfig as LayerVisualConfig)?.mapDisplay === 'latest';
+            const visualConfig = catalogEntry.visualConfig as LayerVisualConfig;
+            const isLatest = visualConfig?.mapDisplay === 'latest';
+
+            // LÓGICA DE FILTRAGEM INTELIGENTE
+            // 1. Se for 'latest', SEMPRE busca o dado mais recente de todos os tempos (ignora filtro global)
+            // 2. Se NÃO for latest, só aplica o filtro de data se a camada estiver configurada para isso (dateFilter: true)
+            //    Isso evita que camadas estáticas (como Bacias, Leito) sumam.
+
+            const shouldFilterDate = !isLatest && visualConfig?.dateFilter;
 
             data = await getGenericLayerData(catalogEntry.id, 'monitoramento', {
-                limit: isLatest ? 1 : undefined
+                limit: isLatest ? 1 : undefined,
+                startDate: shouldFilterDate ? startDate : undefined,
+                endDate: shouldFilterDate ? endDate : undefined
             });
         }
 

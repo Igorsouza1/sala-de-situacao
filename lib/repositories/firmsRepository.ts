@@ -3,10 +3,26 @@ import { rawFirmsInRioDaPrata } from "@/db/schema";
 
 
 
-export async function findAllFirmsDataWithGeometry() {
-  const result = await db.execute(`
+import { sql } from "drizzle-orm"
+
+export async function findAllFirmsDataWithGeometry(startDate?: Date, endDate?: Date) {
+  const whereClauses = [];
+
+  if (startDate) {
+    whereClauses.push(sql`acq_date >= ${startDate.toISOString().split('T')[0]}::date`);
+  }
+  if (endDate) {
+    whereClauses.push(sql`acq_date <= ${endDate.toISOString().split('T')[0]}::date`);
+  }
+
+  const whereSql = whereClauses.length > 0
+    ? sql`WHERE ${sql.join(whereClauses, sql` AND `)}`
+    : sql``;
+
+  const result = await db.execute(sql`
         SELECT  acq_date, acq_time, ST_AsGeoJSON(geom) as geojson
         FROM "monitoramento"."raw_firms"
+        ${whereSql}
       `)
 
   return result

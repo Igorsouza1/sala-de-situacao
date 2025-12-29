@@ -418,29 +418,9 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
              }
           }
           
-          if (layer.visualConfig?.dateFilter && (dateFilter.startDate || dateFilter.endDate)) {
-            // Find the date field - default to 'created_at' or specific fields known schema
-             displayData = {
-               ...displayData,
-               features: displayData.features.filter(f => {
-                 // Try common date fields
-                 const p = f.properties as any;
-                 const dateVal = p.data || p.date || p.created_at || p.alert_date || p.acq_date || p.recordedat || p.detectat || p.time;
-                 if (!dateVal) return true; // Keep if no date found (safe default)
-                 
-                 const d = new Date(dateVal);
-                 if (isNaN(d.getTime())) return true;
-
-                 if (dateFilter.startDate && d < dateFilter.startDate) return false;
-                 if (dateFilter.endDate) {
-                     const end = new Date(dateFilter.endDate);
-                     end.setHours(23, 59, 59, 999);
-                     if (d > end) return false;
-                 }
-                 return true;
-               })
-             }
-          }
+          // Data Filtering Logic
+          // Agora o filtro de data também é feito no Backend (layerService + layerRepository)
+          // Isso evita loop pesado no frontend.
 
 
           // 'latest' Logic: Movemos pro backend! (layerService.ts + layerRepository.ts)

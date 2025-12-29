@@ -31,9 +31,11 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
     title: "",
     content: null,
   })
-  const [dateFilter, setDateFilter] = useState<{ startDate: Date | null; endDate: Date | null }>({
-    startDate: null,
-    endDate: null,
+  const [dateFilter, setDateFilter] = useState<{ startDate: Date | null; endDate: Date | null }>(() => {
+    const end = new Date();
+    const start = new Date();
+    start.setDate(end.getDate() - 30);
+    return { startDate: start, endDate: end };
   })
 
   // Legacy Fetch Functions Removed

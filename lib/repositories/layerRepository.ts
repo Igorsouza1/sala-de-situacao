@@ -18,11 +18,21 @@ function isValidTableSlug(slug: string): boolean {
  * @param schema The database schema, defaults to 'monitoramento'
  * @returns A GeoJSON FeatureCollection
  */
-export async function getGenericLayerData(layerId: number, schema: string = 'monitoramento', options?: { limit?: number }): Promise<MapFeatureCollection> {
+export async function getGenericLayerData(layerId: number, schema: string = 'monitoramento', options?: { limit?: number; startDate?: Date; endDate?: Date }): Promise<MapFeatureCollection> {
 
     // Query otimizada usando as funções JSON do PostGIS
     // Se houver limite, usamos subquery para filtrar ANTES de agregar
     const limitClause = options?.limit ? sql`ORDER BY data_registro DESC LIMIT ${options.limit}` : sql``;
+
+    // Filtro de Data
+    const dateClause = sql``;
+    if (options?.startDate) {
+        dateClause.append(sql` AND data_registro >= ${options.startDate.toISOString()}::timestamp`);
+    }
+    if (options?.endDate) {
+        // Ajuste para o final do dia se necessário, ou assumir que o controller já tratou
+        dateClause.append(sql` AND data_registro <= ${options.endDate.toISOString()}::timestamp`);
+    }
 
     const query = sql`
         WITH filtered_data AS (
@@ -32,6 +42,7 @@ export async function getGenericLayerData(layerId: number, schema: string = 'mon
                 properties
             FROM ${sql.identifier(schema)}."layer_data"
             WHERE layer_id = ${layerId}
+            ${dateClause}
             ${limitClause}
         )
         SELECT json_build_object(
