@@ -108,8 +108,12 @@ export async function getLayer(slug: string, startDate?: Date, endDate?: Date): 
         else {
             // console.log(`🎻 Maestro: Buscando dados genéricos para ${slug} (ID: ${catalogEntry.id})`);
             // Busca SOMENTE na tabela layer_data, usando o ID numérico
-            // TODO: Implementar filtro de data no genericLayerData se necessário
-            data = await getGenericLayerData(catalogEntry.id, 'monitoramento');
+
+            const isLatest = (catalogEntry.visualConfig as LayerVisualConfig)?.mapDisplay === 'latest';
+
+            data = await getGenericLayerData(catalogEntry.id, 'monitoramento', {
+                limit: isLatest ? 1 : undefined
+            });
         }
 
         // 3. Montagem do DTO (Mantém igual)

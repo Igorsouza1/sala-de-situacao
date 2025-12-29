@@ -443,22 +443,8 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
           }
 
 
-          // TODO: ESSA LÓGICA DEVERIA ESTAR NO BACKEND
-          // 'latest' Logic: Keep only the single most recent feature
-          // Useful for sensor data like 'deque-de-pedras' or 'ponte-do-cure'
-          if (layer.visualConfig?.mapDisplay === 'latest') {
-             const sorted = [...displayData.features].sort((a, b) => {
-                 const pA = a.properties as any;
-                 const pB = b.properties as any;
-                 const dateA = new Date(pA.data || pA.date || pA.created_at || pA.alert_date || pA.acq_date || pA.detectat || pA.time || 0);
-                 const dateB = new Date(pB.data || pB.date || pB.created_at || pB.alert_date || pB.acq_date || pB.detectat || pB.time || 0);
-                 return dateB.getTime() - dateA.getTime();
-             });
-             displayData = {
-                 ...displayData,
-                 features: sorted.slice(0, 1) // Top 1
-             };
-          }
+          // 'latest' Logic: Movemos pro backend! (layerService.ts + layerRepository.ts)
+          // O backend agora retorna apenas 1 feature se mapDisplay === 'latest'
 
           return (
              <GeoJSON

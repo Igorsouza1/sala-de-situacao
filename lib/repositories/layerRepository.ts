@@ -18,26 +18,37 @@ function isValidTableSlug(slug: string): boolean {
  * @param schema The database schema, defaults to 'monitoramento'
  * @returns A GeoJSON FeatureCollection
  */
-export async function getGenericLayerData(layerId: number, schema: string = 'monitoramento'): Promise<MapFeatureCollection> {
+export async function getGenericLayerData(layerId: number, schema: string = 'monitoramento', options?: { limit?: number }): Promise<MapFeatureCollection> {
 
     // Query otimizada usando as funções JSON do PostGIS
+    // Se houver limite, usamos subquery para filtrar ANTES de agregar
+    const limitClause = options?.limit ? sql`ORDER BY data_registro DESC LIMIT ${options.limit}` : sql``;
+
     const query = sql`
+        WITH filtered_data AS (
+            SELECT 
+                id, 
+                geom, 
+                properties
+            FROM ${sql.identifier(schema)}."layer_data"
+            WHERE layer_id = ${layerId}
+            ${limitClause}
+        )
         SELECT json_build_object(
             'type', 'FeatureCollection',
             'features', COALESCE(
                 json_agg(
                     json_build_object(
                         'type', 'Feature',
-                        'id', ld.id,
-                        'geometry', ST_AsGeoJSON(ld.geom)::json,
-                        'properties', ld.properties
+                        'id', fd.id,
+                        'geometry', ST_AsGeoJSON(fd.geom)::json,
+                        'properties', fd.properties
                     )
                 ), 
                 '[]'::json
             )
         ) AS geojson
-        FROM ${sql.identifier(schema)}."layer_data" AS ld
-        WHERE ld.layer_id = ${layerId};
+        FROM filtered_data AS fd;
     `;
 
     try {
