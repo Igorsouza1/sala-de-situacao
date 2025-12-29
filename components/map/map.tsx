@@ -245,6 +245,64 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
       }
   }
 
+  // --- MEMOIZED DATA PROCESSING ---
+  // Memoize the filtering and style preparation to avoid heavy loops on every render (e.g. modal open)
+  const processedLayers = useMemo(() => {
+    return dynamicLayers
+      .map((layer) => {
+        const groupByColumn = layer.visualConfig?.groupByColumn
+        let isVisible = false
+        let activeValues: string[] = []
+
+        // 1. Determine Visibility
+        if (groupByColumn) {
+          // Check if any sub-items are active (slug__value)
+          activeValues = visibleDynamicLayers
+            .filter((slug) => slug.startsWith(`${layer.slug}__`))
+            .map((slug) => slug.replace(`${layer.slug}__`, ""))
+
+          if (activeValues.length > 0) isVisible = true
+        } else {
+          isVisible = visibleDynamicLayers.includes(layer.slug)
+        }
+
+        if (!isVisible) return null
+
+        // 2. Data Filtering Logic
+        let displayData = layer.data
+
+        // Apply Group Filter if active
+        if (groupByColumn && activeValues.length > 0) {
+          displayData = {
+            ...displayData,
+            features: displayData.features.filter((f) =>
+              activeValues.includes(f.properties?.[groupByColumn] as string)
+            ),
+          }
+        }
+
+        // 3. Pre-calculate standard Props
+        // This avoids calling getLayerStyle and getPointToLayer repeatedly if not needed,
+        // although they are cheap, organizing them here is cleaner.
+        const style = getLayerStyle(layer.visualConfig)
+        const pointToLayer = getPointToLayer(layer.visualConfig, layer.slug)
+
+        return {
+          slug: layer.slug,
+          name: layer.name,
+          displayData,
+          style,
+          pointToLayer,
+          visualConfig: layer.visualConfig,
+          schemaConfig: layer.schemaConfig,
+          // Create a unique key for the GeoJSON component to force re-mounting only when data changes significantly
+          // leveraging feature count is a simple heuristic.
+          componentKey: `${layer.slug}-${displayData.features.length}`,
+        }
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+  }, [dynamicLayers, visibleDynamicLayers])
+
   // Modal e Permissões
   const [selectedAcao, setSelectedAcao] = useState<any | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
@@ -389,75 +447,44 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
         <CustomZoomControl />
         <CustomLayerControl />
 
-        {dynamicLayers.map(layer => {
-            const groupByColumn = layer.visualConfig?.groupByColumn;
-            let isVisible = false;
-            let activeValues: string[] = [];
-
-            if (groupByColumn) {
-                // Check if any sub-items are active (slug__value)
-                activeValues = visibleDynamicLayers
-                    .filter(slug => slug.startsWith(`${layer.slug}__`))
-                    .map(slug => slug.replace(`${layer.slug}__`, ''));
-                
-                if (activeValues.length > 0) isVisible = true;
-            } else {
-                isVisible = visibleDynamicLayers.includes(layer.slug);
-            }
-
-            if (!isVisible) return null;
-          
-          // Data Filtering Logic
-          let displayData = layer.data;
-
-          // Apply Group Filter if active
-          if (groupByColumn && activeValues.length > 0) {
-             displayData = {
-                 ...displayData,
-                 features: displayData.features.filter(f => activeValues.includes(f.properties?.[groupByColumn] as string))
-             }
-          }
-          
-          // Data Filtering Logic
-          // Agora o filtro de data também é feito no Backend (layerService + layerRepository)
-          // Isso evita loop pesado no frontend.
-
-
-          // 'latest' Logic: Movemos pro backend! (layerService.ts + layerRepository.ts)
-          // O backend agora retorna apenas 1 feature se mapDisplay === 'latest'
-
-          return (
-             <GeoJSON
-                key={`${layer.slug}-${displayData.features.length}`} // Force re-render on filter change
-                data={displayData}
-                style={getLayerStyle(layer.visualConfig)}
-                pointToLayer={getPointToLayer(layer.visualConfig, layer.slug)}
-                onEachFeature={(feature, l) => {
-                   // Bind Popup based on Schema Config
-                   if (layer.schemaConfig?.fields?.length) {
-                     const popupContent = `
+        {processedLayers.map((layerItem) => (
+          <GeoJSON
+            key={layerItem.componentKey}
+            data={layerItem.displayData}
+            style={layerItem.style}
+            pointToLayer={layerItem.pointToLayer}
+            onEachFeature={(feature, l) => {
+              // Bind Popup based on Schema Config
+              if (layerItem.schemaConfig?.fields?.length) {
+                const popupContent = `
                        <div class="p-2 min-w-[200px]">
-                         <h3 class="font-bold mb-2 text-sm border-b pb-1">${layer.name}</h3>
+                         <h3 class="font-bold mb-2 text-sm border-b pb-1">${layerItem.name}</h3>
                          <div class="space-y-1 text-xs">
-                           ${layer.schemaConfig.fields.map(field => `
+                           ${layerItem.schemaConfig.fields
+                             .map(
+                               (field) => `
                              <div class="flex justify-between gap-4">
                                <span class="text-slate-500">${field.label}:</span>
-                               <span class="font-medium text-slate-800">${feature.properties[field.key] ?? '-'}</span>
+                               <span class="font-medium text-slate-800">${
+                                 feature.properties[field.key] ?? "-"
+                               }</span>
                              </div>
-                           `).join('')}
+                           `
+                             )
+                             .join("")}
                          </div>
                        </div>
-                     `;
-                     l.bindPopup(popupContent);
-                   }
+                     `
+                l.bindPopup(popupContent)
+              }
 
-                   l.on({
-                     click: () => handleFeatureClick(feature.properties, layer.slug),
-                   })
-                }}
-              />
-          )
-        })}
+              l.on({
+                click: () =>
+                  handleFeatureClick(feature.properties, layerItem.slug),
+              })
+            }}
+          />
+        ))}
       </MapContainer>
 
       <div className="absolute top-4 left-4 z-[1000]">
