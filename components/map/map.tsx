@@ -101,28 +101,16 @@ const getLayerStyle = (visualConfig: LayerResponseDTO['visualConfig']) => {
   };
 };
 
+// Helper to determine layer style for rendering
 const getPointToLayer = (visualConfig: LayerResponseDTO['visualConfig'], slug: string) => {
   return (feature: any, latlng: L.LatLng) => {
-    // 1. Check for Configured Icon or Default Slug Icons
+    // 1. Check for Configured Icon (Backend Driven)
     const color = visualConfig?.color || '#3388ff';
     
     // Explicit Config
     if (visualConfig?.mapMarker?.icon) {
         return L.marker(latlng, { icon: createCustomIcon(visualConfig.mapMarker?.icon, color) });
     }
-
-
-    // Default Fallbacks (The "Rules")
-    if (slug === 'firms') {
-        return L.marker(latlng, { icon: createCustomIcon('flame', '#ef4444') }); // Red Flame
-    }
-    if (slug === 'deque-de-pedras' || slug === 'ponte-do-cure') {
-        return L.marker(latlng, { icon: createCustomIcon('waves', '#0ea5e9') }); // Blue Waves
-    }
-    if (slug === 'acoes') { // Fallback if it enters the generic loop
-        return L.marker(latlng, { icon: createCustomIcon('activity', '#22c55e') }); 
-    }
-
 
     // 2. Default Shapes
     const markerType = visualConfig?.mapMarker?.type || 'circle';
@@ -326,10 +314,10 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
 
   // TODO: A DETERMINAÇÃO DE ICONES DEVE VIR DO BACKEND
   const dynamicLayerOptions: LayerManagerOption[] = dynamicLayers.map(layer => {
-    // Logic extraction helper
+    // Simplified logic: visual config comes from DTO (backend)
     const getVisuals = (lyr: LayerResponseDTO) => {
         let legendType: 'point' | 'line' | 'polygon' | 'circle' = 'polygon';
-        let iconName = lyr.visualConfig?.mapMarker?.icon;
+        const iconName = lyr.visualConfig?.mapMarker?.icon;
         
         // Support both nested mapMarker.type AND top-level type (flat JSON)
         const markerType = lyr.visualConfig?.mapMarker?.type || lyr.visualConfig?.type;
@@ -338,13 +326,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
             legendType = markerType;
         } else if (iconName) {
             legendType = 'point';
-        } else {
-             // Fallbacks
-            if (lyr.slug === 'raw_firms') { iconName = 'flame'; legendType = 'point'; }
-            else if (lyr.slug === 'deque-de-pedras' || lyr.slug === 'ponte-do-cure') { iconName = 'waves'; legendType = 'point'; }
-            else if (lyr.slug === 'acoes') { iconName = 'activity'; legendType = 'point'; }
-            else if (lyr.slug === 'estradas' || lyr.slug === 'leito') { legendType = 'line'; }
-        }
+        } 
         return { legendType, iconName };
     }
 
@@ -366,17 +348,8 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
              // Generate Sub Options
             const subOptions: LayerManagerOption[] = groups.map(group => {
                 const value = group.id;
-                
-                // Simple heuristic for default icons based on value name
-                let subIcon = iconName;
-                const v = String(group.label).toLowerCase();
-                
-                if (v.includes('fiscaliz')) subIcon = 'shield';
-                else if (v.includes('recupera')) subIcon = 'sprout';
-                else if (v.includes('monitora')) subIcon = 'eye';
-                else if (v.includes('infra')) subIcon = 'hammer';
-                else if (v.includes('incend') || v.includes('fogo')) subIcon = 'flame';
-                else if (v.includes('agua') || v.includes('rio')) subIcon = 'waves';
+                // Use icon from backend group, fallback to layer icon
+                const subIcon = group.icon || iconName;
                 
                 return {
                     id: `${layer.slug}__${value}`, // Composite ID

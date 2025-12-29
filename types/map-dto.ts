@@ -170,6 +170,7 @@ export interface LayerResponseDTO<P = BaseLayerProperties> {
         id: string;
         label: string;
         color?: string; // Optional override color for the group
+        icon?: string; // Icon name (Lucide) for the group
         count?: number;
     }[];
 }

@@ -52,7 +52,7 @@ const ACTION_TYPE_OPTIONS = [
 
 
 
-const getStatusColor = (status: string): { bg: string; text: string; icon: React.ReactNode } => {
+const getStatusColor = (status: string): { bg: string; text: string; border: string; icon: React.ReactNode } => {
   const normalizedStatus = status
     ? status
         .normalize("NFD")
@@ -62,39 +62,44 @@ const getStatusColor = (status: string): { bg: string; text: string; icon: React
 
   if (normalizedStatus.includes("concluido") || normalizedStatus.includes("ativo")) {
     return {
-      bg: "bg-emerald-100",
-      text: "text-emerald-800",
+      bg: "bg-primary-green/10",
+      text: "text-primary-green",
+      border: "border-primary-green/20",
       icon: <CheckCircle2 className="w-4 h-4" />,
     }
   }
 
   if (normalizedStatus.includes("monitoramento") || normalizedStatus.includes("pendente") || normalizedStatus.includes("aguardando")) {
     return {
-      bg: "bg-amber-100",
-      text: "text-amber-800",
+      bg: "bg-primary-yellow/10",
+      text: "text-primary-yellow",
+      border: "border-primary-yellow/20",
       icon: <Clock className="w-4 h-4" />,
     }
   }
 
   if (normalizedStatus.includes("identificado")) {
     return {
-      bg: "bg-blue-100",
-      text: "text-blue-800",
+      bg: "bg-brand-primary/10",
+      text: "text-brand-primary",
+      border: "border-brand-primary/20",
       icon: <Tag className="w-4 h-4" />,
     }
   }
 
   if (normalizedStatus.includes("erro") || normalizedStatus.includes("cancelado")) {
     return {
-      bg: "bg-red-100",
-      text: "text-red-800",
+      bg: "bg-red-50",
+      text: "text-red-700",
+      border: "border-red-200",
       icon: <AlertCircle className="w-4 h-4" />,
     }
   }
 
   return {
-    bg: "bg-slate-100",
-    text: "text-slate-800",
+    bg: "bg-slate-50",
+    text: "text-slate-600",
+    border: "border-slate-200",
     icon: <Tag className="w-4 h-4" />,
   }
 }
@@ -169,76 +174,88 @@ const HistoryTimeline = ({
   onDelete: (id: string) => void
   onImageClick: (url: string) => void
 }) => (
-  <div className="space-y-4">
-    {history.map((update, index) => (
-      <div key={update.id} className="flex gap-4">
-        {/* Timeline connector */}
-        <div className="flex flex-col items-center">
-          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center border-2 border-blue-200">
-            {update.tipoUpdate === "midia" ? (
-              <Camera className="w-5 h-5 text-blue-600" />
-            ) : (
-              <PlusCircle className="w-5 h-5 text-blue-600" />
-            )}
-          </div>
-          {index < history.length - 1 && <div className="w-0.5 h-12 bg-slate-200 mt-2" />}
-        </div>
+  <div className="relative pl-3 space-y-6 pt-2">
+    <div className="absolute left-3 top-2 bottom-2 w-px bg-slate-200" />
+    
+    {history.map((update, index) => {
+       // Visual logic
+       let dotColor = "border-slate-400"
 
-        {/* Content + botão lixeira */}
-        <div className="flex-1 pb-4">
-          <div className="flex items-start justify-between gap-2">
-            <div>
-              <p className="text-xs font-semibold text-slate-500 uppercase tracking-wide mb-1">
-                {update.tipoUpdate === "criacao" ? "📝 Ação Criada" : "📸 Foto Adicionada"}
-              </p>
-              <p className="text-xs text-slate-500 mb-3">
-                {formatDate(update.timestamp || "")}
-              </p>
+       if (update.tipoUpdate === "criacao") {
+         dotColor = "border-primary-green"
+       } else if (update.tipoUpdate === "midia") {
+         dotColor = "border-brand-primary"
+       }
+
+       return (
+      <div key={update.id} className="relative pl-6">
+        {/* Timeline Dot */}
+        <div className={`absolute left-0 top-1.5 w-[9px] h-[9px] rounded-full border-2 bg-white z-10 
+          ${dotColor}`} 
+          style={{ transform: "translateX(-4px)" }}
+        />
+
+        <div className="flex flex-col gap-1.5 group">
+          <div className="flex items-center justify-between">
+            {/* Header: Date only */}
+            <div className="flex items-center gap-2">
+                 <span className="text-sm font-semibold text-slate-700">
+                    {formatDate(update.timestamp || "")}
+                </span>
             </div>
 
             <ConfirmDestructive
               onConfirm={() => onDelete(update.id)}
               title="Excluir item do histórico?"
-              description="Essa ação não pode ser desfeita. O registro será removido permanentemente do histórico deste dossiê."
+              description="Esta ação removerá este registro permanentemente."
               confirmLabel="Excluir"
               cancelLabel="Cancelar"
               trigger={
                 <button
                   type="button"
-                  className="inline-flex items-center justify-center rounded-full p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 transition-colors"
-                  aria-label="Excluir item do histórico"
+                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1.5 text-slate-400 hover:text-red-600 rounded-md hover:bg-red-50"
+                  aria-label="Excluir"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Trash2 className="w-3.5 h-3.5" />
                 </button>
               }
             />
           </div>
 
-          {/* Imagem clicável */}
-          {update.tipoUpdate === "midia" && update.urlMidia && (
-            <div className="space-y-2 mb-3">
-              <ImageDisplay
-                src={update.urlMidia || "/placeholder.svg"}
-                alt="Mídia do dossiê"
-                onClick={() => onImageClick(update.urlMidia!)}
-              />
-              {update.descricao && (
-                <p className="text-sm text-slate-700 italic px-3 py-2 bg-slate-50 rounded-lg border-l-2 border-blue-300">
-                  "{update.descricao}"
-                </p>
-              )}
-            </div>
-          )}
+          {/* Content Card */}
+          <div className="bg-white border border-slate-200 rounded-md p-3 shadow-sm hover:border-brand-primary/30 transition-colors mt-1">
+            {update.urlMidia && (
+              <div className="relative group/image overflow-hidden rounded-md border border-slate-100 bg-slate-50 mb-3">
+                <div 
+                  onClick={() => onImageClick(update.urlMidia!)}
+                  className="cursor-pointer aspect-video relative"
+                >
+                  <img
+                    src={update.urlMidia || "/placeholder.svg"}
+                    alt="Mídia"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover/image:scale-105"
+                  />
+                    <div className="absolute inset-0 bg-black/0 group-hover/image:bg-black/10 transition-colors flex items-center justify-center">
+                      <Camera className="w-8 h-8 text-white opacity-0 group-hover/image:opacity-100 drop-shadow-lg transition-all transform scale-75 group-hover/image:scale-100" />
+                    </div>
+                </div>
+              </div>
+            )}
 
-          {/* Descrição de Criação */}
-          {update.tipoUpdate === "criacao" && update.descricao && (
-            <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <p className="text-sm text-slate-800">{update.descricao}</p>
-            </div>
-          )}
+            {update.descricao ? (
+               <p className="text-sm text-slate-700 leading-relaxed font-normal">
+                 {update.descricao}
+               </p>
+            ) : (
+                // If no description, show fallback text only if it's creation
+                update.tipoUpdate === "criacao" && (
+                    <p className="text-sm text-slate-400 italic">Dossiê criado.</p>
+                )
+            )}
+          </div>
         </div>
       </div>
-    ))}
+    )})}
   </div>
 )
 
@@ -364,69 +381,126 @@ const AddHistoryForm = ({ acaoId, onSuccess, onCancel }: { acaoId: number; onSuc
       setIsSubmitting(false)
     }
   }
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 p-4 bg-slate-50 rounded-lg border border-slate-200">
-      <div className="flex items-center justify-between">
-        <h5 className="font-semibold text-sm text-slate-900">Adicionar ao Histórico</h5>
-        <Button type="button" variant="ghost" size="icon" onClick={onCancel} className="h-6 w-6">
-          <X className="h-4 w-4" />
+    <form onSubmit={handleSubmit} className="p-4 bg-white/50 border border-slate-200 rounded-lg space-y-5 shadow-sm">
+      <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+        <h5 className="font-semibold text-sm text-brand-dark-blue flex items-center gap-2">
+           <PlusCircle className="w-4 h-4 text-brand-primary" />
+           Novo Registro
+        </h5>
+        <Button 
+          type="button" 
+          variant="ghost" 
+          size="icon" 
+          onClick={onCancel} 
+          className="h-6 w-6 rounded-full hover:bg-slate-100 text-slate-400 hover:text-red-500"
+        >
+          <X className="h-3.5 w-3.5" />
         </Button>
       </div>
 
-      <div className="space-y-2">
-  <label htmlFor="data" className="text-xs font-medium text-slate-700">
-    Data do acontecimento
-  </label>
-  <Input
-    id="data"
-    type="date"
-    value={selectedDate}
-    onChange={(e) => setSelectedDate(e.target.value)}
-    className="text-xs"
-  />
-  <p className="text-[11px] text-slate-500">
-    Por padrão usamos a data de hoje, mas você pode ajustar para quando o evento realmente aconteceu.
-  </p>
-</div>
+      <div className="grid gap-4">
+        {/* Data */}
+        <div className="space-y-1.5">
+          <Label htmlFor="data" className="text-xs font-medium text-slate-600">
+            Data do Evento
+          </Label>
+          <Input
+            id="data"
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="h-9 text-xs bg-white border-slate-200 focus-visible:ring-brand-primary/20"
+          />
+        </div>
 
-      <div className="space-y-2">
-        <label htmlFor="file" className="text-xs font-medium text-slate-700">
-          Mídia (opcional)
-        </label>
-        <Input
-          id="file"
-          type="file"
-          accept="image/*,video/*"
-          onChange={(e) => setFile(e.target.files?.[0] || null)}
-          className="text-xs"
-        />
-        {file && (
-          <p className="text-xs text-slate-600 truncate">
-            {file.name}
-          </p>
-        )}
+        {/* Upload Area Customizada */}
+        <div className="space-y-1.5">
+           <Label className="text-xs font-medium text-slate-600">Mídia (Opcional)</Label>
+           <div className="relative">
+              <input
+                id="file-upload"
+                type="file"
+                accept="image/*,video/*"
+                className="hidden"
+                onChange={(e) => setFile(e.target.files?.[0] || null)}
+              />
+              <label 
+                htmlFor="file-upload"
+                className={`
+                  flex items-center justify-center gap-3 w-full p-4 border-2 border-dashed rounded-lg cursor-pointer transition-all
+                  ${file 
+                    ? "border-brand-primary/40 bg-brand-primary/5 text-brand-primary" 
+                    : "border-slate-200 hover:border-brand-primary/30 hover:bg-slate-50 text-slate-500"
+                  }
+                `}
+              >
+                  {file ? (
+                     <>
+                       <Camera className="w-5 h-5 flex-shrink-0" />
+                       <span className="text-xs font-medium truncate max-w-[200px]">{file.name}</span>
+                       <Button 
+                         type="button" 
+                         variant="ghost" 
+                         size="icon" 
+                         className="h-6 w-6 ml-auto hover:bg-brand-primary/10 hover:text-red-500"
+                         onClick={(e) => {
+                            e.preventDefault()
+                            setFile(null)
+                         }}
+                       >
+                          <X className="w-3.5 h-3.5" />
+                       </Button>
+                     </>
+                  ) : (
+                    <>
+                       <Camera className="w-5 h-5 text-slate-400" />
+                       <span className="text-xs">Clique para adicionar foto ou vídeo</span>
+                    </>
+                  )}
+              </label>
+           </div>
+        </div>
+
+        {/* Descrição */}
+        <div className="space-y-1.5">
+          <Label htmlFor="descricao" className="text-xs font-medium text-slate-600">
+            Descrição / Observações
+          </Label>
+          <Textarea
+            id="descricao"
+            value={descricao}
+            onChange={(e) => setDescricao(e.target.value)}
+            placeholder="Escreva detalhes sobre o que aconteceu..."
+            className="min-h-[80px] text-sm bg-white border-slate-200 focus-visible:ring-brand-primary/20 resize-none"
+          />
+        </div>
       </div>
-      
 
-      <div className="space-y-2">
-        <label htmlFor="descricao" className="text-xs font-medium text-slate-700">
-          Descrição (opcional)
-        </label>
-        <Textarea
-          id="descricao"
-          value={descricao}
-          onChange={(e) => setDescricao(e.target.value)}
-          placeholder="Adicione uma descrição ou legenda..."
-          className="min-h-[80px] text-sm"
-        />
-      </div>
-
-      <div className="flex gap-2">
-        <Button type="submit" disabled={isSubmitting} className="flex-1">
-          {isSubmitting ? "Adicionando..." : "Adicionar"}
-        </Button>
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+      <div className="flex gap-3 pt-2">
+        <Button 
+            type="button" 
+            variant="outline" 
+            onClick={onCancel} 
+            disabled={isSubmitting}
+            className="flex-1 border-slate-200 text-slate-600 hover:bg-slate-50"
+        >
           Cancelar
+        </Button>
+        <Button 
+            type="submit" 
+            disabled={isSubmitting} 
+            className="flex-1 bg-brand-primary hover:bg-brand-primary/90 text-white shadow-sm"
+        >
+          {isSubmitting ? (
+             <>
+               <Loader2 className="w-3.5 h-3.5 mr-2 animate-spin" />
+               Salvando...
+             </>
+          ) : (
+             "Salvar Registro"
+          )}
         </Button>
       </div>
     </form>
@@ -601,15 +675,15 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
   return (
     <div className="space-y-6">
       {/* CARD PRINCIPAL DO DOSSIÊ */}
-      <Card className="relative overflow-hidden border-slate-200/80 bg-white shadow-sm">
-        {/* Barrinha colorida no topo */}
-        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-sky-500 via-emerald-500 to-blue-500" />
+      <Card className="relative overflow-hidden border-slate-200 xs:rounded-md shadow-sm">
+        {/* Barrinha colorida no topo (removed gradient to be cleaner as requested, or keep very subtle) */}
+        <div className="absolute inset-x-0 top-0 h-1 bg-brand-primary" />
   
         <CardHeader className="pb-4 pt-4">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3 min-w-0">
               {/* Ícone do dossiê */}
-              <div className="hidden sm:flex h-10 w-10 items-center justify-center rounded-full border border-sky-100 bg-sky-50 text-sky-600 flex-shrink-0">
+              <div className="hidden sm:flex h-10 w-10 items-center justify-center rounded-full border border-brand-primary/20 bg-brand-primary/5 text-brand-primary flex-shrink-0">
                 <MapPin className="h-5 w-5" />
               </div>
   
@@ -647,7 +721,7 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
             <div className="flex flex-col items-start gap-2 sm:items-end">
               <Badge
                 variant="outline"
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-semibold text-[11px] border-none shadow-sm ${statusColor.bg} ${statusColor.text}`}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-full font-semibold text-[11px] shadow-sm ${statusColor.bg} ${statusColor.text} ${statusColor.border} border`}
               >
                 {statusColor.icon}
                 <span>{statusDisplayValue}</span>
@@ -815,25 +889,22 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
   
       <Separator className="bg-slate-200" />
 
-      <div>
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-base font-bold text-slate-900 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-blue-600" />
-            Histórico do Dossiê
+      <div className="space-y-4">
+        <div className="flex items-center justify-between px-1">
+          <h4 className="text-sm font-semibold text-slate-800 flex items-center gap-2">
+            <Clock className="w-4 h-4 text-slate-500" />
+            Histórico
           </h4>
-          {!showAddForm && (
-            <Button
-              onClick={() => setShowAddForm(true)}
-              size="sm"
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <PlusCircle className="w-4 h-4" />
-              Adicionar
-            </Button>
-          )}
+          <Button 
+            size="sm" 
+            variant="outline" 
+            onClick={() => setShowAddForm(true)}
+            className="h-8 text-xs bg-white border-slate-200 hover:bg-slate-50 text-slate-600"
+          >
+            <PlusCircle className="w-3.5 h-3.5 mr-1.5" />
+            Novo Registro
+          </Button>
         </div>
-
         {showAddForm && (
           <div className="mb-4">
             <AddHistoryForm acaoId={acaoId} onSuccess={handleAddSuccess} onCancel={() => setShowAddForm(false)} />

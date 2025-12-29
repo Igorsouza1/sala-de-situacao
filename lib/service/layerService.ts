@@ -39,7 +39,7 @@ const STATIC_STRATEGIES: Record<string, (start?: Date, end?: Date) => Promise<Ma
 };
 
 // --- HELPER: BUSCAR GRUPOS DISTINTOS ---
-async function getLayerGroups(slug: string, column: string, schema: string = 'monitoramento'): Promise<{ id: string, label: string }[]> {
+async function getLayerGroups(slug: string, column: string, schema: string = 'monitoramento'): Promise<{ id: string, label: string, icon?: string }[]> {
     try {
         if (slug === 'acoes') {
             // Caso especial para tabela acoes (Type A)
@@ -53,10 +53,25 @@ async function getLayerGroups(slug: string, column: string, schema: string = 'mo
             `);
             const rows = result.rows || result;
             // @ts-ignore
-            return rows.map((r: any) => ({
-                id: r.value,
-                label: r.value
-            }));
+            return rows.map((r: any) => {
+                const label = r.value;
+                let icon = 'activity'; // Default
+                const v = String(label).toLowerCase();
+
+                // Heuristic for Icons (moved from frontend)
+                if (v.includes('fiscaliz')) icon = 'shield';
+                else if (v.includes('recupera')) icon = 'sprout';
+                else if (v.includes('monitora')) icon = 'eye';
+                else if (v.includes('infra')) icon = 'hammer';
+                else if (v.includes('incend') || v.includes('fogo')) icon = 'flame';
+                else if (v.includes('agua') || v.includes('rio')) icon = 'waves';
+
+                return {
+                    id: r.value,
+                    label: r.value,
+                    icon: icon
+                };
+            });
         } else {
             // Caso genérico para layer_data (Type B)
             // column is inside properties JSONB
@@ -140,7 +155,8 @@ export async function getLayer(slug: string, startDate?: Date, endDate?: Date): 
             groups = await getLayerGroups(slug, groupByColumn);
         }
 
-        return {
+        // Create the final layer object
+        const finalLayer: LayerResponseDTO = {
             id: catalogEntry.id,
             slug: catalogEntry.slug,
             name: catalogEntry.name,
@@ -154,6 +170,35 @@ export async function getLayer(slug: string, startDate?: Date, endDate?: Date): 
             data: data,
             groups: groups
         };
+
+        // --- BACKEND VISUAL INJECTION (LEGACY SUPPORT) ---
+        // Ensure visualConfig exists
+        if (!finalLayer.visualConfig) {
+            finalLayer.visualConfig = { category: 'Monitoramento' }; // Default minimal config
+        }
+
+        // Ensure legacy layers have their icons defined here effectively acting as "DB Defaults"
+        if (!finalLayer.visualConfig.mapMarker) {
+            finalLayer.visualConfig.mapMarker = { type: 'point' };
+        }
+
+        // Firms
+        if (slug === 'raw_firms' || slug === 'firms') {
+            if (!finalLayer.visualConfig.mapMarker.icon) finalLayer.visualConfig.mapMarker.icon = 'flame';
+            if (!finalLayer.visualConfig.mapMarker.color) finalLayer.visualConfig.mapMarker.color = '#ef4444';
+        }
+        // Deque / Ponte
+        if (slug === 'deque-de-pedras' || slug === 'ponte-do-cure') {
+            if (!finalLayer.visualConfig.mapMarker.icon) finalLayer.visualConfig.mapMarker.icon = 'waves';
+            if (!finalLayer.visualConfig.mapMarker.color) finalLayer.visualConfig.mapMarker.color = '#0ea5e9';
+        }
+        // Acoes
+        if (slug === 'acoes') {
+            if (!finalLayer.visualConfig.mapMarker.icon) finalLayer.visualConfig.mapMarker.icon = 'activity';
+            if (!finalLayer.visualConfig.mapMarker.color) finalLayer.visualConfig.mapMarker.color = '#22c55e';
+        }
+
+        return finalLayer;
 
     } catch (error) {
         console.error(`Maestro Error assembling layer ${slug}:`, error);
