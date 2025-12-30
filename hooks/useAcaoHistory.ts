@@ -28,6 +28,11 @@ export type AcaoDossie = {
   acao: string | null;
   geom: any | null;
   status: string | null;
+  tipo: string | null;            // [NEW]
+  propriedade: string | null;     // [NEW] - Nome da propriedade
+  propriedadeCodigo: string | null; // [NEW] - CAR / Código do Imóvel
+  propriedadeGeoJson: any | null; // [NEW] - Polígono da propriedade
+  banhadoGeoJson: any | null;     // [NEW] - Polígono do banhado (se houver)
   history: AcaoUpdate[];
 };
 

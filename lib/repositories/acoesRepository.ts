@@ -6,12 +6,22 @@ import { eq, desc, sql } from "drizzle-orm";
 
 
 export async function findAcaoById(id: number) {
-  const result = await db
-    .select() // Pega todas as colunas da ação principal
-    .from(acoesInRioDaPrata)
-    .where(eq(acoesInRioDaPrata.id, id))
-    .execute();
-  return result[0]; // Retorna apenas o primeiro (ou undefined)
+  // Uses raw SQL to perform spatial JOINs
+  const query = sql`
+    SELECT 
+      a.*,
+      p.nome as propriedade,
+      p.cod_imovel as "propriedadeCodigo",
+      ST_AsGeoJSON(p.geom) as "propriedadeGeoJson",
+      ST_AsGeoJSON(b.geom) as "banhadoGeoJson"
+    FROM "monitoramento"."acoes" a
+    LEFT JOIN "monitoramento"."propriedades" p ON ST_Intersects(p.geom, a.geom)
+    LEFT JOIN "monitoramento"."Banhado_Rio_Da_Prata" b ON ST_Intersects(b.geom, a.geom)
+    WHERE a.id = ${id}
+  `;
+
+  const result = await db.execute(query);
+  return result.rows[0];
 }
 
 export async function findAllAcoesData() {
