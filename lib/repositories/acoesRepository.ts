@@ -13,10 +13,14 @@ export async function findAcaoById(id: number) {
       p.nome as propriedade,
       p.cod_imovel as "propriedadeCodigo",
       ST_AsGeoJSON(p.geom) as "propriedadeGeoJson",
-      ST_AsGeoJSON(b.geom) as "banhadoGeoJson"
+      ST_AsGeoJSON(ld.geom) as "banhadoGeoJson"
     FROM "monitoramento"."acoes" a
     LEFT JOIN "monitoramento"."propriedades" p ON ST_Intersects(p.geom, a.geom)
-    LEFT JOIN "monitoramento"."Banhado_Rio_Da_Prata" b ON ST_Intersects(b.geom, a.geom)
+    LEFT JOIN "monitoramento"."layer_data" ld 
+      ON ld.layer_id = (SELECT id FROM "monitoramento"."layer_catalog" WHERE slug = 'banhado' LIMIT 1)
+      -- Alterado de ST_Intersects para ST_DWithin
+      -- Cast ::geography garante o cálculo em METROS
+      AND ST_DWithin(ld.geom::geography, a.geom::geography, 5000)
     WHERE a.id = ${id}
   `;
 

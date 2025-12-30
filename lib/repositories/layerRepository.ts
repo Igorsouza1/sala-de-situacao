@@ -90,3 +90,21 @@ export async function findAllPropriedadesDataWithGeometry() {
     return await db.select().from(propriedadesInMonitoramento).orderBy(desc(propriedadesInMonitoramento.id));
 }
 
+export async function findAllLayersCatalog() {
+    return await db
+        .select()
+        .from(layerCatalogInMonitoramento)
+        .orderBy(desc(layerCatalogInMonitoramento.ordering));
+}
+
+export async function insertLayerData(layerId: number, geojson: any, properties: any) {
+    // Ensure 4674 SRID
+    const geomSQL = sql`ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geojson)}), 4674)`;
+
+    return await db.execute(sql`
+        INSERT INTO "monitoramento"."layer_data" (layer_id, geom, properties, data_registro)
+        VALUES (${layerId}, ${geomSQL}, ${properties}, NOW())
+        RETURNING id
+    `);
+}
+

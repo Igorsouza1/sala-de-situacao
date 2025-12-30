@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Plus, Map, BarChartIcon as ChartNetwork,  User, Settings, LogOut, UserCog } from "lucide-react"
+import { Plus, Map, BarChartIcon as ChartNetwork,  User, Settings, LogOut, UserCog, Layers } from "lucide-react"
 
 import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -21,7 +21,9 @@ const commonNavItems = [
   { name: "Dashboard", href: "/protected/dashboard", icon: ChartNetwork },
 ]
 
-// const adminNavItems = [{ name: "Painel do Administrador", href: "/protected/admin/data", icon: HardDrive }]
+const adminNavItems = [
+  { name: "Camadas", href: "/protected/admin/layers", icon: Layers }
+]
 
 export function Navbar() {
   const pathname = usePathname()
@@ -40,7 +42,7 @@ export function Navbar() {
     router.refresh()
   }
 
-  const navItems = isLoading ? commonNavItems : [...commonNavItems]
+  const navItems = isLoading ? commonNavItems : (isAdmin ? [...commonNavItems, ...adminNavItems] : [...commonNavItems])
 
   const openProfile = () => {
     setMenuOpen(false)               // fecha o dropdown imediatamente
