@@ -56,6 +56,26 @@ export async function updateAcaoFieldsById(
     return { message: "Nenhum campo enviado para atualização." }
   }
 
+  // --- LOGIC FOR STATUS HISTORY ---
+  if (textUpdates.status) {
+    try {
+      const currentAcao = await findAcaoById(id)
+      if (currentAcao && currentAcao.status !== textUpdates.status) {
+        const oldStatus = currentAcao.status || "Sem status"
+        const newStatus = textUpdates.status
+
+        await addAcaoUpdate(id, {
+          descricao: `Status alterado de "${oldStatus}" para "${newStatus}"`,
+          atualizacao: new Date()
+        })
+      }
+    } catch (err) {
+      console.error("Erro ao registrar histórico de status:", err)
+      // Non-blocking error
+    }
+  }
+  // -------------------------------
+
   await updateAcaoById(id, textUpdates)
   return { message: "Ação atualizada com sucesso!" }
 }

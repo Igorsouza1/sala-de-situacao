@@ -4,8 +4,11 @@ import { useEffect, useState, useMemo } from "react"
 import dynamic from "next/dynamic"
 import { formatDate } from "@/lib/helpers/formatter/formatDate"
 import { ImageModal } from "@/components/ui/image-modal"
-import { AlertCircle, Printer } from "lucide-react" 
+import { AlertCircle, Printer, Trash, Plus, Save, FileImage, X } from "lucide-react" 
 import { Button } from "@/components/ui/button" 
+import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { ACTION_CATEGORIES, STATUS_STYLES, ActionCategory, ActionStatus } from "./config/actions-config"
 
 // --- Dynamic Imports for Map ---
 const DossieMap = dynamic(() => import("./dossie-map"), { 
@@ -56,12 +59,40 @@ const getStatusColor = (status: string) => {
 interface DossieTemplateProps {
   dossie: DossieData
   isPrintMode?: boolean
+  isEditing?: boolean
+  onUpdateFields?: (formData: FormData) => Promise<void>
+  onDeleteHistory?: (id: string) => Promise<void>
+  onAddHistory?: (input: { descricao: string, file?: File }) => Promise<void>
 }
 
-export function DossieTemplate({ dossie, isPrintMode = false }: DossieTemplateProps) {
+export function DossieTemplate({ 
+  dossie, 
+  isPrintMode = false,
+  isEditing = false,
+  onUpdateFields,
+  onDeleteHistory,
+  onAddHistory
+}: DossieTemplateProps) {
   // Image Modal state
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
+
+  // Edit States for Fields
+  const [editStatus, setEditStatus] = useState(dossie?.status || "")
+  const [editCategory, setEditCategory] = useState(dossie?.acao || "")
+  const [editType, setEditType] = useState(dossie?.tipo || "")
+
+  // New Record State
+  const [newRecordDesc, setNewRecordDesc] = useState("")
+  const [newRecordFile, setNewRecordFile] = useState<File | null>(null)
+
+  useEffect(() => {
+     if(dossie) {
+        setEditStatus(dossie.status || "")
+        setEditCategory(dossie.acao || "")
+        setEditType(dossie.tipo || "")
+     }
+  }, [dossie])
 
   const images = useMemo(() => {
     return dossie?.history?.filter((h) => h.urlMidia).map((h) => h.urlMidia!) || []
@@ -74,6 +105,28 @@ export function DossieTemplate({ dossie, isPrintMode = false }: DossieTemplatePr
       setCurrentImageIndex(idx)
       setIsImageModalOpen(true)
     }
+  }
+
+  const handleSaveFields = async () => {
+     if (!onUpdateFields) return
+     const formData = new FormData()
+     formData.append('status', editStatus)
+     formData.append('acao', editCategory) // 'acao' is category in DB column
+     formData.append('tipo', editType)
+     await onUpdateFields(formData)
+  }
+
+  const handleAddNewRecord = async () => {
+      if (!onAddHistory) return
+      if (!newRecordDesc && !newRecordFile) return // Need at least one
+
+      await onAddHistory({
+          descricao: newRecordDesc,
+          file: newRecordFile || undefined
+      })
+      // Reset form
+      setNewRecordDesc("")
+      setNewRecordFile(null)
   }
 
   // Auto-print logic
@@ -144,20 +197,17 @@ export function DossieTemplate({ dossie, isPrintMode = false }: DossieTemplatePr
              display: none !important;
            }
            
+           .no-print {
+               display: none !important;
+           }
+
            /* Fix leaflet print bug where map overlays document */
            .leaflet-container {
              z-index: 0 !important;
            }
         }
       `}</style>
-      
-        {/* Print Button (Only visible if NOT in print mode, and handled by parent usually, but nice to have distinct check) */}
-        {!isPrintMode && (
-             <div className="mx-auto max-w-[210mm] w-full mb-4 flex items-center justify-between print:hidden">
-             <h2 className="text-lg font-bold text-slate-800">Detalhes da Camada</h2>
-             {/* The parent component handles the print action usually, or we can open the window here */}
-          </div>
-        )}
+
 
       <div id="printable-dossier" className="mx-auto max-w-[210mm] w-full bg-white shadow-xl print:shadow-none print:w-full flex flex-col min-h-[297mm]">
         
@@ -205,6 +255,9 @@ export function DossieTemplate({ dossie, isPrintMode = false }: DossieTemplatePr
                  <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-brand-primary pl-2">
                    01. Dados da Ocorrência
                  </h2>
+                 {isEditing && (
+                     <Button size="sm" onClick={handleSaveFields} className="h-6 text-xs bg-brand-primary text-white">Salvar Alterações</Button>
+                 )}
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-3 border border-slate-900 text-sm">
@@ -223,21 +276,53 @@ export function DossieTemplate({ dossie, isPrintMode = false }: DossieTemplatePr
                  {/* Status */}
                  <div className={`p-3 border-b border-slate-900 flex flex-col justify-center ${statusStyle.bg}`}>
                     <span className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Status Atual</span>
-                    <span className={`font-black uppercase tracking-wide ${statusStyle.text}`}>
-                       {dossie.status || "DESCONHECIDO"}
-                    </span>
+                    {isEditing ? (
+                        <select 
+                            className="w-full p-1 text-xs border border-slate-300 rounded bg-white text-slate-900"
+                            value={editStatus}
+                            onChange={(e) => setEditStatus(e.target.value)}
+                        >
+                            {Object.keys(STATUS_STYLES).map(s => (
+                                <option key={s} value={s}>{s}</option>
+                            ))}
+                        </select>
+                    ) : (
+                        <span className={`font-black uppercase tracking-wide ${statusStyle.text}`}>
+                        {dossie.status || "DESCONHECIDO"}
+                        </span>
+                    )}
                  </div>
 
                  {/* Categoria (Natureza) */}
                  <div className="p-3 border-r border-slate-900">
                     <span className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Categoria</span>
-                    <span className="font-semibold text-slate-900 uppercase">{dossie.acao || "Não listado"}</span>
+                    {isEditing ? (
+                        <select 
+                            className="w-full p-1 text-xs border border-slate-300 rounded bg-white text-slate-900 uppercase"
+                            value={editCategory}
+                            onChange={(e) => setEditCategory(e.target.value)}
+                        >
+                            {Object.keys(ACTION_CATEGORIES).map(c => (
+                                <option key={c} value={c}>{c}</option>
+                            ))}
+                        </select>
+                    ) : (
+                        <span className="font-semibold text-slate-900 uppercase">{dossie.acao || "Não listado"}</span>
+                    )}
                  </div>
 
                  {/* Tipo (Detalhe) */}
                  <div className="p-3 border-r border-slate-900 bg-slate-50">
                     <span className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tipo</span>
-                    <span className="font-semibold text-slate-900 uppercase">{dossie.tipo || "—"}</span>
+                    {isEditing ? (
+                        <Input 
+                            className="h-7 text-xs bg-white" 
+                            value={editType} 
+                            onChange={(e) => setEditType(e.target.value)} 
+                        />
+                    ) : (
+                        <span className="font-semibold text-slate-900 uppercase">{dossie.tipo || "—"}</span>
+                    )}
                  </div>
 
                  {/* Propriedade */}
@@ -277,14 +362,71 @@ export function DossieTemplate({ dossie, isPrintMode = false }: DossieTemplatePr
 
             {/* --- E. NARRATIVA TÉCNICA (CONTEXTO) & D. IMAGENS --- */}
             <section aria-label="Histórico e Evidências" className="space-y-6">
-                 <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-brand-primary pl-2">
-                    03. Relatório Técnico & Evidências
-                 </h2>
+                 <div className="flex items-center justify-between">
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-brand-primary pl-2">
+                        03. Relatório Técnico & Evidências
+                    </h2>
+                 </div>
+
+                 {/* Form de Adição (Apenas Modo Edição) */}
+                 {isEditing && (
+                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 no-print mb-6">
+                        <h3 className="text-xs font-bold text-slate-700 uppercase mb-3 flex items-center gap-2">
+                            <Plus className="w-4 h-4" /> Adicionar Novo Registro
+                        </h3>
+                        <div className="grid gap-4">
+                            <Textarea 
+                                placeholder="Descreva a atualização técnica..." 
+                                className="bg-white text-sm"
+                                value={newRecordDesc}
+                                onChange={(e) => setNewRecordDesc(e.target.value)}
+                            />
+                            <div className="flex items-center gap-4">
+                                <div className="flex-1">
+                                    <label className="cursor-pointer inline-flex items-center gap-2 text-xs font-bold text-slate-500 border border-slate-300 rounded px-3 py-2 bg-white hover:bg-slate-50 transition-colors">
+                                        <FileImage className="w-4 h-4" />
+                                        {newRecordFile ? truncate(newRecordFile.name, 20) : "Anexar Evidência (Imagem)"}
+                                        <input 
+                                            type="file" 
+                                            accept="image/*" 
+                                            className="hidden" 
+                                            onChange={(e) => {
+                                                if (e.target.files && e.target.files[0]) {
+                                                    setNewRecordFile(e.target.files[0])
+                                                }
+                                            }}
+                                        />
+                                    </label>
+                                    {newRecordFile && (
+                                        <button onClick={() => setNewRecordFile(null)} className="ml-2 text-slate-400 hover:text-red-500">
+                                            <X className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
+                                <Button size="sm" onClick={handleAddNewRecord} disabled={!newRecordDesc && !newRecordFile}>
+                                    Adicionar Registro
+                                </Button>
+                            </div>
+                        </div>
+                     </div>
+                 )}
 
                  {dossie.history && dossie.history.length > 0 ? (
                     <div className="space-y-8">
                        {dossie.history.map((item, idx) => (
-                          <div key={item.id} className="break-inside-avoid">
+                          <div key={item.id} className="break-inside-avoid relative group">
+                             
+                             {/* Delete Button (Edit Mode Only) */}
+                             {isEditing && onDeleteHistory && (
+                                 <button 
+                                    onClick={() => onDeleteHistory(item.id)}
+                                    className="absolute -left-8 top-0 text-slate-300 hover:text-red-500 p-1 no-print"
+                                    title="Excluir Registro"
+                                 >
+                                    <Trash className="w-4 h-4" />
+                                 </button>
+                             )}
+
                              {/* Cabeçalho do Item */}
                              <div className="flex items-center gap-3 mb-2 border-b border-slate-200 pb-1">
                                 <span className="font-mono text-xs font-bold text-slate-400">#{idx + 1}</span>
@@ -321,7 +463,7 @@ export function DossieTemplate({ dossie, isPrintMode = false }: DossieTemplatePr
                                          </div>
                                       ) : (
                                         <div 
-                                          className="relative group cursor-pointer border-2 border-slate-900 bg-slate-100"
+                                          className="relative group/img cursor-pointer border-2 border-slate-900 bg-slate-100"
                                           onClick={() => handleImageClick(item.urlMidia!)}
                                         >
                                             <img 
@@ -370,4 +512,9 @@ export function DossieTemplate({ dossie, isPrintMode = false }: DossieTemplatePr
       />
     </div>
   )
+}
+
+function truncate(str: string, length: number) {
+    if (str.length <= length) return str;
+    return str.slice(0, length) + '...';
 }

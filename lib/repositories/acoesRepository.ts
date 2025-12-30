@@ -67,7 +67,7 @@ export async function findAllAcoesDataWithGeometry(startDate?: Date, endDate?: D
 
   const result = await db.execute(query);
 
-  return result
+  return result.rows
 }
 
 
