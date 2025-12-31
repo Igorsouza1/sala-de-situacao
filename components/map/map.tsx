@@ -10,6 +10,7 @@ import { CustomZoomControl } from "./CustomZoomControl"
 import { CustomLayerControl } from "./CustomLayerControl"
 import { MapPlaceholder } from "./MapPlaceholder"
 import { DateFilterControl } from "./DateFilterControl"
+import { MeasureControl } from "./MeasureControl"
 import { useMapContext } from "@/context/GeoDataContext"
 import L from "leaflet"
 import { FeatureDetails } from "./feature-details"
@@ -530,6 +531,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
         />
         <CustomZoomControl />
         <CustomLayerControl />
+        <MeasureControl />
 
         {processedLayers.map((layerItem) => (
           <GeoJSON

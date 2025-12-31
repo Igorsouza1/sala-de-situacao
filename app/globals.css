@@ -139,3 +139,12 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+.cursor-crosshair .leaflet-interactive {
+  cursor: crosshair !important;
+  pointer-events: none !important;
+}
+
+.cursor-crosshair {
+  cursor: crosshair !important;
+}
