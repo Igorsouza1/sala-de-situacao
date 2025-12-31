@@ -101,10 +101,27 @@ const resolveFeatureStyle = (finalVisualConfig: any, feature?: any) => {
     if (finalVisualConfig?.rules && Array.isArray(finalVisualConfig.rules) && feature?.properties) {
         finalVisualConfig.rules.forEach((rule: any) => {
              const { field, values, styleProperty } = rule;
-             const featureValue = feature.properties[field];
+             const rawValue = feature.properties[field];
+             
+             // Ensure valid key
+             if (rawValue === undefined || rawValue === null) return;
 
-             if (featureValue && values[featureValue]) {
-                 const override = values[featureValue];
+             const featureValue = String(rawValue).trim(); // convert to string and trim
+
+             // 1. Direct Match
+             let match = values[featureValue];
+
+             // 2. Case Insensitive Fallback
+             if (match === undefined) {
+                 const lowerValue = featureValue.toLowerCase();
+                 const foundKey = Object.keys(values).find(k => k.toLowerCase() === lowerValue);
+                 if (foundKey) {
+                    match = values[foundKey];
+                 }
+             }
+
+             if (match !== undefined) {
+                 const override = match;
                  
                  // If styleProperty is defined, override only that property
                  if (styleProperty) {
