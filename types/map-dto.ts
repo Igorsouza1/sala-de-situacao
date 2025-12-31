@@ -44,21 +44,34 @@ export interface MapMarkerConfig {
     radius?: number; // Required for type: 'circle'
 }
 
-export interface LayerVisualConfig {
-    charts?: LayerChartConfig[];
-    category: 'Monitoramento' | 'Operacional' | 'Infraestrutura' | 'Base Territorial';
-    mapDisplay?: "latest" | "all" | "date_filter"; // 'latest' for sensor data, 'all' for static layers
-    dateFilter?: boolean; // If true, layer responds to global date selector
-    mapMarker?: MapMarkerConfig;
-
-    // Legacy/Leaflet direct options (kept for compatibility or specific overrides)
+export interface VisualStyle {
+    type?: "polygon" | "point" | "circle" | "icon" | "line" | "heatmap";
     color?: string;
-    type?: "polygon" | "point" | "circle";
     fillColor?: string;
     weight?: number;
     opacity?: number;
-    groupByColumn?: string;
     fillOpacity?: number;
+    radius?: number;
+    dashArray?: string;
+    iconName?: string;
+}
+
+export interface LayerVisualConfig extends VisualStyle { // Allow direct properties for backward compatibility
+    charts?: LayerChartConfig[];
+    category: 'Monitoramento' | 'Operacional' | 'Infraestrutura' | 'Base Territorial';
+    mapDisplay?: "latest" | "all" | "date_filter";
+    dateFilter?: boolean;
+    mapMarker?: MapMarkerConfig; // Deprecated but kept for compatibility
+    groupByColumn?: string;
+
+    // New Structure
+    baseStyle?: VisualStyle;
+    rules?: {
+        field: string;
+        values: {
+            [key: string]: VisualStyle;
+        };
+    };
 }
 
 /**

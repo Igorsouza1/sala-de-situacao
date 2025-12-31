@@ -20,7 +20,7 @@ export interface LayerManagerOption {
   slug: string
   fillColor?: string
   icon?: string
-  legendType?: 'point' | 'line' | 'polygon' | 'circle'
+  legendType?: 'point' | 'line' | 'polygon' | 'circle' | 'icon' | 'heatmap'
   category?: string
   subOptions?: LayerManagerOption[]
 }
@@ -126,6 +126,30 @@ function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { 
                             backgroundColor: option.fillColor || option.color, // Fill
                             borderColor: option.color
                         }}
+                    />
+                </div>
+            )}
+
+            {legendType === 'heatmap' && (
+                <div className="h-5 w-5 flex items-center justify-center flex-shrink-0">
+                     <div 
+                        className="h-3 w-3 rounded-sm shadow-sm"
+                        style={{
+                            background: `linear-gradient(135deg, ${option.color || 'red'} 0%, transparent 100%)`, 
+                            border: '1px solid rgba(255,255,255,0.2)'
+                        }}
+                     />
+                </div>
+            )}
+
+            {legendType === 'icon' && (
+                <div 
+                    className="h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 bg-white/5 border border-white/10"
+                    style={{ borderColor: isChecked ? option.color : 'rgba(255,255,255,0.1)' }}
+                >
+                    <IconComponent 
+                        size={12} 
+                        style={{ color: option.color }} 
                     />
                 </div>
             )}

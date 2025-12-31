@@ -18,6 +18,7 @@ import { EditAcaoModal } from "./EditAcaoModal"
 import { useUserRole } from "@/hooks/useUserRole"
 import { renderToStaticMarkup } from "react-dom/server"
 import { LayerManager, LayerManagerOption } from "./LayerManager"
+import { Button } from "@/components/ui/button"
 import { LayerResponseDTO } from "@/types/map-dto"
 
 
@@ -89,41 +90,94 @@ const createCustomIcon = (iconName: string, color: string) => {
 };
 
 // --- HELPER DE ESTILIZAÇÃO DINÂMICA ---
-const getLayerStyle = (visualConfig: LayerResponseDTO['visualConfig']) => {
+
+// Helper to resolve style for a specific feature based on rules
+const resolveFeatureStyle = (finalVisualConfig: any, feature?: any) => {
+    let style = {
+        ...finalVisualConfig?.baseStyle // Start with base style
+    };
+
+    // Apply Rules if they exist and match
+    if (finalVisualConfig?.rules && feature?.properties) {
+        const { field, values } = finalVisualConfig.rules;
+        const featureValue = feature.properties[field]; // e.g. "Crítico"
+
+        if (featureValue && values[featureValue]) {
+            // Merge rule overrides
+            style = {
+                ...style,
+                ...values[featureValue]
+            };
+        }
+    }
+    
+    return style;
+};
+
+
+const getLayerStyle = (visualConfig: LayerResponseDTO['visualConfig'], feature?: any) => {
   if (!visualConfig) return {};
+
+  // Compatibility: Handle both new nested structure and old flat structure
+  // If baseStyle exists, we assume new structure. Otherwise fallback to root.
+  const baseConfig = visualConfig.baseStyle ? visualConfig : { baseStyle: visualConfig }; // Wrap old config if needed for uniform access, or just handle manually below.
   
+  // Actually, let's normalize first. 
+  // If visualConfig has direct color/weight etc, treat it as baseStyle.
+  const normalizedConfig = {
+      baseStyle: visualConfig.baseStyle || visualConfig,
+      rules: visualConfig.rules
+  };
+
+  const resolvedStyle = resolveFeatureStyle(normalizedConfig, feature);
+
   return {
-    color: visualConfig.mapMarker?.color || visualConfig.color || '#3388ff',
-    fillColor: visualConfig.mapMarker?.fillColor || visualConfig.fillColor || '#3388ff',
-    weight: visualConfig.mapMarker?.weight || visualConfig.weight || 2,
-    opacity: visualConfig.mapMarker?.opacity || visualConfig.opacity || 1,
-    fillOpacity: visualConfig.mapMarker?.fillOpacity || visualConfig.fillOpacity || 0.2,
+    color: resolvedStyle.color || '#3388ff',
+    fillColor: resolvedStyle.fillColor || resolvedStyle.color || '#3388ff', // Fallback to outline color if fill missing
+    weight: resolvedStyle.weight ?? 2,
+    opacity: resolvedStyle.opacity ?? 1,
+    fillOpacity: resolvedStyle.fillOpacity ?? 0.2,
+    // Add other leaflet path options if needed
+    dashArray: resolvedStyle.dashArray
   };
 };
 
 // Helper to determine layer style for rendering
 const getPointToLayer = (visualConfig: LayerResponseDTO['visualConfig'], slug: string) => {
   return (feature: any, latlng: L.LatLng) => {
-    // 1. Check for Configured Icon (Backend Driven)
-    const color = visualConfig?.color || '#3388ff';
-    
-    // Explicit Config
-    if (visualConfig?.mapMarker?.icon) {
-        return L.marker(latlng, { icon: createCustomIcon(visualConfig.mapMarker?.icon, color) });
-    }
+    // 1. Normalize Config
+    const normalizedConfig = {
+        baseStyle: visualConfig?.baseStyle || visualConfig || {},
+        rules: visualConfig?.rules
+    };
 
-    // 2. Default Shapes
-    const markerType = visualConfig?.mapMarker?.type || 'circle';
-    const style = getLayerStyle(visualConfig);
+    // 2. Resolve Style for this specific feature
+    const resolvedStyle = resolveFeatureStyle(normalizedConfig, feature);
+    
+    // 3. Determine Marker Type
+    // Priority: Rule Override -> Base Style -> Default 'circle'
+    const markerType = resolvedStyle.type || 'circle';
+    const color = resolvedStyle.color || '#3388ff';
+
+    // 4. Render
+    if (markerType === 'icon' && resolvedStyle.iconName) {
+        return L.marker(latlng, { 
+            icon: createCustomIcon(resolvedStyle.iconName, color) 
+        });
+    }
 
     if (markerType === 'circle') {
       return L.circleMarker(latlng, {
-        ...style,
-        radius: visualConfig?.mapMarker?.radius || 6
+        color: color,
+        fillColor: resolvedStyle.fillColor || color,
+        fillOpacity: resolvedStyle.fillOpacity ?? 0.8,
+        radius: resolvedStyle.radius || 6,
+        weight: resolvedStyle.weight ?? 1,
+        opacity: resolvedStyle.opacity ?? 1
       });
     }
     
-    // Default marker (Leaflet Pin)
+    // Default marker (Leaflet Pin) if nothing else matches
     return L.marker(latlng);
   }
 }
@@ -279,7 +333,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
           slug: layer.slug,
           name: layer.name,
           displayData,
-          style,
+          // style, // REMOVED: Style is now per-feature in <GeoJSON>
           pointToLayer,
           visualConfig: layer.visualConfig,
           schemaConfig: layer.schemaConfig,
@@ -316,26 +370,35 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
   const dynamicLayerOptions: LayerManagerOption[] = dynamicLayers.map(layer => {
     // Simplified logic: visual config comes from DTO (backend)
     const getVisuals = (lyr: LayerResponseDTO) => {
-        let legendType: 'point' | 'line' | 'polygon' | 'circle' = 'polygon';
-        const iconName = lyr.visualConfig?.mapMarker?.icon;
+        let legendType: 'point' | 'line' | 'polygon' | 'circle' | 'icon' | 'heatmap' = 'polygon';
         
-        // Support both nested mapMarker.type AND top-level type (flat JSON)
-        const markerType = lyr.visualConfig?.mapMarker?.type || lyr.visualConfig?.type;
+        // 1. Resolve Config
+        const config = lyr.visualConfig;
+        const baseStyle = config?.baseStyle;
+        
+        // 2. Determine Type & Icon
+        // Priority: baseStyle.type -> legacy mapMarker.type -> legacy type
+        const type = baseStyle?.type || config?.mapMarker?.type || config?.type;
+        const iconName = baseStyle?.iconName || config?.mapMarker?.icon || config?.iconName; // Support legacy icon lookup if needed
 
-        if (markerType) {
-            legendType = markerType;
+        if (type) {
+            legendType = type;
         } else if (iconName) {
-            legendType = 'point';
+            legendType = 'icon'; // Infer icon type if iconName is present but type is missing
         } 
+        
         return { legendType, iconName };
     }
 
     const { legendType, iconName } = getVisuals(layer);
-    const baseColor = layer.visualConfig?.mapMarker?.color || layer.visualConfig?.color || "#3388ff";
-    const baseFill = layer.visualConfig?.mapMarker?.fillColor;
+    const config = layer.visualConfig;
+    const baseStyle = config?.baseStyle;
+    
+    const baseColor = baseStyle?.color || config?.mapMarker?.color || config?.color || "#3388ff";
+    const baseFill = baseStyle?.fillColor || config?.mapMarker?.fillColor;
     
     // CASE A: GROUP BY COLUMN (Nest options)
-    const groupByColumn = layer.visualConfig?.groupByColumn;
+    const groupByColumn = config?.groupByColumn;
 
     if (groupByColumn) {
         // 1. Use Groups from Backend (or Fallback to Data if missing, though ideally backend provides it)
@@ -424,7 +487,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
           <GeoJSON
             key={layerItem.componentKey}
             data={layerItem.displayData}
-            style={layerItem.style}
+            style={(feature) => getLayerStyle(layerItem.visualConfig, feature)}
             pointToLayer={layerItem.pointToLayer}
             onEachFeature={(feature, l) => {
               // Bind Popup based on Schema Config
@@ -459,6 +522,22 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
           />
         ))}
       </MapContainer>
+
+      <div className="absolute top-44 right-4 z-[400]">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => {
+            fetchLayers();
+          }}
+          className="bg-white hover:bg-gray-100 shadow-md text-black border-input"
+          title="Atualizar dados"
+        >
+          <LucideIcons.RefreshCw 
+            className={`h-4 w-4 ${loadingLayers ? 'animate-spin' : ''}`} 
+          />
+        </Button>
+      </div>
 
       <div className="absolute top-4 left-4 z-[1000]">
         <DateFilterControl onDateChange={setDateFilter} />
