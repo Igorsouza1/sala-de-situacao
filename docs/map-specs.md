@@ -1,88 +1,107 @@
 # 🗺️ Especificação de Renderização do Mapa (Frontend Specs)
 
-**Autor:** Prisma Ambiental  
-**Versão:** 1.5 (Atualizado com Categorização e Simbologia)  
-**Contexto:** Unificação das Camadas (Static + Generic) via `LayerResponseDTO`.
+**Projeto:** Prisma Ambiental  
+**Módulo:** Componente de Mapa (`map.tsx` / `MapLayerCard.tsx`)  
+**Versão:** 1.6 (Estilo Base + Regras Condicionais)  
+**Status:** Aprovado  
 
 ---
 
-## 1. Princípio Fundamental
-O componente de Mapa (`map.tsx`) deve atuar como um **Componente Burro (Dumb Component)**. Ele não deve conter regras de negócio "hardcoded" sobre cores, nomes ou comportamentos específicos de camadas (ex: "se for bacia, pinte de azul").
+## 1. Princípio Arquitetural
+O componente de Mapa deve atuar estritamente como um **Componente Burro (Dumb Component)**.
 
-Toda a inteligência de renderização deve ser derivada dinamicamente do objeto `visualConfig` e `schemaConfig` retornado pela API.
-O Frontend (map.tsx) renderiza o que o Backend manda. Não existe if (layer.slug === 'acoes') no código do mapa. O Frontend deve ler visualConfig e aplicar a lógica: "Aplique o baseStyle. Se houver rules e o dado der match, sobrescreva com o estilo da regra."
+* ⛔ **Proibido:** Ter regras de negócio "hardcoded" (ex: `if (layer.slug === 'acoes') setIcon('alert')`).
+* ✅ **Obrigatório:** Toda a inteligência de renderização (ícones, cores, tamanhos, popups) deve ser derivada dinamicamente do objeto `visualConfig` retornado pela API.
+
+O fluxo de renderização é:
+1.  Receber o GeoJSON e o `visualConfig`.
+2.  Aplicar o estilo padrão (`baseStyle`).
+3.  Verificar se existe alguma regra condicional (`rules`).
+4.  Se houver *match* entre o dado e a regra, sobrescrever o estilo base.
 
 ---
 
-## 2. O Objeto de Entrada (DTO)
-O Frontend receberá uma lista de camadas. O contrato foi expandido para suportar agrupamento semântico e simbologia avançada:
+## 2. Contrato de Dados (TypeScript Interfaces)
+
+O Frontend consome uma lista de `LayerResponseDTO`. Abaixo está a definição de tipos atualizada.
 
 ```typescript
-interface LayerResponseDTO {
+/**
+ * DTO principal recebido pelo endpoint /api/mapLayers
+ */
+export interface LayerResponseDTO {
   id: number;
-  slug: string;        // Identificador único (ex: 'acoes', 'bacia-rio-da-prata')
+  slug: string;        // ID único (ex: 'acoes', 'bacia-rio-da-prata')
   name: string;        // Nome para exibição na Legenda
   ordering: number;    // Z-Index (1 = Fundo, 100 = Topo)
   
-  // 🔥 NOVO: Define o agrupamento no menu (Accordion)
+  // Define o agrupamento no menu (Accordion do LayerControl)
   category: 'Monitoramento' | 'Operacional' | 'Infraestrutura' | 'Base Territorial';
 
   data: GeoJSON.FeatureCollection; // O dado geográfico em si
   
-  // Como desenhar (Cores, Ícones, Filtros)
-  VisualConfig {
-  // 1. Agrupamento e Comportamento Macro
-  category: string;             // Ex: "Monitoramento", "Fiscalização", "Base Territorial"
-  mapDisplay: 'all' | 'latest' | 'date_filter'; // Comportamento temporal padrão
-
-  // 2. Estilo Base (O "Default" de qualquer feature dessa camada)
-  baseStyle: {
-    type: 'icon' | 'circle' | 'line' | 'polygon' | 'heatmap';
-    
-    // Propriedades visuais
-    color: string;              // Cor principal (Borda ou Cor do Ícone)
-    fillColor?: string;         // Cor de preenchimento (para polígonos/círculos)
-    weight?: number;            // Espessura da borda/linha
-    radius?: number;            // Tamanho (para type='point' ou 'circle')
-    opacity?: number;           // Opacidade da linha/ícone (0-1)
-    fillOpacity?: number;       // Opacidade do preenchimento (0-1)
-    dashArray?: string;         // Tracejado (ex: '5, 5')
-    
-    // Ícone (Apenas se type='icon')
-    iconName?: string;          // Nome do ícone Lucide (ex: 'alert-circle', 'waves')
-  };
-
-  // 3. Regras Condicionais (Opcional - Para Status, Turbidez crítica, etc)
-  rules?: {
-    field: string;              // Qual campo do GeoJSON analisar? (ex: 'status', 'turbidez')
-    values: {
-      [key: string]: {          // Mapeamento: Valor -> Override de Estilo
-        color?: string;         // Sobrescreve a cor base
-        fillColor?: string;     // Sobrescreve o preenchimento
-        iconName?: string;      // Sobrescreve o ícone
-        radius?: number;        // Sobrescreve o tamanho
-      };
-    };
-  };
-
-  // 4. Configuração de Popup/Tooltip
-  popupFields?: Array<{
-    key: string;                // Chave no GeoJSON
-    label: string;              // Label para o usuário
-    unit?: string;              // Sufixo (ex: " cm", " NTU")
-    format?: 'date' | 'number'; // Dica de formatação
-  }>;
-  
-  // 5. Configuração de Gráficos (Dashboard - Fora do escopo do Mapa, mas presente no JSON)
-  charts?: Array<any>;
+  visualConfig: VisualConfig;      // O cérebro da renderização
+  schemaConfig?: SchemaConfig;     // Configuração auxiliar de campos
 }
 
-  // O que mostrar no Popup
-  schemaConfig?: {
-    fields: Array<{
-      key: string;   // Chave da propriedade no GeoJSON
-      label: string; // Título bonito
-      type: 'text' | 'number' | 'date' | 'boolean';
-    }>
+/**
+ * Configuração Visual Armazenada no Banco (JSONB)
+ */
+export interface VisualConfig {
+  // 1. Comportamento Macro
+  category: string;  // Categoria visual (pode ser redundante com o DTO, mas útil para o frontend)
+  mapDisplay: 'all' | 'latest' | 'date_filter'; // Comportamento do filtro de tempo
+
+  // 2. Estilo Base (Default para todas as features da camada)
+  baseStyle: StyleProperties;
+
+  // 3. Regras Condicionais (Opcional)
+  // Permite mudar o estilo baseado no valor de uma propriedade (ex: status, tipo)
+ rules?: Array<{
+  field: string;          // Qual campo do GeoJSON analisar? (ex: 'eixo_tematico')
+  styleProperty?: string; // (Opcional) Qual propriedade do estilo alterar? (ex: 'iconName' ou 'color')
+                          // Se omitido, faz merge de todo o objeto de estilo.
+  values: {
+    [value: string]: string | Partial<StyleProperties>; 
+    // Se styleProperty for definido, o valor é direto (ex: "sprout").
+    // Se styleProperty não for definido, o valor é um objeto de estilo (ex: { color: "red" }).
   };
+}>;
+  // 4. Configuração de Popup
+  popupFields?: Array<{
+    key: string;               // Chave no properties do GeoJSON
+    label: string;             // Título para o usuário
+    unit?: string;             // Sufixo (ex: " cm", " NTU")
+    format?: 'date' | 'number' | 'currency'; 
+  }>;
+
+  // 5. Configuração de Gráficos (Dashboard)
+  charts?: Array<any>; 
+}
+
+/**
+ * Propriedades de Estilo (Baseadas no Leaflet/Lucide)
+ */
+export interface StyleProperties {
+  type: 'icon' | 'circle' | 'line' | 'polygon' | 'heatmap';
+  
+  // Cores e Dimensões
+  color: string;           // Cor principal (Stroke ou Ícone)
+  fillColor?: string;      // Cor de preenchimento
+  weight?: number;         // Espessura da borda
+  radius?: number;         // Raio (para circle/point)
+  opacity?: number;        // Opacidade da borda/ícone (0.0 - 1.0)
+  fillOpacity?: number;    // Opacidade do preenchimento (0.0 - 1.0)
+  dashArray?: string;      // Tracejado (ex: '5, 5')
+  
+  // Ícones (Apenas se type='icon')
+  iconName?: string;       // Nome do ícone da lib Lucide-React (ex: 'sprout', 'alert-triangle')
+}
+
+export interface SchemaConfig {
+  fields: Array<{
+    key: string;
+    label: string;
+    type: 'text' | 'number' | 'date' | 'boolean';
+  }>;
 }

@@ -97,18 +97,28 @@ const resolveFeatureStyle = (finalVisualConfig: any, feature?: any) => {
         ...finalVisualConfig?.baseStyle // Start with base style
     };
 
-    // Apply Rules if they exist and match
-    if (finalVisualConfig?.rules && feature?.properties) {
-        const { field, values } = finalVisualConfig.rules;
-        const featureValue = feature.properties[field]; // e.g. "Crítico"
+    // Apply Rules: Iterate over array
+    if (finalVisualConfig?.rules && Array.isArray(finalVisualConfig.rules) && feature?.properties) {
+        finalVisualConfig.rules.forEach((rule: any) => {
+             const { field, values, styleProperty } = rule;
+             const featureValue = feature.properties[field];
 
-        if (featureValue && values[featureValue]) {
-            // Merge rule overrides
-            style = {
-                ...style,
-                ...values[featureValue]
-            };
-        }
+             if (featureValue && values[featureValue]) {
+                 const override = values[featureValue];
+                 
+                 // If styleProperty is defined, override only that property
+                 if (styleProperty) {
+                     // @ts-ignore
+                     style[styleProperty] = override;
+                 } else {
+                     // Merge full style object
+                     style = {
+                         ...style,
+                         ...override as any
+                     };
+                 }
+             }
+        });
     }
     
     return style;
@@ -192,6 +202,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
   const [visibleDynamicLayers, setVisibleDynamicLayers] = useState<string[]>([])
   const [loadingLayers, setLoadingLayers] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [dataVersion, setDataVersion] = useState(0)
   const initializedRef = useRef(false)
   
   const { modalData, openModal, closeModal, dateFilter, setDateFilter } =
@@ -206,11 +217,13 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
       const params = new URLSearchParams();
       if (dateFilter.startDate) params.append('startDate', dateFilter.startDate.toISOString());
       if (dateFilter.endDate) params.append('endDate', dateFilter.endDate.toISOString());
+      params.append('_t', String(Date.now())); // Prevent caching
 
       const response = await fetch(`/api/map/layers?${params.toString()}`)
       if (response.ok) {
         const data: LayerResponseDTO[] = await response.json()
         setDynamicLayers(data.sort((a,b) => (a.ordering || 0) - (b.ordering || 0)))
+        setDataVersion(prev => prev + 1) // Force re-render of GeoJSON layers
       } else {
           console.error("Failed to fetch layers")
           setError("Falha ao carregar camadas")
@@ -292,7 +305,9 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
   const processedLayers = useMemo(() => {
     return dynamicLayers
       .map((layer) => {
-        const groupByColumn = layer.visualConfig?.groupByColumn
+        // Check rules array for field used as fallback
+        const ruleField = layer.visualConfig?.rules?.[0]?.field;
+        const groupByColumn = layer.visualConfig?.groupByColumn || ruleField
         let isVisible = false
         let activeValues: string[] = []
 
@@ -339,11 +354,11 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
           schemaConfig: layer.schemaConfig,
           // Create a unique key for the GeoJSON component to force re-mounting only when data changes significantly
           // leveraging feature count is a simple heuristic.
-          componentKey: `${layer.slug}-${displayData.features.length}`,
+          componentKey: `${layer.slug}-${displayData.features.length}-${dataVersion}`,
         }
       })
       .filter((item): item is NonNullable<typeof item> => item !== null)
-  }, [dynamicLayers, visibleDynamicLayers])
+  }, [dynamicLayers, visibleDynamicLayers, dataVersion])
 
   // Modal e Permissões
   const [selectedAcao, setSelectedAcao] = useState<any | null>(null)
@@ -397,12 +412,28 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     const baseColor = baseStyle?.color || config?.mapMarker?.color || config?.color || "#3388ff";
     const baseFill = baseStyle?.fillColor || config?.mapMarker?.fillColor;
     
-    // CASE A: GROUP BY COLUMN (Nest options)
-    const groupByColumn = config?.groupByColumn;
+    // CASE A: GROUP BY COLUMN (Nest options or Rules)
+    const firstRule = config?.rules?.[0]; // Strategy: use first rule for grouping if available
+    const groupByColumn = config?.groupByColumn || firstRule?.field;
 
     if (groupByColumn) {
         // 1. Use Groups from Backend (or Fallback to Data if missing, though ideally backend provides it)
-        const groups = layer.groups || [];
+        let groups = layer.groups || [];
+
+        // 2. Fallback: If no groups but we have RULES, derive groups from RULES
+        if (groups.length === 0 && firstRule?.values) {
+             groups = Object.entries(firstRule.values).map(([key, value]) => {
+                 // Value can be string or object now
+                 const style = typeof value === 'string' ? {} : value as any;
+                 
+                 return {
+                    id: key,
+                    label: key, // Or some formatted label
+                    color: style.color || baseColor,
+                    icon: style.iconName || (firstRule.styleProperty === 'iconName' ? value : iconName)
+                 }
+             });
+        }
         
         // If no groups returned but we have data, maybe fallback? 
         // For now, let's rely on backend groups as requested.
@@ -490,13 +521,15 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
             style={(feature) => getLayerStyle(layerItem.visualConfig, feature)}
             pointToLayer={layerItem.pointToLayer}
             onEachFeature={(feature, l) => {
-              // Bind Popup based on Schema Config
-              if (layerItem.schemaConfig?.fields?.length) {
+              // Bind Popup based on Schema Config OR VisualConfig.popupFields
+              const fields = layerItem.visualConfig?.popupFields || layerItem.schemaConfig?.fields;
+              
+              if (fields?.length) {
                 const popupContent = `
                        <div class="p-2 min-w-[200px]">
                          <h3 class="font-bold mb-2 text-sm border-b pb-1">${layerItem.name}</h3>
                          <div class="space-y-1 text-xs">
-                           ${layerItem.schemaConfig.fields
+                           ${fields
                              .map(
                                (field) => `
                              <div class="flex justify-between gap-4">

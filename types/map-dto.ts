@@ -66,12 +66,19 @@ export interface LayerVisualConfig extends VisualStyle { // Allow direct propert
 
     // New Structure
     baseStyle?: VisualStyle;
-    rules?: {
+    popupFields?: Array<{
+        key: string;
+        label: string;
+        unit?: string;
+        format?: 'date' | 'number';
+    }>;
+    rules?: Array<{
         field: string;
+        styleProperty?: string;
         values: {
-            [key: string]: VisualStyle;
+            [key: string]: string | VisualStyle;
         };
-    };
+    }>;
 }
 
 /**
