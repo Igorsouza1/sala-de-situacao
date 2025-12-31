@@ -1,103 +1,159 @@
 "use client"
 
 import { useState, useCallback, useEffect } from "react"
-import { useMap, useMapEvents, Polyline, CircleMarker, Marker, Tooltip } from "react-leaflet"
-import { Ruler, X, Eraser } from "lucide-react"
+import { useMap, useMapEvents, Polyline, CircleMarker, Tooltip, Polygon } from "react-leaflet"
+import { Ruler, Eraser, SquareDashed } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import L, { LatLng } from "leaflet"
 
+// Helper to calculate polygon area (Spherical) using Shoelace formula approximation for small areas or library
+// Since we don't want extra deps, let's use a simple spherical implementation or L.GeometryUtil if available (it's not in core)
+// This is a rough implementation of spherical area
+const EARTH_RADIUS = 6378137; // meters
+
+const calculateArea = (latLngs: LatLng[]) => {
+    if (latLngs.length < 3) return 0;
+    
+    // Convert to simplified array of {x, y} for projection or use spherical formula
+    // Using simple spherical excess for accuracy on globe
+    let area = 0.0;
+    if (latLngs.length > 2) {
+        for (let i = 0; i < latLngs.length; i++) {
+            const p1 = latLngs[i];
+            const p2 = latLngs[(i + 1) % latLngs.length];
+            area += ((p2.lng - p1.lng) * (2 + Math.sin(p1.lat * Math.PI / 180) + Math.sin(p2.lat * Math.PI / 180)));
+        }
+        area = Math.abs(area * EARTH_RADIUS * EARTH_RADIUS / 2.0);
+        // Correction for radians vs degrees if needed, but the formula above is specific. 
+        // Let's use a more standard implementation: 
+        // ref: https://github.com/Leaflet/Leaflet.draw/blob/develop/src/GeometryUtil.js#L3
+        // Actually, simple planar projection is often enough for small areas, but let's try to be decent.
+        
+        // Simpler approach: Ring area (Planar approximation for visual feedback, acceptable for small/medium scale)
+        // or just import a tiny helper if we were allowed.
+        // Let's stick to this one which is effectively: Area = R^2 / 2 * sum( (lon2 - lon1) * (2 + sin(lat1) + sin(lat2)) ) converted to rads?
+        // No, let's use the standard "Planar" area on projected coords if we could project.
+        
+        // Re-implementing a robust one from OpenLayers/Leaflet.GeometryUtil logic manually:
+        const toRad = (deg: number) => deg * Math.PI / 180;
+        let area2 = 0;
+        for (let i = 0; i < latLngs.length; i++) {
+            const p1 = latLngs[i];
+            const p2 = latLngs[(i + 1) % latLngs.length];
+            area2 += (toRad(p2.lng) - toRad(p1.lng)) * (2 + Math.sin(toRad(p1.lat)) + Math.sin(toRad(p2.lat)));
+        }
+        area = Math.abs(area2 * EARTH_RADIUS * EARTH_RADIUS / 2.0);
+    }
+    
+    return area;
+}
+
+type MeasureMode = 'distance' | 'area' | null;
+
 export function MeasureControl() {
   const map = useMap()
-  const [isMeasuring, setIsMeasuring] = useState(false)
+  const [measureMode, setMeasureMode] = useState<MeasureMode>(null)
+  const [isDrawing, setIsDrawing] = useState(false)
   const [points, setPoints] = useState<LatLng[]>([])
   const [cursorPos, setCursorPos] = useState<LatLng | null>(null)
   
-  // Custom DivIcon for the cursor or markers if needed, but standard CircleMarkers work well for vertices.
-  
   const handleMapClick = useCallback((e: L.LeafletMouseEvent) => {
-    if (!isMeasuring) return
-    
+    if (!measureMode || !isDrawing) return
     setPoints(prev => [...prev, e.latlng])
-  }, [isMeasuring])
+  }, [measureMode, isDrawing])
 
   const handleMouseMove = useCallback((e: L.LeafletMouseEvent) => {
-    if (!isMeasuring) {
+    if (!measureMode || !isDrawing) {
         setCursorPos(null)
         return
     }
     setCursorPos(e.latlng)
-  }, [isMeasuring])
+  }, [measureMode, isDrawing])
 
-  // Bind map events
+  const handleRightClick = useCallback(() => {
+    if (measureMode && isDrawing && points.length > 0) {
+        setIsDrawing(false)
+        setCursorPos(null)
+    }
+  }, [measureMode, isDrawing, points])
+
   useMapEvents({
     click: handleMapClick,
     mousemove: handleMouseMove,
-    // Right click to stop measuring could be nice
-    contextmenu: () => {
-        if (isMeasuring && points.length > 0) {
-            setIsMeasuring(false)
-        }
-    }
+    contextmenu: handleRightClick
   })
 
-  // Close tool on Escape
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (isMeasuring) {
-            setIsMeasuring(false)
-            setCursorPos(null)
+        if (measureMode) {
+            if (isDrawing) {
+                // If drawing, just stop drawing but keep shape
+                setIsDrawing(false)
+                setCursorPos(null)
+            } else {
+                // If already stopped, clear everything
+                setMeasureMode(null)
+                setPoints([])
+            }
         }
       }
     }
     window.addEventListener("keydown", handleKeyDown)
     return () => window.removeEventListener("keydown", handleKeyDown)
-  }, [isMeasuring])
+  }, [measureMode, isDrawing])
 
-  // Change cursor style
   useEffect(() => {
-    if (isMeasuring) {
+    if (measureMode && isDrawing) {
       L.DomUtil.addClass(map.getContainer(), 'cursor-crosshair')
+      map.dragging.disable(); 
     } else {
       L.DomUtil.removeClass(map.getContainer(), 'cursor-crosshair')
+      map.dragging.enable();
     }
-  }, [isMeasuring, map])
+  }, [measureMode, isDrawing, map])
 
-
-  // Calculate total distance
+  // Calculations
   const totalDistance = points.reduce((acc, point, index) => {
     if (index === 0) return 0
     return acc + points[index - 1].distanceTo(point)
   }, 0)
 
-  // Calculate segment distance (from last point to cursor)
   const currentSegmentDistance = (points.length > 0 && cursorPos) 
     ? points[points.length - 1].distanceTo(cursorPos) 
     : 0
 
+  const totalArea = calculateArea([...points, ...(cursorPos ? [cursorPos] : [])]);
+
   const formatDistance = (meters: number) => {
-    if (meters >= 1000) {
-      return `${(meters / 1000).toFixed(2)} km`
-    }
+    if (meters >= 1000) return `${(meters / 1000).toFixed(2)} km`
     return `${Math.round(meters)} m`
+  }
+
+  const formatArea = (sqMeters: number) => {
+    // Always use hectares
+    const hectares = sqMeters / 10000;
+    return `${hectares.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ha`;
   }
 
   const clearMeasurement = (e?: React.MouseEvent) => {
     e?.stopPropagation()
     setPoints([])
     setCursorPos(null)
+    setIsDrawing(true) // Reset to drawing mode if cleared?
   }
 
-  const toggleMeasure = (e: React.MouseEvent) => {
+  const toggleMode = (mode: MeasureMode) => (e: React.MouseEvent) => {
     e.stopPropagation()
-    if (isMeasuring) {
-        setIsMeasuring(false)
+    if (measureMode === mode) {
+        setMeasureMode(null)
         setCursorPos(null)
+        setIsDrawing(false)
     } else {
-        setIsMeasuring(true)
-        // If we want to start fresh every time we click the tool? 
-        // Maybe keep existing points if user just toggled off temporarily.
-        // Let's keep them.
+        setMeasureMode(mode)
+        setPoints([])
+        setCursorPos(null)
+        setIsDrawing(true)
     }
   }
 
@@ -105,97 +161,131 @@ export function MeasureControl() {
     <>
         {/* Controls UI */}
         <div className="absolute top-60 right-4 z-[400] flex flex-col gap-2">
-            <div className="flex items-center gap-1">
+             <div className="flex items-center gap-1 bg-white/90 backdrop-blur-sm p-1 rounded-md shadow-md border border-gray-200">
+                 {/* Distance Button */}
                  <Button
-                    variant={isMeasuring ? "default" : "outline"}
+                    variant={measureMode === 'distance' ? "default" : "ghost"}
                     size="icon"
-                    className={`shadow-md ${isMeasuring ? 'bg-brand-primary text-white border-brand-primary' : 'bg-white text-black hover:bg-gray-100'}`}
-                    onClick={toggleMeasure}
+                    className={`h-8 w-8 ${measureMode === 'distance' ? 'bg-brand-primary text-white hover:bg-brand-primary/90' : 'text-slate-600 hover:bg-slate-100'}`}
+                    onClick={toggleMode('distance')}
                     title="Medir Distância"
                 >
                     <Ruler className="h-4 w-4" />
                 </Button>
+
+                 {/* Area Button */}
+                 <Button
+                    variant={measureMode === 'area' ? "default" : "ghost"}
+                    size="icon"
+                    className={`h-8 w-8 ${measureMode === 'area' ? 'bg-brand-primary text-white hover:bg-brand-primary/90' : 'text-slate-600 hover:bg-slate-100'}`}
+                    onClick={toggleMode('area')}
+                    title="Medir Área"
+                >
+                    <SquareDashed className="h-4 w-4" />
+                </Button>
                 
-                {/* Clear Button - only show if we have data */}
+                {/* Clear Button */}
                 {points.length > 0 && (
+                    <>
+                    <div className="w-[1px] h-4 bg-slate-300 mx-1" />
                     <Button
-                        variant="destructive"
+                        variant="ghost"
                         size="icon"
-                        className="shadow-md"
+                        className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600"
                         onClick={clearMeasurement}
-                        title="Limpar Medição"
+                        title="Limpar"
                     >
                         <Eraser className="h-4 w-4" />
                     </Button>
+                    </>
                 )}
             </div>
            
-           {/* Total Result Panel - only show if we have significant measurement */}
-           {points.length > 1 && (
+           {/* Result Panel */}
+           {points.length > 0 && (
                <div className="bg-white/90 backdrop-blur-sm p-2 rounded shadow-md border border-gray-200 text-sm font-medium text-slate-700 min-w-[100px] text-center animate-in fade-in slide-in-from-right-4">
-                   Total: {formatDistance(totalDistance)}
+                   {measureMode === 'distance' ? (
+                       <span>Distância: {formatDistance(totalDistance + (cursorPos ? currentSegmentDistance : 0))}</span>
+                   ) : (
+                       <span>Área: {formatArea(totalArea)}</span>
+                   )}
                </div>
            )}
         </div>
 
-        {/* Map Elements */}
-        
-        {/* 1. Committed Path (Solid Line) */}
-        {points.length > 1 && (
-            <Polyline 
-                positions={points} 
-                pathOptions={{ color: '#ec4899', weight: 4, opacity: 0.8 }} 
-            />
+        {/* --- MAP ELEMENTS --- */}
+
+        {/* 1. DISTANCE MODE VISUALS */}
+        {measureMode === 'distance' && (
+            <>
+                 {points.length > 1 && (
+                    <Polyline 
+                        positions={points} 
+                        pathOptions={{ color: '#ec4899', weight: 4, opacity: 0.8 }} 
+                        interactive={false}
+                    />
+                )}
+                {/* Ghost line only if drawing */}
+                {isDrawing && cursorPos && points.length > 0 && (
+                     <Polyline
+                        positions={[points[points.length - 1], cursorPos]}
+                        pathOptions={{ color: '#ec4899', weight: 2, dashArray: '5, 10', opacity: 0.6 }}
+                        interactive={false}
+                    />
+                )}
+            </>
         )}
 
-        {/* 2. Ghost Line (Dashed, from last point to cursor) */}
-        {isMeasuring && points.length > 0 && cursorPos && (
-            <Polyline
-                positions={[points[points.length - 1], cursorPos]}
-                pathOptions={{ color: '#ec4899', weight: 2, dashArray: '5, 10', opacity: 0.6 }}
+        {/* 2. AREA MODE VISUALS */}
+        {measureMode === 'area' && points.length > 0 && (
+            <Polygon
+                positions={[...points, ...(cursorPos && isDrawing ? [cursorPos] : [])]}
+                pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.2, weight: 2, dashArray: isDrawing ? '5, 5' : undefined }}
                 interactive={false}
             />
         )}
 
-        {/* 3. Vertices (Points) */}
-        {points.map((point, idx) => (
+        {/* 3. VERTICES (Common) */}
+        {measureMode && points.map((point, idx) => (
             <CircleMarker 
-                key={`${idx}-${point.lat}-${point.lng}`}
+                key={`v-${idx}`}
                 center={point}
                 radius={4}
-                pathOptions={{ color: '#fff', fillColor: '#ec4899', fillOpacity: 1, weight: 2 }}
+                pathOptions={{ 
+                    color: '#fff', 
+                    fillColor: measureMode === 'area' ? '#3b82f6' : '#ec4899', 
+                    fillOpacity: 1, 
+                    weight: 2 
+                }}
                 interactive={false}
-            >
-                {/* Show distance at each vertex (accumulated) */}
-                {idx > 0 && (
-                    <Tooltip direction="top" opacity={0.9}>
-                        {formatDistance(points.slice(0, idx + 1).reduce((acc, p, i) => i===0 ? 0 : acc + points[i-1].distanceTo(p), 0))}
-                    </Tooltip>
-                )}
-            </CircleMarker>
+            />
         ))}
-        
-        {/* 4. Cursor Marker & Dynamic Tooltip */}
-        {isMeasuring && cursorPos && (
+
+        {/* 4. CURSOR & TOOLTIP */}
+        {measureMode && cursorPos && isDrawing && (
             <CircleMarker
                 center={cursorPos}
-                radius={3}
-                pathOptions={{ color: '#ec4899', fillColor: 'transparent', weight: 1 }}
+                radius={4}
+                pathOptions={{ 
+                    color: measureMode === 'area' ? '#3b82f6' : '#ec4899', 
+                    fillColor: 'transparent', 
+                    weight: 2 
+                }}
                 interactive={false}
             >
-                 {points.length > 0 && (
-                     <Tooltip 
-                        direction="right" 
-                        permanent 
-                        offset={[10, 0]} 
-                        className="bg-transparent border-0 shadow-none text-pink-600 font-bold"
-                     >
-                        {formatDistance(currentSegmentDistance)}
-                     </Tooltip>
-                 )}
+                 <Tooltip 
+                    direction="right" 
+                    permanent 
+                    offset={[10, 0]} 
+                    className={`bg-transparent border-0 shadow-none font-bold text-base ${measureMode === 'area' ? 'text-blue-600' : 'text-pink-600'}`}
+                 >
+                    {measureMode === 'distance' 
+                        ? formatDistance(currentSegmentDistance)
+                        : formatArea(totalArea)
+                    }
+                 </Tooltip>
             </CircleMarker>
         )}
-
     </>
   )
 }
