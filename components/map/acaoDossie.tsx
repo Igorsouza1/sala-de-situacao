@@ -171,7 +171,7 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
                 disabled={isSubmitting}
             >
                 {isEditing ? <Save className="w-4 h-4 mr-2" /> : <Pencil className="w-4 h-4 mr-2" />}
-                {isEditing ? "Concluir Edição" : "Editar Dossiê"}
+                {isEditing ? "Concluir Edição" : "Editar"}
             </Button>
          </div>
 

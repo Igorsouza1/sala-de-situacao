@@ -37,6 +37,7 @@ export interface DossieData {
   history: HistoryUpdate[]
   propriedadeGeoJson?: any
   banhadoGeoJson?: any
+  tipo_tecnico?: string
 }
 
 const getStatusColor = (status: string) => {
@@ -79,7 +80,7 @@ export function DossieTemplate({
 
   // Edit States for Fields
   const [editStatus, setEditStatus] = useState(dossie?.status || "")
-  const [editCategory, setEditCategory] = useState(dossie?.acao || "")
+  const [editCategory, setEditCategory] = useState(dossie?.tipo_tecnico || "")
   const [editType, setEditType] = useState(dossie?.tipo || "")
 
   // New Record State
@@ -307,7 +308,7 @@ export function DossieTemplate({
                             ))}
                         </select>
                     ) : (
-                        <span className="font-semibold text-slate-900 uppercase">{dossie.acao || "Não listado"}</span>
+                        <span className="font-semibold text-slate-900 uppercase">{dossie.tipo_tecnico || "Não listado"}</span>
                     )}
                  </div>
 
