@@ -541,11 +541,18 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
               // Bind Popup based on Schema Config OR VisualConfig.popupFields
               const fields = layerItem.visualConfig?.popupFields || layerItem.schemaConfig?.fields;
               
-              if (fields?.length) {
-                const popupContent = `
-                       <div class="p-2 min-w-[200px]">
-                         <h3 class="font-bold mb-2 text-sm border-b pb-1">${layerItem.name}</h3>
-                         <div class="space-y-1 text-xs">
+              const generateContent = (isTooltip = false) => {
+                 if (!fields?.length) return null;
+                 
+                  // For tooltips, maybe show less info or cleaner? 
+                  // For now, let's show the same content but in a tooltip structure
+                  return `
+                       <div class="${isTooltip ? 'p-1 min-w-[150px]' : 'p-2 min-w-[200px]'}">
+                         <h3 class="font-bold ${isTooltip ? 'mb-1 text-xs' : 'mb-2 text-sm'} border-b pb-1">
+                            ${layerItem.name} 
+                            ${isTooltip ? '' : ''}
+                         </h3>
+                         <div class="space-y-1 ${isTooltip ? 'text-[10px]' : 'text-xs'}">
                            ${fields
                              .map(
                                (field) => `
@@ -560,8 +567,65 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
                              .join("")}
                          </div>
                        </div>
-                     `
+                     `;
+              }
+
+              const popupContent = generateContent(false);
+
+              if (popupContent) {
                 l.bindPopup(popupContent)
+              }
+
+              // HOVER TOOLTIP LOGIC
+              const EXCLUDED_HOVER_LAYERS = ['propriedades', 'propriedade', 'banhado'];
+              // Check exact slug or if slug starts with excluded prefix (if using namespacing)
+              // Also check if the layer slug *contains* the word if strict match isn't enough, 
+              // but user said "propriedade" and "banhado".
+              const isExcluded = EXCLUDED_HOVER_LAYERS.some(ex => layerItem.slug.includes(ex));
+
+              if (!isExcluded && popupContent) {
+                  // Use same content or simplified? using same for now as requested "informações sobre eles"
+                  const tooltipContent = generateContent(true);
+                  if (tooltipContent) {
+                       l.bindTooltip(tooltipContent, {
+                           sticky: true, // Follow mouse
+                           direction: 'top',
+                           opacity: 0.95,
+                           className: 'custom-map-tooltip' // We can style this in global css if needed
+                       });
+
+                       // Add hover effect to highlight
+                       l.on({
+                           mouseover: (e: any) => {
+                               const layer = e.target;
+                               if (layer.setStyle) {
+                                   try {
+                                       layer.setStyle({
+                                           weight: (layerItem.visualConfig?.mapMarker?.weight || 2) + 2,
+                                           fillOpacity: 0.5
+                                       });
+                                   } catch(err) {
+                                        // Ignore if setStyle not supported (e.g. Marker)
+                                   }
+                               }
+                           },
+                           mouseout: (e: any) => {
+                               // Reset style
+                               const layer = e.target;
+                               if (layerItem.slug !== 'acoes' && layer.setStyle) { // Don't mess with acoes selection style if we had one? 
+                                    // Actually we re-apply base style. 
+                                    // A better way is using GeoJSON's resetStyle but we don't have ref to it easily here inside onEachFeature without closure
+                                    // Re-calculating style for this feature:
+                                    const baseStyle = getLayerStyle(layerItem.visualConfig, feature);
+                                    try {
+                                        layer.setStyle(baseStyle);
+                                    } catch(err) {
+                                        // Ignore
+                                    }
+                               }
+                           }
+                       })
+                  }
               }
 
               l.on({
