@@ -17,7 +17,7 @@ const STATIC_STRATEGIES: Record<string, (start?: Date, end?: Date) => Promise<Ma
     "acoes": async (start?: Date, end?: Date) => {
         const data = await findAllAcoesDataWithGeometry(start, end);
         // O helper converte o array de linhas do repo para GeoJSON
-        return toFeatureCollection(data.rows || data);
+        return toFeatureCollection(data);
     },
     "estradas": async () => {
         const data = await findAllEstradasDataWithGeometry();
@@ -148,7 +148,7 @@ export async function getLayer(slug: string, startDate?: Date, endDate?: Date): 
 
         // Resolve Group By Column
         // Force 'actions' to use 'categoria', otherwise respect config
-        const groupByColumn = catalogEntry.slug === 'acoes' ? 'categoria' : visualConfig?.groupByColumn;
+        const groupByColumn = catalogEntry.slug === 'acoes' ? 'eixo_tematico' : visualConfig?.groupByColumn;
 
         let groups: { id: string, label: string }[] | undefined;
         if (groupByColumn) {

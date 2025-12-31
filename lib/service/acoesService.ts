@@ -26,8 +26,7 @@ export async function getAllAcoesData() {
 // Retorna todas as ações com geometria
 export async function getAllAcoesForMap() {
   const acoesDataWithGeometry = await findAllAcoesDataWithGeometry();
-  const actionsGeoJSON = formatAcoesToGeojson(acoesDataWithGeometry);
-  return actionsGeoJSON;
+  return acoesDataWithGeometry;
 }
 
 export async function deleteAcaoItemHistoryById(id: number) {

@@ -54,6 +54,9 @@ export const acoesInMonitoramento = monitoramento.table("acoes", {
 	categoria: categoriaAcaoInMonitoramento(),
 	tipo: text(),
 	status: statusAcaoInMonitoramento(),
+	eixoTematico: varchar("eixo_tematico", { length: 100 }),
+	tipoTecnico: varchar("tipo_tecnico", { length: 100 }),
+	carater: varchar("carater", { length: 50 }),
 }, (table) => [
 	// Foreign key to regioes is handled by .references() above, but we can explicitly define it if needed for naming overlap control
 	// Keeping existing separate FK definition style for consistency if preferred, otherwise inline is standard.

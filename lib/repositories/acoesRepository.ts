@@ -47,7 +47,7 @@ export async function findAllAcoesData() {
 
 export async function findAllAcoesDataWithGeometry(startDate?: Date, endDate?: Date) {
   let query = `
-    SELECT a.id, a.acao, a.name, a.descricao, a.mes, a.atuacao, a.time, a.status, a.categoria, a.tipo, ST_AsGeoJSON(a.geom) as geojson,
+    SELECT a.id, a.acao, a.name, a.descricao, a.mes, a.atuacao, a.time, a.status, a.categoria, a.tipo, a.eixo_tematico, ST_AsGeoJSON(a.geom) as geojson,
     MAX(f.created_at) as ultima_foto_em
     FROM "monitoramento"."acoes" a
     LEFT JOIN "monitoramento"."fotos_acoes" f ON a.id = f.acao_id
