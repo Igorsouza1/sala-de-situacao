@@ -22,6 +22,7 @@ import { formatDate } from "@/lib/helpers/formatter/formatDate"
 import { formatTime } from "@/lib/helpers/formatter/formatTime"
 import { formatDuration } from "@/lib/helpers/formatter/formatDuration"
 import { AcaoDossie } from "./acaoDossie"
+import { PropriedadeDossie } from "./PropriedadeDossie"
 
 // Style configuration for each layer type
 const layerStyles: { [key: string]: { icon: React.ElementType; title: string; color: string; bgColor: string } } = {
@@ -106,18 +107,7 @@ export function FeatureDetails({ layerType, properties }: { layerType: string; p
           </>
         )
       case "propriedades":
-        return (
-          <>
-            <DetailItem icon={FileText} label="Nome da propriedade" value={properties.nome || "A ser adicionado"} />
-            <DetailItem icon={Hash} label="Código do imóvel" value={properties.cod_imovel} />
-            <DetailItem
-              icon={Ruler}
-              label="Tamanho da propriedade (hectares)"
-              value={properties.num_area?.toFixed(2)}
-            />
-            <DetailItem icon={MapIcon} label="Município" value={properties.municipio} />
-          </>
-        )
+        return <PropriedadeDossie propriedadeId={properties.id} />
       case "estradas":
         return (
           <>
