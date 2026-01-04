@@ -2,6 +2,13 @@ import { db } from "@/db";
 import { sql } from "drizzle-orm";
 
 
+export async function updatePropriedadeName(id: number, nome: string) {
+  return await db.execute(sql`
+    UPDATE "monitoramento"."propriedades"
+    SET nome = ${nome}
+    WHERE id = ${id}
+  `);
+}
 
 export async function findAllPropriedadesDataWithGeometry() {
   const result = await db.execute(`
