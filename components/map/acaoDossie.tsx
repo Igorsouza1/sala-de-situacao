@@ -3,6 +3,7 @@
 import type React from "react"
 import { useEffect, useState, useMemo } from "react"
 import { useAcaoHistory } from "@/hooks/useAcaoHistory"
+import { useUserRole } from "@/hooks/useUserRole"
 import { Skeleton } from "@/components/ui/skeleton"
 import { AlertCircle, Printer, Pencil, Save, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -33,12 +34,16 @@ const ErrorState = ({ message }: { message: string }) => (
   </div>
 )
 
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"]
+const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+
 // --- COMPONENT PRINCIPAL ---
 export function AcaoDossie({ acaoId }: { acaoId: number }) {
   const { dossie, isLoading, error, refetch } = useAcaoHistory(acaoId)
   const [isEditing, setIsEditing] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const { toast } = useToast()
+  const { isAdmin } = useUserRole()
   
   // --- HANDLERS ---
   const handlePrint = () => {
@@ -96,6 +101,26 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
 
   const handleAddHistory = async (input: { descricao: string, file?: File }) => {
       try {
+          // Validate before submitting
+          if (input.file) {
+              if (!ALLOWED_MIME_TYPES.includes(input.file.type)) {
+                  toast({
+                      variant: "destructive",
+                      title: "Formato inválido",
+                      description: "Apenas imagens (JPEG, PNG, WEBP) são permitidas."
+                  })
+                  return
+              }
+              if (input.file.size > MAX_FILE_SIZE) {
+                   toast({
+                      variant: "destructive",
+                      title: "Arquivo muito grande",
+                      description: "O tamanho máximo permitido é 5MB."
+                  })
+                  return
+              }
+          }
+
           setIsSubmitting(true)
           let urlMidia = null
 
@@ -163,7 +188,8 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
       {/* Container A4 Style Actions */}
       <div className="mx-auto max-w-[210mm] w-full mb-4 flex items-center justify-between no-print">
          <div className="flex gap-2">
-            <Button 
+            {isAdmin && (
+             <Button 
                 variant={isEditing ? "default" : "outline"} 
                 size="sm" 
                 onClick={() => setIsEditing(!isEditing)} 
@@ -173,6 +199,7 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
                 {isEditing ? <Save className="w-4 h-4 mr-2" /> : <Pencil className="w-4 h-4 mr-2" />}
                 {isEditing ? "Concluir Edição" : "Editar"}
             </Button>
+            )}
          </div>
 
          <Button variant="outline" size="sm" onClick={handlePrint} className="bg-white hover:bg-slate-50 text-slate-700 border-slate-300">

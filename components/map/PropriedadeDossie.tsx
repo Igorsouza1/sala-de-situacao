@@ -232,7 +232,12 @@ export function PropriedadeDossie({ propriedadeId }: { propriedadeId: number }) 
                 <div className="flex justify-between items-end border-b pb-2 border-slate-100">
                     <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
                         <Flame className="w-4 h-4 text-red-500" />
-                        Histórico de Focos de Calor
+                        Histórico de Focos de Calor 
+                        {data.focosCount > 5 && (
+                            <span className="ml-2 text-[10px] font-normal text-slate-500 normal-case bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+                                Exibindo 5 mais recentes de {data.focosCount}
+                            </span>
+                        )}
                     </h3>
                 </div>
                 <div className="space-y-3">

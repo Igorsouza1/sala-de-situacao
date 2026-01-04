@@ -65,21 +65,27 @@ export async function findPropriedadeDossieData(id: number) {
         WHERE ST_DWithin(f.geom::geography, p.geom::geography, 187.5)
       ) as "areaQueimada",
       (
-        SELECT COALESCE(
-          json_agg(
-            json_build_object(
-              'id', f.id,
-              'date', f.acq_date,
-              'latitude', f.latitude,
-              'longitude', f.longitude,
-              'frp', f.frp
-            ) ORDER BY f.acq_date DESC
-          ),
-          '[]'::json
-        )
-        FROM "monitoramento"."raw_firms" f
-        WHERE ST_Intersects(f.geom, p.geom)
-      ) as "focos",
+  SELECT COALESCE(
+    json_agg(
+      json_build_object(
+        'id', f.id,
+        'date', f.acq_date,
+        'latitude', f.latitude,
+        'longitude', f.longitude,
+        'frp', f.frp
+      )
+      ORDER BY f.acq_date DESC
+    ),
+    '[]'::json
+  )
+  FROM (
+    SELECT *
+    FROM "monitoramento"."raw_firms"
+    WHERE ST_Intersects(geom, p.geom)
+    ORDER BY acq_date DESC
+    LIMIT 5
+  ) f
+) as "focos",
       (
         SELECT COALESCE(
           json_agg(
