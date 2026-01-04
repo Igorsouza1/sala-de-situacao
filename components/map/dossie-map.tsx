@@ -5,6 +5,8 @@ import { MapContainer, TileLayer, Marker, GeoJSON } from "react-leaflet"
 import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 
+import { getLayerStyle, PROPRIEDADE_STYLE_CONFIG, BANHADO_STYLE_CONFIG } from "./helpers/map-visuals"
+
 // Fix Leaflet Default Icon
 // This runs only on client because this component is dynamically imported with ssr: false
 const DefaultIcon = L.icon({
@@ -40,13 +42,13 @@ export default function DossieMap({ lat, lng, propriedadeGeoJson, banhadoGeoJson
          {propriedadeGeoJson && (
              <GeoJSON 
                  data={typeof propriedadeGeoJson === 'string' ? JSON.parse(propriedadeGeoJson) : propriedadeGeoJson} 
-                 style={{ color: '#f59e0b', weight: 2, fillOpacity: 0, dashArray: '5, 5' }} 
+                 style={(feature) => getLayerStyle(PROPRIEDADE_STYLE_CONFIG, feature)} 
              />
          )}
          {banhadoGeoJson && (
              <GeoJSON 
                  data={typeof banhadoGeoJson === 'string' ? JSON.parse(banhadoGeoJson) : banhadoGeoJson} 
-                 style={{ color: '#3b82f6', weight: 1, fillOpacity: 0.5, fillColor: '#3b82f6' }} 
+                 style={(feature) => getLayerStyle(BANHADO_STYLE_CONFIG, feature)} 
              />
          )}
       </MapContainer>

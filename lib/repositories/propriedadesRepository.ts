@@ -63,7 +63,39 @@ export async function findPropriedadeDossieData(id: number) {
         )::float
         FROM "monitoramento"."raw_firms" f
         WHERE ST_DWithin(f.geom::geography, p.geom::geography, 187.5)
-      ) as "areaQueimada"
+      ) as "areaQueimada",
+      (
+        SELECT COALESCE(
+          json_agg(
+            json_build_object(
+              'id', f.id,
+              'date', f.acq_date,
+              'latitude', f.latitude,
+              'longitude', f.longitude,
+              'frp', f.frp
+            ) ORDER BY f.acq_date DESC
+          ),
+          '[]'::json
+        )
+        FROM "monitoramento"."raw_firms" f
+        WHERE ST_Intersects(f.geom, p.geom)
+      ) as "focos",
+      (
+        SELECT COALESCE(
+          json_agg(
+            json_build_object(
+              'id', d.id,
+              'date', d.detectat,
+              'area', d.alertha,
+              'latitude', ST_Y(ST_Centroid(d.geom)),
+              'longitude', ST_X(ST_Centroid(d.geom))
+            ) ORDER BY d.detectat DESC
+          ),
+          '[]'::json
+        )
+        FROM "monitoramento"."desmatamento" d
+        WHERE ST_Intersects(d.geom, p.geom)
+      ) as "desmatamentos"
     FROM prop p
   `;
   const result = await db.execute(query);

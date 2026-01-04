@@ -1,3 +1,4 @@
+
 Com certeza! Aqui está a estrutura da sua arquitetura core organizada em formato Markdown, com as devidas referências aos arquivos do projeto:
 
 🏗️ Arquitetura Core
@@ -54,3 +55,13 @@ Schema do banco de dados: https://gemini.google.com/share/e71dd66e1578
 
 7. Documentação de Design
 Para padrões visuais, paleta de cores e guias de estilo, consulte a documentação do [Design System](docs/design-system.md).
+
+8. Regras de Segurança (SECURITY RULES)
+> [!IMPORTANT]
+> Estas regras devem ser seguidas rigosamente em todo o desenvolvimento.
+
+*   **Tratamento de Erros no Backend:** NUNCA exponha mensagens de erro do banco de dados (SQL, nomes de tabelas, nomes de colunas) para o cliente (frontend).
+    *   **Correto:** `return NextResponse.json({ error: "Erro interno no servidor" }, { status: 500 })` e logar o erro real com `console.error` no servidor.
+    *   **Incorreto:** `return NextResponse.json({ error: error.message }, { status: 500 })`
+*   **Validação de Input:** Sempre valide e sanitize inputs antes de usá-los em queries.
+*   **Privacidade:** Não exponha dados sensíveis (CPFs, telefones pessoais) em rotas públicas ou desprotegidas.

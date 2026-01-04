@@ -45,7 +45,10 @@ export const createCustomIcon = (iconName: string, color: string) => {
         boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
         display: 'flex',
         alignItems: 'center',
-        justifyContent: 'center'
+        justifyContent: 'center',
+        // Force background printing
+        printColorAdjust: 'exact',
+        WebkitPrintColorAdjust: 'exact'
     }}>
       <IconComponent size={16} color="white" strokeWidth={2.5} />
     </div>
@@ -176,4 +179,85 @@ export const getPointToLayer = (visualConfig: LayerResponseDTO['visualConfig'], 
     // Default marker (Leaflet Pin) if nothing else matches
     return L.marker(latlng);
   }
+}
+
+// --- STANDARD CONFIGS (HARDCODED FALLBACKS) ---
+
+export const PROPRIEDADE_STYLE_CONFIG: any = {
+    baseStyle: {
+        color: '#f59e0b', // Amber/Yellow
+        weight: 3,
+        fillColor: '#f59e0b',
+        fillOpacity: 0.1,
+        dashArray: '5, 5',
+        type: 'polygon'
+    }
+}
+
+export const BANHADO_STYLE_CONFIG: any = {
+    baseStyle: {
+        color: '#3b82f6', // Blue
+        weight: 1,
+        fillColor: '#3b82f6',
+        fillOpacity: 0.5,
+        type: 'polygon'
+    }
+}
+
+export const ACOES_VISUAL_CONFIG: any = {
+    baseStyle: {
+        color: "#3b82f6", // blue-500
+        iconName: "tag",
+        type: "icon"
+    },
+    rules: [
+        {
+            field: "categoria",
+            values: {
+                "Fiscalização": { color: "#ef4444", iconName: "alert-triangle" },
+                "Incidente": { color: "#ef4444", iconName: "alert-triangle" },
+                "Recuperação": { color: "#22c55e", iconName: "sprout" },
+                "Monitoramento": { color: "#3b82f6", iconName: "eye" }
+            }
+        },
+        {
+            field: "status",
+            values: {
+                "Crítico": { color: "#ef4444", iconName: "alert-octagon" },
+                "Critico": { color: "#ef4444", iconName: "alert-octagon" },
+                "Alert": { color: "#f59e0b", iconName: "alert-circle" }
+            }
+        }
+    ]
+};
+
+// --- LEGEND & UI HELPERS ---
+
+export const getLayerLegendInfo = (visualConfig: any) => {
+    let legendType: 'point' | 'line' | 'polygon' | 'circle' | 'icon' | 'heatmap' = 'polygon';
+    
+    // 1. Resolve Config (Handle legacy flat vs new structure)
+    const baseStyle = visualConfig?.baseStyle || visualConfig;
+    
+    // 2. Determine Type & Icon
+    // Priority: baseStyle.type -> legacy mapMarker.type -> legacy type
+    const type = baseStyle?.type || visualConfig?.mapMarker?.type || visualConfig?.type;
+    const iconName = baseStyle?.iconName || visualConfig?.mapMarker?.icon || visualConfig?.iconName; 
+
+    if (type) {
+        legendType = type;
+    } else if (iconName) {
+        legendType = 'icon'; 
+    } 
+
+    // 3. Determine Colors
+    const color = baseStyle?.color || visualConfig?.mapMarker?.color || visualConfig?.color || "#3388ff";
+    const fillColor = baseStyle?.fillColor || visualConfig?.mapMarker?.fillColor; // Can be undefined
+
+    return { 
+        legendType, 
+        iconName, 
+        color, 
+        fillColor 
+    };
 }

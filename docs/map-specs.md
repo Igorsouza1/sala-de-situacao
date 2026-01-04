@@ -105,3 +105,45 @@ export interface SchemaConfig {
     type: 'text' | 'number' | 'date' | 'boolean';
   }>;
 }
+
+---
+
+## 3. Centralização de Lógica Visual (`helpers/map-visuals.tsx`)
+
+Para garantir consistência visual entre os diferentes mapas (`map.tsx`, `PropriedadeMap.tsx`, `dossie-map.tsx`), **TODAS** as renderizações devem utilizar as funções auxiliares centralizadas.
+
+### 3.1. Funções Core
+
+*   **`getLayerStyle(visualConfig, feature?)`**: Retorna um objeto de estilo Leaflet (`PathOptions`) pronto para ser usado em `<GeoJSON style={...} />`. Processa `baseStyle` e aplica `rules` condicionalmente se uma `feature` for passada.
+*   **`getPointToLayer(visualConfig, slug)`**: Retorna uma função para a prop `pointToLayer` do Leaflet. Gerencia a criação de Marcadores (`L.marker`, `L.circleMarker`) e Ícones customizados.
+*   **`resolveFeatureStyle(visualConfig, feature?)`**: Função de baixo nível que retorna o "estado final" de estilo da feature (cor, icone, etc) após aplicar todas as regras. Útil para componentes que precisam apenas da cor/ícone resolvida (ex: `Marker` isolado).
+*   **`createCustomIcon(iconName, color)`**: Gera um `L.DivIcon` padronizado usando a biblioteca Lucide-React.
+*   **`getLayerLegendInfo(visualConfig)`**: Extrai metadados para exibição em legendas/controles (ex: qual ícone mostrar no menu lateral, qual a cor base).
+
+### 3.2. Padrão de Uso
+
+#### Em Mapas com GeoJSON Completo (ex: `map.tsx`)
+```tsx
+<GeoJSON
+  data={data}
+  style={(feature) => getLayerStyle(config, feature)}
+  pointToLayer={getPointToLayer(config, slug)}
+/>
+```
+
+#### Em Mapas com Marcadores Isolados (ex: `PropriedadeMap.tsx`)
+```tsx
+// 1. Resolver o estilo final baseada nas props do objeto
+const style = resolveFeatureStyle(config, { properties: item });
+// 2. Gerar o ícone
+const icon = createCustomIcon(style.iconName, style.color);
+
+return <Marker position={...} icon={icon} />
+```
+
+#### Estilos Padrão (Hardcoded/Fallback)
+Para camadas que não vêm do banco (ex: Polígono da Propriedade no Dossiê), deve-se usar as constantes exportadas de `helpers/map-visuals.tsx`:
+*   `PROPRIEDADE_STYLE_CONFIG`
+*   `BANHADO_STYLE_CONFIG`
+
+Iso garante que se decidirmos mudar a cor da propriedade de "Amber" para "Blue", mudamos em apenas um lugar.

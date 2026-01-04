@@ -27,9 +27,10 @@ export async function GET(
 
         return NextResponse.json({ success: true, data });
     } catch (error: any) {
-        console.error("Erro ao buscar dossiê da propriedade:", error);
+        // SECURITY: Log detailed error on server but return generic message to client to avoid leaking DB schema
+        console.error("Erro CRITICO ao buscar dossiê da propriedade [SECURITY]:", error);
         return NextResponse.json(
-            { success: false, error: error.message || "Erro interno" },
+            { success: false, error: "Erro interno ao processar a requisição." },
             { status: 500 }
         );
     }

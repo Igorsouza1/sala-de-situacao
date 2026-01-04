@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Map as MapIcon, Tag, Flame, AlertTriangle, Ruler } from "lucide-react"
+import { Map as MapIcon, Tag, Flame, AlertTriangle, Ruler, Printer } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import dynamic from "next/dynamic"
 
 
@@ -26,6 +27,22 @@ interface ActionData {
     longitude?: string;
 }
 
+interface FocoData {
+    id: number;
+    date: string;
+    latitude: number;
+    longitude: number;
+    frp?: number;
+}
+
+interface DesmatamentoData {
+    id: number;
+    date: string;
+    area: number;
+    latitude: number;
+    longitude: number;
+}
+
 interface PropriedadeData {
     id: number;
     nome: string;
@@ -36,6 +53,8 @@ interface PropriedadeData {
     centerLat: number;
     centerLng: number;
     acoes: ActionData[];
+    focos: FocoData[];
+    desmatamentos: DesmatamentoData[];
     focosCount: number;
     desmatamentoCount: number;
     desmatamentoArea: number;
@@ -66,6 +85,10 @@ export function PropriedadeDossie({ propriedadeId }: { propriedadeId: number }) 
         }
         fetchData()
     }, [propriedadeId])
+
+    const handlePrint = () => {
+        window.open(`/print/propriedade/${propriedadeId}`, '_blank');
+    }
 
 
   if (loading) {
@@ -100,15 +123,20 @@ export function PropriedadeDossie({ propriedadeId }: { propriedadeId: number }) 
   return (
     <div className="space-y-8 max-h-[80vh] overflow-y-auto pr-2 scrollbar-thin">
         {/* Header */}
-        <div className="border-b border-slate-100 pb-6">
-            <h2 className="text-2xl font-black text-slate-900 leading-tight mb-3 tracking-tight">{data.nome || "Propriedade Sem Nome"}</h2>
-             <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
-                <span className="font-mono bg-slate-100 border border-slate-200 px-2 py-1 rounded text-slate-700 font-bold" title="Código CAR">
-                    {data.cod_imovel || "CAR N/D"}
-                </span>
-                <span className="flex items-center gap-1.5"><MapIcon size={16} className="text-slate-400"/> {data.municipio}</span>
-                <span className="flex items-center gap-1.5"><Ruler size={16} className="text-slate-400"/> {data.num_area?.toFixed(2)} ha</span>
+        <div className="border-b border-slate-100 pb-6 flex justify-between items-start">
+            <div>
+                <h2 className="text-2xl font-black text-slate-900 leading-tight mb-3 tracking-tight">{data.nome || "Propriedade Sem Nome"}</h2>
+                 <div className="flex flex-wrap items-center gap-3 text-sm text-slate-600">
+                    <span className="font-mono bg-slate-100 border border-slate-200 px-2 py-1 rounded text-slate-700 font-bold" title="Código CAR">
+                        {data.cod_imovel || "CAR N/D"}
+                    </span>
+                    <span className="flex items-center gap-1.5"><MapIcon size={16} className="text-slate-400"/> {data.municipio}</span>
+                    <span className="flex items-center gap-1.5"><Ruler size={16} className="text-slate-400"/> {data.num_area?.toFixed(2)} ha</span>
+                </div>
             </div>
+            <Button variant="outline" size="sm" onClick={handlePrint} className="bg-white hover:bg-slate-50 text-slate-700 border-slate-300 shadow-sm">
+                <Printer className="w-4 h-4 mr-2" /> Imprimir Relatório
+            </Button>
         </div>
 
         {/* Stats Grid */}
@@ -180,8 +208,111 @@ export function PropriedadeDossie({ propriedadeId }: { propriedadeId: number }) 
                 </div>
             )}
         </div>
+
+        {/* Desmatamento List */}
+        {data.desmatamentos && data.desmatamentos.length > 0 && (
+             <div className="space-y-4 pt-4">
+                <div className="flex justify-between items-end border-b pb-2 border-slate-100">
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                        Histórico de Desmatamento
+                    </h3>
+                </div>
+                <div className="space-y-3">
+                    {data.desmatamentos.map((item) => (
+                        <DesmatamentoCard key={item.id} data={item} />
+                    ))}
+                </div>
+            </div>
+        )}
+
+        {/* Focos List */}
+        {data.focos && data.focos.length > 0 && (
+             <div className="space-y-4 pt-4">
+                <div className="flex justify-between items-end border-b pb-2 border-slate-100">
+                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                        <Flame className="w-4 h-4 text-red-500" />
+                        Histórico de Focos de Calor
+                    </h3>
+                </div>
+                <div className="space-y-3">
+                    {data.focos.map((item) => (
+                        <FocoCard key={item.id} data={item} />
+                    ))}
+                </div>
+            </div>
+        )}
+
     </div>
   )
+}
+
+function DesmatamentoCard({ data }: { data: DesmatamentoData }) {
+    return (
+        <div className="rounded-lg shadow-sm border border-l-4 border-yellow-400 bg-white transition hover:shadow-md overflow-hidden">
+             <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div className="flex items-center gap-2">
+                    <AlertTriangle className="w-4 h-4 text-yellow-600" />
+                    <span className="font-bold text-slate-800 text-sm">Alerta de Desmatamento</span>
+                </div>
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded border border-yellow-200 text-yellow-700 bg-yellow-50">
+                    Monitoramento
+                </span>
+            </div>
+            <div className="p-4 space-y-4">
+                <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-xs">
+                     <div>
+                        <span className="block text-slate-400 font-bold uppercase text-[10px] mb-0.5">Área Afetada</span>
+                        <span className="text-slate-700 font-medium font-mono">{data.area?.toFixed(2)} ha</span>
+                    </div>
+                     <div>
+                        <span className="block text-slate-400 font-bold uppercase text-[10px] mb-0.5">Data Detecção</span>
+                        <span className="text-slate-700 font-medium font-mono">{new Date(data.date).toLocaleDateString('pt-BR')}</span>
+                    </div>
+                     <div>
+                        <span className="block text-slate-400 font-bold uppercase text-[10px] mb-0.5">Coordenadas</span>
+                        <span className="text-slate-700 font-medium font-mono">
+                            {data.latitude && data.longitude ? `${Number(data.latitude).toFixed(4)}, ${Number(data.longitude).toFixed(4)}` : "—"}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+function FocoCard({ data }: { data: FocoData }) {
+    return (
+        <div className="rounded-lg shadow-sm border border-l-4 border-red-500 bg-white transition hover:shadow-md overflow-hidden">
+             <div className="px-4 py-3 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <div className="flex items-center gap-2">
+                    <Flame className="w-4 h-4 text-red-600" />
+                    <span className="font-bold text-slate-800 text-sm">Foco de Calor</span>
+                </div>
+                <span className="text-[10px] uppercase font-bold px-2 py-0.5 rounded border border-red-200 text-red-700 bg-red-50">
+                    Satélite
+                </span>
+            </div>
+            <div className="p-4 space-y-4">
+                <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-xs">
+                     <div>
+                        <span className="block text-slate-400 font-bold uppercase text-[10px] mb-0.5">Data Detecção</span>
+                        <span className="text-slate-700 font-medium font-mono">{new Date(data.date).toLocaleDateString('pt-BR')}</span>
+                    </div>
+                     <div>
+                        <span className="block text-slate-400 font-bold uppercase text-[10px] mb-0.5">Intensidade (FRP)</span>
+                        <span className="text-slate-700 font-medium font-mono">{data.frp ? data.frp.toFixed(1) : "—"}</span>
+                    </div>
+                     <div>
+                        <span className="block text-slate-400 font-bold uppercase text-[10px] mb-0.5">Coordenadas</span>
+                        <span className="text-slate-700 font-medium font-mono">
+                            {data.latitude && data.longitude ? `${Number(data.latitude).toFixed(4)}, ${Number(data.longitude).toFixed(4)}` : "—"}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
 }
 
 function ActionCard({ acao }: { acao: ActionData }) {

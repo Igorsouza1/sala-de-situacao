@@ -6,46 +6,9 @@ import L from "leaflet"
 import "leaflet/dist/leaflet.css"
 import { AlertTriangle, Tag, Info } from "lucide-react"
 
-// --- ICONS ---
-// Need to create custom divIcons for the actions similar to main map but simpler
-const createIcon = (color: string, iconName: string) => {
-    // Determine icon (using lucide names to map to something visual in HTML string if needed, 
-    // or just using simple colored markers for now to ensure robustness)
-    
-    // Using standard Leaflet DivIcon with Tailwind classes
-    return L.divIcon({
-        className: 'bg-transparent',
-        html: `<div class="w-8 h-8 rounded-full border-2 border-white shadow-lg flex items-center justify-center ${color}">
-                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><circle cx="12" cy="12" r="10"/></svg>
-               </div>`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-        popupAnchor: [0, -16]
-    })
-}
+import { createCustomIcon, resolveFeatureStyle, getLayerStyle, PROPRIEDADE_STYLE_CONFIG, ACOES_VISUAL_CONFIG } from "./helpers/map-visuals"
 
-// Improved Icon Factory
-const getActionIcon = (category: string, status: string) => {
-    const cat = (category || "").toLowerCase();
-    const stat = (status || "").toLowerCase();
-
-    let color = "bg-blue-500";
-    if (cat.includes('fiscaliza') || cat.includes('incidente') || stat.includes('critico')) {
-        color = "bg-red-500";
-    } else if (cat.includes('recupera')) {
-        color = "bg-green-500";
-    }
-
-    return L.divIcon({
-        className: 'bg-transparent',
-        html: `<div class="w-6 h-6 rounded-full border-2 border-white shadow-md flex items-center justify-center ${color}">
-                 <div class="w-2 h-2 bg-white rounded-full"></div>
-               </div>`,
-        iconSize: [24, 24],
-        iconAnchor: [12, 12]
-    })
-}
-
+// Visual Config Definitiva para Ações vem do HELPER agora!
 
 function MapController({ geojson, actions }: { geojson: any, actions: any[] }) {
     const map = useMap();
@@ -110,26 +73,28 @@ export default function PropriedadeMap({ propriedadeGeoJson, acoes }: Propriedad
                 subdomains={["mt0", "mt1", "mt2", "mt3"]}
              />
 
-             {/* Property Polygon */}
+             {/* Property Polygon - USANDO HELPER */}
              <GeoJSON 
                 data={geoJsonData} 
-                style={{
-                    color: '#f59e0b', // Amber/Yellow
-                    weight: 3,
-                    fillColor: '#f59e0b',
-                    fillOpacity: 0.1,
-                    dashArray: '5, 5'
-                }}
+                style={(feature) => getLayerStyle(PROPRIEDADE_STYLE_CONFIG, feature)}
              />
 
-             {/* Action Markers */}
-             {acoes && acoes.map(acao => {
+             {/* Action Markers - Rendered Oldest to Newest (Newest on Top) */}
+             {acoes && [...acoes]
+                .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                .map(acao => {
                  if (!acao.latitude || !acao.longitude) return null;
+                 
+                 // Resolve styling from Config based on acao properties
+                 const style = resolveFeatureStyle(ACOES_VISUAL_CONFIG, { properties: acao });
+                 const icon = createCustomIcon(style.iconName || "tag", style.color || "#3388ff");
+
                  return (
                      <Marker 
                         key={acao.id} 
                         position={[parseFloat(acao.latitude), parseFloat(acao.longitude)]}
-                        icon={getActionIcon(acao.categoria, acao.status)}
+                        icon={icon}
+                        zIndexOffset={new Date(acao.date).getTime() / 1000} // Extra guarantee: z-index based on timestamp
                      >
                          <Popup className="custom-popup">
                              <div className="p-1">

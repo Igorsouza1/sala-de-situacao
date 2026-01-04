@@ -34,7 +34,7 @@ interface MapProps {
   zoom?: number 
 }
 
-import { getLayerStyle, getPointToLayer } from "./helpers/map-visuals"
+import { getLayerStyle, getPointToLayer, getLayerLegendInfo } from "./helpers/map-visuals"
 
 // Helper to convert kebab-case or snake_case to PascalCase (Removed as it is now in helper)
 
@@ -112,6 +112,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
 
   
 
+  
 
   // Dynamic Layer Toggles
   const handleDynamicLayerToggle = (slug: string, isChecked: boolean) => {
@@ -233,34 +234,9 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
 
   // TODO: A DETERMINAÇÃO DE ICONES DEVE VIR DO BACKEND
   const dynamicLayerOptions: LayerManagerOption[] = dynamicLayers.map(layer => {
-    // Simplified logic: visual config comes from DTO (backend)
-    const getVisuals = (lyr: LayerResponseDTO) => {
-        let legendType: 'point' | 'line' | 'polygon' | 'circle' | 'icon' | 'heatmap' = 'polygon';
-        
-        // 1. Resolve Config
-        const config = lyr.visualConfig;
-        const baseStyle = config?.baseStyle;
-        
-        // 2. Determine Type & Icon
-        // Priority: baseStyle.type -> legacy mapMarker.type -> legacy type
-        const type = baseStyle?.type || config?.mapMarker?.type || config?.type;
-        const iconName = baseStyle?.iconName || config?.mapMarker?.icon || config?.iconName; // Support legacy icon lookup if needed
-
-        if (type) {
-            legendType = type;
-        } else if (iconName) {
-            legendType = 'icon'; // Infer icon type if iconName is present but type is missing
-        } 
-        
-        return { legendType, iconName };
-    }
-
-    const { legendType, iconName } = getVisuals(layer);
+    // 1. Resolve Visuals from Helper
+    const { legendType, iconName, color: baseColor, fillColor: baseFill } = getLayerLegendInfo(layer.visualConfig);
     const config = layer.visualConfig;
-    const baseStyle = config?.baseStyle;
-    
-    const baseColor = baseStyle?.color || config?.mapMarker?.color || config?.color || "#3388ff";
-    const baseFill = baseStyle?.fillColor || config?.mapMarker?.fillColor;
     
     // CASE A: GROUP BY COLUMN (Nest options or Rules)
     const firstRule = config?.rules?.[0]; // Strategy: use first rule for grouping if available
