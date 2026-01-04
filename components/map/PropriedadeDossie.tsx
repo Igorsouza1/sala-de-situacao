@@ -39,6 +39,7 @@ interface PropriedadeData {
     focosCount: number;
     desmatamentoCount: number;
     desmatamentoArea: number;
+    areaQueimada: number;
 }
 
 export function PropriedadeDossie({ propriedadeId }: { propriedadeId: number }) {
@@ -123,9 +124,10 @@ export function PropriedadeDossie({ propriedadeId }: { propriedadeId: number }) 
                 icon={Flame} 
                 label="Focos de Calor" 
                 value={data.focosCount} 
+                subValue={data.areaQueimada > 0 ? `${data.areaQueimada.toFixed(1)} ha` : undefined}
                 color="text-red-500" 
                 bg="bg-red-50 border-red-100" 
-                title="Total histórico de focos"
+                title="Total histórico de focos e área estimada impactada"
             />
             <StatCard 
                 icon={AlertTriangle} 

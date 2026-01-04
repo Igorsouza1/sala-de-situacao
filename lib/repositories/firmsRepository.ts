@@ -20,7 +20,7 @@ export async function findAllFirmsDataWithGeometry(startDate?: Date, endDate?: D
     : sql``;
 
   const result = await db.execute(sql`
-        SELECT  acq_date, acq_time, ST_AsGeoJSON(geom) as geojson
+        SELECT  acq_date, acq_time, frp, ST_AsGeoJSON(geom) as geojson
         FROM "monitoramento"."raw_firms"
         ${whereSql}
       `)
@@ -42,6 +42,7 @@ export async function findAllFirmsData() {
       instrument: rawFirmsInRioDaPrata.instrument,
       confidence: rawFirmsInRioDaPrata.confidence,
       version: rawFirmsInRioDaPrata.version,
+      frp: rawFirmsInRioDaPrata.frp,
     })
     .from(rawFirmsInRioDaPrata)
     .execute()

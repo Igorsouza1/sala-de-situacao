@@ -1,20 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
 import { findPropriedadeDossieData } from "@/lib/repositories/propriedadesRepository";
 
+
 export async function GET(
     request: NextRequest,
     { params }: { params: { id: string } }
 ) {
     try {
-        const id = parseInt(params.id);
-        if (isNaN(id)) {
+        const { id } = await params
+        const parsedId = parseInt(id)
+        if (isNaN(parsedId)) {
             return NextResponse.json(
                 { success: false, error: "ID inválido" },
                 { status: 400 }
             );
         }
 
-        const data = await findPropriedadeDossieData(id);
+        const data = await findPropriedadeDossieData(parsedId);
 
         if (!data) {
             return NextResponse.json(

@@ -50,9 +50,53 @@ export async function findPropriedadeDossieData(id: number) {
       ) as "acoes",
       (SELECT COUNT(*)::int FROM "monitoramento"."raw_firms" f WHERE ST_Intersects(f.geom, p.geom)) as "focosCount",
       (SELECT COUNT(*)::int FROM "monitoramento"."desmatamento" d WHERE ST_Intersects(d.geom, p.geom)) as "desmatamentoCount",
-      (SELECT COALESCE(SUM(alertha), 0)::float FROM "monitoramento"."desmatamento" d WHERE ST_Intersects(d.geom, p.geom)) as "desmatamentoArea"
+      (SELECT COALESCE(SUM(alertha), 0)::float FROM "monitoramento"."desmatamento" d WHERE ST_Intersects(d.geom, p.geom)) as "desmatamentoArea",
+      (
+        SELECT COALESCE(
+          ST_Area(
+             ST_Intersection(
+               p.geom,
+               ST_Union(ST_Buffer(f.geom::geography, 187.5)::geometry)
+             )
+           ::geography) / 10000,
+           0
+        )::float
+        FROM "monitoramento"."raw_firms" f
+        WHERE ST_DWithin(f.geom::geography, p.geom::geography, 187.5)
+      ) as "areaQueimada"
     FROM prop p
   `;
   const result = await db.execute(query);
+  const row = result.rows[0];
+
+  if (row) {
+    // Flatten the result if needed or ensure the key matches the frontend expectation
+    // But since we joined, it might be in the row depending on how we select it.
+    // Let's adjust the SELECT list to include it explicitly if I didn't add it there.
+    // Re-reading the query structure...
+    // The previous structure was `SELECT ... FROM prop p`.
+    // I should add the column to the main SELECT list instead of a LATERAL JOIN if I want to keep it simple,
+    // OR use the LATERAL JOIN and select the column.
+    // The previous implementation used subqueries in the SELECT list.
+    // I will stick to the subquery pattern for consistency with "focosCount" etc.
+    /* 
+      (SELECT COALESCE(SUM(alertha), 0)::float FROM "monitoramento"."desmatamento" d WHERE ST_Intersects(d.geom, p.geom)) as "desmatamentoArea",
+      -- New Column
+      (
+        SELECT COALESCE(
+          ST_Area(
+             ST_Intersection(
+               p.geom,
+               ST_Union(ST_Buffer(f.geom, 187.5))
+             )
+           ) / 10000,
+           0
+        )::float
+        FROM "monitoramento"."raw_firms" f
+        WHERE ST_Intersects(ST_Buffer(f.geom, 187.5), p.geom)
+      ) as "areaQueimada"
+      FROM prop p
+    */
+  }
   return result.rows[0];
 }
