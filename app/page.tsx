@@ -56,13 +56,13 @@ export default function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-4">
-            <Link href="/sign-in">
+            <Link href="/sign-in" className="hidden md:block">
               <Button variant="ghost" className="text-slate-300 hover:text-white hover:bg-white/5">
                 Acesso Seguro
               </Button>
             </Link>
             <ContactModal>
-              <Button className="bg-brand-primary hover:bg-blue-600 text-white border-0 font-medium">
+              <Button className="bg-brand-primary hover:bg-blue-600 text-white border-0 font-medium px-3 md:px-4 text-xs md:text-sm">
                   Agendar Apresentação
               </Button>
             </ContactModal>
@@ -496,7 +496,7 @@ export default function LandingPage() {
               <p className="text-xl text-slate-400">Governe com a segurança de quem vê o cenário completo.</p>
               
                <ContactModal>
-                 <Button size="lg" className="bg-brand-primary hover:bg-blue-600 text-white border-0 px-10 h-14 text-lg shadow-lg shadow-blue-900/20">
+                 <Button size="lg" className="bg-brand-primary hover:bg-blue-600 text-white border-0 w-full sm:w-auto px-4 md:px-10 h-auto py-4 md:py-6 text-base md:text-lg shadow-lg shadow-blue-900/20 whitespace-normal text-center leading-tight">
                     Solicitar Demonstração do Centro de Comando
                  </Button>
                </ContactModal>
