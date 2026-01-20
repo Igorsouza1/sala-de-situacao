@@ -3,18 +3,21 @@ import { getAllLayers } from "@/lib/service/layerService"
 import { LayerResponseDTO } from "@/types/map-dto"
 
 interface PrintMapPageProps {
-  searchParams: {
+  // 1. Wrap the type in a Promise
+  searchParams: Promise<{
     lat?: string
     lng?: string
     z?: string
-    l?: string // comma separated layer slugs or IDs
+    l?: string 
     startDate?: string
     endDate?: string
-  }
+  }>
 }
 
 export default async function PrintMapPage({ searchParams }: PrintMapPageProps) {
+  // 2. You are already awaiting it here, so this part is correct!
   const params = await searchParams
+  
   const lat = parseFloat(params.lat || "-21.327773")
   const lng = parseFloat(params.lng || "-56.694734")
   const zoom = parseInt(params.z || "11")
@@ -23,13 +26,11 @@ export default async function PrintMapPage({ searchParams }: PrintMapPageProps) 
   const startDate = params.startDate ? new Date(params.startDate) : undefined
   const endDate = params.endDate ? new Date(params.endDate) : undefined
 
-  // Fetch all layers using the service with DATE FILTERS
   const allLayers = await getAllLayers(startDate, endDate)
   
   const activeLayers: LayerResponseDTO[] = []
 
   allLayers.forEach((layer: LayerResponseDTO) => {
-      // Direct match or partial match
       const directMatch = layerSlugs.includes(layer.slug)
       const groupMatch = layerSlugs.some(s => s.startsWith(layer.slug + '__'))
 
@@ -60,7 +61,6 @@ export default async function PrintMapPage({ searchParams }: PrintMapPageProps) 
       }
   })
 
-  // Sort by ordering
   activeLayers.sort((a,b) => (a.ordering || 0) - (b.ordering || 0))
 
   return (
