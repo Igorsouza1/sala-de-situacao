@@ -3,14 +3,17 @@ import { getLayerCatalog, insertLayerData } from "@/lib/repositories/layerReposi
 
 export async function POST(
     request: NextRequest,
-    { params }: { params: { slug: string } }
+    // 1. Update the type to expect a Promise
+    { params }: { params: Promise<{ slug: string }> }
 ) {
     try {
-        const slug = params.slug;
+        // 2. Await the params to extract the slug
+        const { slug } = await params;
+
         const body = await request.json();
         const { geojson, properties } = body;
 
-        // 1. Validar Slug e buscar Layer ID
+        // 3. Validar Slug e buscar Layer ID
         const layer = await getLayerCatalog(slug);
         if (!layer) {
             return NextResponse.json(
@@ -19,7 +22,7 @@ export async function POST(
             );
         }
 
-        // 2. Validar Input Básico
+        // 4. Validar Input Básico
         if (!geojson || !properties) {
             return NextResponse.json(
                 { success: false, error: "Dados inválidos: geojson e properties são obrigatórios" },
@@ -27,7 +30,7 @@ export async function POST(
             );
         }
 
-        // 3. Inserir Dados
+        // 5. Inserir Dados
         await insertLayerData(layer.id, geojson, properties);
 
         return NextResponse.json({ success: true });
