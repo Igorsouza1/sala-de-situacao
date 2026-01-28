@@ -3,7 +3,6 @@
 import { useEffect } from "react"
 import { MapContainer, TileLayer, Marker, GeoJSON } from "react-leaflet"
 import L from "leaflet"
-import "leaflet/dist/leaflet.css"
 
 import { getLayerStyle, PROPRIEDADE_STYLE_CONFIG, BANHADO_STYLE_CONFIG } from "./helpers/map-visuals"
 
@@ -15,7 +14,6 @@ const DefaultIcon = L.icon({
   iconSize: [25, 41],
   iconAnchor: [12, 41],
 })
-L.Marker.prototype.options.icon = DefaultIcon
 
 interface DossieMapProps {
   lat: number
@@ -28,6 +26,7 @@ export default function DossieMap({ lat, lng, propriedadeGeoJson, banhadoGeoJson
   return (
     <div className="h-64 w-full relative z-0">
       <MapContainer 
+         id="dossie-map"
          center={[lat, lng]} 
          zoom={15} 
          scrollWheelZoom={false} 
