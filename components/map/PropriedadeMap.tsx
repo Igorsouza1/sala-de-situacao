@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useRef } from "react"
 import { MapContainer, TileLayer, GeoJSON, Marker, Popup, useMap } from "react-leaflet"
 import L from "leaflet"
-import "leaflet/dist/leaflet.css"
 import { AlertTriangle, Tag, Info } from "lucide-react"
 
 import { createCustomIcon, resolveFeatureStyle, getLayerStyle, PROPRIEDADE_STYLE_CONFIG, ACOES_VISUAL_CONFIG } from "./helpers/map-visuals"
@@ -55,6 +54,7 @@ export default function PropriedadeMap({ propriedadeGeoJson, acoes }: Propriedad
 
     return (
         <MapContainer 
+            id="propriedade-map"
             style={{ height: '100%', width: '100%', background: '#f8fafc' }} 
             zoom={13} 
             center={[-21.4, -56.5]} 

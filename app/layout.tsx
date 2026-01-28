@@ -1,6 +1,7 @@
 import { Noto_Sans } from "next/font/google";
 import { Inter, JetBrains_Mono } from "next/font/google"; // This line was missing and is now added.
 
+import "leaflet/dist/leaflet.css"; // Leaflet Styles Global
 // import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
