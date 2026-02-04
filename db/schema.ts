@@ -1,4 +1,4 @@
-import { pgSchema, serial, geometry, bigint, doublePrecision, integer, varchar, numeric, text, timestamp, date, foreignKey, unique, time, uuid, index, jsonb } from "drizzle-orm/pg-core"
+import { pgSchema, serial, geometry, bigint, doublePrecision, integer, varchar, numeric, text, timestamp, date, foreignKey, unique, time, uuid, index, jsonb, uniqueIndex, boolean } from "drizzle-orm/pg-core"
 import { InferInsertModel } from "drizzle-orm"
 
 export const monitoramento = pgSchema("monitoramento");
@@ -165,10 +165,17 @@ export const rawFirmsInMonitoramento = monitoramento.table("raw_firms", {
 	daynight: text(),
 	type: text(),
 	horaDeteccao: time("hora_deteccao"),
-	geom: geometry({ type: "point", srid: 4674 }), // Already 4674, kept
+	alerta_enviado: boolean("alerta_enviado").default(false).notNull(),
+	geom: geometry({ type: "point", srid: 4674 }),
 	id: uuid().defaultRandom().primaryKey().notNull(),
-	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id), // Added FK
+	regiaoId: integer("regiao_id"),
 }, (table) => [
+	uniqueIndex("idx_firms_point_unique").using("btree", table.latitude.asc().nullsLast().op("date_ops"), table.longitude.asc().nullsLast().op("float8_ops"), table.acqDate.asc().nullsLast().op("date_ops"), table.acqTime.asc().nullsLast().op("text_ops")),
+	foreignKey({
+		columns: [table.regiaoId],
+		foreignColumns: [regioesInMonitoramento.id],
+		name: "raw_firms_regiao_id_regioes_id_fk"
+	}),
 	unique("raw_firms_id_key").on(table.id),
 ]);
 export const rawFirmsInRioDaPrata = rawFirmsInMonitoramento;
@@ -189,6 +196,22 @@ export const fotosAcoesInMonitoramento = monitoramento.table("fotos_acoes", {
 	}),
 ]);
 export const fotosAcoesInRioDaPrata = fotosAcoesInMonitoramento;
+
+
+export const destinatariosAlertasInMonitoramento = monitoramento.table("destinatarios_alertas", {
+	id: serial().primaryKey().notNull(),
+	regiaoId: integer("regiao_id").notNull(),
+	email: varchar({ length: 255 }).notNull(),
+	preferencias: jsonb().default({ "fogo": true }),
+	ativo: boolean().default(true),
+}, (table) => [
+	foreignKey({
+		columns: [table.regiaoId],
+		foreignColumns: [regioesInMonitoramento.id],
+		name: "destinatarios_alertas_regiao_id_regioes_id_fk"
+	}),
+]);
+export const destinatariosAlertasInRioDaPrata = destinatariosAlertasInMonitoramento;
 
 
 // --- NEW DYNAMIC MONITORING TABLES (Type B) ---

@@ -1,51 +1,60 @@
 import { db } from "@/db";
-import { rawFirmsInRioDaPrata } from "@/db/schema";
+import { rawFirmsInMonitoramento, regioesInMonitoramento, destinatariosAlertasInMonitoramento } from "@/db/schema";
+import { sql, eq, and, isNull } from "drizzle-orm";
+import { InferInsertModel } from "drizzle-orm";
 
+export type RawFirmInsert = InferInsertModel<typeof rawFirmsInMonitoramento>;
 
-
-import { sql } from "drizzle-orm"
-
-export async function findAllFirmsDataWithGeometry(startDate?: Date, endDate?: Date) {
-  const whereClauses = [];
-
-  if (startDate) {
-    whereClauses.push(sql`acq_date >= ${startDate.toISOString().split('T')[0]}::date`);
+class FirmsRepository {
+  async getActiveRegions() {
+    // Assuming all regions are active for now, as verified in plan
+    return await db
+      .select({
+        id: regioesInMonitoramento.id,
+        nome: regioesInMonitoramento.nome,
+        geom: sql<string>`ST_AsGeoJSON(${regioesInMonitoramento.geom})`, // PostGIS geometry as GeoJSON string
+      })
+      .from(regioesInMonitoramento);
   }
-  if (endDate) {
-    whereClauses.push(sql`acq_date <= ${endDate.toISOString().split('T')[0]}::date`);
+
+  async bulkInsertFirms(data: RawFirmInsert[]) {
+    if (data.length === 0) return;
+
+    // Use ON CONFLICT DO NOTHING to handle duplicates efficiently
+    // The unique index idx_firms_point_unique handles duplication logic
+    return await db
+      .insert(rawFirmsInMonitoramento)
+      .values(data)
+      .onConflictDoNothing();
   }
 
-  const whereSql = whereClauses.length > 0
-    ? sql`WHERE ${sql.join(whereClauses, sql` AND `)}`
-    : sql``;
+  async getUnnotifiedFirms() {
+    return await db
+      .select()
+      .from(rawFirmsInMonitoramento)
+      .where(eq(rawFirmsInMonitoramento.alerta_enviado, false));
+  }
 
-  const result = await db.execute(sql`
-        SELECT  acq_date, acq_time, frp, ST_AsGeoJSON(geom) as geojson
-        FROM "monitoramento"."raw_firms"
-        ${whereSql}
-      `)
+  async markFirmsAsNotified(ids: string[]) {
+    if (ids.length === 0) return;
 
-  return result
+    return await db
+      .update(rawFirmsInMonitoramento)
+      .set({ alerta_enviado: true })
+      .where(sql`${rawFirmsInMonitoramento.id} IN ${ids}`);
+  }
 
+  async getRecipients(regiaoId: number) {
+    return await db
+      .select()
+      .from(destinatariosAlertasInMonitoramento)
+      .where(
+        and(
+          eq(destinatariosAlertasInMonitoramento.regiaoId, regiaoId),
+          eq(destinatariosAlertasInMonitoramento.ativo, true)
+        )
+      );
+  }
 }
 
-
-export async function findAllFirmsData() {
-  const result = await db
-    .select({
-      acq_date: rawFirmsInRioDaPrata.acqDate,
-      bright_ti4: rawFirmsInRioDaPrata.brightTi4,
-      scan: rawFirmsInRioDaPrata.scan,
-      track: rawFirmsInRioDaPrata.track,
-      acq_time: rawFirmsInRioDaPrata.acqTime,
-      satellite: rawFirmsInRioDaPrata.satellite,
-      instrument: rawFirmsInRioDaPrata.instrument,
-      confidence: rawFirmsInRioDaPrata.confidence,
-      version: rawFirmsInRioDaPrata.version,
-      frp: rawFirmsInRioDaPrata.frp,
-    })
-    .from(rawFirmsInRioDaPrata)
-    .execute()
-
-  return result
-}
+export const firmsRepository = new FirmsRepository();
