@@ -5,7 +5,6 @@ import * as LucideIcons from "lucide-react"
 import { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import dynamic from "next/dynamic"
 import type { LatLngExpression } from "leaflet"
-import "leaflet/dist/leaflet.css"
 import { CustomZoomControl } from "./CustomZoomControl"
 import { CustomLayerControl } from "./CustomLayerControl"
 import { MapPlaceholder } from "./MapPlaceholder"
@@ -326,6 +325,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
   return (
     <div className="w-full h-screen relative z-10">
       <MapContainer 
+        id="main-map"
         center={center} 
         zoom={zoom} 
         zoomControl={false} 
