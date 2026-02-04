@@ -3,6 +3,7 @@ import csv from "csv-parser";
 import * as turf from "@turf/turf";
 import { Readable } from "stream";
 import { RawFirmInsert } from "../repositories/firmsRepository";
+import { sql } from "drizzle-orm";
 
 // --- FETCHER ---
 class FirmsFetcher {
@@ -36,21 +37,15 @@ class FirmsFetcher {
   }
 }
 
-// --- PROCESSOR ---
+// --- PROCESSOR (Layer 1: Region Filter) ---
 class FirmsProcessor {
   isPointInRegion(latitude: number, longitude: number, regionGeom: any): boolean {
     if (!regionGeom || !regionGeom.coordinates) return false;
 
-    // Handle different GeoJSON types if necessary, typically MultiPolygon for regions
     const point = turf.point([longitude, latitude]);
 
     try {
-      // Ensure geometry is valid for Turf
-      // Note: regionGeom from DB might need parsing if it's a string, 
-      // but drizzle-orm/postgis usually returns distinct object structure. 
-      // We assume regionGeom matches GeoJSON structure or is convertible.
       const geometry = typeof regionGeom === 'string' ? JSON.parse(regionGeom) : regionGeom;
-
       return turf.booleanPointInPolygon(point, geometry);
     } catch (error) {
       console.error("Error checking point in polygon:", error);
@@ -76,7 +71,7 @@ class FirmsProcessor {
             brightTi4: parseFloat(row.bright_ti4),
             scan: parseFloat(row.scan),
             track: parseFloat(row.track),
-            acqDate: row.acq_date, // String YYYY-MM-DD
+            acqDate: row.acq_date,
             acqTime: row.acq_time,
             satellite: row.satellite,
             instrument: row.instrument,
@@ -85,16 +80,13 @@ class FirmsProcessor {
             brightTi5: parseFloat(row.bright_ti5),
             frp: parseFloat(row.frp),
             daynight: row.daynight,
-            type: "0", // Default type if not present
-            // geom: handled by PostGIS Trigger or manual construction if needed. 
-            // Drizzle PostGIS usually wants a GeoJSON object or similar.
-            // Constructing Point GeoJSON:
-            geom: { type: "Point", coordinates: [lon, lat] } as any,
+            type: "0",
+            // geom will be handled by PostGIS Trigger or Driver if we pass GeoJSON/Point string.
+            // Drizzle often accepts geometry object for insertion if configured correctly, 
+            // or we might need to cast.
+            geom: sql`ST_SetSRID(ST_MakePoint(${lon}, ${lat}), 4674)` as any,
           });
-          // A point belongs to one region? Or multiple? 
-          // If strictly one, break. If overlaps allowed, continue.
-          // Assuming one for simplicity, or add logic to handle multiple.
-          break;
+          break; // Point assigned to first matching region
         }
       }
     }
@@ -110,7 +102,7 @@ class FirmsNotifier {
     const clientSecret = process.env.CLIENT_SECRET;
 
     if (!tenantId || !clientId || !clientSecret) {
-      throw new Error("Missing Microsoft Graph credentials (TENANT_ID, CLIENT_ID, CLIENT_SECRET)");
+      throw new Error("Missing Microsoft Graph credentials");
     }
 
     const params = new URLSearchParams();
@@ -121,10 +113,7 @@ class FirmsNotifier {
 
     const response = await fetch(
       `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
-      {
-        method: "POST",
-        body: params,
-      }
+      { method: "POST", body: params }
     );
 
     if (!response.ok) {
@@ -152,14 +141,10 @@ class FirmsNotifier {
           content: bodyHtml,
         },
         toRecipients: to.map(email => ({
-          emailAddress: {
-            address: email,
-          },
+          emailAddress: { address: email },
         })),
         from: {
-          emailAddress: {
-            address: senderEmail
-          }
+          emailAddress: { address: senderEmail }
         }
       },
       saveToSentItems: "false",
@@ -180,7 +165,6 @@ class FirmsNotifier {
     if (!response.ok) {
       const err = await response.text();
       console.error("Error sending email:", err);
-      // Don't throw to avoid stopping the whole process, just log
     }
   }
 }
@@ -199,18 +183,24 @@ export async function processFirmsData() {
 
   // 2. Load Regions
   const regions = await firmsRepository.getActiveRegions();
+  // Create a map for Region Name lookup
+  const regionMap = new Map(regions.map(r => [r.id, r.nome]));
 
-  // 3. Process & Filter
+  // 3. Process & Filter (Layer 1)
   const validFirms = firmsProcessor.processCSVData(csvData, regions);
   console.log(`Found ${validFirms.length} fires in active regions.`);
 
-  // 4. Bulk Insert (On Conflict Do Nothing)
+  // 4. Bulk Insert
   if (validFirms.length > 0) {
     await firmsRepository.bulkInsertFirms(validFirms);
+
+    // 5. Enrichment (Layer 2)
+    // Enrich with CAR code using PostGIS
+    console.log("Enriching fires with CAR data...");
+    await firmsRepository.enrichFirmsWithCAR();
   }
 
-  // 5. Check for Unnotified Logic
-  // Group fires by region to send bundled emails
+  // 6. Check for Unnotified matches
   const unnotifiedFirms = await firmsRepository.getUnnotifiedFirms();
 
   if (unnotifiedFirms.length === 0) {
@@ -228,40 +218,49 @@ export async function processFirmsData() {
     firmsByRegion[firm.regiaoId].push(firm);
   }
 
-  // 6. Notify & Mark as Sent
+  // 7. Notify & Mark as Sent
   for (const [regiaoIdStr, firms] of Object.entries(firmsByRegion)) {
     const regiaoId = parseInt(regiaoIdStr);
     const recipients = await firmsRepository.getRecipients(regiaoId);
+    if (recipients.length === 0) continue;
 
-    if (recipients.length === 0) {
-      console.log(`No recipients for region ${regiaoId}`);
-      continue;
-    }
-
-    // Filter by preference (example: simple check)
     const emailAddresses = recipients
       .filter(r => (r.preferencias as any)?.fogo === true)
       .map(r => r.email);
 
     if (emailAddresses.length === 0) continue;
 
-    // Build Email Content
-    const subject = `🔥 ALERTA DE INCÊNDIO: ${firms.length} novos focos detectados`;
-    const listItems = firms.map(f => `
-          <li>
-              <b>Data/Hora:</b> ${f.acqDate} ${f.acqTime}<br>
-              <b>Satélite:</b> ${f.satellite}<br>
-              <b>Confiança:</b> ${f.confidence}<br>
-              <b>Coords:</b> ${f.latitude}, ${f.longitude} <br>
-              <a href="https://www.google.com/maps/search/?api=1&query=${f.latitude},${f.longitude}">Ver no Mapa</a>
+    const regionName = regionMap.get(regiaoId) || `ID ${regiaoId}`;
+
+    // Build Professional Email Content
+    const subject = `🔥 ALERTA: Novos focos em ${regionName}`;
+
+    const listItems = firms.map(f => {
+      const carInfo = f.codImovel ? `<b>CAR:</b> ${f.codImovel}<br>` : "<b>CAR:</b> Não identificado<br>";
+
+      return `
+          <li style="margin-bottom: 10px; padding: 10px; border-bottom: 1px solid #eee;">
+              ${carInfo}
+              <b>Data:</b> ${f.acqDate} às ${f.acqTime} UTC<br>
+              <a href="https://www.google.com/maps/search/?api=1&query=${f.latitude},${f.longitude}" 
+                 style="color: #d9534f; text-decoration: none; font-weight: bold;">
+                 Ver Localização no Mapa
+              </a>
           </li>
-      `).join("");
+      `;
+    }).join("");
 
     const htmlBody = `
-          <h3>Novos focos de incêndio detectados na região (ID: ${regiaoId})</h3>
-          <ul>${listItems}</ul>
-          <p>Este é um alerta automático do sistema de monitoramento.</p>
-      `;
+      <div style="font-family: Arial, sans-serif; color: #333;">
+          <h2 style="color: #d9534f;">Alerta de Monitoramento de Incêndios</h2>
+          <p>O sistema detectou <strong>${firms.length} novos focos</strong> na região de monitoramento: <strong>${regionName}</strong>.</p>
+          <hr style="border: 0; border-top: 1px solid #ccc;">
+          <ul style="list-style-type: none; padding: 0;">
+              ${listItems}
+          </ul>
+          <p style="font-size: 12px; color: #777;">Este é um alerta automático gerado pelo sistema de monitoramento GeoMap.</p>
+      </div>
+    `;
 
     // Send Email
     await firmsNotifier.sendEmail(emailAddresses, subject, htmlBody);

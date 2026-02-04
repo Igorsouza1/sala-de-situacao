@@ -166,6 +166,7 @@ export const rawFirmsInMonitoramento = monitoramento.table("raw_firms", {
 	type: text(),
 	horaDeteccao: time("hora_deteccao"),
 	alerta_enviado: boolean("alerta_enviado").default(false).notNull(),
+	codImovel: varchar("cod_imovel", { length: 100 }), // CAR Code from enrichment
 	geom: geometry({ type: "point", srid: 4674 }),
 	id: uuid().defaultRandom().primaryKey().notNull(),
 	regiaoId: integer("regiao_id"),
