@@ -83,7 +83,7 @@ export function PropriedadeDossieTemplate({ data, isPrintMode = false }: Proprie
                         </p>
                     </div>
                     <div className="w-24 h-24 flex items-center justify-center">
-                        <img src="/logo.png" alt="PRISMA" className="max-h-full max-w-full object-contain" />
+                        <img src="/prisma_logo_revert.png" alt="PRISMA" className="max-h-full max-w-full object-contain" />
                     </div>
                 </header>
 

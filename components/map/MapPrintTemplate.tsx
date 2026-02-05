@@ -95,7 +95,7 @@ export function MapPrintTemplate({ lat, lng, zoom, layers, activeSlugs }: MapPri
                {/* Left: Logos */}
                <div className="bg-white/90 backdrop-blur-md p-3 rounded-lg shadow-lg border border-slate-200 flex items-center gap-4">
                    <img 
-                     src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Bras%C3%A3o_de_Bonito_%28Mato_Grosso_do_Sul%29.svg/240px-Bras%C3%A3o_de_Bonito_%28Mato_Grosso_do_Sul%29.svg.png" 
+                     src="/brasao-bonito.jpeg"
                      alt="Brasão Bonito" 
                      className="h-12 w-auto object-contain"
                    />
