@@ -15,19 +15,19 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte"; ano: s
   const { filteredPonteCureData, isLoading: isLoadingPonte, error: errorPonte } = usePonteCure()
 
   if (ponto === "deque" && isLoadingDeque) {
-    return <p className="text-[hsl(var(--dashboard-muted))]">Carregando...</p>
+    return <p className="text-muted-foreground">Carregando...</p>
   }
 
   if (ponto === "ponte" && isLoadingPonte) {
-    return <p className="text-[hsl(var(--dashboard-muted))]">Carregando...</p>
+    return <p className="text-muted-foreground">Carregando...</p>
   }
 
   if (ponto === "deque" && errorDeque) {
-    return <p className="text-red-400">{errorDeque}</p>
+    return <p className="text-destructive">{errorDeque}</p>
   }
 
   if (ponto === "ponte" && errorPonte) {
-    return <p className="text-red-400">{errorPonte}</p>
+    return <p className="text-destructive">{errorPonte}</p>
   }
 
   const dadosChuva = meses.map((mes, index) => ({
@@ -57,35 +57,15 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte"; ano: s
   return (
     <div>
       <Tabs value={tipoGrafico} onValueChange={setTipoGrafico}>
-        <TabsList className="grid w-full grid-cols-3 bg-[hsl(var(--dashboard-accent))]">
-          <TabsTrigger
-            value="chuva"
-            className="data-[state=active]:bg-pantaneiro-green data-[state=active]:text-white text-[hsl(var(--dashboard-muted))]"
-          >
-            Chuva
-          </TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="chuva">Chuva</TabsTrigger>
           {ponto === "deque" ? (
-            <TabsTrigger
-              value="turbidez"
-              className="data-[state=active]:bg-pantaneiro-green data-[state=active]:text-white text-[hsl(var(--dashboard-muted))]"
-            >
-              Turbidez
-            </TabsTrigger>
+            <TabsTrigger value="turbidez">Turbidez</TabsTrigger>
           ) : (
-            <TabsTrigger
-              value="visibilidade"
-              className="data-[state=active]:bg-pantaneiro-green data-[state=active]:text-white text-[hsl(var(--dashboard-muted))]"
-            >
-              Visibilidade
-            </TabsTrigger>
+            <TabsTrigger value="visibilidade">Visibilidade</TabsTrigger>
           )}
           {ponto === "ponte" && (
-            <TabsTrigger
-              value="nivel"
-              className="data-[state=active]:bg-pantaneiro-green data-[state=active]:text-white text-[hsl(var(--dashboard-muted))]"
-            >
-              Nível do Rio
-            </TabsTrigger>
+            <TabsTrigger value="nivel">Nível do Rio</TabsTrigger>
           )}
         </TabsList>
 
@@ -94,18 +74,29 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte"; ano: s
             config={{
               chuva: {
                 label: "Chuva (mm)",
-                color: "#3b82f6",
+                color: "hsl(var(--chart-3))", // Blue
               },
             }}
             className="h-[300px]"
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dadosChuva}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--dashboard-accent))" />
-                <XAxis dataKey="mes" stroke="hsl(var(--dashboard-muted))" />
-                <YAxis stroke="hsl(var(--dashboard-muted))" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="mes"
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={10}
+                  tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                />
+                <YAxis
+                  tickLine={false}
+                  axisLine={false}
+                  tickMargin={10}
+                  tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                />
                 <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar dataKey="chuva" fill="#3b82f6" />
+                <Bar dataKey="chuva" fill="var(--color-chuva)" radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartContainer>
@@ -117,34 +108,39 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte"; ano: s
               config={{
                 turbidezMax: {
                   label: "Turbidez Máxima",
-                  color: "#ef4444",
+                  color: "hsl(var(--chart-1))", // Red
                 },
                 turbidezMin: {
                   label: "Turbidez Mínima",
-                  color: "hsl(var(--pantaneiro-lime))",
+                  color: "hsl(var(--chart-2))", // Green
                 },
                 turbidezMedia: {
                   label: "Turbidez Média",
-                  color: "#f59e0b",
+                  color: "hsl(var(--chart-4))", // Yellow/Orange
                 },
               }}
               className="h-[300px]"
             >
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={dadosTurbidez}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--dashboard-accent))" />
-                  <XAxis dataKey="mes" stroke="hsl(var(--dashboard-muted))" />
-                  <YAxis stroke="hsl(var(--dashboard-muted))" />
-                  <ChartTooltip content={<ChartTooltipContent />} />
-                  <Area type="monotone" dataKey="turbidezMax" stroke="#ef4444" fill="#ef4444" fillOpacity={0.3} />
-                  <Area
-                    type="monotone"
-                    dataKey="turbidezMin"
-                    stroke="hsl(var(--pantaneiro-lime))"
-                    fill="hsl(var(--pantaneiro-lime))"
-                    fillOpacity={0.3}
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="mes"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={10}
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
                   />
-                  <Area type="monotone" dataKey="turbidezMedia" stroke="#f59e0b" fill="#f59e0b" fillOpacity={0.3} />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={10}
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Area type="monotone" dataKey="turbidezMax" stroke="var(--color-turbidezMax)" fill="var(--color-turbidezMax)" fillOpacity={0.3} />
+                  <Area type="monotone" dataKey="turbidezMin" stroke="var(--color-turbidezMin)" fill="var(--color-turbidezMin)" fillOpacity={0.3} />
+                  <Area type="monotone" dataKey="turbidezMedia" stroke="var(--color-turbidezMedia)" fill="var(--color-turbidezMedia)" fillOpacity={0.3} />
                 </AreaChart>
               </ResponsiveContainer>
             </ChartContainer>
@@ -157,28 +153,39 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte"; ano: s
               config={{
                 cristalino: {
                   label: "Cristalino",
-                  color: "#3b82f6",
+                  color: "hsl(var(--chart-3))", // Blue
                 },
                 turvo: {
                   label: "Turvo",
-                  color: "#f59e0b",
+                  color: "hsl(var(--chart-4))", // Yellow/Orange
                 },
                 muitoTurvo: {
                   label: "Muito Turvo",
-                  color: "#ef4444",
+                  color: "hsl(var(--chart-1))", // Red
                 },
               }}
               className="h-[300px]"
             >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={dadosVisibilidade}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--dashboard-accent))" />
-                  <XAxis dataKey="mes" stroke="hsl(var(--dashboard-muted))" />
-                  <YAxis stroke="hsl(var(--dashboard-muted))" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="mes"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={10}
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={10}
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="cristalino" stackId="a" fill="#3b82f6" />
-                  <Bar dataKey="turvo" stackId="a" fill="#f59e0b" />
-                  <Bar dataKey="muitoTurvo" stackId="a" fill="#ef4444" />
+                  <Bar dataKey="cristalino" stackId="a" fill="var(--color-cristalino)" />
+                  <Bar dataKey="turvo" stackId="a" fill="var(--color-turvo)" />
+                  <Bar dataKey="muitoTurvo" stackId="a" fill="var(--color-muitoTurvo)" />
                 </BarChart>
               </ResponsiveContainer>
             </ChartContainer>
@@ -191,22 +198,33 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte"; ano: s
               config={{
                 nivel: {
                   label: "Nível do Rio (m)",
-                  color: "hsl(var(--pantaneiro-green))",
+                  color: "hsl(var(--chart-2))", // Green
                 },
               }}
               className="h-[300px]"
             >
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={dadosNivel}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--dashboard-accent))" />
-                  <XAxis dataKey="mes" stroke="hsl(var(--dashboard-muted))" />
-                  <YAxis stroke="hsl(var(--dashboard-muted))" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis
+                    dataKey="mes"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={10}
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  />
+                  <YAxis
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={10}
+                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Area
                     type="monotone"
                     dataKey="nivel"
-                    stroke="hsl(var(--pantaneiro-green))"
-                    fill="hsl(var(--pantaneiro-green))"
+                    stroke="var(--color-nivel)"
+                    fill="var(--color-nivel)"
                     fillOpacity={0.3}
                   />
                 </AreaChart>
