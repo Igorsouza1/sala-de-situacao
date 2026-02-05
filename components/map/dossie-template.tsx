@@ -217,13 +217,9 @@ export function DossieTemplate({
            {/* Esquerda: Brasão Bonito */}
            <div className="w-24 h-24 flex items-center justify-center">
               <img 
-                src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Bras%C3%A3o_de_Bonito_%28Mato_Grosso_do_Sul%29.svg/240px-Bras%C3%A3o_de_Bonito_%28Mato_Grosso_do_Sul%29.svg.png" 
+                src="/brasao-bonito.jpeg" 
                 alt="Brasão Bonito" 
                 className="max-h-full max-w-full object-contain opacity-90"
-                onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    if(e.currentTarget.parentElement) e.currentTarget.parentElement.innerHTML = '<span class="text-xs font-bold text-slate-400 text-center border p-2 rounded">BRASÃO MUNICÍPIO</span>'
-                }}
               />
            </div>
 

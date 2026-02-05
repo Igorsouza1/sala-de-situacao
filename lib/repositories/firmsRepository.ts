@@ -3,6 +3,14 @@ import { rawFirmsInMonitoramento, regioesInMonitoramento, destinatariosAlertasIn
 import { sql, eq, and, isNull } from "drizzle-orm";
 import { InferInsertModel } from "drizzle-orm";
 
+export async function findAllFirmsData() {
+  const result = await db.execute(sql`
+      SELECT id, acq_date, acq_time, frp, satellite, cod_imovel
+      FROM "monitoramento"."raw_firms"
+    `)
+
+  return result
+}
 
 export async function findAllFirmsDataWithGeometry(startDate?: Date, endDate?: Date) {
   const whereClauses = [];
