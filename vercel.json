@@ -1,8 +1,12 @@
 {
     "crons": [
         {
-            "path": "/api/cron/firms-alert",
+            "path": "/api/cron/firms-sync",
             "schedule": "0 10,14,18 * * *"
+        },
+        {
+            "path": "/api/cron/firms-notify",
+            "schedule": "5 10,14,18 * * *"
         }
     ]
 }
