@@ -3,6 +3,30 @@ import { rawFirmsInMonitoramento, regioesInMonitoramento, destinatariosAlertasIn
 import { sql, eq, and, isNull } from "drizzle-orm";
 import { InferInsertModel } from "drizzle-orm";
 
+
+export async function findAllFirmsDataWithGeometry(startDate?: Date, endDate?: Date) {
+  const whereClauses = [];
+
+  if (startDate) {
+    whereClauses.push(sql`acq_date >= ${startDate.toISOString().split('T')[0]}::date`);
+  }
+  if (endDate) {
+    whereClauses.push(sql`acq_date <= ${endDate.toISOString().split('T')[0]}::date`);
+  }
+
+  const whereSql = whereClauses.length > 0
+    ? sql`WHERE ${sql.join(whereClauses, sql` AND `)}`
+    : sql``;
+
+  const result = await db.execute(sql`
+      SELECT id, acq_date, acq_time, frp, satellite, cod_imovel, ST_AsGeoJSON(geom) as geojson
+      FROM "monitoramento"."raw_firms"
+      ${whereSql}
+    `)
+
+  return result
+}
+
 export type RawFirmInsert = InferInsertModel<typeof rawFirmsInMonitoramento>;
 
 class FirmsRepository {
