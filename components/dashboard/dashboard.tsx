@@ -495,7 +495,7 @@ function DashboardContent() {
           </Card>
 
           {/* Ponte do Cure */}
-          <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 bg-[hsl(var(--dashboard-card))] border border-[hsl(var(--dashboard-accent))]">
+          {/* <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 bg-[hsl(var(--dashboard-card))] border border-[hsl(var(--dashboard-accent))]">
             <CardHeader className="pb-4">
               <CardTitle className="text-[hsl(var(--dashboard-text))] flex items-center gap-2">
                 <div className="w-8 h-8 bg-pantaneiro-lime/20 rounded-lg flex items-center justify-center border border-pantaneiro-lime/30">
@@ -512,7 +512,7 @@ function DashboardContent() {
                 <GraficoPonteCure />
               </DailyPonteCureProvider>
             </CardContent>
-          </Card>
+          </Card> */}
         </section>
 
         {/* 3. Análises Macro */}
