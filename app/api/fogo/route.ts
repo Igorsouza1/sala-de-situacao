@@ -4,11 +4,11 @@ import { getAllFirmsData } from "@/lib/service/firmsService";
 
 
 export async function GET() {
-    try{
+    try {
         const fogoData = await getAllFirmsData()
 
         return apiSuccess(fogoData)
-    }catch(error){
+    } catch (error) {
         return apiError(error as string, 500)
     }
 

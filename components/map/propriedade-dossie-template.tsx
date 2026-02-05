@@ -71,9 +71,8 @@ export function PropriedadeDossieTemplate({ data, isPrintMode = false }: Proprie
                 {/* --- HEADER --- */}
                 <header className="px-10 py-8 border-b-4 border-slate-900 flex items-center justify-between bg-slate-50 print:bg-white">
                     <div className="w-24 h-24 flex items-center justify-center">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Bras%C3%A3o_de_Bonito_%28Mato_Grosso_do_Sul%29.svg/240px-Bras%C3%A3o_de_Bonito_%28Mato_Grosso_do_Sul%29.svg.png" 
-                             alt="Brasão" className="max-h-full max-w-full object-contain opacity-90" 
-                             onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                        <img src="/brasao-bonito.jpeg" 
+                             alt="Brasão" className="max-h-full max-w-full object-contain opacity-90" />
                     </div>
                     <div className="text-center space-y-1 flex-1 px-4">
                         <h1 className="text-xl font-black tracking-widest text-slate-900 uppercase font-serif">

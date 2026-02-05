@@ -1,9 +1,11 @@
-import { firmsRepository } from "../repositories/firmsRepository";
+import { firmsRepository, findAllFirmsData } from "../repositories/firmsRepository";
 import csv from "csv-parser";
 import * as turf from "@turf/turf";
 import { Readable } from "stream";
 import { RawFirmInsert } from "../repositories/firmsRepository";
 import { sql } from "drizzle-orm";
+
+
 
 // --- FETCHER ---
 class FirmsFetcher {
@@ -317,4 +319,28 @@ export async function notifyFirms() {
 export async function processFirmsData() {
   await syncFirmsData();
   return await notifyFirms();
+}
+
+export async function getAllFirmsData() {
+  const result = await findAllFirmsData();
+  const rows = result.rows;
+
+  const data: Record<number, number[]> = {};
+
+  for (const row of rows) {
+    const dateStr = row.acq_date as string; // "YYYY-MM-DD"
+    if (!dateStr) continue;
+
+    const date = new Date(dateStr);
+    const year = date.getFullYear();
+    const month = date.getMonth(); // 0-11
+
+    if (!data[year]) {
+      data[year] = Array(12).fill(0);
+    }
+
+    data[year][month]++;
+  }
+
+  return data;
 }

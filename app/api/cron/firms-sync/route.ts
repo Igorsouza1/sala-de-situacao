@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { syncFirmsData } from "@/lib/service/firmsService";
 
 export const dynamic = "force-dynamic";
-export const maxDuration = 300; // 5 minutes for Pro plan, but optimizing for 10s on Hobby
+export const maxDuration = 50; // 5 minutes for Pro plan, but optimizing for 10s on Hobby
 
 export async function GET(request: NextRequest) {
     const authHeader = request.headers.get("authorization");
