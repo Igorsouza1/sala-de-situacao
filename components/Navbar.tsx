@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { Plus, Map, BarChartIcon as ChartNetwork,  User, Settings, LogOut, UserCog, Layers } from "lucide-react"
+import { Plus, Map, BarChartIcon as ChartNetwork,  User, Settings, LogOut, UserCog, Layers, Siren } from "lucide-react"
 
 import { Avatar } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,7 @@ import { useUserRole } from "@/hooks/useUserRole"
 import { createClient } from "@/lib/supabase/client"
   import { DataInsertDialog } from "@/components/data-insert/DataInsertDialog"
 import { UserProfileModal } from "@/components/user-profile-modal"
+import { AlertManagerModal } from "@/components/alerts/AlertManagerModal"
 
 /* ───────── itens de navegação ───────── */
 const commonNavItems = [
@@ -32,6 +33,7 @@ export function Navbar() {
   const supabase = createClient()
 
   const [isGpxModalOpen, setIsGpxModalOpen] = useState(false)
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false)
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
 
   // ⬇️  controle explícito do dropdown
@@ -76,22 +78,41 @@ export function Navbar() {
 
           {/* botão de upload GPX (só admins) */}
           {isAdmin && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setIsGpxModalOpen(true)}
-                  className="p-2.5 rounded-xl text-slate-400 transition-all duration-300 hover:bg-brand-primary/10 hover:text-brand-primary"
-                  aria-label="Upload GPX"
-                >
-                  <Plus className="w-5 h-5" strokeWidth={1.5} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="right" className="bg-brand-dark border border-white/10 text-white">
-                <p className="font-medium text-xs">Upload GPX</p>
-              </TooltipContent>
-            </Tooltip>
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsGpxModalOpen(true)}
+                    className="p-2.5 rounded-xl text-slate-400 transition-all duration-300 hover:bg-brand-primary/10 hover:text-brand-primary"
+                    aria-label="Upload GPX"
+                  >
+                    <Plus className="w-5 h-5" strokeWidth={1.5} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="bg-brand-dark border border-white/10 text-white">
+                  <p className="font-medium text-xs">Upload GPX</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsAlertModalOpen(true)}
+                    className="p-2.5 rounded-xl text-slate-400 transition-all duration-300 hover:bg-brand-primary/10 hover:text-brand-primary"
+                    aria-label="Gerenciar Alertas"
+                  >
+                    <Siren className="w-5 h-5" strokeWidth={1.5} />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="right" className="bg-brand-dark border border-white/10 text-white">
+                  <p className="font-medium text-xs">Gerenciar Alertas</p>
+                </TooltipContent>
+              </Tooltip>
+            </>
           )}
         </div>
 
@@ -141,6 +162,9 @@ export function Navbar() {
 
       {/* modal de upload GPX */}
       <DataInsertDialog isOpen={isGpxModalOpen} onClose={() => setIsGpxModalOpen(false)} />
+
+      {/* modal de alertas */}
+      <AlertManagerModal isOpen={isAlertModalOpen} onClose={() => setIsAlertModalOpen(false)} />
 
       {/* modal de perfil do usuário */}
       <UserProfileModal isOpen={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
