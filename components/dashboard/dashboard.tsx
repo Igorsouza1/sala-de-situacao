@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { PropertyTable } from "@/components/properties/PropertyTable";
 import { GraficoFogo } from "./charts/grafico-fogo";
 import { GraficoDesmatamento } from "./charts/grafico-desmatamento";
 import { GraficoAcoes } from "./charts/grafico-acoes";
@@ -601,6 +602,27 @@ function DashboardContent() {
               </CardContent>
             </Card>
           </div>
+        </section>
+
+        {/* 4. Monitoramento de Propriedades */}
+        <section className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-center justify-center">
+                <MapPin className="h-4 w-4 text-blue-500" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-foreground">
+                  Monitoramento de Propriedades
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Detalhamento de focos, desmatamento e ações por propriedade (CAR)
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <PropertyTable />
         </section>
       </div>
     </div>

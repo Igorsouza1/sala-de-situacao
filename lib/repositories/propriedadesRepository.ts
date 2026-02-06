@@ -145,3 +145,48 @@ export async function findPropriedadeDossieData(id: number) {
   }
   return result.rows[0];
 }
+
+export async function findAllPropertiesStats(limit = 50) {
+  const query = sql`
+    WITH stats AS (
+      SELECT
+        p.id,
+        p.nome as name,
+        p.cod_imovel as car,
+
+        -- 1. Focos de calor
+        (SELECT COUNT(*)::int 
+         FROM "monitoramento"."raw_firms" f 
+         WHERE f.cod_imovel = p.cod_imovel) as focos,
+
+        -- 2. Desmatamento
+        COALESCE((
+          SELECT SUM(d.alertha) 
+          FROM "monitoramento"."desmatamento" d 
+          WHERE ST_Intersects(d.geom, p.geom)
+        ), 0)::float as "desmatamentoHa",
+
+        -- 3. Ações Passivas
+        (
+          SELECT COUNT(*)::int 
+          FROM "monitoramento"."acoes" a 
+          WHERE ST_Intersects(a.geom, p.geom) AND a.carater ILIKE '%Passivo%'
+        ) as "acoesPassivos",
+
+        -- 4. Ações Ativas
+        (
+          SELECT COUNT(*)::int 
+          FROM "monitoramento"."acoes" a 
+          WHERE ST_Intersects(a.geom, p.geom) AND a.carater ILIKE '%Ativo%'
+        ) as "acoesAtivos"
+
+      FROM "monitoramento"."propriedades" p
+    )
+    SELECT * FROM stats
+    ORDER BY (focos + "acoesPassivos" + "acoesAtivos") DESC, "desmatamentoHa" DESC
+    LIMIT ${limit}
+  `;
+
+  const result = await db.execute(query);
+  return result.rows;
+}
