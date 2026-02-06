@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Flame, TreePine, AlertCircle, CheckCircle, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react"
+import { Flame, TreePine, AlertCircle, CheckCircle, ArrowUpDown, ArrowUp, ArrowDown, Copy } from "lucide-react"
 
 export interface PropertySummary {
   id: string
@@ -78,6 +78,11 @@ export function PropertyTable({ data }: PropertyTableProps) {
     setSortConfig({ key, direction })
   }
 
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text)
+    // Could add visual feedback here
+  }
+
   const sortedData = [...tableData].sort((a, b) => {
     if (!sortConfig) return 0
 
@@ -123,21 +128,12 @@ export function PropertyTable({ data }: PropertyTableProps) {
             <TableHeader className="bg-slate-900/80 sticky top-0 z-10 backdrop-blur-sm">
               <TableRow className="hover:bg-slate-900/80 border-slate-700/50">
                 <TableHead
-                  className="text-slate-300 font-medium h-12 w-[30%] cursor-pointer hover:text-white transition-colors"
-                  onClick={() => handleSort("name")}
-                >
-                  <div className="flex items-center">
-                    Nome
-                    <SortIcon column="name" />
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="text-slate-300 font-medium h-12 w-[20%] cursor-pointer hover:text-white transition-colors"
+                  className="text-slate-300 font-medium h-12 w-[40%] cursor-pointer hover:text-white transition-colors"
                 >
                   CAR
                 </TableHead>
                 <TableHead
-                  className="text-slate-300 font-medium text-center h-12 w-[10%] cursor-pointer hover:text-white transition-colors"
+                  className="text-slate-300 font-medium text-center h-12 w-[15%] cursor-pointer hover:text-white transition-colors"
                   onClick={() => handleSort("focos")}
                 >
                   <div className="flex items-center justify-center">
@@ -155,7 +151,7 @@ export function PropertyTable({ data }: PropertyTableProps) {
                   </div>
                 </TableHead>
                 <TableHead
-                  className="text-slate-300 font-medium text-center h-12 w-[12%] py-2 cursor-pointer hover:text-white transition-colors"
+                  className="text-slate-300 font-medium text-center h-12 w-[15%] py-2 cursor-pointer hover:text-white transition-colors"
                   onClick={() => handleSort("acoesPassivos")}
                 >
                   <div className="flex flex-col items-center leading-none gap-1">
@@ -169,7 +165,7 @@ export function PropertyTable({ data }: PropertyTableProps) {
                   </div>
                 </TableHead>
                 <TableHead
-                  className="text-slate-300 font-medium text-center h-12 w-[12%] py-2 cursor-pointer hover:text-white transition-colors"
+                  className="text-slate-300 font-medium text-center h-12 w-[15%] py-2 cursor-pointer hover:text-white transition-colors"
                   onClick={() => handleSort("acoesAtivos")}
                 >
                   <div className="flex flex-col items-center leading-none gap-1">
@@ -194,14 +190,20 @@ export function PropertyTable({ data }: PropertyTableProps) {
                                 hover:bg-slate-800/40
                             `}
                 >
-                  <TableCell className="font-medium text-slate-200 py-3">
-                    {item.name}
-                  </TableCell>
                   <TableCell
-                    className="text-slate-400 text-xs font-mono py-3"
+                    className="text-slate-300 text-sm font-mono py-3 font-medium text-center sm:text-left pl-4"
                     title={item.car}
                   >
-                    {formatCar(item.car)}
+                    <div className="flex items-center gap-2 group">
+                        {formatCar(item.car)}
+                        <button 
+                            onClick={() => handleCopy(item.car)}
+                            className="p-1.5 rounded-md hover:bg-slate-700/50 text-slate-500 hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100"
+                            title="Copiar CAR"
+                        >
+                            <Copy className="h-3.5 w-3.5" />
+                        </button>
+                    </div>
                   </TableCell>
 
                   {/* Focos */}
