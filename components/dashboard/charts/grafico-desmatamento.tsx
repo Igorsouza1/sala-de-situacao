@@ -7,14 +7,14 @@ import { useDesmatamento } from "@/context/DesmatamentoContext"
 const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 
 export function GraficoDesmatamento() {
-  const { filteredDesmatamentoData, isLoading, error, selectedYear } = useDesmatamento()
+  const { filteredDesmatamentoData, isLoading, error } = useDesmatamento()
 
   if (isLoading) {
-    return <p className="text-white/70">Carregando...</p>
+    return <p className="text-muted-foreground">Carregando...</p>
   }
 
   if (error) {
-    return <p className="text-red-400">{error}</p>
+    return <p className="text-destructive">{error}</p>
   }
 
   const data = meses.map((mes, index) => ({
@@ -27,39 +27,31 @@ export function GraficoDesmatamento() {
       config={{
         desmatamento: {
           label: "Áreas Desmatadas (ha)",
-          color: "hsl(120, 60%, 50%)", // Verde mais vibrante
+          color: "hsl(var(--chart-2))",
         },
       }}
       className="h-[300px]"
     >
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data}>
-          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.2)" />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} />
           <XAxis 
             dataKey="mes" 
-            stroke="rgba(255,255,255,0.8)" 
-            fontSize={12}
-            tickLine={{ stroke: "rgba(255,255,255,0.3)" }}
-            axisLine={{ stroke: "rgba(255,255,255,0.3)" }}
+            tickLine={false}
+            axisLine={false}
+            tickMargin={10}
+            tick={{ fill: 'hsl(var(--muted-foreground))' }}
           />
           <YAxis 
-            stroke="rgba(255,255,255,0.8)" 
-            fontSize={12}
-            tickLine={{ stroke: "rgba(255,255,255,0.3)" }}
-            axisLine={{ stroke: "rgba(255,255,255,0.3)" }}
+            tickLine={false}
+            axisLine={false}
+            tickMargin={10}
+            tick={{ fill: 'hsl(var(--muted-foreground))' }}
           />
-          <ChartTooltip 
-            content={<ChartTooltipContent />}
-            contentStyle={{
-              backgroundColor: "hsl(var(--dashboard-card))",
-              border: "1px solid hsl(var(--dashboard-accent))",
-              borderRadius: "8px",
-              color: "hsl(var(--dashboard-text))"
-            }}
-          />
+          <ChartTooltip content={<ChartTooltipContent />} />
           <Bar 
             dataKey="desmatamento" 
-            fill="hsl(120, 60%, 50%)"
+            fill="var(--color-desmatamento)"
             radius={[4, 4, 0, 0]}
           />
         </BarChart>
@@ -67,4 +59,3 @@ export function GraficoDesmatamento() {
     </ChartContainer>
   );
 };
-
