@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { createClient } from "@/utils/supabase/client"
+import { createClient } from "@/lib/supabase/client"
 
 export function useUserRole() {
   const [isAdmin, setIsAdmin] = useState(false)
@@ -23,7 +23,7 @@ export function useUserRole() {
           } else {
             setIsAdmin(false)
           }
-        } 
+        }
       } catch (error) {
         setIsAdmin(false)
       } finally {

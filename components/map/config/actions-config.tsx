@@ -8,7 +8,7 @@ import {
 } from "lucide-react";
 
 export type ActionCategory = 'Fiscalização' | 'Recuperação' | 'Incidente' | 'Monitoramento' | 'Infraestrutura';
-export type ActionStatus = 'Ativo' | 'Monitorando' | 'Resolvido' | 'Crítico';
+export type ActionStatus = 'Identificado'| 'Em Recuperação' | 'Concluído'
 
 export interface CategoryConfig {
   color: string;
@@ -49,26 +49,22 @@ export const ACTION_CATEGORIES: Record<ActionCategory, CategoryConfig> = {
   }
 };
 
+
 export const STATUS_STYLES: Record<ActionStatus, StatusConfig & { color: string }> = {
-  'Ativo': {
+  'Identificado': {
     className: 'border-2 border-blue-500 opacity-100',
-    label: 'Ativo',
-    color: '#3bf69fff' // blue-500
+    label: 'Identificado',
+    color: '#271ea7ff' // blue-500
   },
-  'Monitorando': {
+  'Em Recuperação': {
     className: 'border-2 border-yellow-500 opacity-90',
-    label: 'Monitorando',
+    label: 'Em Recuperação',
     color: '#eab308' // yellow-500
   },
-  'Resolvido': {
+  'Concluído': {
     className: 'border-2 border-green-500 opacity-60 grayscale',
-    label: 'Resolvido',
+    label: 'Concluído',
     color: '#22c55e' // green-500
-  },
-  'Crítico': {
-    className: 'border-2 border-red-600 animate-pulse',
-    label: 'Crítico',
-    color: '#dc2626' // red-600
   }
 };
 

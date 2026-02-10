@@ -1,23 +1,33 @@
+import { Noto_Sans } from "next/font/google";
+import { Inter, JetBrains_Mono } from "next/font/google"; // This line was missing and is now added.
 
-import { Geist } from "next/font/google";
+import "leaflet/dist/leaflet.css"; // Leaflet Styles Global
 // import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
+import type { Metadata } from "next"; // This line was missing and is now added.
 
 const defaultUrl = process.env.VERCEL_URL
   ? `https://${process.env.VERCEL_URL}`
   : "http://localhost:3000";
 
-export const metadata = {
-  metadataBase: new URL(defaultUrl),
-  title: "PRISMA AMBIENTAL",
-  description: "Sala de situação para monitormaneto ambiental",
-};
-
-const geistSans = Geist({
-  display: "swap",
+const inter = Inter({
   subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
 });
+
+const jetbrainsMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-jetbrains-mono",
+  display: "swap",
+});
+
+export const metadata: Metadata = {
+  metadataBase: new URL(defaultUrl),
+  title: "PRISMA - Sala de Situação",
+  description: "Centro de Comando Ambiental para gestão estratégica e antecipação de crises.",
+};
 
 export default function RootLayout({
   children,
@@ -25,8 +35,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={geistSans.className} suppressHydrationWarning>
-      <body className="bg-background">
+    <html lang="pt-BR" className={`${inter.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
+      <body className="bg-background font-sans antialiased">
         {/* <ThemeProvider
           attribute="class"
           defaultTheme="system"

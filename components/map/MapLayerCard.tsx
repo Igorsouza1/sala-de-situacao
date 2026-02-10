@@ -45,25 +45,25 @@ export function MapLayersCard({ title, options, onLayerToggle }: MapLayersCardPr
   const totalLayersCount = options.length
 
   return (
-    <Card className="w-80 max-w-sm bg-emerald-950/70 backdrop-blur-md shadow-xl z-[1000] overflow-hidden border border-white/10">
+    <Card className="w-80 max-w-sm bg-brand-dark/95 backdrop-blur-md shadow-2xl z-[1000] overflow-hidden border border-white/10 transition-all duration-300">
       <CardHeader className="p-3 border-b border-white/10">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="h-8 w-8 rounded-full border border-emerald-400/40 bg-emerald-900/60 flex items-center justify-center flex-shrink-0">
-              <Layers className="w-4 h-4 text-emerald-100" />
+            <div className="h-8 w-8 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center flex-shrink-0">
+              <Layers className="w-4 h-4 text-brand-primary" />
             </div>
 
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-base font-semibold text-emerald-50 flex items-center gap-2 truncate">
+              <CardTitle className="text-base font-semibold text-slate-100 flex items-center gap-2 truncate">
                 {title}
-                <Leaf className="w-4 h-4 text-emerald-200/90" />
+                <Leaf className="w-4 h-4 text-brand-primary/80" />
               </CardTitle>
 
-              <p className="text-sm text-emerald-200/90 mt-0.5">
+              <p className="text-sm text-slate-400 mt-0.5">
                 Mostrando{" "}
-                <span className="font-semibold text-emerald-100">{activeLayersCount}</span>{" "}
+                <span className="font-semibold text-brand-primary">{activeLayersCount}</span>{" "}
                 de{" "}
-                <span className="font-semibold text-emerald-100">{totalLayersCount}</span>{" "}
+                <span className="font-semibold text-brand-primary">{totalLayersCount}</span>{" "}
                 camadas
               </p>
             </div>
@@ -73,7 +73,7 @@ export function MapLayersCard({ title, options, onLayerToggle }: MapLayersCardPr
             variant="ghost"
             size="icon"
             onClick={toggleExpand}
-            className="h-8 w-8 p-0 rounded-full text-emerald-100 hover:bg-emerald-800/70"
+            className="h-8 w-8 p-0 rounded-full text-slate-400 hover:bg-white/10 hover:text-white"
             aria-expanded={isExpanded}
             aria-label={isExpanded ? "Fechar camadas" : "Abrir camadas"}
           >
@@ -95,7 +95,7 @@ export function MapLayersCard({ title, options, onLayerToggle }: MapLayersCardPr
             transition={{ duration: 0.25, ease: "easeInOut" }}
           >
             <CardContent className="p-2.5">
-              <div className="space-y-1.5 max-h-[65vh] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-emerald-700/60 scrollbar-track-transparent">
+              <div className="space-y-1.5 max-h-[65vh] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
                 {options.map((option, index) => {
                   const isChecked = checkedLayers.includes(option.id)
 
@@ -105,10 +105,10 @@ export function MapLayersCard({ title, options, onLayerToggle }: MapLayersCardPr
                       initial={{ opacity: 0, x: -12 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: index * 0.03 }}
-                      className={`group flex items-center justify-between rounded-md border transition-colors duration-150 px-2.5 py-2 ${
+                      className={`group flex items-center justify-between rounded-lg border transition-colors duration-150 px-2.5 py-2 ${
                         isChecked
-                          ? "bg-emerald-900/50 border-white/10"
-                          : "bg-emerald-950/40 border-white/5 hover:bg-emerald-900/40"
+                          ? "bg-brand-primary/5 border-brand-primary/20"
+                          : "bg-white/[0.02] border-white/5 hover:bg-white/[0.04]"
                       }`}
                     >
                       <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -116,33 +116,33 @@ export function MapLayersCard({ title, options, onLayerToggle }: MapLayersCardPr
                           id={option.id}
                           checked={isChecked}
                           onCheckedChange={(checked) => handleCheckboxChange(option.id, checked as boolean)}
-                          className="w-4 h-4 border-emerald-400/70 data-[state=checked]:bg-emerald-300 data-[state=checked]:border-emerald-300 data-[state=checked]:text-emerald-950 flex-shrink-0"
+                          className="w-4 h-4 border-slate-600 data-[state=checked]:bg-brand-primary data-[state=checked]:border-brand-primary data-[state=checked]:text-white flex-shrink-0"
                         />
 
                         {/* dot da cor da camada */}
                         <span
-                          className="h-3 w-3 rounded-full flex-shrink-0 border border-white/10"
+                          className="h-3 w-3 rounded-full flex-shrink-0 ring-1 ring-white/10"
                           style={{ backgroundColor: option.color }}
                         />
 
                         <Label
                           htmlFor={option.id}
-                          className="text-sm text-emerald-50 cursor-pointer select-none flex-1 truncate"
+                          className="text-sm text-slate-300 cursor-pointer select-none flex-1 truncate font-normal"
                         >
                           {option.label}
                         </Label>
                       </div>
 
                       <div className="flex items-center gap-2 ml-2 flex-shrink-0">
-                        <Badge className="bg-emerald-900/80 text-emerald-100 text-sm h-5 px-2">
+                        <Badge className="bg-brand-dark-blue text-brand-primary border border-brand-primary/20 text-xs h-5 px-1.5">
                           {option.count}
                         </Badge>
 
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                           {isChecked ? (
-                            <Eye className="h-3 w-3 text-emerald-200/90" />
+                            <Eye className="h-3 w-3 text-brand-primary" />
                           ) : (
-                            <EyeOff className="h-3 w-3 text-emerald-200/40" />
+                            <EyeOff className="h-3 w-3 text-slate-600" />
                           )}
                         </div>
                       </div>
@@ -162,7 +162,7 @@ export function MapLayersCard({ title, options, onLayerToggle }: MapLayersCardPr
                       setCheckedLayers(allIds)
                       allIds.forEach((id) => onLayerToggle(id, true))
                     }}
-                    className="flex-1 text-xs border-white/10 text-emerald-100 bg-emerald-700/60 hover:bg-emerald-900/60 hover:text-emerald-50 hover:border-white/20"
+                    className="flex-1 text-xs border-white/10 text-slate-300 bg-white/5 hover:bg-brand-primary/10 hover:text-brand-primary hover:border-brand-primary/20"
                   >
                     Mostrar Todas
                   </Button>
@@ -174,7 +174,7 @@ export function MapLayersCard({ title, options, onLayerToggle }: MapLayersCardPr
                       setCheckedLayers([])
                       options.forEach((opt) => onLayerToggle(opt.id, false))
                     }}
-                    className="flex-1 text-xs border-white/10 text-emerald-100 bg-emerald-700/60 hover:bg-emerald-900/60 hover:text-emerald-50 hover:border-white/20"
+                    className="flex-1 text-xs border-white/10 text-slate-300 bg-white/5 hover:bg-brand-primary/10 hover:text-brand-primary hover:border-brand-primary/20"
                   >
                     Ocultar Todas
                   </Button>

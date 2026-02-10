@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -47,9 +47,6 @@ import {
 } from "lucide-react";
 import { GraficoTurbidezDiario } from "./charts/GraficoTurbidezDiario";
 import { DailyDequeProvider } from "@/context/DailyDequeContext";
-import { GraficoPonteCure } from "./charts/GraficoCureDiario";
-import { DailyPonteCureProvider } from "@/context/DailyPonteCureContext";
-import { useEffect } from "react";
 
 // Mock data for indicators - replace with real data
 const indicadores = {
@@ -103,7 +100,7 @@ function IndicatorCard({
   const colorClasses = {
     blue: "bg-blue-500/20 border-blue-500/30 text-blue-400",
     green:
-      "bg-pantaneiro-lime/20 border-pantaneiro-lime/30 text-pantaneiro-lime",
+      "bg-emerald-500/20 border-emerald-500/30 text-emerald-400",
     orange: "bg-orange-500/20 border-orange-500/30 text-orange-400",
     purple: "bg-purple-500/20 border-purple-500/30 text-purple-400",
   };
@@ -111,7 +108,7 @@ function IndicatorCard({
   const getTrendIcon = () => {
     switch (trend) {
       case "alta":
-        return <ArrowUp className="h-4 w-4 text-green-400" />;
+        return <ArrowUp className="h-4 w-4 text-emerald-400" />;
       case "baixa":
         return <ArrowDown className="h-4 w-4 text-red-400" />;
       case "estavel":
@@ -124,18 +121,8 @@ function IndicatorCard({
     return Number(n).toFixed(dec);
   }
 
-  function trendFromDelta(
-    deltaPct: number | null | undefined
-  ): "alta" | "baixa" | "estavel" {
-    if (deltaPct === null || deltaPct === undefined || Number.isNaN(deltaPct))
-      return "estavel";
-    if (deltaPct > 0.1) return "alta";
-    if (deltaPct < -0.1) return "baixa";
-    return "estavel";
-  }
-
   return (
-    <Card className="shadow-md bg-[hsl(var(--dashboard-card))] border border-[hsl(var(--dashboard-accent))]">
+    <Card className="shadow-md bg-card border-border">
       <CardContent className="p-6">
         <div className="flex items-center justify-between mb-4">
           <div
@@ -146,17 +133,17 @@ function IndicatorCard({
           {getTrendIcon()}
         </div>
         <div className="space-y-2">
-          <h3 className="text-sm font-medium text-[hsl(var(--dashboard-muted))]">
+          <h3 className="text-sm font-medium text-muted-foreground">
             {title}
           </h3>
           <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-[hsl(var(--dashboard-text))]">
+            <span className="text-2xl font-bold text-foreground">
               {value}
               {unit}
             </span>
           </div>
           {comparison && (
-            <p className="text-xs text-[hsl(var(--dashboard-muted))]">
+            <p className="text-xs text-muted-foreground">
               {comparison}
             </p>
           )}
@@ -250,7 +237,6 @@ function DashboardContent() {
       }
 
       const { mtdAtual, mtdPassado, deltaPct, avisos } = json.data || {};
-      console.log(mtdAtual, mtdPassado, deltaPct, avisos);
       setNivelRio({
         atual: mtdAtual ?? null,
         anoPassado: mtdPassado ?? null,
@@ -301,20 +287,20 @@ function DashboardContent() {
   }, [])
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-[hsl(var(--dashboard-bg))] to-[hsl(var(--dashboard-accent))]">
+    <div className="min-h-screen w-full bg-background text-foreground dark">
       <div className="max-w-7xl mx-auto p-6 space-y-8">
         {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-[hsl(var(--dashboard-card))] rounded-xl p-6 shadow-lg border border-[hsl(var(--dashboard-accent))]">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-card rounded-xl p-6 shadow-lg border border-border">
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-pantaneiro-green rounded-lg flex items-center justify-center">
-                <BarChart3 className="h-5 w-5 text-white" />
+              <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center border border-primary/30">
+                <BarChart3 className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-[hsl(var(--dashboard-text))]">
+                <h1 className="text-2xl font-bold text-foreground">
                   Dashboard Ambiental
                 </h1>
-                <p className="text-[hsl(var(--dashboard-muted))]">
+                <p className="text-muted-foreground">
                   Monitoramento inteligente de dados geoespaciais
                 </p>
               </div>
@@ -324,7 +310,7 @@ function DashboardContent() {
           <div className="flex items-center gap-3">
             <Badge
               variant="outline"
-              className="border-pantaneiro-lime text-pantaneiro-lime bg-pantaneiro-lime/10"
+              className="border-emerald-500 text-emerald-500 bg-emerald-500/10"
             >
               <CheckCircle className="h-3 w-3 mr-1" />
               Sistema Ativo
@@ -337,7 +323,7 @@ function DashboardContent() {
                 loadIndicadorChuva()
               }}
               disabled={loading}
-              className="border-[hsl(var(--dashboard-accent))] text-[hsl(var(--dashboard-text))] hover:bg-[hsl(var(--dashboard-accent))] text-black hover:text-white"
+              className="border-border text-foreground hover:bg-muted"
             >
               <RefreshCw
                 className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
@@ -351,14 +337,14 @@ function DashboardContent() {
         {/* 1. Indicadores Baseados em Dados Históricos/Atuais */}
         <section className="space-y-6">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-pantaneiro-green rounded-lg flex items-center justify-center">
-              <Activity className="h-4 w-4 text-white" />
+            <div className="w-8 h-8 bg-primary/20 border border-primary/30 rounded-lg flex items-center justify-center">
+              <Activity className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-[hsl(var(--dashboard-text))]">
+              <h2 className="text-xl font-bold text-foreground">
                 Indicadores Principais
               </h2>
-              <p className="text-sm text-[hsl(var(--dashboard-muted))]">
+              <p className="text-sm text-muted-foreground">
                 Comparativos e tendências baseados em dados históricos
               </p>
             </div>
@@ -395,34 +381,34 @@ function DashboardContent() {
             )}
 
             {/* Chuva */}
-  {loadingChuva ? (
-    <IndicatorCard
-      title="Chuva vs Ano Passado"
-      icon={CloudRain}
-      value="Carregando..."
-      comparison=""
-      trend="estavel"
-      colorScheme="green"
-    />
-  ) : (
-    <IndicatorCard
-      title="Chuva vs Ano Passado"
-      icon={CloudRain}
-      value={fmtNumber(chuva?.atual, 1)}
-      comparison={
-        chuva?.percentual === null
-          ? "Sem base de comparação"
-          : `${chuva?.percentual! >= 0 ? "+" : ""}${fmtNumber(
-              chuva?.percentual,
-              1
-            )}% vs ano passado (${fmtNumber(chuva?.anoPassado, 1)}mm)`
-      }
-      trend={chuva?.tendencia || "estavel"}
-      unit="mm"
-      colorScheme="green"
-      avisos={chuva?.avisos}
-    />
-  )}
+            {loadingChuva ? (
+              <IndicatorCard
+                title="Chuva vs Ano Passado"
+                icon={CloudRain}
+                value="Carregando..."
+                comparison=""
+                trend="estavel"
+                colorScheme="green"
+              />
+            ) : (
+              <IndicatorCard
+                title="Chuva vs Ano Passado"
+                icon={CloudRain}
+                value={fmtNumber(chuva?.atual, 1)}
+                comparison={
+                  chuva?.percentual === null
+                    ? "Sem base de comparação"
+                    : `${chuva?.percentual! >= 0 ? "+" : ""}${fmtNumber(
+                        chuva?.percentual,
+                        1
+                      )}% vs ano passado (${fmtNumber(chuva?.anoPassado, 1)}mm)`
+                }
+                trend={chuva?.tendencia || "estavel"}
+                unit="mm"
+                colorScheme="green"
+                avisos={chuva?.avisos}
+              />
+            )}
 
             <IndicatorCard
               title="Tendência Nível Rio (7 dias)"
@@ -460,14 +446,14 @@ function DashboardContent() {
         <section className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-purple-500 rounded-lg flex items-center justify-center">
-                <Zap className="h-4 w-4 text-white" />
+              <div className="w-8 h-8 bg-purple-500/20 border border-purple-500/30 rounded-lg flex items-center justify-center">
+                <Zap className="h-4 w-4 text-purple-400" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-[hsl(var(--dashboard-text))]">
+                <h2 className="text-xl font-bold text-foreground">
                   Análises Micro
                 </h2>
-                <p className="text-sm text-[hsl(var(--dashboard-muted))]">
+                <p className="text-sm text-muted-foreground">
                   Monitoramento detalhado de pontos específicos
                 </p>
               </div>
@@ -475,15 +461,15 @@ function DashboardContent() {
           </div>
 
           {/* Monitoramento de Turbidez - Deque de Pedras */}
-          <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 bg-[hsl(var(--dashboard-card))] border border-[hsl(var(--dashboard-accent))]">
+          <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 bg-card border-border">
             <CardHeader className="pb-4">
-              <CardTitle className="text-[hsl(var(--dashboard-text))] flex items-center gap-2">
+              <CardTitle className="text-foreground flex items-center gap-2">
                 <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center border border-blue-500/30">
                   <Droplets className="h-4 w-4 text-blue-400" />
                 </div>
                 Monitoramento de Turbidez - Deque de Pedras
               </CardTitle>
-              <p className="text-sm text-[hsl(var(--dashboard-muted))]">
+              <p className="text-sm text-muted-foreground">
                 Análise diária da qualidade da água no ponto de monitoramento
               </p>
             </CardHeader>
@@ -493,40 +479,20 @@ function DashboardContent() {
               </DailyDequeProvider>
             </CardContent>
           </Card>
-
-          {/* Ponte do Cure */}
-          <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 bg-[hsl(var(--dashboard-card))] border border-[hsl(var(--dashboard-accent))]">
-            <CardHeader className="pb-4">
-              <CardTitle className="text-[hsl(var(--dashboard-text))] flex items-center gap-2">
-                <div className="w-8 h-8 bg-pantaneiro-lime/20 rounded-lg flex items-center justify-center border border-pantaneiro-lime/30">
-                  <MapPin className="h-4 w-4 text-pantaneiro-lime" />
-                </div>
-                Monitoramento - Ponte do Cure
-              </CardTitle>
-              <p className="text-sm text-[hsl(var(--dashboard-muted))]">
-                Dados ambientais coletados na Ponte do Cure
-              </p>
-            </CardHeader>
-            <CardContent>
-              <DailyPonteCureProvider>
-                <GraficoPonteCure />
-              </DailyPonteCureProvider>
-            </CardContent>
-          </Card>
         </section>
 
         {/* 3. Análises Macro */}
         <section className="space-y-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-pantaneiro-green rounded-lg flex items-center justify-center">
-                <Globe className="h-4 w-4 text-white" />
+              <div className="w-8 h-8 bg-emerald-500/20 border border-emerald-500/30 rounded-lg flex items-center justify-center">
+                <Globe className="h-4 w-4 text-emerald-500" />
               </div>
               <div>
-                <h2 className="text-xl font-bold text-[hsl(var(--dashboard-text))]">
+                <h2 className="text-xl font-bold text-foreground">
                   Análises Macro
                 </h2>
-                <p className="text-sm text-[hsl(var(--dashboard-muted))]">
+                <p className="text-sm text-muted-foreground">
                   Visão regional dos indicadores ambientais
                 </p>
               </div>
@@ -534,14 +500,14 @@ function DashboardContent() {
 
             {/* Local Year Control for Macro */}
             <div className="flex items-center gap-2">
-              <span className="text-sm text-[hsl(var(--dashboard-muted))]">
+              <span className="text-sm text-muted-foreground">
                 Filtrar por ano:
               </span>
               <Select value={anoSelecionado} onValueChange={handleAnoChange}>
-                <SelectTrigger className="w-[160px] bg-[hsl(var(--dashboard-accent))] border-[hsl(var(--dashboard-accent))] text-[hsl(var(--dashboard-text))]">
+                <SelectTrigger className="w-[160px] bg-card border-border text-foreground">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[hsl(var(--dashboard-card))] border-[hsl(var(--dashboard-accent))] text-white">
+                <SelectContent className="bg-card border-border text-foreground">
                   <SelectItem value="todos">Período Completo</SelectItem>
                   <SelectItem value="2021">2021</SelectItem>
                   <SelectItem value="2022">2022</SelectItem>
@@ -554,15 +520,15 @@ function DashboardContent() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 bg-[hsl(var(--dashboard-card))] border border-[hsl(var(--dashboard-accent))]">
+            <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 bg-card border-border">
               <CardHeader className="pb-4">
-                <CardTitle className="text-[hsl(var(--dashboard-text))] flex items-center gap-2">
+                <CardTitle className="text-foreground flex items-center gap-2">
                   <div className="w-8 h-8 bg-red-500/20 rounded-lg flex items-center justify-center border border-red-500/30">
                     <Flame className="h-4 w-4 text-red-400" />
                   </div>
                   Focos de Incêndio
                 </CardTitle>
-                <p className="text-sm text-[hsl(var(--dashboard-muted))]">
+                <p className="text-sm text-muted-foreground">
                   Distribuição temporal de focos detectados
                 </p>
               </CardHeader>
@@ -571,15 +537,15 @@ function DashboardContent() {
               </CardContent>
             </Card>
 
-            <Card className=" shadow-md hover:shadow-lg transition-shadow duration-300 bg-[hsl(var(--dashboard-card))] border border-[hsl(var(--dashboard-accent))]">
+            <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 bg-card border-border">
               <CardHeader className="pb-4">
-                <CardTitle className="text-[hsl(var(--dashboard-text))] flex items-center gap-2">
-                  <div className="w-8 h-8 bg-pantaneiro-lime/20 rounded-lg flex items-center justify-center border border-pantaneiro-lime/30">
-                    <TreePine className="h-4 w-4 text-pantaneiro-lime" />
+                <CardTitle className="text-foreground flex items-center gap-2">
+                  <div className="w-8 h-8 bg-emerald-500/20 rounded-lg flex items-center justify-center border border-emerald-500/30">
+                    <TreePine className="h-4 w-4 text-emerald-400" />
                   </div>
                   Desmatamento
                 </CardTitle>
-                <p className="text-sm text-[hsl(var(--dashboard-muted))]">
+                <p className="text-sm text-muted-foreground">
                   Área desmatada por período
                 </p>
               </CardHeader>
@@ -588,15 +554,15 @@ function DashboardContent() {
               </CardContent>
             </Card>
 
-            <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 bg-[hsl(var(--dashboard-card))] border border-[hsl(var(--dashboard-accent))]">
+            <Card className="shadow-md hover:shadow-lg transition-shadow duration-300 bg-card border-border">
               <CardHeader className="pb-4">
-                <CardTitle className="text-[hsl(var(--dashboard-text))] flex items-center gap-2">
+                <CardTitle className="text-foreground flex items-center gap-2">
                   <div className="w-8 h-8 bg-purple-500/20 rounded-lg flex items-center justify-center border border-purple-500/30">
                     <TrendingUp className="h-4 w-4 text-purple-400" />
                   </div>
                   Ações Realizadas
                 </CardTitle>
-                <p className="text-sm text-[hsl(var(--dashboard-muted))]">
+                <p className="text-sm text-muted-foreground">
                   Distribuição de ações por categoria
                 </p>
               </CardHeader>
@@ -605,28 +571,28 @@ function DashboardContent() {
               </CardContent>
             </Card>
 
-            <Card className=" shadow-md hover:shadow-lg transition-shadow duration-300 bg-[hsl(var(--dashboard-card))] border border-[hsl(var(--dashboard-accent))]">
+            <Card className=" shadow-md hover:shadow-lg transition-shadow duration-300 bg-card border-border">
               <CardHeader className="pb-4">
-                <CardTitle className="text-[hsl(var(--dashboard-text))] flex items-center gap-2">
+                <CardTitle className="text-foreground flex items-center gap-2">
                   <div className="w-8 h-8 bg-blue-500/20 rounded-lg flex items-center justify-center border border-blue-500/30">
                     <MapPin className="h-4 w-4 text-blue-400" />
                   </div>
                   Pontos de Monitoramento Consolidados
                 </CardTitle>
-                <p className="text-sm text-[hsl(var(--dashboard-muted))]">
+                <p className="text-sm text-muted-foreground">
                   Dados consolidados dos pontos de coleta
                 </p>
               </CardHeader>
               <CardContent>
                 <div className="space-y-6">
                   <div>
-                    <h4 className="text-sm font-medium text-[hsl(var(--dashboard-text))] mb-3">
+                    <h4 className="text-sm font-medium text-foreground mb-3">
                       Deque de Pedras
                     </h4>
                     <GraficoPontos ponto="deque" ano={anoSelecionado} />
                   </div>
                   <div>
-                    <h4 className="text-sm font-medium text-[hsl(var(--dashboard-text))] mb-3">
+                    <h4 className="text-sm font-medium text-foreground mb-3">
                       Ponte do Cure
                     </h4>
                     <GraficoPontos ponto="ponte" ano={anoSelecionado} />

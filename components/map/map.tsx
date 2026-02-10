@@ -1,250 +1,222 @@
 "use client"
 
-import { useEffect, useState, useMemo, useCallback } from "react"
+import {  Flame, Waves, MapPin } from "lucide-react"
+import * as LucideIcons from "lucide-react"
+import { useEffect, useState, useMemo, useCallback, useRef } from "react"
 import dynamic from "next/dynamic"
 import type { LatLngExpression } from "leaflet"
-import "leaflet/dist/leaflet.css"
 import { CustomZoomControl } from "./CustomZoomControl"
 import { CustomLayerControl } from "./CustomLayerControl"
-import { MapLayersCard } from "./MapLayerCard"
-import { ActionsLayerCard } from "./ActionLayerCard"
 import { MapPlaceholder } from "./MapPlaceholder"
 import { DateFilterControl } from "./DateFilterControl"
+import { MeasureControl } from "./MeasureControl"
+import { CoordinateInspector } from "./CoordinateInspector"
+import { SnapshotControl } from "./SnapshotControl"
 import { useMapContext } from "@/context/GeoDataContext"
 import L from "leaflet"
 import { FeatureDetails } from "./feature-details"
 import { Modal } from "./Modal"
 import { EditAcaoModal } from "./EditAcaoModal"
 import { useUserRole } from "@/hooks/useUserRole"
-import { useMapFilters } from "@/hooks/useMapFilters"
-import { ACTION_CATEGORIES, ActionCategory, STATUS_STYLES, ActionStatus } from "./config/actions-config"
-import { renderToStaticMarkup } from "react-dom/server"
+import { LayerManager, LayerManagerOption } from "./LayerManager"
+import { Button } from "@/components/ui/button"
+import { LayerResponseDTO } from "@/types/map-dto"
+
 
 // Imports Dinâmicos
 const MapContainer = dynamic(() => import("react-leaflet").then((mod) => mod.MapContainer), { ssr: false })
 const TileLayer = dynamic(() => import("react-leaflet").then((mod) => mod.TileLayer), { ssr: false })
 const GeoJSON = dynamic(() => import("react-leaflet").then((mod) => mod.GeoJSON), { ssr: false })
-const CircleMarker = dynamic(() => import("react-leaflet").then((mod) => mod.CircleMarker), { ssr: false })
-const Marker = dynamic(() => import("react-leaflet").then((mod) => mod.Marker), { ssr: false })
-const Tooltip = dynamic(() => import("react-leaflet").then((mod) => mod.Tooltip), { ssr: false })
 
 interface MapProps {
   center?: LatLngExpression
-  zoom?: number
+  zoom?: number 
 }
 
+import { getLayerStyle, getPointToLayer, getLayerLegendInfo } from "./helpers/map-visuals"
+
+// Helper to convert kebab-case or snake_case to PascalCase (Removed as it is now in helper)
+
+// --- ESTILOS ESTÁTICOS --- (Moved to Helpers)
+
+// --- HELPER DE ESTILIZAÇÃO DINÂMICA --- (Moved to Helpers)
 
 
-// --- Constantes de Cor ---
-const layerColors = {
-  estradas: "#FFFFF0",
-  bacia: "#33FF57",
-  leito: "#3357FF",
-  desmatamento: "yellow",
-  propriedades: "green",
-  firms: "red",
-  banhado: "darkblue",
-  expedicoes: "orange",
-}
 
-// --- ESTILOS ESTÁTICOS ---
-const STATIC_LAYER_STYLES = {
-  bacia: {
-    color: layerColors.bacia,
-    fillColor: layerColors.bacia,
-    weight: 2,
-    opacity: 0.65,
-    fillOpacity: 0.2,
-  },
-  banhado: {
-    color: layerColors.banhado,
-    fillColor: layerColors.banhado,
-    weight: 2,
-    opacity: 0.65,
-    fillOpacity: 0.2,
-  },
-  propriedades: {
-    color: "black",
-    fillColor: layerColors.propriedades,
-    weight: 2,
-    opacity: 0.65,
-    fillOpacity: 0.2,
-  },
-  leito: { color: layerColors.leito, weight: 4, opacity: 0.65 },
-  estradas: { color: layerColors.estradas, weight: 4, opacity: 0.65 },
-  desmatamento: {
-    color: layerColors.desmatamento,
-    fillColor: layerColors.desmatamento,
-    weight: 2,
-    opacity: 0.65,
-    fillOpacity: 0.1,
-  },
-  expedicoes: { color: layerColors.expedicoes, weight: 3, opacity: 0.8 },
-}
-
-const createWaypointIcon = (index: number) =>
-  L.divIcon({
-    html: `
-      <div style="
-        background: rgba(255, 165, 0, 0.85);
-        color: white;
-        border: 2px solid white;
-        border-radius: 50%;
-        width: 28px;
-        height: 28px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 14px;
-        font-weight: bold;
-        box-shadow: 0 0 4px rgba(0,0,0,0.5);
-      ">
-        ${index}
-      </div>
-    `,
-    className: "waypoint-icon",
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-  })
-
-// Helper to create Action Icon
-const createActionIcon = (category: ActionCategory, status: ActionStatus) => {
-  const config = ACTION_CATEGORIES[category] || ACTION_CATEGORIES['Monitoramento'];
-  const statusConfig = STATUS_STYLES[status] || STATUS_STYLES['Ativo'];
-  const IconComponent = config.icon;
-  
-  // Colors
-  // If resolved, use a muted gray for the main pin to indicate inactivity, but keep the badge green
-  const mainColor = status === 'Resolvido' ? '#64748b' : config.color; 
-  const statusColor = statusConfig.color;
-
-  const iconHtml = renderToStaticMarkup(
-    <IconComponent 
-      size={18} 
-      color="white" 
-      strokeWidth={2.5}
-    />
-  );
-
-  // SVG Path for a Map Pin (FontAwesome style)
-  // ViewBox 0 0 384 512
-  const pinPath = "M172.268 501.67C26.97 291.031 0 269.413 0 192 0 85.961 85.961 0 192 0s192 85.961 192 192c0 77.413-26.97 99.031-172.268 309.67-9.535 13.774-29.93 13.773-39.464 0z";
-
-  return L.divIcon({
-    html: `
-      <div style="
-        position: relative;
-        width: 40px;
-        height: 48px;
-        filter: drop-shadow(0 4px 4px rgba(0,0,0,0.3));
-        transition: all 0.2s ease;
-      " class="group hover:-translate-y-1">
-        
-        <!-- Main Pin -->
-        <svg width="40" height="48" viewBox="0 0 384 512" xmlns="http://www.w3.org/2000/svg">
-          <path fill="${mainColor}" d="${pinPath}"/>
-          <circle cx="192" cy="192" r="90" fill="rgba(255,255,255,0.2)" />
-        </svg>
-
-        <!-- Icon -->
-        <div style="
-          position: absolute;
-          top: 14px;
-          left: 50%;
-          transform: translateX(-50%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 20px;
-          height: 20px;
-        ">
-          ${iconHtml}
-        </div>
-
-        <!-- Status Badge -->
-        <div style="
-          position: absolute;
-          top: 0;
-          right: 0;
-          width: 14px;
-          height: 14px;
-          background-color: ${statusColor};
-          border: 2px solid white;
-          border-radius: 50%;
-          box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-          z-index: 10;
-        "></div>
-      </div>
-    `,
-    className: `action-marker-${category} ${status === 'Crítico' ? 'animate-pulse' : ''}`,
-    iconSize: [40, 48],
-    iconAnchor: [20, 48], // Tip of the pin
-    popupAnchor: [0, -48], // Above the pin
-  });
-};
 
 export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: MapProps) {
   const [isMounted, setIsMounted] = useState(false)
-  const [visibleLayers, setVisibleLayers] = useState<string[]>([
-    "estradas",
-    "bacia",
-    "leito",
-    "desmatamento",
-    "propriedades",
-    "firms",
-    "banhado",
-  ])
   
-  // New Visibility State: Array of "Category:Type" strings
-  const [visibleActionTypes, setVisibleActionTypes] = useState<string[]>([])
+  const [dynamicLayers, setDynamicLayers] = useState<LayerResponseDTO[]>([])
+  const [visibleDynamicLayers, setVisibleDynamicLayers] = useState<string[]>([])
+  const [loadingLayers, setLoadingLayers] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [dataVersion, setDataVersion] = useState(0)
+  const initializedRef = useRef(false)
   
-  const { mapData, isLoading, error, modalData, openModal, closeModal, dateFilter, setDateFilter, expedicoesData, refreshAcoesData, acoesData } =
+  const { modalData, openModal, closeModal, dateFilter, setDateFilter } =
     useMapContext()
 
-  // ✅ HOOK: Recupera dados filtrados e agrupados
-  const {
-    filteredDesmatamentoData,
-    filteredFirms,
-    filteredAcoesFeatures,
-    groupedActions
-  } = useMapFilters({ mapData, acoesData, expedicoesData, dateFilter });
+  // Fetch Dynamic Layers (Moved directly to map component for reuse)
+  // ISSO NAO DEVIA ESTAR EM UM HOOK?
+  const fetchLayers = useCallback(async () => {
+    setLoadingLayers(true)
+    setError(null)
+    try {
+      const params = new URLSearchParams();
+      if (dateFilter.startDate) params.append('startDate', dateFilter.startDate.toISOString());
+      if (dateFilter.endDate) params.append('endDate', dateFilter.endDate.toISOString());
+      params.append('_t', String(Date.now())); // Prevent caching
+
+      const response = await fetch(`/api/map/layers?${params.toString()}`)
+      if (response.ok) {
+        const data: LayerResponseDTO[] = await response.json()
+        setDynamicLayers(data.sort((a,b) => (a.ordering || 0) - (b.ordering || 0)))
+        setDataVersion(prev => prev + 1) // Force re-render of GeoJSON layers
+      } else {
+          console.error("Failed to fetch layers")
+          setError("Falha ao carregar camadas")
+      }
+    } catch (err) {
+      console.error("Error fetching layers:", err)
+      setError("Erro ao conectar com servidor")
+    } finally {
+      setLoadingLayers(false)
+    }
+  }, [dateFilter.startDate?.toISOString(), dateFilter.endDate?.toISOString()]) // Re-fetch when dates change - using string primitives for stability 
+
+  // Initialize visibility once
+  useEffect(() => {
+    if (!initializedRef.current && dynamicLayers.length > 0) {
+        const initialSlugs: string[] = [];
+        dynamicLayers.forEach(l => {
+            if (l.groups && l.groups.length > 0) {
+                // For grouped layers (like acoes), check all sub-items by default
+                l.groups.forEach(g => initialSlugs.push(`${l.slug}__${g.id}`));
+            }
+            // Always add the parent slug too
+            initialSlugs.push(l.slug);
+        });
+        
+        setVisibleDynamicLayers(initialSlugs)
+        initializedRef.current = true
+    }
+  }, [dynamicLayers])
 
   useEffect(() => {
     setIsMounted(true)
-  }, [])
+    fetchLayers()
+  }, [fetchLayers])
+
 
   
 
-  const handleLayerToggle = (id: string, isChecked: boolean) => {
-    setVisibleLayers((prev) => (isChecked ? [...prev, id] : prev.filter((layerId) => layerId !== id)))
+  
+
+  // Dynamic Layer Toggles
+  const handleDynamicLayerToggle = (slug: string, isChecked: boolean) => {
+    setVisibleDynamicLayers(prev => isChecked ? [...prev, slug] : prev.filter(s => s !== slug))
   }
 
-  // Toggle a specific Type within a Category
-  const handleActionTypeToggle = (categoryId: string, typeId: string, isChecked: boolean) => {
-    const uniqueId = `${categoryId}:${typeId}`
-    setVisibleActionTypes(prev => 
-      isChecked ? [...prev, uniqueId] : prev.filter(id => id !== uniqueId)
-    )
-  }
-
-  // Toggle all types within a Category
-  const handleCategoryToggle = (categoryId: string, isChecked: boolean) => {
-    const category = groupedActions.find(c => c.id === categoryId)
-    if (!category) return
-
-    const allTypeIds = category.types.map(t => `${categoryId}:${t.id}`)
-    
-    setVisibleActionTypes(prev => {
-      const withoutCategory = prev.filter(id => !id.startsWith(`${categoryId}:`))
-      return isChecked ? [...withoutCategory, ...allTypeIds] : withoutCategory
+  const handleGroupToggle = (slugs: string[], isChecked: boolean) => {
+    setVisibleDynamicLayers(prev => {
+        if (isChecked) {
+            // Add all slugs that are not already present
+            const newSlugs = slugs.filter(s => !prev.includes(s));
+            return [...prev, ...newSlugs];
+        } else {
+            // Remove all slugs
+            return prev.filter(s => !slugs.includes(s));
+        }
     })
   }
+
+  const handleToggleAllDynamic = (isChecked: boolean) => {
+      if (isChecked) {
+          // Flatten all slugs
+          const allSlugs: string[] = [];
+          dynamicLayers.forEach(l => {
+              if (l.groups && l.groups.length > 0) {
+                  l.groups.forEach(g => allSlugs.push(`${l.slug}__${g.id}`));
+                  // Also include parent slug if needed? Not really, but good for tracking
+                  allSlugs.push(l.slug);
+              } else {
+                  allSlugs.push(l.slug);
+              }
+          });
+          setVisibleDynamicLayers(allSlugs);
+      } else {
+          setVisibleDynamicLayers([]);
+      }
+  }
+
+  // --- MEMOIZED DATA PROCESSING ---
+  // Memoize the filtering and style preparation to avoid heavy loops on every render (e.g. modal open)
+  const processedLayers = useMemo(() => {
+    return dynamicLayers
+      .map((layer) => {
+        // Check rules array for field used as fallback
+        const ruleField = layer.visualConfig?.rules?.[0]?.field;
+        const groupByColumn = layer.visualConfig?.groupByColumn || ruleField
+        let isVisible = false
+        let activeValues: string[] = []
+
+        // 1. Determine Visibility
+        if (groupByColumn) {
+          // Check if any sub-items are active (slug__value)
+          activeValues = visibleDynamicLayers
+            .filter((slug) => slug.startsWith(`${layer.slug}__`))
+            .map((slug) => slug.replace(`${layer.slug}__`, ""))
+
+          if (activeValues.length > 0) isVisible = true
+        } else {
+          isVisible = visibleDynamicLayers.includes(layer.slug)
+        }
+
+        if (!isVisible) return null
+
+        // 2. Data Filtering Logic
+        let displayData = layer.data
+
+        // Apply Group Filter if active
+        if (groupByColumn && activeValues.length > 0) {
+          displayData = {
+            ...displayData,
+            features: displayData.features.filter((f) =>
+              activeValues.includes(f.properties?.[groupByColumn] as string)
+            ),
+          }
+        }
+
+        // 3. Pre-calculate standard Props
+        // This avoids calling getLayerStyle and getPointToLayer repeatedly if not needed,
+        // although they are cheap, organizing them here is cleaner.
+        const style = getLayerStyle(layer.visualConfig)
+        const pointToLayer = getPointToLayer(layer.visualConfig, layer.slug)
+
+        return {
+          slug: layer.slug,
+          name: layer.name,
+          displayData,
+          // style, // REMOVED: Style is now per-feature in <GeoJSON>
+          pointToLayer,
+          visualConfig: layer.visualConfig,
+          schemaConfig: layer.schemaConfig,
+          // Create a unique key for the GeoJSON component to force re-mounting only when data changes significantly
+          // leveraging feature count is a simple heuristic.
+          componentKey: `${layer.slug}-${displayData.features.length}-${dataVersion}`,
+        }
+      })
+      .filter((item): item is NonNullable<typeof item> => item !== null)
+  }, [dynamicLayers, visibleDynamicLayers, dataVersion])
 
   // Modal e Permissões
   const [selectedAcao, setSelectedAcao] = useState<any | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
   const { isAdmin } = useUserRole()
 
+
+  
   const handleFeatureClick = useCallback(
     (properties: Record<string, unknown>, layerType: string) => {
       if (layerType === "acoes") {
@@ -258,31 +230,87 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     [openModal],
   )
 
-  const layerConfigs = useMemo(
-    () =>
-      mapData
-        ? [
-            { id: "bacia", data: mapData.bacia, style: STATIC_LAYER_STYLES.bacia },
-            { id: "banhado", data: mapData.banhado, style: STATIC_LAYER_STYLES.banhado },
-            { id: "propriedades", data: mapData.propriedades, style: STATIC_LAYER_STYLES.propriedades },
-            { id: "leito", data: mapData.leito, style: STATIC_LAYER_STYLES.leito },
-            { id: "estradas", data: mapData.estradas, style: STATIC_LAYER_STYLES.estradas },
-          ]
-        : [],
-    [mapData],
-  )
 
-  const layerOptions = [
-    { id: "bacia", label: "Bacia", count: mapData?.bacia.features.length || 0, color: layerColors.bacia },
-    { id: "banhado", label: "Banhado", count: mapData?.banhado.features.length || 0, color: layerColors.banhado },
-    { id: "propriedades", label: "Propriedades", count: mapData?.propriedades.features.length || 0, color: layerColors.propriedades },
-    { id: "leito", label: "Leito", count: mapData?.leito.features.length || 0, color: layerColors.leito },
-    { id: "estradas", label: "Estradas", count: mapData?.estradas.features.length || 0, color: layerColors.estradas },
-    { id: "desmatamento", label: "Desmatamento", count: mapData?.desmatamento.features.length || 0, color: layerColors.desmatamento },
-    { id: "firms", label: "Focos de Incêndio", count: mapData?.firms.features.length || 0, color: layerColors.firms },
-  ]
+  // TODO: A DETERMINAÇÃO DE ICONES DEVE VIR DO BACKEND
+  const dynamicLayerOptions: LayerManagerOption[] = dynamicLayers.map(layer => {
+    // 1. Resolve Visuals from Helper
+    const { legendType, iconName, color: baseColor, fillColor: baseFill } = getLayerLegendInfo(layer.visualConfig);
+    const config = layer.visualConfig;
+    
+    // CASE A: GROUP BY COLUMN (Nest options or Rules)
+    const firstRule = config?.rules?.[0]; // Strategy: use first rule for grouping if available
+    const groupByColumn = config?.groupByColumn || firstRule?.field;
 
-  if (!isMounted || isLoading) {
+    if (groupByColumn) {
+        // 1. Use Groups from Backend (or Fallback to Data if missing, though ideally backend provides it)
+        let groups = layer.groups || [];
+
+        // 2. Fallback: If no groups but we have RULES, derive groups from RULES
+        if (groups.length === 0 && firstRule?.values) {
+             groups = Object.entries(firstRule.values).map(([key, value]) => {
+                 // Value can be string or object now
+                 const style = typeof value === 'string' ? {} : value as any;
+                 
+                 return {
+                    id: key,
+                    label: key, // Or some formatted label
+                    color: style.color || baseColor,
+                    icon: style.iconName || (firstRule.styleProperty === 'iconName' ? value : iconName)
+                 }
+             });
+        }
+        
+        // If no groups returned but we have data, maybe fallback? 
+        // For now, let's rely on backend groups as requested.
+        
+        if (groups.length > 0) {
+             // Generate Sub Options
+            const subOptions: LayerManagerOption[] = groups.map(group => {
+                const value = group.id;
+                // Use icon from backend group, fallback to layer icon
+                const subIcon = group.icon || iconName;
+                
+                return {
+                    id: `${layer.slug}__${value}`, // Composite ID
+                    label: group.label, // Use label from backend
+                    slug: `${layer.slug}__${value}`,
+                    color: group.color || baseColor, // Use group color if available
+                    icon: subIcon,
+                    legendType: legendType,
+                    fillColor: baseFill,
+                    category: layer.visualConfig?.category 
+                }
+            });
+
+            // Return Parent Option with SubOptions
+            return {
+                id: String(layer.id),
+                label: layer.name,
+                slug: layer.slug, // Parent slug (acting as container/folder)
+                color: baseColor,
+                icon: iconName,
+                legendType: legendType,
+                fillColor: baseFill,
+                category: layer.visualConfig?.category,
+                subOptions: subOptions
+            };
+        }
+    }
+
+    // CASE B: STANDARD SINGLE LAYER
+    return {
+        id: String(layer.id),
+        label: layer.name,
+        slug: layer.slug,
+        color: baseColor,
+        icon: iconName,
+        legendType: legendType,
+        fillColor: baseFill,
+        category: layer.visualConfig?.category
+    }
+  })
+
+  if (!isMounted) {
     return <MapPlaceholder />
   }
 
@@ -297,6 +325,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
   return (
     <div className="w-full h-screen relative z-10">
       <MapContainer 
+        id="main-map"
         center={center} 
         zoom={zoom} 
         zoomControl={false} 
@@ -310,175 +339,158 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
         />
         <CustomZoomControl />
         <CustomLayerControl />
+        <MeasureControl />
+        <CoordinateInspector />
+        <SnapshotControl activeLayers={visibleDynamicLayers} />
 
-        {/* Camadas Estáticas */}
-        {layerConfigs.map(
-          (layer) =>
-            visibleLayers.includes(layer.id) && (
-              <GeoJSON
-                key={layer.id}
-                data={layer.data}
-                style={layer.style}
-                onEachFeature={(feature, l) => {
-                  l.on({
-                    click: () => handleFeatureClick(feature.properties, layer.id),
-                  })
-                }}
-              />
-            ),
-        )}
-
-        {/* Desmatamento */}
-        {filteredDesmatamentoData && visibleLayers.includes("desmatamento") && (
+        {processedLayers.map((layerItem) => (
           <GeoJSON
-            key={`desmatamento-${dateFilter.startDate?.toISOString()}-${dateFilter.endDate?.toISOString()}`}
-            data={filteredDesmatamentoData}
-            style={STATIC_LAYER_STYLES.desmatamento}
-            onEachFeature={(feature, layer) => {
-              layer.on({
-                click: () => handleFeatureClick(feature.properties, "desmatamento"),
+            key={layerItem.componentKey}
+            data={layerItem.displayData}
+            style={(feature) => getLayerStyle(layerItem.visualConfig, feature)}
+            pointToLayer={layerItem.pointToLayer}
+            onEachFeature={(feature, l) => {
+              // Bind Popup based on Schema Config OR VisualConfig.popupFields
+              const fields = layerItem.visualConfig?.popupFields || layerItem.schemaConfig?.fields;
+              
+              const generateContent = (isTooltip = false) => {
+                 if (!fields?.length) return null;
+                 
+                  // For tooltips, maybe show less info or cleaner? 
+                  // For now, let's show the same content but in a tooltip structure
+                  return `
+                       <div class="${isTooltip ? 'p-1 min-w-[150px]' : 'p-2 min-w-[200px]'}">
+                         <h3 class="font-bold ${isTooltip ? 'mb-1 text-xs' : 'mb-2 text-sm'} border-b pb-1">
+                            ${layerItem.name} 
+                            ${isTooltip ? '' : ''}
+                         </h3>
+                         <div class="space-y-1 ${isTooltip ? 'text-[10px]' : 'text-xs'}">
+                           ${fields
+                             .map(
+                               (field) => `
+                             <div class="flex justify-between gap-4">
+                               <span class="text-slate-500">${field.label}:</span>
+                               <span class="font-medium text-slate-800">${
+                                 feature.properties[field.key] ?? "-"
+                               }</span>
+                             </div>
+                           `
+                             )
+                             .join("")}
+                         </div>
+                       </div>
+                     `;
+              }
+
+              const popupContent = generateContent(false);
+
+              if (popupContent) {
+                l.bindPopup(popupContent)
+              }
+
+              // HOVER TOOLTIP LOGIC
+              const EXCLUDED_HOVER_LAYERS = ['propriedades', 'propriedade', 'banhado'];
+              // Check exact slug or if slug starts with excluded prefix (if using namespacing)
+              // Also check if the layer slug *contains* the word if strict match isn't enough, 
+              // but user said "propriedade" and "banhado".
+              const isExcluded = EXCLUDED_HOVER_LAYERS.some(ex => layerItem.slug.includes(ex));
+
+              if (!isExcluded && popupContent) {
+                  // Use same content or simplified? using same for now as requested "informações sobre eles"
+                  const tooltipContent = generateContent(true);
+                  if (tooltipContent) {
+                       l.bindTooltip(tooltipContent, {
+                           sticky: true, // Follow mouse
+                           direction: 'top',
+                           opacity: 0.95,
+                           className: 'custom-map-tooltip' // We can style this in global css if needed
+                       });
+
+                       // Add hover effect to highlight
+                       l.on({
+                           mouseover: (e: any) => {
+                               const layer = e.target;
+                               if (layer.setStyle) {
+                                   try {
+                                       layer.setStyle({
+                                           weight: (layerItem.visualConfig?.mapMarker?.weight || 2) + 2,
+                                           fillOpacity: 0.5
+                                       });
+                                   } catch(err) {
+                                        // Ignore if setStyle not supported (e.g. Marker)
+                                   }
+                               }
+                           },
+                           mouseout: (e: any) => {
+                               // Reset style
+                               const layer = e.target;
+                               if (layerItem.slug !== 'acoes' && layer.setStyle) { // Don't mess with acoes selection style if we had one? 
+                                    // Actually we re-apply base style. 
+                                    // A better way is using GeoJSON's resetStyle but we don't have ref to it easily here inside onEachFeature without closure
+                                    // Re-calculating style for this feature:
+                                    const baseStyle = getLayerStyle(layerItem.visualConfig, feature);
+                                    try {
+                                        layer.setStyle(baseStyle);
+                                    } catch(err) {
+                                        // Ignore
+                                    }
+                               }
+                           }
+                       })
+                  }
+              }
+
+              l.on({
+                click: () =>
+                  handleFeatureClick(feature.properties, layerItem.slug),
               })
             }}
           />
-        )}
-
-        {/* Focos de Incêndio */}
-        {visibleLayers.includes("firms") &&
-          filteredFirms.map((firm, index) => {
-            const coords = firm.geometry?.coordinates
-            if (
-              Array.isArray(coords) &&
-              coords.length === 2 &&
-              typeof coords[0] === "number" &&
-              typeof coords[1] === "number"
-            ) {
-              return (
-                <CircleMarker
-                  key={`firm-${index}`}
-                  center={[coords[1], coords[0]]}
-                  radius={5}
-                  pathOptions={{
-                    color: layerColors.firms,
-                    fillColor: layerColors.firms,
-                    fillOpacity: 0.8,
-                  }}
-                  eventHandlers={{
-                    click: () => handleFeatureClick(firm.properties, "firms"),
-                  }}
-                >
-                  <Tooltip>
-                    {firm.properties.acq_date
-                      ? new Intl.DateTimeFormat('pt-BR').format(new Date(firm.properties.acq_date))
-                      : firm.properties.nome}
-                  </Tooltip>
-                </CircleMarker>
-              )
-            }
-            return null
-          })}
-
-        {/* Ações (Refatorado) */}
-        {filteredAcoesFeatures.map((feature, index) => {
-          const cat = (feature.properties.categoria as ActionCategory) || 'Monitoramento';
-          const type = feature.properties.tipo || 'Outros';
-          const uniqueId = `${cat}:${type}`;
-          const status = (feature.properties.status as ActionStatus) || 'Ativo';
-
-          if (!visibleActionTypes.includes(uniqueId)) return null;
-
-          const coords = feature.geometry?.coordinates as number[] | undefined;
-          if (Array.isArray(coords) && coords.length >= 2) {
-            return (
-              <Marker
-                key={`acao-${feature.properties.id || index}`}
-                position={[coords[1], coords[0]]}
-                icon={createActionIcon(cat, status)}
-                eventHandlers={{
-                  click: () => handleFeatureClick({ ...feature.properties, id: feature.properties.id }, "acoes"),
-                }}
-              >
-                <Tooltip>{feature.properties.name || feature.properties.nome}</Tooltip>
-              </Marker>
-            );
-          }
-          return null;
-        })}
-
-        {/* Expedições - Trilhas */}
-        {expedicoesData && visibleLayers.includes("expedicoes") && (
-          <GeoJSON
-            key={`expedicoes-${dateFilter.startDate?.toISOString() ?? "null"}-${dateFilter.endDate?.toISOString() ?? "null"}`}
-            data={{
-              type: "FeatureCollection",
-              features: expedicoesData.trilhas.features.filter((f) => {
-                const d = f.properties.data ?? f.properties.recordedat ?? f.properties.created_at
-                const itemDate = new Date(d)
-                if (dateFilter.startDate && itemDate < dateFilter.startDate) return false
-                if (dateFilter.endDate) {
-                    const end = new Date(dateFilter.endDate)
-                    end.setHours(23, 59, 59, 999)
-                    if (itemDate > end) return false
-                }
-                return true
-              }),
-            } as any}
-            style={STATIC_LAYER_STYLES.expedicoes}
-            onEachFeature={(feature, layer) => {
-              layer.on({ click: () => handleFeatureClick(feature.properties, "expedicoes") })
-            }}
-          />
-        )}
-
-        {/* Expedições - Waypoints */}
-        {expedicoesData &&
-          visibleLayers.includes("expedicoes") &&
-          [...expedicoesData.waypoints.features]
-            .filter((wp) => {
-                const d = wp.properties.data
-                const itemDate = new Date(d)
-                if (dateFilter.startDate && itemDate < dateFilter.startDate) return false
-                if (dateFilter.endDate) {
-                    const end = new Date(dateFilter.endDate)
-                    end.setHours(23, 59, 59, 999)
-                    if (itemDate > end) return false
-                }
-                return true
-            })
-            .sort((a, b) => new Date(a.properties.recordedat).getTime() - new Date(b.properties.recordedat).getTime())
-            .map((wp, index) => {
-              const coords = wp.geometry?.coordinates as number[] | undefined
-              if (Array.isArray(coords) && coords.length >= 2) {
-                return (
-                  <Marker
-                    key={`exp-wp-${index}`}
-                    position={[coords[1], coords[0]]}
-                    icon={createWaypointIcon(index + 1)}
-                    eventHandlers={{
-                      click: () => handleFeatureClick(wp.properties, "expedicoes"),
-                    }}
-                  >
-                    <Tooltip>{wp.properties.name || wp.properties.nome}</Tooltip>
-                  </Marker>
-                )
-              }
-              return null
-            })}
+        ))}
       </MapContainer>
+
+      <div className="absolute top-44 right-4 z-[400]">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => {
+            fetchLayers();
+          }}
+          className="bg-white hover:bg-gray-100 shadow-md text-black border-input"
+          title="Atualizar dados"
+        >
+          <LucideIcons.RefreshCw 
+            className={`h-4 w-4 ${loadingLayers ? 'animate-spin' : ''}`} 
+          />
+        </Button>
+      </div>
 
       <div className="absolute top-4 left-4 z-[1000]">
         <DateFilterControl onDateChange={setDateFilter} />
       </div>
 
       <div className="absolute bottom-4 left-4 z-[1000] gap-3 flex flex-col">
-        <MapLayersCard title="Camadas" options={layerOptions} onLayerToggle={handleLayerToggle} />
-        <ActionsLayerCard 
-          title="Ações" 
-          categories={groupedActions} 
-          visibleActionTypes={visibleActionTypes}
-          onToggleType={handleActionTypeToggle}
-          onToggleCategory={handleCategoryToggle}
+        {/* <MapLayersCard ... /> Removido */ }
+       
+        <LayerManager
+            title="Camadas"
+            options={dynamicLayerOptions}
+            activeLayers={visibleDynamicLayers}
+            onLayerToggle={handleDynamicLayerToggle}
+            onToggleAll={handleToggleAllDynamic}
+            onGroupToggle={handleGroupToggle}
         />
       </div>
+
+      {loadingLayers && (
+        <div className="absolute inset-0 z-[2000] bg-black/40 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+            <div className="bg-brand-dark border border-white/10 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+                <span className="text-slate-200 text-sm font-medium">Atualizando dados...</span>
+            </div>
+        </div>
+      )}
+
 
       <Modal
         isOpen={modalData.isOpen}
@@ -498,7 +510,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
           Object.entries(data).forEach(([k, v]) => form.append(k, String(v)))
           files.forEach(f => form.append("files", f))
           await fetch(`/api/acoes/${data.id}`, { method: "PUT", body: form })
-          await refreshAcoesData()
+          await fetchLayers()
           setIsEditOpen(false)
           closeModal()
         }}

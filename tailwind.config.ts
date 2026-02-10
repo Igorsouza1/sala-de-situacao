@@ -10,6 +10,10 @@ const config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["var(--font-inter)", "sans-serif"],
+        mono: ["var(--font-jetbrains-mono)", "monospace"],
+      },
       colors: {
         border: "hsl(var(--border))",
         input: "hsl(var(--input))",
@@ -53,6 +57,12 @@ const config = {
           green: "#02483E",
           lime: "#9BB61B",
           "lime-hover": "#8ba219",
+        },
+        brand: {
+          dark: "#0F172A",
+          "dark-blue": "#111c35",
+          primary: "#3B82F6",
+          whatsapp: "#005c4b",
         },
       },
       borderRadius: {

@@ -1,7 +1,7 @@
 "use server";
 
-import { encodedRedirect } from "@/utils/utils";
-import { createClient } from "@/utils/supabase/server";
+import { encodedRedirect } from "@/lib/utils";
+import { createClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -60,24 +60,24 @@ export const forgotPasswordAction = async (formData: FormData) => {
   const email = formData.get("email")?.toString();
   const supabase = await createClient();
   const origin = process.env.NODE_ENV === 'production'
-  ? 'https://sala-de-situacao.vercel.app'
-  : 'http://localhost:3000';
+    ? 'https://sala-de-situacao.vercel.app'
+    : 'http://localhost:3000';
   const callbackUrl = formData.get("callbackUrl")?.toString();
-  
+
 
   if (!email) {
     return encodedRedirect("error", "/forgot-password", "Email is required");
   }
-  
+
   const redirectTo = `${origin}/auth/callback?redirect_to=/protected/reset-password`;
   console.log('redirectTo ENVIADO:', redirectTo); // <-- confira no console
 
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${origin}/auth/callback?redirect_to=/protected/reset-password`,
-    
+
   });
 
-  
+
 
   if (error) {
     console.error(error.message);
@@ -172,7 +172,8 @@ export const completeInviteAction = async (formData: FormData) => {
 
   const { error } = await supabase.auth.updateUser({
     password,
-    data: { full_name: name }},
+    data: { full_name: name }
+  },
   );
 
   if (error) {

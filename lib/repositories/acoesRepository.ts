@@ -6,12 +6,26 @@ import { eq, desc, sql } from "drizzle-orm";
 
 
 export async function findAcaoById(id: number) {
-  const result = await db
-    .select() // Pega todas as colunas da ação principal
-    .from(acoesInRioDaPrata)
-    .where(eq(acoesInRioDaPrata.id, id))
-    .execute();
-  return result[0]; // Retorna apenas o primeiro (ou undefined)
+  // Uses raw SQL to perform spatial JOINs
+  const query = sql`
+    SELECT 
+      a.*,
+      p.nome as propriedade,
+      p.cod_imovel as "propriedadeCodigo",
+      ST_AsGeoJSON(p.geom) as "propriedadeGeoJson",
+      ST_AsGeoJSON(ld.geom) as "banhadoGeoJson"
+    FROM "monitoramento"."acoes" a
+    LEFT JOIN "monitoramento"."propriedades" p ON ST_Intersects(p.geom, a.geom)
+    LEFT JOIN "monitoramento"."layer_data" ld 
+      ON ld.layer_id = (SELECT id FROM "monitoramento"."layer_catalog" WHERE slug = 'banhado' LIMIT 1)
+      -- Alterado de ST_Intersects para ST_DWithin
+      -- Cast ::geography garante o cálculo em METROS
+      AND ST_DWithin(ld.geom::geography, a.geom::geography, 5000)
+    WHERE a.id = ${id}
+  `;
+
+  const result = await db.execute(query);
+  return result.rows[0];
 }
 
 export async function findAllAcoesData() {
@@ -31,15 +45,31 @@ export async function findAllAcoesData() {
   return result;
 }
 
-export async function findAllAcoesDataWithGeometry() {
-
-  const result = await db.execute(`
-    SELECT a.id, a.acao, a.name, a.descricao, a.mes, a.atuacao, a.time, a.status, a.categoria, a.tipo, ST_AsGeoJSON(a.geom) as geojson,
+export async function findAllAcoesDataWithGeometry(startDate?: Date, endDate?: Date) {
+  let query = `
+    SELECT a.id, a.acao, a.name, a.descricao, a.mes, a.atuacao, a.time, TO_CHAR(a.time, 'DD/MM/YYYY HH24:MI') as time_formatado, a.status, a.categoria, a.tipo, a.eixo_tematico, a.tipo_tecnico, a.carater, ST_AsGeoJSON(a.geom) as geojson,
     MAX(f.created_at) as ultima_foto_em
-    FROM "rio_da_prata"."acoes" a
-    LEFT JOIN "rio_da_prata"."fotos_acoes" f ON a.id = f.acao_id
-    GROUP BY a.id
-  `)
+    FROM "monitoramento"."acoes" a
+    LEFT JOIN "monitoramento"."fotos_acoes" f ON a.id = f.acao_id
+  `;
+
+  const conditions: string[] = [];
+
+  if (startDate) {
+    conditions.push(`a.time >= '${startDate.toISOString()}'`);
+  }
+
+  if (endDate) {
+    conditions.push(`a.time <= '${endDate.toISOString()}'`);
+  }
+
+  if (conditions.length > 0) {
+    query += ` WHERE ${conditions.join(' AND ')}`;
+  }
+
+  query += ` GROUP BY a.id`;
+
+  const result = await db.execute(query);
 
   return result.rows
 }
@@ -119,7 +149,7 @@ export async function insertAcaoData(data: NewAcoesData) {
       atuacao: data.atuacao,
       acao: data.acao,
 
-      geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4326)`,
+      geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4674)`,
     })
     .returning({ id: acoesInRioDaPrata.id });
   return newRecord

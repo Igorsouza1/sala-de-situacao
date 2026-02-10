@@ -5,7 +5,7 @@ import { useMemo, useState, useCallback, type JSX } from "react"
 import { format, parseISO, differenceInCalendarDays } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { useDailyPonteCure } from "@/context/DailyPonteCureContext"
-import { ChartContainer } from "@/components/ui/chart"
+import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -16,18 +16,6 @@ const PRESETS: Record<string, number> = {
   "30 d": 30,
 }
 
-const COLORS = {
-  chuva: "#06b6d4",
-  nivel: "#22c55e",
-  grid: "#374151",
-  cristalino: "#3b82f6",
-  turvo: "#f97316",
-  muitoTurvo: "#ef4444",
-} as const
-
-// Faixas de referência para nível da água
-// Remover completamente NIVEL_BANDS
-
 interface SerieDia {
   label: string
   data: Date
@@ -36,6 +24,11 @@ interface SerieDia {
   visibilidade: "cristalino" | "turvo" | "muitoTurvo"
 }
 
+// Custom tooltip needs to access payload which has semantic colors now?
+// Or we just use ChartTooltipContent? The original had custom logic for emojis.
+// I'll adapt ChartTooltipContent or keep custom if it adds value.
+// The original `CustomTooltip` had specific emojis and formatting. I'll reimplement it using proper Tailwind classes.
+
 function CustomTooltip({ active, payload, label }: any) {
   if (!active || !payload || !payload.length) return null
 
@@ -43,28 +36,30 @@ function CustomTooltip({ active, payload, label }: any) {
   if (!data) return null
 
   const statusVisibilidade = {
-    cristalino: { cor: "text-blue-400", emoji: "💎", texto: "Cristalino" },
-    turvo: { cor: "text-orange-400", emoji: "🌊", texto: "Turvo" },
-    muitoTurvo: { cor: "text-red-400", emoji: "🟤", texto: "Muito Turvo" },
+    cristalino: { colorClass: "text-blue-400", emoji: "💎", texto: "Cristalino" },
+    turvo: { colorClass: "text-orange-400", emoji: "🌊", texto: "Turvo" },
+    muitoTurvo: { colorClass: "text-red-400", emoji: "🟤", texto: "Muito Turvo" },
   }
 
   const status = statusVisibilidade[data.visibilidade]
 
   return (
-    <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
-      <p className="text-white font-medium mb-2">{format(data.data, "dd 'de' MMMM", { locale: ptBR })}</p>
+    <div className="bg-card border border-border rounded-lg p-3 shadow-xl">
+      <p className="text-foreground font-medium mb-2">{format(data.data, "dd 'de' MMMM", { locale: ptBR })}</p>
       <div className="space-y-1">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-gray-300 text-sm">Chuva:</span>
-          <span className="text-white font-medium">{data.chuva} mm</span>
+          <span className="text-muted-foreground text-sm">Chuva:</span>
+          <span className="text-foreground font-medium">{data.chuva} mm</span>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <span className="text-gray-300 text-sm">Nível:</span>
-          <span className="text-white font-medium">{data.nivel} m</span>
+          <span className="text-muted-foreground text-sm">Nível:</span>
+          <span className="text-foreground font-medium">{data.nivel} m</span>
         </div>
         <div className="flex items-center justify-between gap-3">
-          <span className="text-gray-300 text-sm">Visibilidade:</span>
-          
+          <span className="text-muted-foreground text-sm">Visibilidade:</span>
+           <span className={`${status.colorClass} font-medium flex items-center gap-1`}>
+             {status.emoji} {status.texto}
+           </span>
         </div>
       </div>
     </div>
@@ -141,10 +136,10 @@ export function GraficoPonteCure(): JSX.Element {
 
   if (isLoading) {
     return (
-      <Card className="bg-gray-900/50 border-gray-700">
+      <Card className="bg-card border-border">
         <CardContent className="flex items-center justify-center h-64">
-          <div className="flex items-center gap-2 text-gray-400">
-            <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+          <div className="flex items-center gap-2 text-muted-foreground">
+            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             Carregando dados…
           </div>
         </CardContent>
@@ -154,9 +149,9 @@ export function GraficoPonteCure(): JSX.Element {
 
   if (error) {
     return (
-      <Card className="bg-red-900/20 border-red-700">
+      <Card className="bg-destructive/10 border-destructive">
         <CardContent className="flex items-center justify-center h-64">
-          <p className="text-red-400">Erro: {error}</p>
+          <p className="text-destructive">Erro: {error}</p>
         </CardContent>
       </Card>
     )
@@ -164,9 +159,9 @@ export function GraficoPonteCure(): JSX.Element {
 
   if (!serieCompleta.length) {
     return (
-      <Card className="bg-gray-900/50 border-gray-700">
+      <Card className="bg-card border-border">
         <CardContent className="flex items-center justify-center h-64">
-          <p className="text-gray-400">Nenhum dado disponível</p>
+          <p className="text-muted-foreground">Nenhum dado disponível</p>
         </CardContent>
       </Card>
     )
@@ -174,10 +169,10 @@ export function GraficoPonteCure(): JSX.Element {
 
   return (
     <div className="flex gap-4">
-      <Card className="bg-gray-900/50 border-gray-700 backdrop-blur-sm flex-1">
+      <Card className="bg-card border-border flex-1">
         <CardHeader className="pb-4">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-white">🌊 Ponte do Cure - Últimos Dias</CardTitle>
+            <CardTitle className="text-foreground">🌊 Ponte do Cure - Últimos Dias</CardTitle>
             <div className="flex items-center gap-3">
               {currentStatus && (
                 <>
@@ -185,16 +180,16 @@ export function GraficoPonteCure(): JSX.Element {
                     variant="outline"
                     className={`${
                       currentStatus.cor === "green"
-                        ? "border-green-500 text-green-400 bg-green-500/10"
+                        ? "border-emerald-500 text-emerald-500 bg-emerald-500/10"
                         : currentStatus.cor === "orange"
-                          ? "border-orange-500 text-orange-400 bg-orange-500/10"
-                          : "border-red-500 text-red-400 bg-red-500/10"
+                          ? "border-orange-500 text-orange-500 bg-orange-500/10"
+                          : "border-red-500 text-red-500 bg-red-500/10"
                     }`}
                   >
                     {currentStatus.emoji} {currentStatus.texto} - {currentStatus.nivel}m
                   </Badge>
                   {currentStatus?.outdated && (
-                    <Badge variant="outline" className="border-amber-500 text-amber-400 bg-amber-500/10">
+                    <Badge variant="outline" className="border-amber-500 text-amber-500 bg-amber-500/10">
                       Última leitura: {currentStatus.dataFmt} ({currentStatus.diasAtras} d)
                     </Badge>
                   )}
@@ -214,8 +209,8 @@ export function GraficoPonteCure(): JSX.Element {
                 onClick={() => handlePresetChange(dias)}
                 className={
                   presetDias === dias
-                    ? "bg-blue-600 hover:bg-blue-700 text-white"
-                    : "border-gray-600 text-gray-300 hover:bg-gray-800 hover:text-white"
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90"
+                    : "border-border text-muted-foreground hover:bg-muted"
                 }
               >
                 {lbl}
@@ -225,18 +220,18 @@ export function GraficoPonteCure(): JSX.Element {
 
           <ChartContainer
             config={{
-              chuva: { label: "Chuva (mm)", color: COLORS.chuva },
-              nivel: { label: "Nível (m)", color: COLORS.nivel },
+              chuva: { label: "Chuva (mm)", color: "hsl(var(--chart-3))" },
+              nivel: { label: "Nível (m)", color: "hsl(var(--chart-2))" },
             }}
             className="h-[400px]"
           >
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={displayData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke={COLORS.grid} opacity={0.3} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
 
                 <XAxis
                   dataKey="label"
-                  stroke="#9ca3af"
+                  stroke="hsl(var(--muted-foreground))"
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
@@ -245,7 +240,7 @@ export function GraficoPonteCure(): JSX.Element {
 
                 <YAxis
                   yAxisId="chuva"
-                  stroke={COLORS.chuva}
+                  stroke="hsl(var(--chart-3))"
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
@@ -255,14 +250,14 @@ export function GraficoPonteCure(): JSX.Element {
                     value: "Chuva (mm)",
                     angle: -90,
                     position: "insideLeft",
-                    style: { textAnchor: "middle" },
+                    style: { textAnchor: "middle", fill: "hsl(var(--muted-foreground))" },
                   }}
                 />
 
                 <YAxis
                   yAxisId="nivel"
                   orientation="right"
-                  stroke={COLORS.nivel}
+                  stroke="hsl(var(--chart-2))"
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
@@ -272,17 +267,16 @@ export function GraficoPonteCure(): JSX.Element {
                     value: "Nível (m)",
                     angle: 90,
                     position: "insideRight",
-                    style: { textAnchor: "middle" },
+                    style: { textAnchor: "middle", fill: "hsl(var(--muted-foreground))" },
                   }}
                 />
-
-                {/* Remover todas as ReferenceArea */}
 
                 <Bar
                   dataKey="chuva"
                   yAxisId="chuva"
-                  fill={COLORS.chuva + "30"}
-                  stroke={COLORS.chuva}
+                  fill="var(--color-chuva)"
+                  stroke="var(--color-chuva)"
+                  fillOpacity={0.2}
                   barSize={6}
                   radius={[2, 2, 0, 0]}
                 />
@@ -290,12 +284,16 @@ export function GraficoPonteCure(): JSX.Element {
                 <Line
                   yAxisId="nivel"
                   dataKey="nivel"
-                  stroke={COLORS.nivel}
+                  stroke="var(--color-nivel)"
                   strokeWidth={3}
                   dot={(props: any) => {
                     const { cx, cy, payload } = props
-                    const cor = COLORS[payload.visibilidade as keyof typeof COLORS]
-                    return <circle key={cx} cx={cx} cy={cy} r={6} fill={cor} stroke="#fff" strokeWidth={3} />
+                    // Logic to color dots based on visibility
+                    let color = "hsl(var(--chart-3))" // default blue
+                    if (payload.visibilidade === "turvo") color = "hsl(var(--chart-4))" // orange
+                    if (payload.visibilidade === "muitoTurvo") color = "hsl(var(--chart-1))" // red
+
+                    return <circle key={cx} cx={cx} cy={cy} r={6} fill={color} stroke="#fff" strokeWidth={3} />
                   }}
                   activeDot={{ r: 8, stroke: "#fff", strokeWidth: 3 }}
                 />
@@ -307,39 +305,39 @@ export function GraficoPonteCure(): JSX.Element {
 
           <div className="flex flex-wrap gap-4 justify-center text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-0.5" style={{ backgroundColor: COLORS.nivel }} />
-              <span className="text-gray-300">Nível (m)</span>
+              <div className="w-6 h-0.5 bg-[hsl(var(--chart-2))]" />
+              <span className="text-muted-foreground">Nível (m)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-transparent" style={{ border: `2px solid ${COLORS.chuva}` }} />
-              <span className="text-gray-300">Chuva (mm)</span>
+              <div className="w-3 h-3 rounded bg-transparent border-2 border-[hsl(var(--chart-3))]" />
+              <span className="text-muted-foreground">Chuva (mm)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded" style={{ backgroundColor: COLORS.cristalino }} />
-              <span className="text-gray-300">Cristalino</span>
+              <div className="w-3 h-3 rounded bg-[hsl(var(--chart-3))]" />
+              <span className="text-muted-foreground">Cristalino</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded" style={{ backgroundColor: COLORS.turvo }} />
-              <span className="text-gray-300">Turvo</span>
+              <div className="w-3 h-3 rounded bg-[hsl(var(--chart-4))]" />
+              <span className="text-muted-foreground">Turvo</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded" style={{ backgroundColor: COLORS.muitoTurvo }} />
-              <span className="text-gray-300">Muito Turvo</span>
+              <div className="w-3 h-3 rounded bg-[hsl(var(--chart-1))]" />
+              <span className="text-muted-foreground">Muito Turvo</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="bg-gray-900/50 border-gray-700 backdrop-blur-sm w-64">
+      <Card className="bg-card border-border w-64">
         <CardHeader className="pb-3">
-          <CardTitle className="text-white text-lg">Visibilidade da Água</CardTitle>
+          <CardTitle className="text-foreground text-lg">Visibilidade da Água</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="flex items-center gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
             <div className="w-6 h-6 rounded-full bg-blue-500 border-2 border-white"></div>
             <div className="flex-1">
               <div className="text-blue-400 text-sm font-medium">💎 Cristalino</div>
-              <div className="text-gray-400 text-xs">Ótima visibilidade</div>
+              <div className="text-muted-foreground text-xs">Ótima visibilidade</div>
             </div>
           </div>
 
@@ -347,7 +345,7 @@ export function GraficoPonteCure(): JSX.Element {
             <div className="w-6 h-6 rounded-full bg-orange-500 border-2 border-white"></div>
             <div className="flex-1">
               <div className="text-orange-400 text-sm font-medium">🌊 Turvo</div>
-              <div className="text-gray-400 text-xs">Visibilidade reduzida</div>
+              <div className="text-muted-foreground text-xs">Visibilidade reduzida</div>
             </div>
           </div>
 
@@ -355,13 +353,13 @@ export function GraficoPonteCure(): JSX.Element {
             <div className="w-6 h-6 rounded-full bg-red-500 border-2 border-white"></div>
             <div className="flex-1">
               <div className="text-red-400 text-sm font-medium">🟤 Muito Turvo</div>
-              <div className="text-gray-400 text-xs">Baixa visibilidade</div>
+              <div className="text-muted-foreground text-xs">Baixa visibilidade</div>
             </div>
           </div>
 
-          <div className="mt-4 pt-3 border-t border-gray-700">
-            <div className="text-gray-400 text-xs space-y-2">
-              <div className="font-medium text-white">📊 Como interpretar:</div>
+          <div className="mt-4 pt-3 border-t border-border">
+            <div className="text-muted-foreground text-xs space-y-2">
+              <div className="font-medium text-foreground">📊 Como interpretar:</div>
               <div>• Pontos coloridos na linha verde mostram a visibilidade de cada dia</div>
               <div>• Barras azuis mostram a quantidade de chuva</div>
               <div>• Linha verde mostra o nível da água</div>

@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { RouteIcon as Road, BracketsIcon as Bridge, Layers, MapPin } from "lucide-react"
 
-type DataType = "estrada" | "ponteCure" | "dequePedras" | "acoes"
+type DataType = "estrada" | "ponteCure" | "dequePedras" | "acoes" | "dynamic"
 
 interface TypeSelectorProps {
   selectedType: DataType | null
@@ -43,6 +43,14 @@ const dataTypes = [
     icon: MapPin,
     color: "bg-orange-500",
     requirements: ["Arquivo GPX", "Classificação de waypoints", "Fotos (opcional)"],
+  },
+  {
+    id: "dynamic" as DataType,
+    title: "Camadas Dinâmicas",
+    description: "Inserção em camadas configuráveis do sistema (ex: Nascentes, Refúgios)",
+    icon: Layers,
+    color: "bg-purple-500",
+    requirements: ["Seleção da Camada", "Geometria (Ponto)", "Propriedades Específicas"],
   },
 ]
 

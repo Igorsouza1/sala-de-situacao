@@ -9,6 +9,7 @@ import { EstradaForm } from "./forms/EstradaForm"
 import { PonteCureForm } from "./forms/PonteCureForm"
 import { DequePedrasForm } from "./forms/DequePedrasForm"
 import { AcoesForm } from "./forms/AcoesForm"
+import { DynamicLayerForm } from "./forms/DynamicLayerForm"
 import { useDataInsert } from "./hooks/useDataInsert"
 import { useToast } from "@/hooks/use-toast"
 
@@ -72,6 +73,7 @@ export function DataInsertDialog({ isOpen, onClose }: DataInsertDialogProps) {
         ponteCure: "/api/ponte-cure",
         dequePedras: "/api/deque-pedras",
         acoes: "/api/acoes",
+        dynamic: `/api/layers/${previewData.layerSlug}/data` // Dynamic Endpoint
       }[selectedType];
   
       let response: Response;
@@ -152,6 +154,8 @@ export function DataInsertDialog({ isOpen, onClose }: DataInsertDialogProps) {
             return <DequePedrasForm onValidate={setIsValidated} onPreview={setPreviewData} />
           case "acoes":
             return <AcoesForm onValidate={setIsValidated} onPreview={setPreviewData} />
+          case "dynamic":
+            return <DynamicLayerForm onValidate={setIsValidated} onPreview={setPreviewData} />
           default:
             return null
         }
