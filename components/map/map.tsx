@@ -21,6 +21,7 @@ import { useUserRole } from "@/hooks/useUserRole"
 import { LayerManager, LayerManagerOption } from "./LayerManager"
 import { Button } from "@/components/ui/button"
 import { LayerResponseDTO } from "@/types/map-dto"
+import { ShapefileUploader } from "./ShapefileUploader"
 
 
 // Imports Dinâmicos
@@ -46,6 +47,7 @@ import { getLayerStyle, getPointToLayer, getLayerLegendInfo } from "./helpers/ma
 
 export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: MapProps) {
   const [isMounted, setIsMounted] = useState(false)
+  const [previewGeoJSON, setPreviewGeoJSON] = useState<{data: any, color: string} | null>(null)
   
   const [dynamicLayers, setDynamicLayers] = useState<LayerResponseDTO[]>([])
   const [visibleDynamicLayers, setVisibleDynamicLayers] = useState<string[]>([])
@@ -342,6 +344,25 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
         <MeasureControl />
         <CoordinateInspector />
         <SnapshotControl activeLayers={visibleDynamicLayers} />
+
+        {previewGeoJSON && (
+          <GeoJSON
+            key={`preview-${Date.now()}`}
+            data={previewGeoJSON.data}
+            style={{
+              color: previewGeoJSON.color,
+              weight: 2,
+              fillColor: previewGeoJSON.color,
+              fillOpacity: 0.2
+            }}
+          />
+        )}
+
+        <ShapefileUploader
+          onPreview={(data, color) => setPreviewGeoJSON({ data, color })}
+          onClearPreview={() => setPreviewGeoJSON(null)}
+          onSaveSuccess={() => fetchLayers()}
+        />
 
         {processedLayers.map((layerItem) => (
           <GeoJSON
