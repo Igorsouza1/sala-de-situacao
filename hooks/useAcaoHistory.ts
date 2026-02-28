@@ -3,7 +3,6 @@
 
 import { useState, useEffect, useCallback } from 'react';
 // Não precisamos mais dos tipos do schema aqui, o Service já tratou
-// import type { acoesInMonitoramento, fotosAcoesInMonitoramento } from '@/db/schema';
 
 // --- Definição dos Tipos (O que esperamos da API) ---
 type AcaoUpdate = {
