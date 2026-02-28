@@ -81,7 +81,7 @@ class FirmsRepository {
     return await db
       .select()
       .from(rawFirmsInMonitoramento)
-      .where(eq(rawFirmsInMonitoramento.alerta_enviado, false));
+      .where(eq(rawFirmsInMonitoramento.alertaEnviado, false));
   }
 
   async markFirmsAsNotified(ids: string[]) {
@@ -89,7 +89,7 @@ class FirmsRepository {
 
     return await db
       .update(rawFirmsInMonitoramento)
-      .set({ alerta_enviado: true })
+      .set({ alertaEnviado: true })
       .where(sql`${rawFirmsInMonitoramento.id} IN ${ids}`);
   }
 
