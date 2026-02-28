@@ -10,7 +10,6 @@ ALTER TABLE "monitoramento"."acoes" ADD COLUMN "eixo_tematico" varchar(100);--> 
 ALTER TABLE "monitoramento"."acoes" ADD COLUMN "tipo_tecnico" varchar(100);--> statement-breakpoint
 ALTER TABLE "monitoramento"."acoes" ADD COLUMN "carater" varchar(50);--> statement-breakpoint
 ALTER TABLE "monitoramento"."layer_catalog" ADD COLUMN "ordering" integer NOT NULL;--> statement-breakpoint
-ALTER TABLE "monitoramento"."layer_catalog" ADD COLUMN "color_hex" text;--> statement-breakpoint
 ALTER TABLE "monitoramento"."layer_catalog" ADD COLUMN "regiao_id" integer;--> statement-breakpoint
 ALTER TABLE "monitoramento"."raw_firms" ADD COLUMN "alerta_enviado" boolean DEFAULT false NOT NULL;--> statement-breakpoint
 ALTER TABLE "monitoramento"."raw_firms" ADD COLUMN "cod_imovel" varchar(100);--> statement-breakpoint

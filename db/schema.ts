@@ -224,7 +224,6 @@ export const layerCatalogInMonitoramento = monitoramento.table("layer_catalog", 
 	schemaConfig: jsonb("schema_config"),
 	visualConfig: jsonb("visual_config"),
 	ordering: integer("ordering").notNull(),
-	colorHex: text("color_hex"),
 	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id),
 });
 
