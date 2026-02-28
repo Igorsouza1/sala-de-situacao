@@ -1,5 +1,5 @@
 import { db, sql } from "@/db"
-import { NewTrilhaData, trilhasInRioDaPrata, waypointsInRioDaPrata, NewWaypointData } from "@/db/schema";
+import { NewTrilhaData, trilhasInMonitoramento, waypointsInMonitoramento, NewWaypointData } from "@/db/schema";
 
 
 
@@ -25,7 +25,7 @@ export async function findAllExpedicoesData() {
 
 export async function insertTrilhaData(data: NewTrilhaData) {
   const [newRecord] = await db
-    .insert(trilhasInRioDaPrata)
+    .insert(trilhasInMonitoramento)
     .values({
       nome: data.nome,
       dataInicio: data.dataInicio,
@@ -33,7 +33,7 @@ export async function insertTrilhaData(data: NewTrilhaData) {
       duracaoMinutos: data.duracaoMinutos,
       geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4674)`,
     })
-    .returning({ id: trilhasInRioDaPrata.id });
+    .returning({ id: trilhasInMonitoramento.id });
 
   return newRecord;
 }
@@ -41,7 +41,7 @@ export async function insertTrilhaData(data: NewTrilhaData) {
 
 export async function insertWaypointDataInWaypointsTable(data: NewWaypointData) {
   const [newRecord] = await db
-    .insert(waypointsInRioDaPrata)
+    .insert(waypointsInMonitoramento)
     .values({
       trilhaId: data.trilhaId,
       nome: data.nome,
@@ -49,7 +49,7 @@ export async function insertWaypointDataInWaypointsTable(data: NewWaypointData) 
       recordedat: data.recordedat,
       geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4674)`,
     })
-    .returning({ id: waypointsInRioDaPrata.id });
+    .returning({ id: waypointsInMonitoramento.id });
   return newRecord;
 }
 

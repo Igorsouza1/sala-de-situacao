@@ -1,37 +1,37 @@
 import { db } from "@/db"
-import { ponteDoCureInRioDaPrata } from "@/db/schema"
+import { ponteDoCureInMonitoramento } from "@/db/schema"
 import { gte, lte } from "drizzle-orm"
 
-export type NewPonteData = typeof ponteDoCureInRioDaPrata.$inferInsert;
+export type NewPonteData = typeof ponteDoCureInMonitoramento.$inferInsert;
 
 
-export async function findAllPonteData(){
-    const result = await db
-      .select({
-        mes: ponteDoCureInRioDaPrata.mes,
-        data: ponteDoCureInRioDaPrata.data,
-        chuva: ponteDoCureInRioDaPrata.chuva,
-        nivel: ponteDoCureInRioDaPrata.nivel,
-        visibilidade: ponteDoCureInRioDaPrata.visibilidade,
-      })
-      .from(ponteDoCureInRioDaPrata)
-      .execute()
+export async function findAllPonteData() {
+  const result = await db
+    .select({
+      mes: ponteDoCureInMonitoramento.mes,
+      data: ponteDoCureInMonitoramento.data,
+      chuva: ponteDoCureInMonitoramento.chuva,
+      nivel: ponteDoCureInMonitoramento.nivel,
+      visibilidade: ponteDoCureInMonitoramento.visibilidade,
+    })
+    .from(ponteDoCureInMonitoramento)
+    .execute()
 
-      return result
+  return result
 }
 
 
-export async function findPonteDataByDateRange(startDate: string, endDate: string){
+export async function findPonteDataByDateRange(startDate: string, endDate: string) {
   let query = db
     .select()
-    .from(ponteDoCureInRioDaPrata).$dynamic()
+    .from(ponteDoCureInMonitoramento).$dynamic()
 
-  if(startDate){
-      query = query.where(gte(ponteDoCureInRioDaPrata.data, startDate))
+  if (startDate) {
+    query = query.where(gte(ponteDoCureInMonitoramento.data, startDate))
   }
 
-  if(endDate){
-      query = query.where(lte(ponteDoCureInRioDaPrata.data, endDate))
+  if (endDate) {
+    query = query.where(lte(ponteDoCureInMonitoramento.data, endDate))
   }
 
   const result = await query.execute()
@@ -41,11 +41,11 @@ export async function findPonteDataByDateRange(startDate: string, endDate: strin
 
 
 
-export async function insertPonteData(data: NewPonteData){
+export async function insertPonteData(data: NewPonteData) {
   const [newRecord] = await db
-  .insert(ponteDoCureInRioDaPrata)
-  .values(data)
-  .returning();
+    .insert(ponteDoCureInMonitoramento)
+    .values(data)
+    .returning();
 
-return newRecord;
+  return newRecord;
 }

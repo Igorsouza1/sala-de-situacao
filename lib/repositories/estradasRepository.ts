@@ -1,5 +1,5 @@
 import { db, sql } from "@/db"
-import { estradasInRioDaPrata, type NewEstradaData } from "@/db/schema";
+import { estradasInMonitoramento, type NewEstradaData } from "@/db/schema";
 
 
 
@@ -16,14 +16,14 @@ export async function findAllEstradasDataWithGeometry() {
 
 export async function insertEstradaData(data: NewEstradaData) {
   const [newRecord] = await db
-    .insert(estradasInRioDaPrata)
+    .insert(estradasInMonitoramento)
     .values({
       nome: data.nome,
       tipo: data.tipo,
       codigo: data.codigo,
       geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4674)`,
     })
-    .returning({ id: estradasInRioDaPrata.id });
+    .returning({ id: estradasInMonitoramento.id });
 
   return newRecord;
 }

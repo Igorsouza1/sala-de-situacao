@@ -1,5 +1,5 @@
 import { db } from "@/db"
-import { desmatamentoInRioDaPrata } from "@/db/schema"
+import { desmatamentoInMonitoramento } from "@/db/schema"
 
 
 import { sql } from "drizzle-orm"
@@ -30,14 +30,14 @@ export async function findAllDesmatamentoDataWithGeometry(startDate?: Date, endD
 export async function findAllDesmatamentoData() {
   const result = await db.select(
     {
-      alertid: desmatamentoInRioDaPrata.alertid,
-      alertha: desmatamentoInRioDaPrata.alertha,
-      detectat: desmatamentoInRioDaPrata.detectat,
-      detectyear: desmatamentoInRioDaPrata.detectyear,
-      state: desmatamentoInRioDaPrata.state,
-      stateha: desmatamentoInRioDaPrata.stateha,
+      alertid: desmatamentoInMonitoramento.alertid,
+      alertha: desmatamentoInMonitoramento.alertha,
+      detectat: desmatamentoInMonitoramento.detectat,
+      detectyear: desmatamentoInMonitoramento.detectyear,
+      state: desmatamentoInMonitoramento.state,
+      stateha: desmatamentoInMonitoramento.stateha,
     }
-  ).from(desmatamentoInRioDaPrata).execute()
+  ).from(desmatamentoInMonitoramento).execute()
 
   return result
 }

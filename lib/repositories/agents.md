@@ -18,12 +18,12 @@ alwaysApply: true
 ## Snippet
 ```ts
 import { db } from "@/db";
-import { dequeDePedrasInRioDaPrata } from "@/db/schema";
+import { dequeDePedrasInMonitoramento } from "@/db/schema";
 
 export async function createDequeInDb(input: {
   data: Date; turbidez: number; secchiVertical: number; secchiHorizontal: number; chuva: number;
 }) {
-  return await db.insert(dequeDePedrasInRioDaPrata).values(input).execute();
+  return await db.insert(dequeDePedrasInMonitoramento).values(input).execute();
 }
 
 

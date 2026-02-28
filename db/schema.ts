@@ -213,8 +213,6 @@ export const propriedadesInMonitoramento = monitoramento.table("propriedades", {
 });
 
 
-// TYPES
-
 type BaseAcoesData = InferInsertModel<typeof acoesInMonitoramento>;
 
 export type NewAcoesData = Omit<BaseAcoesData, 'geom'> & {
