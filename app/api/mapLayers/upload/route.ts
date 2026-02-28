@@ -53,7 +53,7 @@ export async function POST(req: Request) {
                 return {
                     layerId: newLayer.id,
                     properties: props,
-                    dataRegistro: new Date().toISOString(),
+                    dataRegistro: new Date(),
                     // Transform to SRID 4674, make valid, and simplify
                     geom: sql`ST_Simplify(ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(${geomJson}), 4674)), 0.0001)`
                 };

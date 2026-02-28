@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -30,6 +30,39 @@ export function ShapefileUploader({ onPreview, onClearPreview, onSaveSuccess }: 
   const [error, setError] = useState<string | null>(null)
 
   const { toast } = useToast()
+
+  const [position, setPosition] = useState({ x: -60, y: -250 })
+  const [isDragging, setIsDragging] = useState(false)
+  const dragRef = useRef({ startX: 0, startY: 0, initX: 0, initY: 0 })
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    const target = e.target as HTMLElement
+    if (target.closest('button') || target.tagName === 'INPUT') return
+
+    setIsDragging(true)
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initX: position.x,
+      initY: position.y
+    }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isDragging) return
+    setPosition({
+      x: dragRef.current.initX + (e.clientX - dragRef.current.startX),
+      y: dragRef.current.initY + (e.clientY - dragRef.current.startY)
+    })
+  }
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (isDragging) {
+      setIsDragging(false)
+      e.currentTarget.releasePointerCapture(e.pointerId)
+    }
+  }
 
   // Fetch regioes for the dropdown
   useEffect(() => {
@@ -175,10 +208,11 @@ export function ShapefileUploader({ onPreview, onClearPreview, onSaveSuccess }: 
       setParsedGeoJson(null)
       setError(null)
       onClearPreview()
+      setPosition({ x: -60, y: -250 })
   }
 
   return (
-    <div className="absolute top-32 right-4 z-[400]">
+    <div className="absolute top-[420px] right-4 z-[400]">
        {!isOpen ? (
         <Button
             variant="outline"
@@ -190,8 +224,15 @@ export function ShapefileUploader({ onPreview, onClearPreview, onSaveSuccess }: 
             <Upload className="h-4 w-4" />
         </Button>
        ) : (
-        <Card className="w-80 shadow-2xl bg-white/95 backdrop-blur-sm border-slate-200">
-            <CardHeader className="pb-3 border-b border-slate-100 relative">
+        <div style={{ transform: `translate(${position.x}px, ${position.y}px)`, position: 'absolute', right: 0, top: 0 }}>
+        <Card className="w-80 shadow-2xl bg-white/95 backdrop-blur-sm border-slate-200" style={{ touchAction: 'none' }}>
+            <CardHeader 
+                className={`pb-3 border-b border-slate-100 relative ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+            >
                 <Button
                     variant="ghost"
                     size="icon"
@@ -298,6 +339,7 @@ export function ShapefileUploader({ onPreview, onClearPreview, onSaveSuccess }: 
 
             </CardContent>
         </Card>
+        </div>
        )}
     </div>
   )
