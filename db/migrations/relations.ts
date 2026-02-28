@@ -1,7 +1,7 @@
 import { relations } from "drizzle-orm/relations";
-import { regioesInMonitoramento, acoesInMonitoramento, trilhasInMonitoramento, fotosAcoesInMonitoramento, waypointsInMonitoramento, rawFirmsInMonitoramento, layerCatalogInMonitoramento, layerDataInMonitoramento, desmatamentoInMonitoramento, estradasInMonitoramento, propriedadesInMonitoramento } from "../schema";
+import { regioesInMonitoramento, acoesInMonitoramento, trilhasInMonitoramento, fotosAcoesInMonitoramento, waypointsInMonitoramento, rawFirmsInMonitoramento, layerCatalogInMonitoramento, layerDataInMonitoramento, desmatamentoInMonitoramento, estradasInMonitoramento, propriedadesInMonitoramento } from "./schema";
 
-export const acoesInMonitoramentoRelations = relations(acoesInMonitoramento, ({ one, many }) => ({
+export const acoesInMonitoramentoRelations = relations(acoesInMonitoramento, ({one, many}) => ({
 	regioesInMonitoramento: one(regioesInMonitoramento, {
 		fields: [acoesInMonitoramento.regiaoId],
 		references: [regioesInMonitoramento.id]
@@ -9,7 +9,7 @@ export const acoesInMonitoramentoRelations = relations(acoesInMonitoramento, ({ 
 	fotosAcoesInMonitoramentos: many(fotosAcoesInMonitoramento),
 }));
 
-export const regioesInMonitoramentoRelations = relations(regioesInMonitoramento, ({ many }) => ({
+export const regioesInMonitoramentoRelations = relations(regioesInMonitoramento, ({many}) => ({
 	acoesInMonitoramentos: many(acoesInMonitoramento),
 	trilhasInMonitoramentos: many(trilhasInMonitoramento),
 	waypointsInMonitoramentos: many(waypointsInMonitoramento),
@@ -19,7 +19,7 @@ export const regioesInMonitoramentoRelations = relations(regioesInMonitoramento,
 	propriedadesInMonitoramentos: many(propriedadesInMonitoramento),
 }));
 
-export const trilhasInMonitoramentoRelations = relations(trilhasInMonitoramento, ({ one, many }) => ({
+export const trilhasInMonitoramentoRelations = relations(trilhasInMonitoramento, ({one, many}) => ({
 	regioesInMonitoramento: one(regioesInMonitoramento, {
 		fields: [trilhasInMonitoramento.regiaoId],
 		references: [regioesInMonitoramento.id]
@@ -27,14 +27,14 @@ export const trilhasInMonitoramentoRelations = relations(trilhasInMonitoramento,
 	waypointsInMonitoramentos: many(waypointsInMonitoramento),
 }));
 
-export const fotosAcoesInMonitoramentoRelations = relations(fotosAcoesInMonitoramento, ({ one }) => ({
+export const fotosAcoesInMonitoramentoRelations = relations(fotosAcoesInMonitoramento, ({one}) => ({
 	acoesInMonitoramento: one(acoesInMonitoramento, {
 		fields: [fotosAcoesInMonitoramento.acaoId],
 		references: [acoesInMonitoramento.id]
 	}),
 }));
 
-export const waypointsInMonitoramentoRelations = relations(waypointsInMonitoramento, ({ one }) => ({
+export const waypointsInMonitoramentoRelations = relations(waypointsInMonitoramento, ({one}) => ({
 	regioesInMonitoramento: one(regioesInMonitoramento, {
 		fields: [waypointsInMonitoramento.regiaoId],
 		references: [regioesInMonitoramento.id]
@@ -45,39 +45,39 @@ export const waypointsInMonitoramentoRelations = relations(waypointsInMonitorame
 	}),
 }));
 
-export const rawFirmsInMonitoramentoRelations = relations(rawFirmsInMonitoramento, ({ one }) => ({
+export const rawFirmsInMonitoramentoRelations = relations(rawFirmsInMonitoramento, ({one}) => ({
 	regioesInMonitoramento: one(regioesInMonitoramento, {
 		fields: [rawFirmsInMonitoramento.regiaoId],
 		references: [regioesInMonitoramento.id]
 	}),
 }));
 
-export const layerDataInMonitoramentoRelations = relations(layerDataInMonitoramento, ({ one }) => ({
+export const layerDataInMonitoramentoRelations = relations(layerDataInMonitoramento, ({one}) => ({
 	layerCatalogInMonitoramento: one(layerCatalogInMonitoramento, {
 		fields: [layerDataInMonitoramento.layerId],
 		references: [layerCatalogInMonitoramento.id]
 	}),
 }));
 
-export const layerCatalogInMonitoramentoRelations = relations(layerCatalogInMonitoramento, ({ many }) => ({
+export const layerCatalogInMonitoramentoRelations = relations(layerCatalogInMonitoramento, ({many}) => ({
 	layerDataInMonitoramentos: many(layerDataInMonitoramento),
 }));
 
-export const desmatamentoInMonitoramentoRelations = relations(desmatamentoInMonitoramento, ({ one }) => ({
+export const desmatamentoInMonitoramentoRelations = relations(desmatamentoInMonitoramento, ({one}) => ({
 	regioesInMonitoramento: one(regioesInMonitoramento, {
 		fields: [desmatamentoInMonitoramento.regiaoId],
 		references: [regioesInMonitoramento.id]
 	}),
 }));
 
-export const estradasInMonitoramentoRelations = relations(estradasInMonitoramento, ({ one }) => ({
+export const estradasInMonitoramentoRelations = relations(estradasInMonitoramento, ({one}) => ({
 	regioesInMonitoramento: one(regioesInMonitoramento, {
 		fields: [estradasInMonitoramento.regiaoId],
 		references: [regioesInMonitoramento.id]
 	}),
 }));
 
-export const propriedadesInMonitoramentoRelations = relations(propriedadesInMonitoramento, ({ one }) => ({
+export const propriedadesInMonitoramentoRelations = relations(propriedadesInMonitoramento, ({one}) => ({
 	regioesInMonitoramento: one(regioesInMonitoramento, {
 		fields: [propriedadesInMonitoramento.regiaoId],
 		references: [regioesInMonitoramento.id]
