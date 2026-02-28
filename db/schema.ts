@@ -1,42 +1,41 @@
-import { pgSchema, serial, geometry, bigint, doublePrecision, integer, varchar, numeric, text, timestamp, date, foreignKey, unique, time, uuid, index, jsonb, uniqueIndex, boolean } from "drizzle-orm/pg-core"
+import { pgSchema, serial, geometry, bigint, doublePrecision, integer, varchar, numeric, text, timestamp, date, foreignKey, unique, time, uuid, index, jsonb, uniqueIndex, boolean, pgTable } from "drizzle-orm/pg-core"
 import { InferInsertModel } from "drizzle-orm"
 
 export const monitoramento = pgSchema("monitoramento");
 
-// Backwards compatibility alias
-export const rioDaPrata = monitoramento;
-
 export const categoriaAcaoInMonitoramento = monitoramento.enum("categoria_acao", ['Fiscalização', 'Recuperação', 'Incidente', 'Monitoramento', 'Infraestrutura'])
 export const statusAcaoInMonitoramento = monitoramento.enum("status_acao", ['Ativo', 'Monitorando', 'Resolvido', 'Crítico'])
+export const statusAcoesInMonitoramento = monitoramento.enum("status_acoes", ['Identificado', 'Em Recuperação', 'Concluído'])
 
-// Aliases for enums
-export const categoriaAcaoInRioDaPrata = categoriaAcaoInMonitoramento;
-export const statusAcaoInRioDaPrata = statusAcaoInMonitoramento;
-
-export const baciaRioDaPrataIdSeqInMonitoramento = monitoramento.sequence("Bacia_RioDaPrata_id_seq", { startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
-export const rioDaPrataLeitoIdSeqInMonitoramento = monitoramento.sequence("Rio da Prata - Leito_id_seq", { startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
-
-export const baciaRioDaPrataIdSeqInRioDaPrata = baciaRioDaPrataIdSeqInMonitoramento;
-export const rioDaPrataLeitoIdSeqInRioDaPrata = rioDaPrataLeitoIdSeqInMonitoramento;
-
-
-// --- CORE TABLES (Type A) ---
+export const organizationsInMonitoramento = monitoramento.table("organizations", {
+	id: uuid("id").primaryKey().defaultRandom(),
+	name: varchar("name", { length: 255 }).notNull(),
+	maxRegions: integer("max_regions").default(1),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+});
 
 export const regioesInMonitoramento = monitoramento.table("regioes", {
 	id: serial().primaryKey().notNull(),
 	nome: varchar({ length: 255 }).notNull(),
-	slug: text("slug").unique(), // Added
-	metadata: jsonb("metadata"), // Added
 	descricao: text(),
-	geom: geometry({ type: "multipolygon", srid: 4674 }), // Updated SRID
+	geom: geometry({ type: "multipolygon", srid: 4674 }),
 	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	cor: text(),
+	slug: text(),
+	metadata: jsonb(),
 }, (table) => [
 	index("idx_regioes_geom").using("gist", table.geom.asc().nullsLast().op("gist_geometry_ops_2d")),
+	unique("regioes_slug_unique").on(table.slug),
 ]);
-export const regioesInRioDaPrata = regioesInMonitoramento;
 
+export const userAccessInMonitoramento = monitoramento.table("user_access", {
+	id: serial("id").primaryKey().notNull(),
+	userId: uuid("user_id").notNull(),
+	organizationId: uuid("organization_id").references(() => organizationsInMonitoramento.id).notNull(),
+	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id),
+	role: varchar("role", { length: 50 }).default('viewer').notNull(),
+});
 
 export const acoesInMonitoramento = monitoramento.table("acoes", {
 	id: serial().primaryKey().notNull(),
@@ -49,47 +48,73 @@ export const acoesInMonitoramento = monitoramento.table("acoes", {
 	mes: varchar({ length: 50 }),
 	atuacao: varchar({ length: 100 }),
 	acao: varchar({ length: 100 }),
-	geom: geometry({ type: "pointz", srid: 4674 }), // Updated SRID
-	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id), // Added FK
+	geom: geometry({ type: "pointz", srid: 4674 }),
+	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id),
 	categoria: categoriaAcaoInMonitoramento(),
 	tipo: text(),
-	status: statusAcaoInMonitoramento(),
+	status: statusAcoesInMonitoramento(),
 	eixoTematico: varchar("eixo_tematico", { length: 100 }),
 	tipoTecnico: varchar("tipo_tecnico", { length: 100 }),
 	carater: varchar("carater", { length: 50 }),
-}, (table) => [
-	// Foreign key to regioes is handled by .references() above, but we can explicitly define it if needed for naming overlap control
-	// Keeping existing separate FK definition style for consistency if preferred, otherwise inline is standard.
-	// The previous schema had:
-	/*
-	foreignKey({
-		columns: [table.regiaoId],
-		foreignColumns: [regioesInRioDaPrata.id],
-		name: "acoes_regiao_id_fkey"
-	}).onUpdate("cascade"),
-	*/
-]);
-export const acoesInRioDaPrata = acoesInMonitoramento;
-
+});
 
 export const trilhasInMonitoramento = monitoramento.table("trilhas", {
 	id: serial().primaryKey().notNull(),
 	nome: text().notNull(),
-	geom: geometry({ type: "multilinestringz", srid: 4674 }).notNull(), // Updated SRID
-	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id), // Added FK
+	geom: geometry({ type: "multilinestringz", srid: 4674 }).notNull(),
+	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id),
 	dataInicio: timestamp("data_inicio", { mode: 'string' }),
 	dataFim: timestamp("data_fim", { mode: 'string' }),
 	duracaoMinutos: integer("duracao_minutos"),
 });
-export const trilhasInRioDaPrata = trilhasInMonitoramento;
 
+export const dequeDePedrasInMonitoramento = monitoramento.table("deque_de_pedras", {
+	id: serial().primaryKey().notNull(),
+	local: varchar({ length: 255 }),
+	mes: varchar({ length: 50 }),
+	data: date(),
+	turbidez: numeric({ precision: 5, scale: 2 }),
+	secchiVertical: numeric("secchi_vertical", { precision: 5, scale: 2 }),
+	secchiHorizontal: numeric("secchi_horizontal", { precision: 5, scale: 2 }),
+	chuva: numeric({ precision: 5, scale: 2 }),
+});
+
+export const fotosAcoesInMonitoramento = monitoramento.table("fotos_acoes", {
+	id: serial().primaryKey().notNull(),
+	acaoId: integer("acao_id").references(() => acoesInMonitoramento.id).notNull(),
+	url: varchar({ length: 1000 }).notNull(),
+	descricao: varchar({ length: 255 }),
+	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
+	atualizacao: date(),
+});
+
+export const destinatariosAlertasInMonitoramento = monitoramento.table("destinatarios_alertas", {
+	id: serial().primaryKey().notNull(),
+	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id).notNull(),
+	email: varchar({ length: 255 }).notNull(),
+	nome: varchar({ length: 255 }),
+	ativo: boolean().default(true).notNull(),
+	preferencias: jsonb().default({ "fogo": true, "nivel_rio": true, "relatorio_semanal": true }),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+});
+
+export const ponteDoCureInMonitoramento = monitoramento.table("ponte_do_cure", {
+	id: serial().primaryKey().notNull(),
+	local: varchar({ length: 255 }),
+	mes: varchar({ length: 50 }),
+	data: date(),
+	chuva: numeric({ precision: 5, scale: 2 }),
+	nivel: numeric({ precision: 5, scale: 2 }),
+	visibilidade: varchar({ length: 50 }),
+});
 
 export const waypointsInMonitoramento = monitoramento.table("waypoints", {
 	id: serial().primaryKey().notNull(),
 	trilhaId: integer("trilha_id").notNull(),
 	nome: text(),
-	geom: geometry({ type: "pointz", srid: 4674 }).notNull(), // Updated SRID
-	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id), // Added FK
+	geom: geometry({ type: "pointz", srid: 4674 }).notNull(),
+	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id),
 	ele: doublePrecision(),
 	recordedat: timestamp({ mode: 'string' }),
 }, (table) => [
@@ -99,56 +124,30 @@ export const waypointsInMonitoramento = monitoramento.table("waypoints", {
 		name: "waypoints_trilha_id_trilhas_id_fk"
 	}).onDelete("cascade"),
 ]);
-export const waypointsInRioDaPrata = waypointsInMonitoramento;
 
-
-export const estradasInMonitoramento = monitoramento.table("estradas", {
+export const layerCatalogInMonitoramento = monitoramento.table("layer_catalog", {
 	id: serial().primaryKey().notNull(),
-	nome: varchar({ length: 255 }),
-	tipo: varchar({ length: 100 }),
-	codigo: varchar({ length: 50 }),
-	geom: geometry({ type: "multilinestringz", srid: 4674 }), // Updated SRID
-	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id), // Added FK
+	name: text().notNull(),
+	slug: text().notNull().unique(),
+	schemaConfig: jsonb("schema_config"),
+	visualConfig: jsonb("visual_config"),
+	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id),
+	ordering: integer().default(0),
 });
-export const estradasInRioDaPrata = estradasInMonitoramento;
 
-
-export const desmatamentoInMonitoramento = monitoramento.table("desmatamento", {
+export const layerDataInMonitoramento = monitoramento.table("layer_data", {
 	id: serial().primaryKey().notNull(),
-	alertid: text(),
-	alertcode: text(),
-	alertha: doublePrecision(),
-	source: text(),
-	detectat: text(),
-	detectyear: integer(),
-	state: text(),
-	stateha: doublePrecision(),
-	geom: geometry({ type: "geometry", srid: 4674 }), // Updated SRID
-	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id), // Added FK
-});
-export const desmatamentoInRioDaPrata = desmatamentoInMonitoramento;
-
-
-export const propriedadesInMonitoramento = monitoramento.table("propriedades", {
-	id: serial().primaryKey().notNull(),
-	codTema: varchar("cod_tema", { length: 50 }),
-	nomTema: varchar("nom_tema", { length: 100 }),
-	codImovel: varchar("cod_imovel", { length: 100 }),
-	modFiscal: doublePrecision("mod_fiscal"),
-	numArea: doublePrecision("num_area"),
-	indStatus: varchar("ind_status", { length: 20 }),
-	indTipo: varchar("ind_tipo", { length: 20 }),
-	desCondic: text("des_condic"),
-	municipio: varchar({ length: 100 }),
-	geom: geometry({ type: "multipolygon", srid: 4674 }), // Updated SRID
-	nome: text(),
-	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id), // Added FK
-	properties: jsonb("properties"), // Added JSONB
-});
-export const propriedadesInRioDaPrata = propriedadesInMonitoramento;
-
+	layerId: integer("layer_id").references(() => layerCatalogInMonitoramento.id),
+	geom: geometry({ type: "geometry", srid: 4674 }),
+	properties: jsonb(),
+	dataRegistro: timestamp("data_registro", { mode: 'string' }),
+}, (table) => [
+	index("idx_layer_data_data_registro").using("btree", table.dataRegistro.asc().nullsLast().op("timestamp_ops")),
+	index("idx_layer_data_geom").using("gist", table.geom.asc().nullsLast().op("gist_geometry_ops_2d")),
+]);
 
 export const rawFirmsInMonitoramento = monitoramento.table("raw_firms", {
+	id: uuid().defaultRandom().primaryKey().notNull(),
 	latitude: doublePrecision(),
 	longitude: doublePrecision(),
 	brightTi4: doublePrecision("bright_ti4"),
@@ -165,91 +164,53 @@ export const rawFirmsInMonitoramento = monitoramento.table("raw_firms", {
 	daynight: text(),
 	type: text(),
 	horaDeteccao: time("hora_deteccao"),
-	alerta_enviado: boolean("alerta_enviado").default(false).notNull(),
-	codImovel: varchar("cod_imovel", { length: 100 }), // CAR Code from enrichment
 	geom: geometry({ type: "point", srid: 4674 }),
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	regiaoId: integer("regiao_id"),
+	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id),
+	alertaEnviado: boolean("alerta_enviado").default(false),
+	codImovel: text("cod_imovel"),
 }, (table) => [
 	uniqueIndex("idx_firms_point_unique").using("btree", table.latitude.asc().nullsLast().op("date_ops"), table.longitude.asc().nullsLast().op("float8_ops"), table.acqDate.asc().nullsLast().op("date_ops"), table.acqTime.asc().nullsLast().op("text_ops")),
-	foreignKey({
-		columns: [table.regiaoId],
-		foreignColumns: [regioesInMonitoramento.id],
-		name: "raw_firms_regiao_id_regioes_id_fk"
-	}),
-	unique("raw_firms_id_key").on(table.id),
-]);
-export const rawFirmsInRioDaPrata = rawFirmsInMonitoramento;
-
-
-export const fotosAcoesInMonitoramento = monitoramento.table("fotos_acoes", {
-	id: serial().primaryKey().notNull(),
-	acaoId: integer("acao_id").notNull(),
-	url: varchar({ length: 1000 }).notNull(),
-	descricao: varchar({ length: 255 }),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-	atualizacao: date(),
-}, (table) => [
-	foreignKey({
-		columns: [table.acaoId],
-		foreignColumns: [acoesInMonitoramento.id],
-		name: "fotos_acoes_acao_id_acoes_id_fk"
-	}),
 ]);
 
-
-export const leitoRioDaPrataInMonitoramento = monitoramento.table("Leito_Rio_Da_Prata", {
+export const desmatamentoInMonitoramento = monitoramento.table("desmatamento", {
 	id: serial().primaryKey().notNull(),
-	geom: geometry({ type: "multilinestringz", srid: 4674 }), // Updated SRID
-	name: varchar({ length: 254 }),
-	descriptio: varchar({ length: 254 }),
-	timestamp: varchar({ length: 24 }),
-	begin: varchar({ length: 24 }),
-	end: varchar({ length: 24 }),
-	altitudemo: varchar({ length: 254 }),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	tessellate: bigint({ mode: "number" }),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	extrude: bigint({ mode: "number" }),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	visibility: bigint({ mode: "number" }),
-	// You can use { mode: "bigint" } if numbers are exceeding js number limitations
-	draworder: bigint({ mode: "number" }),
-	icon: varchar({ length: 254 }),
-	descript1: varchar("descript_1", { length: 254 }),
-	altitude1: varchar("altitude_1", { length: 254 }),
-	gmLayer: varchar("gm_layer", { length: 254 }),
-	gmType: varchar("gm_type", { length: 254 }),
-	layer: varchar({ length: 254 }),
-	compriment: numeric(),
-	metros: doublePrecision(),
+	alertid: text(),
+	alertcode: text(),
+	alertha: doublePrecision(),
+	source: text(),
+	detectat: text(),
+	detectyear: integer(),
+	state: text(),
+	stateha: doublePrecision(),
+	geom: geometry({ type: "geometry", srid: 4674 }),
+	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id),
 });
-export const leitoRioDaPrataInRioDaPrata = leitoRioDaPrataInMonitoramento;
 
-
-export const dequeDePedrasInMonitoramento = monitoramento.table("deque_de_pedras", {
+export const estradasInMonitoramento = monitoramento.table("estradas", {
 	id: serial().primaryKey().notNull(),
-	local: varchar({ length: 255 }),
-	mes: varchar({ length: 50 }),
-	data: date(),
-	turbidez: numeric({ precision: 5, scale: 2 }),
-	secchiVertical: numeric("secchi_vertical", { precision: 5, scale: 2 }),
-	secchiHorizontal: numeric("secchi_horizontal", { precision: 5, scale: 2 }),
-	chuva: numeric({ precision: 5, scale: 2 }),
+	nome: varchar({ length: 255 }),
+	tipo: varchar({ length: 100 }),
+	codigo: varchar({ length: 50 }),
+	geom: geometry({ type: "multilinestringz", srid: 4674 }),
+	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id),
 });
-export const dequeDePedrasInRioDaPrata = dequeDePedrasInMonitoramento;
 
-
-export const ponteDoCureInMonitoramento = monitoramento.table("ponte_do_cure", {
+export const propriedadesInMonitoramento = monitoramento.table("propriedades", {
 	id: serial().primaryKey().notNull(),
-	local: varchar({ length: 255 }),
-	mes: varchar({ length: 50 }),
-	data: date(),
-	chuva: numeric({ precision: 5, scale: 2 }),
-	nivel: numeric({ precision: 5, scale: 2 }),
-	visibilidade: varchar({ length: 50 }),
+	codTema: varchar("cod_tema", { length: 50 }),
+	nomTema: varchar("nom_tema", { length: 100 }),
+	codImovel: varchar("cod_imovel", { length: 100 }),
+	modFiscal: doublePrecision("mod_fiscal"),
+	numArea: doublePrecision("num_area"),
+	indStatus: varchar("ind_status", { length: 20 }),
+	indTipo: varchar("ind_tipo", { length: 20 }),
+	desCondic: text("des_condic"),
+	municipio: varchar({ length: 100 }),
+	nome: text(),
+	geom: geometry({ type: "multipolygon", srid: 4674 }),
+	regiaoId: integer("regiao_id").references(() => regioesInMonitoramento.id),
+	properties: jsonb(),
 });
-export const ponteDoCureInRioDaPrata = ponteDoCureInMonitoramento;
 
 
 // TYPES
