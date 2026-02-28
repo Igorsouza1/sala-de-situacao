@@ -1,12 +1,12 @@
 {
-  "id": "e493f8be-ce58-4fcc-afe0-3318af792c02",
-  "prevId": "00000000-0000-0000-0000-000000000000",
+  "id": "00000000-0000-0000-0000-000000000000",
+  "prevId": "",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
-    "rio_da_prata.acoes": {
+    "monitoramento.acoes": {
       "name": "acoes",
-      "schema": "rio_da_prata",
+      "schema": "monitoramento",
       "columns": {
         "id": {
           "name": "id",
@@ -70,7 +70,161 @@
         },
         "geom": {
           "name": "geom",
-          "type": "geometry(point)",
+          "type": "geometry(PointZ,4674)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "regiao_id": {
+          "name": "regiao_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "categoria": {
+          "name": "categoria",
+          "type": "categoria_acao",
+          "typeSchema": "monitoramento",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "status": {
+          "name": "status",
+          "type": "status_acoes",
+          "typeSchema": "monitoramento",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "eixo_tematico": {
+          "name": "eixo_tematico",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tipo_tecnico": {
+          "name": "tipo_tecnico",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "carater": {
+          "name": "carater",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "acoes_regiao_id_regioes_id_fk": {
+          "name": "acoes_regiao_id_regioes_id_fk",
+          "tableFrom": "acoes",
+          "tableTo": "regioes",
+          "schemaTo": "monitoramento",
+          "columnsFrom": [
+            "regiao_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "monitoramento.trilhas": {
+      "name": "trilhas",
+      "schema": "monitoramento",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "geom": {
+          "name": "geom",
+          "type": "geometry(MultiLineStringZ,4674)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "data_inicio": {
+          "name": "data_inicio",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "data_fim": {
+          "name": "data_fim",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "duracao_minutos": {
+          "name": "duracao_minutos",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "regiao_id": {
+          "name": "regiao_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "trilhas_regiao_id_regioes_id_fk": {
+          "name": "trilhas_regiao_id_regioes_id_fk",
+          "tableFrom": "trilhas",
+          "tableTo": "regioes",
+          "schemaTo": "monitoramento",
+          "columnsFrom": [
+            "regiao_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "monitoramento.Banhado_Rio_Da_Prata": {
+      "name": "Banhado_Rio_Da_Prata",
+      "schema": "monitoramento",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigint",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "geom": {
+          "name": "geom",
+          "type": "geometry(MultiPolygon,4674)",
           "primaryKey": false,
           "notNull": false
         }
@@ -79,13 +233,13 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {},
+      "policies": {},
       "isRLSEnabled": false
     },
-    "rio_da_prata.Bacia_Rio_Da_Prata": {
-      "name": "Bacia_Rio_Da_Prata",
-      "schema": "rio_da_prata",
+    "monitoramento.Leito_Rio_Da_Prata": {
+      "name": "Leito_Rio_Da_Prata",
+      "schema": "monitoramento",
       "columns": {
         "id": {
           "name": "id",
@@ -95,7 +249,140 @@
         },
         "geom": {
           "name": "geom",
-          "type": "geometry(point)",
+          "type": "geometry(MultiLineString,4674)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(254)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "descriptio": {
+          "name": "descriptio",
+          "type": "varchar(254)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "timestamp": {
+          "name": "timestamp",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "begin": {
+          "name": "begin",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "end": {
+          "name": "end",
+          "type": "varchar(24)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "altitudemo": {
+          "name": "altitudemo",
+          "type": "varchar(254)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tessellate": {
+          "name": "tessellate",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "extrude": {
+          "name": "extrude",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "visibility": {
+          "name": "visibility",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "draworder": {
+          "name": "draworder",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "icon": {
+          "name": "icon",
+          "type": "varchar(254)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "descript_1": {
+          "name": "descript_1",
+          "type": "varchar(254)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "altitude_1": {
+          "name": "altitude_1",
+          "type": "varchar(254)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gm_layer": {
+          "name": "gm_layer",
+          "type": "varchar(254)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "gm_type": {
+          "name": "gm_type",
+          "type": "varchar(254)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "layer": {
+          "name": "layer",
+          "type": "varchar(254)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "compriment": {
+          "name": "compriment",
+          "type": "numeric",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metros": {
+          "name": "metros",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "monitoramento.Bacia_Rio_Da_Prata": {
+      "name": "Bacia_Rio_Da_Prata",
+      "schema": "monitoramento",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "geom": {
+          "name": "geom",
+          "type": "geometry(MultiPolygon,4674)",
           "primaryKey": false,
           "notNull": false
         },
@@ -1868,38 +2155,97 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {},
+      "policies": {},
       "isRLSEnabled": false
     },
-    "rio_da_prata.Banhado_Rio_Da_Prata": {
-      "name": "Banhado_Rio_Da_Prata",
-      "schema": "rio_da_prata",
+    "monitoramento.organizations": {
+      "name": "organizations",
+      "schema": "monitoramento",
       "columns": {
         "id": {
           "name": "id",
-          "type": "bigint",
+          "type": "uuid",
           "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "name": {
+          "name": "name",
+          "type": "varchar(255)",
+          "primaryKey": false,
           "notNull": true
         },
-        "geom": {
-          "name": "geom",
-          "type": "geometry(point)",
+        "max_regions": {
+          "name": "max_regions",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "default": 1
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {},
+      "policies": {},
       "isRLSEnabled": false
     },
-    "rio_da_prata.deque_de_pedras": {
+    "monitoramento.user_access": {
+      "name": "user_access",
+      "schema": "monitoramento",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "organization_id": {
+          "name": "organization_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "regiao_id": {
+          "name": "regiao_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "role": {
+          "name": "role",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'viewer'"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "monitoramento.deque_de_pedras": {
       "name": "deque_de_pedras",
-      "schema": "rio_da_prata",
+      "schema": "monitoramento",
       "columns": {
         "id": {
           "name": "id",
@@ -1954,129 +2300,13 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {},
+      "policies": {},
       "isRLSEnabled": false
     },
-    "rio_da_prata.desmatamento": {
-      "name": "desmatamento",
-      "schema": "rio_da_prata",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "alertid": {
-          "name": "alertid",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "alertcode": {
-          "name": "alertcode",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "alertha": {
-          "name": "alertha",
-          "type": "double precision",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "source": {
-          "name": "source",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "detectat": {
-          "name": "detectat",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "detectyear": {
-          "name": "detectyear",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "state": {
-          "name": "state",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "stateha": {
-          "name": "stateha",
-          "type": "double precision",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "geom": {
-          "name": "geom",
-          "type": "geometry(point)",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "rio_da_prata.estradas": {
-      "name": "estradas",
-      "schema": "rio_da_prata",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "serial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "nome": {
-          "name": "nome",
-          "type": "varchar(255)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "tipo": {
-          "name": "tipo",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "codigo": {
-          "name": "codigo",
-          "type": "varchar(50)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "geom": {
-          "name": "geom",
-          "type": "geometry(point)",
-          "primaryKey": false,
-          "notNull": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
-    "rio_da_prata.fotos_acoes": {
+    "monitoramento.fotos_acoes": {
       "name": "fotos_acoes",
-      "schema": "rio_da_prata",
+      "schema": "monitoramento",
       "columns": {
         "id": {
           "name": "id",
@@ -2108,6 +2338,12 @@
           "primaryKey": false,
           "notNull": false,
           "default": "now()"
+        },
+        "atualizacao": {
+          "name": "atualizacao",
+          "type": "date",
+          "primaryKey": false,
+          "notNull": false
         }
       },
       "indexes": {},
@@ -2116,7 +2352,7 @@
           "name": "fotos_acoes_acao_id_acoes_id_fk",
           "tableFrom": "fotos_acoes",
           "tableTo": "acoes",
-          "schemaTo": "rio_da_prata",
+          "schemaTo": "monitoramento",
           "columnsFrom": [
             "acao_id"
           ],
@@ -2129,13 +2365,13 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {},
+      "policies": {},
       "isRLSEnabled": false
     },
-    "rio_da_prata.Leito_Rio_Da_Prata": {
-      "name": "Leito_Rio_Da_Prata",
-      "schema": "rio_da_prata",
+    "monitoramento.destinatarios_alertas": {
+      "name": "destinatarios_alertas",
+      "schema": "monitoramento",
       "columns": {
         "id": {
           "name": "id",
@@ -2143,132 +2379,64 @@
           "primaryKey": true,
           "notNull": true
         },
-        "geom": {
-          "name": "geom",
-          "type": "geometry(point)",
+        "regiao_id": {
+          "name": "regiao_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "email": {
+          "name": "email",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "varchar(255)",
           "primaryKey": false,
           "notNull": false
         },
-        "name": {
-          "name": "name",
-          "type": "varchar(254)",
+        "ativo": {
+          "name": "ativo",
+          "type": "boolean",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": true
         },
-        "descriptio": {
-          "name": "descriptio",
-          "type": "varchar(254)",
+        "preferencias": {
+          "name": "preferencias",
+          "type": "jsonb",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "default": "'{\"fogo\":true,\"nivel_rio\":true,\"relatorio_semanal\":true}'::jsonb"
         },
-        "timestamp": {
-          "name": "timestamp",
-          "type": "varchar(24)",
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": "now()"
         },
-        "begin": {
-          "name": "begin",
-          "type": "varchar(24)",
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
           "primaryKey": false,
-          "notNull": false
-        },
-        "end": {
-          "name": "end",
-          "type": "varchar(24)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "altitudemo": {
-          "name": "altitudemo",
-          "type": "varchar(254)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "tessellate": {
-          "name": "tessellate",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "extrude": {
-          "name": "extrude",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "visibility": {
-          "name": "visibility",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "draworder": {
-          "name": "draworder",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "icon": {
-          "name": "icon",
-          "type": "varchar(254)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "descript_1": {
-          "name": "descript_1",
-          "type": "varchar(254)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "altitude_1": {
-          "name": "altitude_1",
-          "type": "varchar(254)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "gm_layer": {
-          "name": "gm_layer",
-          "type": "varchar(254)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "gm_type": {
-          "name": "gm_type",
-          "type": "varchar(254)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "layer": {
-          "name": "layer",
-          "type": "varchar(254)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "compriment": {
-          "name": "compriment",
-          "type": "numeric",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "metros": {
-          "name": "metros",
-          "type": "double precision",
-          "primaryKey": false,
-          "notNull": false
+          "notNull": true,
+          "default": "now()"
         }
       },
       "indexes": {},
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {},
+      "policies": {},
       "isRLSEnabled": false
     },
-    "rio_da_prata.ponte_do_cure": {
+    "monitoramento.ponte_do_cure": {
       "name": "ponte_do_cure",
-      "schema": "rio_da_prata",
+      "schema": "monitoramento",
       "columns": {
         "id": {
           "name": "id",
@@ -2317,13 +2485,13 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {},
+      "policies": {},
       "isRLSEnabled": false
     },
-    "rio_da_prata.propriedades": {
-      "name": "propriedades",
-      "schema": "rio_da_prata",
+    "monitoramento.regioes": {
+      "name": "regioes",
+      "schema": "monitoramento",
       "columns": {
         "id": {
           "name": "id",
@@ -2331,78 +2499,241 @@
           "primaryKey": true,
           "notNull": true
         },
-        "cod_tema": {
-          "name": "cod_tema",
-          "type": "varchar(50)",
+        "nome": {
+          "name": "nome",
+          "type": "varchar(255)",
           "primaryKey": false,
-          "notNull": false
+          "notNull": true
         },
-        "nom_tema": {
-          "name": "nom_tema",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "cod_imovel": {
-          "name": "cod_imovel",
-          "type": "varchar(100)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "mod_fiscal": {
-          "name": "mod_fiscal",
-          "type": "double precision",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "num_area": {
-          "name": "num_area",
-          "type": "double precision",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "ind_status": {
-          "name": "ind_status",
-          "type": "varchar(20)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "ind_tipo": {
-          "name": "ind_tipo",
-          "type": "varchar(20)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "des_condic": {
-          "name": "des_condic",
+        "descricao": {
+          "name": "descricao",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "municipio": {
-          "name": "municipio",
-          "type": "varchar(100)",
           "primaryKey": false,
           "notNull": false
         },
         "geom": {
           "name": "geom",
-          "type": "geometry(point)",
+          "type": "geometry(MultiPolygon,4674)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "cor": {
+          "name": "cor",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "idx_regioes_geom": {
+          "name": "idx_regioes_geom",
+          "columns": [
+            {
+              "expression": "geom",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "gist_geometry_ops_2d",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gist",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "regioes_slug_unique": {
+          "columns": [
+            "slug"
+          ],
+          "nullsNotDistinct": false,
+          "name": "regioes_slug_unique"
+        }
+      },
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "monitoramento.waypoints": {
+      "name": "waypoints",
+      "schema": "monitoramento",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "trilha_id": {
+          "name": "trilha_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "geom": {
+          "name": "geom",
+          "type": "geometry(PointZ,4674)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ele": {
+          "name": "ele",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "recordedat": {
+          "name": "recordedat",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "regiao_id": {
+          "name": "regiao_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         }
       },
       "indexes": {},
-      "foreignKeys": {},
+      "foreignKeys": {
+        "waypoints_regiao_id_regioes_id_fk": {
+          "name": "waypoints_regiao_id_regioes_id_fk",
+          "tableFrom": "waypoints",
+          "tableTo": "regioes",
+          "schemaTo": "monitoramento",
+          "columnsFrom": [
+            "regiao_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        },
+        "waypoints_trilha_id_trilhas_id_fk": {
+          "name": "waypoints_trilha_id_trilhas_id_fk",
+          "tableFrom": "waypoints",
+          "tableTo": "trilhas",
+          "schemaTo": "monitoramento",
+          "columnsFrom": [
+            "trilha_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {},
+      "policies": {},
       "isRLSEnabled": false
     },
-    "rio_da_prata.raw_firms": {
+    "monitoramento.layer_catalog": {
+      "name": "layer_catalog",
+      "schema": "monitoramento",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "schema_config": {
+          "name": "schema_config",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "visual_config": {
+          "name": "visual_config",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "regiao_id": {
+          "name": "regiao_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ordering": {
+          "name": "ordering",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "layer_catalog_slug_unique": {
+          "columns": [
+            "slug"
+          ],
+          "nullsNotDistinct": false,
+          "name": "layer_catalog_slug_unique"
+        }
+      },
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "monitoramento.raw_firms": {
       "name": "raw_firms",
-      "schema": "rio_da_prata",
+      "schema": "monitoramento",
       "columns": {
         "latitude": {
           "name": "latitude",
@@ -2502,7 +2833,7 @@
         },
         "geom": {
           "name": "geom",
-          "type": "geometry(point)",
+          "type": "geometry(Point,4674)",
           "primaryKey": false,
           "notNull": false
         },
@@ -2512,27 +2843,99 @@
           "primaryKey": true,
           "notNull": true,
           "default": "gen_random_uuid()"
+        },
+        "regiao_id": {
+          "name": "regiao_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "alerta_enviado": {
+          "name": "alerta_enviado",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": false,
+          "default": false
+        },
+        "cod_imovel": {
+          "name": "cod_imovel",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
+      "indexes": {
+        "idx_firms_point_unique": {
+          "name": "idx_firms_point_unique",
+          "columns": [
+            {
+              "expression": "latitude",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "date_ops",
+              "isExpression": false
+            },
+            {
+              "expression": "longitude",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "float8_ops",
+              "isExpression": false
+            },
+            {
+              "expression": "acq_date",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "date_ops",
+              "isExpression": false
+            },
+            {
+              "expression": "acq_time",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "text_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "raw_firms_regiao_id_regioes_id_fk": {
+          "name": "raw_firms_regiao_id_regioes_id_fk",
+          "tableFrom": "raw_firms",
+          "tableTo": "regioes",
+          "schemaTo": "monitoramento",
+          "columnsFrom": [
+            "regiao_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "raw_firms_id_key": {
-          "name": "raw_firms_id_key",
-          "nullsNotDistinct": false,
           "columns": [
             "id"
-          ]
+          ],
+          "nullsNotDistinct": false,
+          "name": "raw_firms_id_key"
         }
       },
-      "policies": {},
       "checkConstraints": {},
+      "policies": {},
       "isRLSEnabled": false
     },
-    "rio_da_prata.trilhas": {
-      "name": "trilhas",
-      "schema": "rio_da_prata",
+    "monitoramento.layer_data": {
+      "name": "layer_data",
+      "schema": "monitoramento",
       "columns": {
         "id": {
           "name": "id",
@@ -2540,48 +2943,90 @@
           "primaryKey": true,
           "notNull": true
         },
-        "nome": {
-          "name": "nome",
-          "type": "text",
+        "layer_id": {
+          "name": "layer_id",
+          "type": "integer",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
         "geom": {
           "name": "geom",
-          "type": "geometry(point)",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "data_inicio": {
-          "name": "data_inicio",
-          "type": "timestamp",
+          "type": "geometry(Geometry,4674)",
           "primaryKey": false,
           "notNull": false
         },
-        "data_fim": {
-          "name": "data_fim",
-          "type": "timestamp",
+        "properties": {
+          "name": "properties",
+          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
-        "duracao_minutos": {
-          "name": "duracao_minutos",
-          "type": "integer",
+        "data_registro": {
+          "name": "data_registro",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         }
       },
-      "indexes": {},
-      "foreignKeys": {},
+      "indexes": {
+        "idx_layer_data_data_registro": {
+          "name": "idx_layer_data_data_registro",
+          "columns": [
+            {
+              "expression": "data_registro",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "timestamp_ops",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "idx_layer_data_geom": {
+          "name": "idx_layer_data_geom",
+          "columns": [
+            {
+              "expression": "geom",
+              "asc": true,
+              "nulls": "last",
+              "opclass": "gist_geometry_ops_2d",
+              "isExpression": false
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gist",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "layer_data_layer_id_layer_catalog_id_fk": {
+          "name": "layer_data_layer_id_layer_catalog_id_fk",
+          "tableFrom": "layer_data",
+          "tableTo": "layer_catalog",
+          "schemaTo": "monitoramento",
+          "columnsFrom": [
+            "layer_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {},
+      "policies": {},
       "isRLSEnabled": false
     },
-    "rio_da_prata.waypoints": {
-      "name": "waypoints",
-      "schema": "rio_da_prata",
+    "monitoramento.desmatamento": {
+      "name": "desmatamento",
+      "schema": "monitoramento",
       "columns": {
         "id": {
           "name": "id",
@@ -2589,93 +3034,353 @@
           "primaryKey": true,
           "notNull": true
         },
-        "trilha_id": {
-          "name": "trilha_id",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "nome": {
-          "name": "nome",
+        "alertid": {
+          "name": "alertid",
           "type": "text",
           "primaryKey": false,
           "notNull": false
         },
-        "geom": {
-          "name": "geom",
-          "type": "geometry(point)",
+        "alertcode": {
+          "name": "alertcode",
+          "type": "text",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "ele": {
-          "name": "ele",
+        "alertha": {
+          "name": "alertha",
           "type": "double precision",
           "primaryKey": false,
           "notNull": false
         },
-        "recordedat": {
-          "name": "recordedat",
-          "type": "timestamp",
+        "source": {
+          "name": "source",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "detectat": {
+          "name": "detectat",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "detectyear": {
+          "name": "detectyear",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "state": {
+          "name": "state",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "stateha": {
+          "name": "stateha",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "geom": {
+          "name": "geom",
+          "type": "geometry(Geometry,4674)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "regiao_id": {
+          "name": "regiao_id",
+          "type": "integer",
           "primaryKey": false,
           "notNull": false
         }
       },
       "indexes": {},
       "foreignKeys": {
-        "waypoints_trilha_id_trilhas_id_fk": {
-          "name": "waypoints_trilha_id_trilhas_id_fk",
-          "tableFrom": "waypoints",
-          "tableTo": "trilhas",
-          "schemaTo": "rio_da_prata",
+        "desmatamento_regiao_id_regioes_id_fk": {
+          "name": "desmatamento_regiao_id_regioes_id_fk",
+          "tableFrom": "desmatamento",
+          "tableTo": "regioes",
+          "schemaTo": "monitoramento",
           "columnsFrom": [
-            "trilha_id"
+            "regiao_id"
           ],
           "columnsTo": [
             "id"
           ],
-          "onDelete": "cascade",
+          "onDelete": "no action",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "policies": {},
       "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "monitoramento.estradas": {
+      "name": "estradas",
+      "schema": "monitoramento",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "nome": {
+          "name": "nome",
+          "type": "varchar(255)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "tipo": {
+          "name": "tipo",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "codigo": {
+          "name": "codigo",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "geom": {
+          "name": "geom",
+          "type": "geometry(MultiLineStringZ,4674)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "regiao_id": {
+          "name": "regiao_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "estradas_regiao_id_regioes_id_fk": {
+          "name": "estradas_regiao_id_regioes_id_fk",
+          "tableFrom": "estradas",
+          "tableTo": "regioes",
+          "schemaTo": "monitoramento",
+          "columnsFrom": [
+            "regiao_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
+      "isRLSEnabled": false
+    },
+    "monitoramento.propriedades": {
+      "name": "propriedades",
+      "schema": "monitoramento",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "cod_tema": {
+          "name": "cod_tema",
+          "type": "varchar(50)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nom_tema": {
+          "name": "nom_tema",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "cod_imovel": {
+          "name": "cod_imovel",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "mod_fiscal": {
+          "name": "mod_fiscal",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "num_area": {
+          "name": "num_area",
+          "type": "double precision",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ind_status": {
+          "name": "ind_status",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "ind_tipo": {
+          "name": "ind_tipo",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "des_condic": {
+          "name": "des_condic",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "municipio": {
+          "name": "municipio",
+          "type": "varchar(100)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "geom": {
+          "name": "geom",
+          "type": "geometry(MultiPolygon,4674)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "nome": {
+          "name": "nome",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "regiao_id": {
+          "name": "regiao_id",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "properties": {
+          "name": "properties",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "propriedades_regiao_id_regioes_id_fk": {
+          "name": "propriedades_regiao_id_regioes_id_fk",
+          "tableFrom": "propriedades",
+          "tableTo": "regioes",
+          "schemaTo": "monitoramento",
+          "columnsFrom": [
+            "regiao_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {},
+      "policies": {},
       "isRLSEnabled": false
     }
   },
-  "enums": {},
+  "enums": {
+    "monitoramento.categoria_acao": {
+      "name": "categoria_acao",
+      "values": [
+        "Fiscalização",
+        "Recuperação",
+        "Incidente",
+        "Monitoramento",
+        "Infraestrutura"
+      ],
+      "schema": "monitoramento"
+    },
+    "monitoramento.status_acao": {
+      "name": "status_acao",
+      "values": [
+        "Ativo",
+        "Monitorando",
+        "Resolvido",
+        "Crítico"
+      ],
+      "schema": "monitoramento"
+    },
+    "monitoramento.status_acoes": {
+      "name": "status_acoes",
+      "values": [
+        "Identificado",
+        "Em Recuperação",
+        "Concluído"
+      ],
+      "schema": "monitoramento"
+    }
+  },
   "schemas": {
-    "rio_da_prata": "rio_da_prata"
+    "monitoramento": "monitoramento"
   },
   "sequences": {
-    "rio_da_prata.Bacia_RioDaPrata_id_seq": {
+    "monitoramento.Bacia_RioDaPrata_id_seq": {
       "name": "Bacia_RioDaPrata_id_seq",
-      "schema": "rio_da_prata",
-      "increment": "1",
+      "schema": "monitoramento",
       "startWith": "1",
       "minValue": "1",
       "maxValue": "2147483647",
-      "cache": "1",
-      "cycle": false
+      "increment": "1",
+      "cycle": false,
+      "cache": "1"
     },
-    "rio_da_prata.Rio da Prata - Leito_id_seq": {
+    "monitoramento.Rio da Prata - Leito_id_seq": {
       "name": "Rio da Prata - Leito_id_seq",
-      "schema": "rio_da_prata",
-      "increment": "1",
+      "schema": "monitoramento",
       "startWith": "1",
       "minValue": "1",
       "maxValue": "2147483647",
-      "cache": "1",
-      "cycle": false
+      "increment": "1",
+      "cycle": false,
+      "cache": "1"
+    },
+    "monitoramento.Bacia_Rio_Da_Prata_id_seq": {
+      "name": "Bacia_Rio_Da_Prata_id_seq",
+      "schema": "monitoramento",
+      "startWith": "1",
+      "minValue": "1",
+      "maxValue": "2147483647",
+      "increment": "1",
+      "cycle": false,
+      "cache": "1"
+    },
+    "monitoramento.Leito_Rio_Da_Prata_id_seq": {
+      "name": "Leito_Rio_Da_Prata_id_seq",
+      "schema": "monitoramento",
+      "startWith": "1",
+      "minValue": "1",
+      "maxValue": "2147483647",
+      "increment": "1",
+      "cycle": false,
+      "cache": "1"
     }
   },
   "roles": {},
   "policies": {},
   "views": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
+    "tables": {},
+    "columns": {}
+  },
+  "internal": {
     "tables": {}
   }
 }
