@@ -1,7 +1,7 @@
 // lib/repositories/fogoRepository.ts
 
 import { db } from "@/db"
-import { acoesInRioDaPrata, fotosAcoesInRioDaPrata, NewAcoesData } from "@/db/schema"
+import { acoesInMonitoramento, fotosAcoesInMonitoramento, NewAcoesData } from "@/db/schema"
 import { eq, desc, sql } from "drizzle-orm";
 
 
@@ -31,15 +31,15 @@ export async function findAcaoById(id: number) {
 export async function findAllAcoesData() {
   const result = await db
     .select({
-      id: acoesInRioDaPrata.id,
-      name: acoesInRioDaPrata.name,
-      time: acoesInRioDaPrata.time,
-      descricao: acoesInRioDaPrata.descricao,
-      mes: acoesInRioDaPrata.mes,
-      atuacao: acoesInRioDaPrata.atuacao,
-      acao: acoesInRioDaPrata.acao,
+      id: acoesInMonitoramento.id,
+      name: acoesInMonitoramento.name,
+      time: acoesInMonitoramento.time,
+      descricao: acoesInMonitoramento.descricao,
+      mes: acoesInMonitoramento.mes,
+      atuacao: acoesInMonitoramento.atuacao,
+      acao: acoesInMonitoramento.acao,
     })
-    .from(acoesInRioDaPrata)
+    .from(acoesInMonitoramento)
     .execute()
 
   return result;
@@ -78,16 +78,16 @@ export async function findAllAcoesDataWithGeometry(startDate?: Date, endDate?: D
 export async function findAllAcoesUpdates(id: number) {
   const result = await db
     .select({
-      id: fotosAcoesInRioDaPrata.id,
-      acaoId: fotosAcoesInRioDaPrata.acaoId,
-      descricao: fotosAcoesInRioDaPrata.descricao,  // <-- O comentário ou legenda
-      url: fotosAcoesInRioDaPrata.url,   // <-- A URL da mídia
-      timestamp: fotosAcoesInRioDaPrata.atualizacao,
-      createdAt: fotosAcoesInRioDaPrata.createdAt,
+      id: fotosAcoesInMonitoramento.id,
+      acaoId: fotosAcoesInMonitoramento.acaoId,
+      descricao: fotosAcoesInMonitoramento.descricao,  // <-- O comentário ou legenda
+      url: fotosAcoesInMonitoramento.url,   // <-- A URL da mídia
+      timestamp: fotosAcoesInMonitoramento.atualizacao,
+      createdAt: fotosAcoesInMonitoramento.createdAt,
     })
-    .from(fotosAcoesInRioDaPrata)
-    .where(eq(fotosAcoesInRioDaPrata.acaoId, id))
-    .orderBy(desc(fotosAcoesInRioDaPrata.createdAt)) // Mais recente primeiro
+    .from(fotosAcoesInMonitoramento)
+    .where(eq(fotosAcoesInMonitoramento.acaoId, id))
+    .orderBy(desc(fotosAcoesInMonitoramento.createdAt)) // Mais recente primeiro
     .execute();
 
   return result;
@@ -96,32 +96,32 @@ export async function findAllAcoesUpdates(id: number) {
 
 export async function deleteAcaoUpdateById(id: number) {
   const result = await db
-    .delete(fotosAcoesInRioDaPrata)
-    .where(eq(fotosAcoesInRioDaPrata.id, id))
+    .delete(fotosAcoesInMonitoramento)
+    .where(eq(fotosAcoesInMonitoramento.id, id))
     .execute()
   return result
 }
 
 export async function deleteAcaoById(id: number) {
   const result = await db
-    .delete(acoesInRioDaPrata)
-    .where(eq(acoesInRioDaPrata.id, id))
+    .delete(acoesInMonitoramento)
+    .where(eq(acoesInMonitoramento.id, id))
     .execute()
   return result
 }
 
 export async function updateAcaoById(id: number, data: any) {
   const result = await db
-    .update(acoesInRioDaPrata)
+    .update(acoesInMonitoramento)
     .set(data)
-    .where(eq(acoesInRioDaPrata.id, id))
+    .where(eq(acoesInMonitoramento.id, id))
     .execute()
   return result
 }
 
 export async function addAcaoImageById(acaoId: number, url: string, descricao: string, atualizacao: Date) {
   const result = await db
-    .insert(fotosAcoesInRioDaPrata)
+    .insert(fotosAcoesInMonitoramento)
     .values({
       acaoId,
       url,
@@ -137,7 +137,7 @@ export async function addAcaoImageById(acaoId: number, url: string, descricao: s
 
 export async function insertAcaoData(data: NewAcoesData) {
   const [newRecord] = await db
-    .insert(acoesInRioDaPrata)
+    .insert(acoesInMonitoramento)
     .values({
       name: data.name,
       latitude: data.latitude,
@@ -151,7 +151,7 @@ export async function insertAcaoData(data: NewAcoesData) {
 
       geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4674)`,
     })
-    .returning({ id: acoesInRioDaPrata.id });
+    .returning({ id: acoesInMonitoramento.id });
   return newRecord
 }
 
