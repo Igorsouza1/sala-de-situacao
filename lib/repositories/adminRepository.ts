@@ -99,6 +99,28 @@ export async function getRegionByIdInDb(id: number) {
   return (result.rows[0] as RegionListItem) ?? null;
 }
 
+export async function getBaseLayersByRegionInDb(regionId: number) {
+  const result = await db.execute(sql`
+    SELECT
+      c.id,
+      c.name,
+      c.slug,
+      c.visual_config as "visualConfig",
+      c.regiao_id as "regiaoId",
+      (
+        SELECT ST_AsGeoJSON(ST_Union(d.geom))
+        FROM monitoramento.layer_data d
+        WHERE d.layer_id = c.id
+      ) as geojson
+    FROM monitoramento.layer_catalog c
+    WHERE c.regiao_id = ${regionId}
+      AND c.visual_config->>'category' = 'Base Territorial'
+    ORDER BY c.ordering DESC, c.id DESC
+  `);
+
+  return result.rows as any[];
+}
+
 export async function createRegionInDb(input: {
   nome: string;
   organizationId: string;
