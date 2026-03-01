@@ -17,6 +17,14 @@ export default async function AdminDashboardPage() {
           <p className="text-neutral-500 dark:text-neutral-400 mt-2">
             Visão geral de todas as Organizações e Regiões cadastradas no sistema.
           </p>
+          <div className="mt-4 flex gap-3">
+            <a href="/admin/organizations" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700">
+              Gerir Organizações
+            </a>
+            <a href="/admin/regions" className="rounded-md border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100">
+              Gerir Regiões
+            </a>
+          </div>
         </header>
 
         {data.length === 0 ? (
