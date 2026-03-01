@@ -59,6 +59,7 @@ export type RegionListItem = {
   organizationName: string | null;
   sizeKm2: number;
   createdAt: string;
+  geojson?: string;
 };
 
 export async function listRegionsInDb() {
@@ -87,7 +88,8 @@ export async function getRegionByIdInDb(id: number) {
       r.metadata->>'organizationId' AS "organizationId",
       o.name AS "organizationName",
       ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
-      r.created_at AS "createdAt"
+      r.created_at AS "createdAt",
+      ST_AsGeoJSON(r.geom) as "geojson"
     FROM monitoramento.regioes r
     LEFT JOIN monitoramento.organizations o
       ON o.id::text = r.metadata->>'organizationId'

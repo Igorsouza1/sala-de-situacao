@@ -1,5 +1,6 @@
 import { getRegionById, listOrganizations } from "@/lib/service/adminService";
 import { RegionSimpleEdit } from "@/components/admin/region-simple-edit";
+import { RegionMapPreview } from "@/components/admin/region-map-preview";
 import { notFound } from "next/navigation";
 
 export default async function RegionEditPage({ params }: { params: Promise<{ id: string }> }) {
@@ -34,6 +35,13 @@ export default async function RegionEditPage({ params }: { params: Promise<{ id:
           }}
           organizations={organizations}
         />
+
+        <div className="pt-8">
+          <RegionMapPreview
+            regionId={region.id}
+            initialGeoJson={region.geojson || null}
+          />
+        </div>
       </div>
     </div>
   );
