@@ -76,7 +76,25 @@ export async function listRegionsInDb() {
     ORDER BY r.created_at DESC
   `);
 
-  return result.rows;
+  return result.rows as RegionListItem[];
+}
+
+export async function getRegionByIdInDb(id: number) {
+  const result = await db.execute(sql<RegionListItem>`
+    SELECT
+      r.id,
+      r.nome,
+      r.metadata->>'organizationId' AS "organizationId",
+      o.name AS "organizationName",
+      ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
+      r.created_at AS "createdAt"
+    FROM monitoramento.regioes r
+    LEFT JOIN monitoramento.organizations o
+      ON o.id::text = r.metadata->>'organizationId'
+    WHERE r.id = ${id}
+  `);
+
+  return (result.rows[0] as RegionListItem) ?? null;
 }
 
 export async function createRegionInDb(input: {
@@ -100,7 +118,7 @@ export async function createRegionInDb(input: {
       created_at AS "createdAt"
   `);
 
-  return result.rows[0] ?? null;
+  return (result.rows[0] as RegionListItem) ?? null;
 }
 
 export async function updateRegionInDb(
@@ -124,7 +142,30 @@ export async function updateRegionInDb(
       created_at AS "createdAt"
   `);
 
-  return result.rows[0] ?? null;
+  return (result.rows[0] as RegionListItem) ?? null;
+}
+
+export async function updateRegionMetadataInDb(
+  id: number,
+  input: { nome: string; organizationId: string }
+) {
+  const result = await db.execute(sql<RegionListItem>`
+    UPDATE monitoramento.regioes
+    SET
+      nome = ${input.nome},
+      metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('organizationId', ${input.organizationId}::text),
+      updated_at = now()
+    WHERE id = ${id}
+    RETURNING
+      id,
+      nome,
+      metadata->>'organizationId' AS "organizationId",
+      null::text AS "organizationName",
+      ROUND(COALESCE(ST_Area(geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
+      created_at AS "createdAt"
+  `);
+
+  return (result.rows[0] as RegionListItem) ?? null;
 }
 
 export async function deleteRegionInDb(id: number) {
@@ -134,5 +175,5 @@ export async function deleteRegionInDb(id: number) {
     RETURNING id
   `);
 
-  return result.rows[0] ?? null;
+  return (result.rows[0] as { id: number }) ?? null;
 }

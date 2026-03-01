@@ -1,12 +1,13 @@
 import {
-  createOrganizationInDb,
-  createRegionInDb,
+  createOrganizationInDb, createRegionInDb,
   deleteOrganizationInDb,
   deleteRegionInDb,
+  getRegionByIdInDb,
   listOrganizationsInDb,
   listRegionsInDb,
   updateOrganizationInDb,
   updateRegionInDb,
+  updateRegionMetadataInDb,
 } from "@/lib/repositories/adminRepository";
 import { OrganizationPayload, RegionPayload } from "@/lib/validations/admin";
 
@@ -30,6 +31,10 @@ export async function listRegions() {
   return listRegionsInDb();
 }
 
+export async function getRegionById(id: number) {
+  return getRegionByIdInDb(id);
+}
+
 export async function createRegion(payload: RegionPayload) {
   return createRegionInDb({
     nome: payload.nome,
@@ -48,4 +53,11 @@ export async function updateRegion(id: number, payload: RegionPayload) {
 
 export async function deleteRegion(id: number) {
   return deleteRegionInDb(id);
+}
+
+export async function updateRegionMetadata(
+  id: number,
+  payload: { nome: string; organizationId: string }
+) {
+  return updateRegionMetadataInDb(id, payload);
 }
