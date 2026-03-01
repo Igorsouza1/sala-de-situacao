@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { RegionGeometryEditor } from "@/components/admin/region-geometry-editor";
+import { RegionGeometryEditor } from "@/components/admin/region-geometry-editor-dynamic";
 
 type Organization = { id: string; name: string };
 type Region = {
