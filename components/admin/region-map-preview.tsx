@@ -43,6 +43,9 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
   const [isSaving, setIsSaving] = useState(false);
 
   // Settings state
+  const [multipleConfig, setMultipleConfig] = useState<{ hasMultiple: boolean; count: number }>({ hasMultiple: false, count: 0 });
+  const [insertMode, setInsertMode] = useState<"single" | "split">("single");
+
   const [expandBoundary, setExpandBoundary] = useState(true);
   const [createBaseLayer, setCreateBaseLayer] = useState(true);
   const [layerName, setLayerName] = useState("");
@@ -85,6 +88,21 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
   const handleGeoJsonUpload = async (newFeature: FeatureCollection | Feature | Geometry) => {
     setIsLoading(true);
     setRawUploadedFeature(newFeature);
+
+    let count = 0;
+    if (newFeature.type === "FeatureCollection" && newFeature.features?.length > 1) {
+      count = newFeature.features.length;
+    } else if (newFeature.type === "MultiPolygon") {
+      count = newFeature.coordinates.length;
+    } else if (newFeature.type === "Feature" && newFeature.geometry?.type === "MultiPolygon") {
+      count = newFeature.geometry.coordinates.length;
+    }
+    
+    setMultipleConfig({
+      hasMultiple: count > 1,
+      count: count
+    });
+    setInsertMode("single");
 
     try {
       const response = await fetch("/api/admin/regions/preview-union", {
@@ -138,6 +156,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
         body: JSON.stringify({
           expandBoundary,
           createBaseLayer,
+          insertMode,
           newFeature: rawUploadedFeature,
           layerConfig: createBaseLayer ? {
             name: layerName || `Camada Base ${Math.floor(Math.random() * 1000)}`,
@@ -278,6 +297,28 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
             <h3 className="font-semibold text-lg border-b pb-4 dark:border-neutral-800">Finalizar Alterações</h3>
 
             <div className="space-y-4">
+              {multipleConfig.hasMultiple && (
+                <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-xl space-y-3 mb-6">
+                   <Label className="text-sm font-semibold flex items-center gap-2 text-blue-800 dark:text-blue-200">
+                     <Layers className="w-4 h-4" />
+                     Múltiplos Elementos Detectados ({multipleConfig.count})
+                   </Label>
+                   <p className="text-xs text-blue-700 dark:text-blue-300">
+                     Este arquivo contém múltiplas geometrias. Como deseja salvá-las?
+                   </p>
+                   <div className="flex flex-col gap-2 mt-2">
+                      <label className="flex items-center gap-2 text-sm cursor-pointer text-neutral-700 dark:text-neutral-300">
+                         <input type="radio" name="insertMode" value="single" checked={insertMode === "single"} onChange={() => setInsertMode("single")} className="text-blue-600 focus:ring-blue-500 w-4 h-4" />
+                         Unir e salvar como uma única camada
+                      </label>
+                      <label className="flex items-center gap-2 text-sm cursor-pointer text-neutral-700 dark:text-neutral-300">
+                         <input type="radio" name="insertMode" value="split" checked={insertMode === "split"} onChange={() => setInsertMode("split")} className="text-blue-600 focus:ring-blue-500 w-4 h-4" />
+                         Dividir e salvar como {multipleConfig.count} camadas separadas
+                      </label>
+                   </div>
+                </div>
+              )}
+
               <div className="flex items-start space-x-3">
                 <Checkbox
                   id="expand-boundary"

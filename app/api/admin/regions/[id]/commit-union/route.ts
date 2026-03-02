@@ -9,6 +9,7 @@ import slugify from "slugify";
 const commitPayloadSchema = z.object({
   expandBoundary: z.boolean(),
   createBaseLayer: z.boolean(),
+  insertMode: z.enum(["single", "split"]).optional().default("single"),
   newFeature: z.any(),
   layerConfig: z.object({
     name: z.string().min(1),
@@ -30,7 +31,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const parsed = commitPayloadSchema.safeParse(json);
     if (!parsed.success) return apiError("Payload inválido.", 400);
 
-    const { expandBoundary, createBaseLayer, newFeature, layerConfig } = parsed.data;
+    const { expandBoundary, createBaseLayer, insertMode, newFeature, layerConfig } = parsed.data;
 
     // Extract geometry for DB functions
     let geometryToUse = newFeature;
@@ -53,7 +54,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     await db.transaction(async (tx) => {
       // 1. Expand boundary (Update region geometry)
       if (expandBoundary) {
-         await tx.execute(sql`
+        await tx.execute(sql`
             UPDATE monitoramento.regioes
             SET geom = ST_Multi(ST_Simplify(
               ST_Union(
@@ -69,50 +70,79 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
       // 2. Create Base Layer
       if (createBaseLayer && layerConfig) {
-         const slugBase = slugify(layerConfig.name, { lower: true, strict: true });
-         let uniqueSlug = slugBase;
+        let itemsToInsert = [newFeature];
 
-         // simple unique slug attempt
-         const existingSlug = await tx.execute(sql`SELECT slug FROM monitoramento.layer_catalog WHERE slug LIKE ${slugBase + '%'}`);
-         if (existingSlug.rowCount > 0) {
-           uniqueSlug = `${slugBase}-${Date.now().toString().slice(-4)}`;
-         }
+        if (insertMode === "split") {
+          if (newFeature.type === "FeatureCollection" && newFeature.features?.length > 1) {
+            itemsToInsert = newFeature.features;
+          } else if (newFeature.type === "MultiPolygon") {
+            itemsToInsert = newFeature.coordinates.map((coords: any) => ({
+              type: "Polygon",
+              coordinates: coords
+            }));
+          } else if (newFeature.type === "Feature" && newFeature.geometry?.type === "MultiPolygon") {
+            itemsToInsert = newFeature.geometry.coordinates.map((coords: any) => ({
+              type: "Feature",
+              geometry: { type: "Polygon", coordinates: coords },
+              properties: newFeature.properties
+            }));
+          }
+        }
 
-         const visualConfig = {
-           category: "Base Territorial",
-           defaultVisibility: true,
-           baseStyle: {
-             type: "polygon",
-             color: layerConfig.color,
-             fillOpacity: layerConfig.fillOpacity,
-             weight: layerConfig.weight
-           }
-         };
+        for (let i = 0; i < itemsToInsert.length; i++) {
+          const item = itemsToInsert[i];
+          const itemName = itemsToInsert.length > 1 ? `${layerConfig.name} - Parte ${i + 1}` : layerConfig.name;
 
-         // Insert into catalog
-         const catalogResult = await tx.insert(layerCatalogInMonitoramento)
-           .values({
-             name: layerConfig.name,
-             slug: uniqueSlug,
-             regiaoId: regionId,
-             visualConfig: visualConfig,
-             schemaConfig: { source: "upload" },
-             ordering: 0
-           })
-           .returning({ id: layerCatalogInMonitoramento.id });
+          const slugBase = slugify(itemName, { lower: true, strict: true });
+          let uniqueSlug = slugBase;
 
-         const newLayerId = catalogResult[0].id;
+          const existingSlug = await tx.execute(sql`SELECT slug FROM monitoramento.layer_catalog WHERE slug LIKE ${slugBase + '%'}`);
+          if (existingSlug && existingSlug.rowCount && existingSlug.rowCount > 0) {
+            uniqueSlug = `${slugBase}-${Date.now().toString().slice(-4)}-${i}`;
+          }
 
-         // Insert the data into layer_data table
-         await tx.execute(sql`
-           INSERT INTO monitoramento.layer_data (layer_id, geom, properties, data_registro)
-           VALUES (
-             ${newLayerId},
-             ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4674),
-             ${JSON.stringify(newFeature.properties || {})},
-             now()
-           )
-         `);
+          const visualConfig = {
+            category: "Base Territorial",
+            defaultVisibility: true,
+            baseStyle: {
+              type: "polygon",
+              color: layerConfig.color,
+              fillOpacity: layerConfig.fillOpacity,
+              weight: layerConfig.weight
+            }
+          };
+
+          // Extract geometry for this specific chunk
+          let chunkGeometry = item;
+          if (item.type === "Feature") chunkGeometry = item.geometry;
+          if (!chunkGeometry || !chunkGeometry.type) continue;
+          const chunkGeoJsonString = JSON.stringify(chunkGeometry);
+
+          // Insert into catalog
+          const catalogResult = await tx.insert(layerCatalogInMonitoramento)
+            .values({
+              name: itemName,
+              slug: uniqueSlug,
+              regiaoId: regionId,
+              visualConfig: visualConfig,
+              schemaConfig: { source: "upload" },
+              ordering: 0
+            })
+            .returning({ id: layerCatalogInMonitoramento.id });
+
+          const newLayerId = catalogResult[0].id;
+
+          // Insert the data into layer_data table
+          await tx.execute(sql`
+             INSERT INTO monitoramento.layer_data (layer_id, geom, properties, data_registro)
+             VALUES (
+               ${newLayerId},
+               ST_SetSRID(ST_GeomFromGeoJSON(${chunkGeoJsonString}), 4674),
+               ${JSON.stringify(item.properties || {})},
+               now()
+             )
+           `);
+        }
       }
     });
 
