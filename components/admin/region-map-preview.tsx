@@ -201,9 +201,9 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Map Column */}
-        <div className={`col-span-1 ${isPreviewing ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
+        <div className={`col-span-1 ${isPreviewing ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
           <div className="h-[500px] w-full rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-sm relative z-0">
 
             {isLoading && (
@@ -274,7 +274,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
 
         {/* Options Column */}
         {isPreviewing && (
-          <div className="col-span-1 space-y-6 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm">
+          <div className="col-span-1 lg:col-span-4 space-y-6 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm">
             <h3 className="font-semibold text-lg border-b pb-4 dark:border-neutral-800">Finalizar Alterações</h3>
 
             <div className="space-y-4">
