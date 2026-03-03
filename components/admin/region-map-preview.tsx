@@ -33,9 +33,6 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
   const [isSaving, setIsSaving] = useState(false);
 
   // Settings state
-  const [expandBoundary, setExpandBoundary] = useState(false); // Make union optional by default so users don't accidentally check it without reading
-  const [createBaseLayer, setCreateBaseLayer] = useState(true);
-  const [isForUnion, setIsForUnion] = useState(false); // Controls preview intensity/type before upload
   const [layerName, setLayerName] = useState("");
   const [layerColor, setLayerColor] = useState("#000000");
   const [layerOpacity, setLayerOpacity] = useState([20]); // 0 to 100
@@ -80,49 +77,26 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
     try {
       let previewGeoData: FeatureCollection | null = null;
 
-      // Se for para calcular a União, chamamos o banco.
-      if (isForUnion) {
-        const formData = new FormData();
-        formData.append("regionId", regionId.toString());
-        formData.append("isForUnion", "true");
-        formData.append("file", file);
+      // Lemos o arquivo 100% no cliente e deixamos o MapLibre (geojson-vt)
+      // fatiar ele em vector tiles na GPU, aguentando 100MB+ sem travar.
+      const text = await file.text();
+      const parsed = JSON.parse(text);
 
-        const response = await fetch("/api/admin/regions/preview-union", {
-          method: "POST",
-          body: formData,
-        });
-
-        const data = await response.json();
-
-        if (!data.success) {
-          throw new Error(data.error?.message || "Failed to generate union preview.");
-        }
-
-        previewGeoData = data.data as FeatureCollection;
-
+      if (parsed.type === "FeatureCollection") {
+        previewGeoData = parsed;
+      } else if (parsed.type === "Feature") {
+        previewGeoData = { type: "FeatureCollection", features: [parsed] };
       } else {
-        // Se NÃO for união (apenas visualizar uma camada base),
-        // Lemos o arquivo 100% no cliente e deixamos o MapLibre (geojson-vt)
-        // fatiar ele em vector tiles na GPU, aguentando 100MB+ sem travar.
-        const text = await file.text();
-        const parsed = JSON.parse(text);
-
-        if (parsed.type === "FeatureCollection") {
-          previewGeoData = parsed;
-        } else if (parsed.type === "Feature") {
-          previewGeoData = { type: "FeatureCollection", features: [parsed] };
-        } else {
-          previewGeoData = {
-            type: "FeatureCollection",
-            features: [
-              {
-                type: "Feature",
-                geometry: parsed,
-                properties: {}
-              }
-            ]
-          };
-        }
+        previewGeoData = {
+          type: "FeatureCollection",
+          features: [
+            {
+              type: "Feature",
+              geometry: parsed,
+              properties: {}
+            }
+          ]
+        };
       }
 
       setGeoData(previewGeoData);
@@ -152,20 +126,16 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
 
     try {
       const formData = new FormData();
-      formData.append("expandBoundary", expandBoundary.toString());
-      formData.append("createBaseLayer", createBaseLayer.toString());
       formData.append("file", uploadedFile);
 
-      if (createBaseLayer) {
-        formData.append("layerConfig", JSON.stringify({
-          name: layerName || `Camada Base ${Math.floor(Math.random() * 1000)}`,
-          color: layerColor,
-          fillOpacity: layerOpacity[0] / 100,
-          weight: layerWeight[0]
-        }));
-      }
+      formData.append("layerConfig", JSON.stringify({
+        name: layerName || `Camada Base ${Math.floor(Math.random() * 1000)}`,
+        color: layerColor,
+        fillOpacity: layerOpacity[0] / 100,
+        weight: layerWeight[0]
+      }));
 
-      const response = await fetch(`/api/admin/regions/${regionId}/commit-union`, {
+      const response = await fetch(`/api/admin/regions/${regionId}/commit-layer`, {
         method: "POST",
         body: formData
       });
@@ -173,7 +143,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
       const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.error?.message || "Failed to commit union.");
+        throw new Error(data.error?.message || "Failed to save layer.");
       }
 
       // Success, reset preview state and refresh page to show new initial geometry and layer list
@@ -183,7 +153,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
 
     } catch (error) {
       console.error("Save failed:", error);
-      alert(error instanceof Error ? error.message : "Erro ao salvar alterações");
+      alert(error instanceof Error ? error.message : "Erro ao salvar camada.");
     } finally {
       setIsSaving(false);
     }
@@ -215,10 +185,10 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50">
-            Composição Geográfica
+            Adicionar Camada Base
           </h2>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            Adicione novas áreas para unir e compor esta região.
+            Faça upload de um arquivo para criar uma nova camada territorial.
           </p>
         </div>
 
@@ -234,29 +204,10 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
               <Trash2 className="w-4 h-4" /> Cancelar Preview
             </Button>
           ) : (
-             <div className="flex flex-col gap-2 border p-3 rounded-xl border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="is-for-union"
-                    checked={isForUnion}
-                    onCheckedChange={(c) => setIsForUnion(c === true)}
-                  />
-                  <Label htmlFor="is-for-union" className="text-xs font-medium leading-none cursor-pointer">
-                    Usar este arquivo para Expandir Fronteira?
-                  </Label>
-                </div>
-                <p className="text-[10px] text-neutral-500 max-w-[250px]">
-                  {isForUnion ?
-                    "O mapa tentará calcular o preview da União (mais lento em arquivos gigantes)." :
-                    "Ideal para visualizar Camadas Base pesadas instantaneamente."}
-                </p>
-                <div className="pt-1 border-t dark:border-neutral-800">
-                  <GeoJsonUploader
-                    onUpload={handleGeoJsonUpload}
-                    isUploading={isLoading}
-                  />
-                </div>
-             </div>
+             <GeoJsonUploader
+                onUpload={handleGeoJsonUpload}
+                isUploading={isLoading}
+             />
           )}
         </div>
       </div>
@@ -346,45 +297,13 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
 
         {/* Options Column */}
         {isPreviewing && (
-          <div className="col-span-1 space-y-6 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm">
-            <h3 className="font-semibold text-lg border-b pb-4 dark:border-neutral-800">Finalizar Alterações</h3>
+          <div className="col-span-1 space-y-6 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+            <div>
+              <h3 className="font-semibold text-lg border-b pb-4 dark:border-neutral-800 flex items-center gap-2">
+                <Layers className="w-5 h-5 text-blue-500" /> Configurar Camada
+              </h3>
 
-            <div className="space-y-4">
-              <div className="flex items-start space-x-3">
-                <Checkbox
-                  id="expand-boundary"
-                  checked={expandBoundary}
-                  onCheckedChange={(c) => setExpandBoundary(c === true)}
-                  className="mt-1"
-                />
-                <div className="grid gap-1.5 leading-none">
-                  <Label htmlFor="expand-boundary" className="text-sm font-medium flex items-center gap-2">
-                    <Maximize className="w-4 h-4 text-emerald-500" />
-                    Expandir Fronteira
-                  </Label>
-                  <p className="text-xs text-neutral-500">Unir a nova área com a geometria central da região.</p>
-                </div>
-              </div>
-
-              <div className="flex items-start space-x-3 pt-2">
-                <Checkbox
-                  id="create-layer"
-                  checked={createBaseLayer}
-                  onCheckedChange={(c) => setCreateBaseLayer(c === true)}
-                  className="mt-1"
-                />
-                <div className="grid gap-1.5 leading-none">
-                  <Label htmlFor="create-layer" className="text-sm font-medium flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-blue-500" />
-                    Criar Camada Base
-                  </Label>
-                  <p className="text-xs text-neutral-500">Adicionar a nova área ao catálogo de camadas territoriais.</p>
-                </div>
-              </div>
-            </div>
-
-            {createBaseLayer && (
-              <div className="space-y-5 pt-4 border-t dark:border-neutral-800">
+              <div className="space-y-5 pt-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-semibold">Nome da Nova Camada</Label>
                   <Input
@@ -433,18 +352,18 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
                   />
                 </div>
               </div>
-            )}
+            </div>
 
             <div className="pt-6 mt-6 border-t dark:border-neutral-800">
                <Button
                   onClick={handleSave}
-                  disabled={isSaving || (!expandBoundary && !createBaseLayer)}
+                  disabled={isSaving}
                   className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium"
                 >
                   {isSaving ? (
                     <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Salvando...</>
                   ) : (
-                    <><Save className="w-4 h-4 mr-2" /> Salvar Alterações</>
+                    <><Save className="w-4 h-4 mr-2" /> Salvar Camada</>
                   )}
                </Button>
             </div>

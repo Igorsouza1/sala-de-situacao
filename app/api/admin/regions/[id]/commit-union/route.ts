@@ -1,9 +1,6 @@
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
-import { layerCatalogInMonitoramento, layerDataInMonitoramento } from "@/db/schema";
-import { revalidateTag } from "next/cache";
-import slugify from "slugify";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -15,25 +12,15 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (!formData) return apiError("FormData é obrigatório.", 400);
 
     const expandBoundaryStr = formData.get("expandBoundary");
-    const createBaseLayerStr = formData.get("createBaseLayer");
-    const layerConfigStr = formData.get("layerConfig");
     const file = formData.get("file") as File;
 
-    if (!file) return apiError("Arquivo não fornecido.", 400);
-
-    const expandBoundary = expandBoundaryStr === "true";
-    const createBaseLayer = createBaseLayerStr === "true";
-
-    let layerConfig: any = null;
-    if (createBaseLayer && layerConfigStr) {
-      layerConfig = JSON.parse(layerConfigStr.toString());
+    if (!file || expandBoundaryStr !== "true") {
+      return apiError("Arquivo inválido ou confirmação ausente.", 400);
     }
 
-    // Leitura do arquivo massivo no backend
     const fileContent = await file.text();
     const newFeature = JSON.parse(fileContent);
 
-    // Geometry calculation for the union (Needs a single coherent geometry representation)
     let geometryToUseForUnion = newFeature;
     if (newFeature.type === "FeatureCollection" && newFeature.features?.length > 0) {
       geometryToUseForUnion = {
@@ -141,7 +128,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     return apiSuccess({ message: "Operação concluída com sucesso." });
 
   } catch (error) {
-    console.error("Failed to commit region union / base layer", error);
+    console.error("Failed to commit region union expansion", error);
     return apiError("Falha ao salvar as alterações de território.", 500);
   }
 }
