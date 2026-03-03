@@ -3,10 +3,9 @@
 import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { UploadCloud, X } from "lucide-react";
-import { FeatureCollection, Feature, Geometry } from "geojson";
 
 interface GeoJsonUploaderProps {
-  onUpload: (geojson: FeatureCollection | Feature | Geometry) => void;
+  onUpload: (file: File) => void;
   isUploading?: boolean;
 }
 
@@ -22,31 +21,15 @@ export function GeoJsonUploader({ onUpload, isUploading }: GeoJsonUploaderProps)
 
     if (!file.name.endsWith(".geojson") && !file.name.endsWith(".json")) {
       setError("Por favor, selecione um arquivo .geojson ou .json válido.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
-    try {
-      const text = await file.text();
-      const parsed = JSON.parse(text);
+    // Pass the raw file object directly to avoid client-side JSON parsing of potentially massive files
+    onUpload(file);
 
-      if (!parsed.type) {
-        throw new Error("Arquivo GeoJSON inválido: propriedade 'type' ausente.");
-      }
-
-      // We support FeatureCollection, Feature or plain Geometries
-      const validTypes = ["FeatureCollection", "Feature", "Point", "MultiPoint", "LineString", "MultiLineString", "Polygon", "MultiPolygon", "GeometryCollection"];
-
-      if (!validTypes.includes(parsed.type)) {
-         throw new Error(`Tipo GeoJSON não suportado: ${parsed.type}`);
-      }
-
-      onUpload(parsed);
-    } catch (err: any) {
-      setError(err.message || "Erro ao ler o arquivo. Verifique se é um JSON válido.");
-    } finally {
-      if (fileInputRef.current) {
-        fileInputRef.current.value = ""; // Reset file input
-      }
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
     }
   };
 

@@ -36,18 +36,16 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
   const router = useRouter();
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
   const [originalGeoData, setOriginalGeoData] = useState<FeatureCollection | null>(null);
-  const [rawUploadedFeature, setRawUploadedFeature] = useState<FeatureCollection | Feature | Geometry | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
 
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   // Settings state
-  const [multipleConfig, setMultipleConfig] = useState<{ hasMultiple: boolean; count: number }>({ hasMultiple: false, count: 0 });
-  const [insertMode, setInsertMode] = useState<"single" | "split">("single");
-
   const [expandBoundary, setExpandBoundary] = useState(true);
   const [createBaseLayer, setCreateBaseLayer] = useState(true);
+  const [isForUnion, setIsForUnion] = useState(false); // Controls preview intensity/type before upload
   const [layerName, setLayerName] = useState("");
   const [layerColor, setLayerColor] = useState("#000000");
   const [layerOpacity, setLayerOpacity] = useState([20]); // 0 to 100
@@ -85,35 +83,19 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
     }
   }, [initialGeoJson]);
 
-  const handleGeoJsonUpload = async (newFeature: FeatureCollection | Feature | Geometry) => {
+  const handleGeoJsonUpload = async (file: File) => {
     setIsLoading(true);
-    setRawUploadedFeature(newFeature);
-
-    let count = 0;
-    if (newFeature.type === "FeatureCollection" && newFeature.features?.length > 1) {
-      count = newFeature.features.length;
-    } else if (newFeature.type === "MultiPolygon") {
-      count = newFeature.coordinates.length;
-    } else if (newFeature.type === "Feature" && newFeature.geometry?.type === "MultiPolygon") {
-      count = newFeature.geometry.coordinates.length;
-    }
-    
-    setMultipleConfig({
-      hasMultiple: count > 1,
-      count: count
-    });
-    setInsertMode("single");
+    setUploadedFile(file);
 
     try {
+      const formData = new FormData();
+      formData.append("regionId", regionId.toString());
+      formData.append("isForUnion", isForUnion.toString());
+      formData.append("file", file);
+
       const response = await fetch("/api/admin/regions/preview-union", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          regionId,
-          newFeature
-        })
+        body: formData, // Sending multipart/form-data
       });
 
       const data = await response.json();
@@ -131,7 +113,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
     } catch (error) {
       console.error("Preview failed:", error);
       alert(error instanceof Error ? error.message : "Erro ao gerar preview da união");
-      setRawUploadedFeature(null);
+      setUploadedFile(null);
     } finally {
       setIsLoading(false);
     }
@@ -140,31 +122,31 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
   const handleCancelPreview = () => {
     setGeoData(originalGeoData);
     setIsPreviewing(false);
-    setRawUploadedFeature(null);
+    setUploadedFile(null);
   };
 
   const handleSave = async () => {
-    if (!rawUploadedFeature) return;
+    if (!uploadedFile) return;
     setIsSaving(true);
 
     try {
+      const formData = new FormData();
+      formData.append("expandBoundary", expandBoundary.toString());
+      formData.append("createBaseLayer", createBaseLayer.toString());
+      formData.append("file", uploadedFile);
+
+      if (createBaseLayer) {
+        formData.append("layerConfig", JSON.stringify({
+          name: layerName || `Camada Base ${Math.floor(Math.random() * 1000)}`,
+          color: layerColor,
+          fillOpacity: layerOpacity[0] / 100,
+          weight: layerWeight[0]
+        }));
+      }
+
       const response = await fetch(`/api/admin/regions/${regionId}/commit-union`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          expandBoundary,
-          createBaseLayer,
-          insertMode,
-          newFeature: rawUploadedFeature,
-          layerConfig: createBaseLayer ? {
-            name: layerName || `Camada Base ${Math.floor(Math.random() * 1000)}`,
-            color: layerColor,
-            fillOpacity: layerOpacity[0] / 100,
-            weight: layerWeight[0]
-          } : undefined
-        })
+        body: formData
       });
 
       const data = await response.json();
@@ -175,7 +157,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
 
       // Success, reset preview state and refresh page to show new initial geometry and layer list
       setIsPreviewing(false);
-      setRawUploadedFeature(null);
+      setUploadedFile(null);
       router.refresh();
 
     } catch (error) {
@@ -200,7 +182,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 items-end">
           {isPreviewing ? (
             <Button
               type="button"
@@ -212,17 +194,36 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
               <Trash2 className="w-4 h-4" /> Cancelar Preview
             </Button>
           ) : (
-            <GeoJsonUploader
-              onUpload={handleGeoJsonUpload}
-              isUploading={isLoading}
-            />
+             <div className="flex flex-col gap-2 border p-3 rounded-xl border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-sm">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="is-for-union"
+                    checked={isForUnion}
+                    onCheckedChange={(c) => setIsForUnion(c === true)}
+                  />
+                  <Label htmlFor="is-for-union" className="text-xs font-medium leading-none cursor-pointer">
+                    Usar este arquivo para Expandir Fronteira?
+                  </Label>
+                </div>
+                <p className="text-[10px] text-neutral-500 max-w-[250px]">
+                  {isForUnion ?
+                    "O mapa tentará calcular o preview da União (mais lento em arquivos gigantes)." :
+                    "Ideal para subir apenas Camadas Base pesadas de forma rápida."}
+                </p>
+                <div className="pt-1 border-t dark:border-neutral-800">
+                  <GeoJsonUploader
+                    onUpload={handleGeoJsonUpload}
+                    isUploading={isLoading}
+                  />
+                </div>
+             </div>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         {/* Map Column */}
-        <div className={`col-span-1 ${isPreviewing ? 'lg:col-span-8' : 'lg:col-span-12'}`}>
+        <div className={`col-span-1 ${isPreviewing ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
           <div className="h-[500px] w-full rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-sm relative z-0">
 
             {isLoading && (
@@ -293,32 +294,10 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
 
         {/* Options Column */}
         {isPreviewing && (
-          <div className="col-span-1 lg:col-span-4 space-y-6 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm">
+          <div className="col-span-1 space-y-6 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm">
             <h3 className="font-semibold text-lg border-b pb-4 dark:border-neutral-800">Finalizar Alterações</h3>
 
             <div className="space-y-4">
-              {multipleConfig.hasMultiple && (
-                <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/50 rounded-xl space-y-3 mb-6">
-                   <Label className="text-sm font-semibold flex items-center gap-2 text-blue-800 dark:text-blue-200">
-                     <Layers className="w-4 h-4" />
-                     Múltiplos Elementos Detectados ({multipleConfig.count})
-                   </Label>
-                   <p className="text-xs text-blue-700 dark:text-blue-300">
-                     Este arquivo contém múltiplas geometrias. Como deseja salvá-las?
-                   </p>
-                   <div className="flex flex-col gap-2 mt-2">
-                      <label className="flex items-center gap-2 text-sm cursor-pointer text-neutral-700 dark:text-neutral-300">
-                         <input type="radio" name="insertMode" value="single" checked={insertMode === "single"} onChange={() => setInsertMode("single")} className="text-blue-600 focus:ring-blue-500 w-4 h-4" />
-                         Unir e salvar como uma única camada
-                      </label>
-                      <label className="flex items-center gap-2 text-sm cursor-pointer text-neutral-700 dark:text-neutral-300">
-                         <input type="radio" name="insertMode" value="split" checked={insertMode === "split"} onChange={() => setInsertMode("split")} className="text-blue-600 focus:ring-blue-500 w-4 h-4" />
-                         Dividir e salvar como {multipleConfig.count} camadas separadas
-                      </label>
-                   </div>
-                </div>
-              )}
-
               <div className="flex items-start space-x-3">
                 <Checkbox
                   id="expand-boundary"
