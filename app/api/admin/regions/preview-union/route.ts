@@ -68,15 +68,15 @@ export async function POST(request: Request) {
 
     let amebaPreviewString: string;
 
-    // Faz o Union pesado
+    // Faz o Union da miniatura na mesma proporção do banco oficial 
     const result = await db.execute(sql<{ ameba_preview: string }>`
       SELECT ST_AsGeoJSON(
         ST_Simplify(
           ST_Union(
             (SELECT geom FROM monitoramento.regioes WHERE id = ${regionId}),
-            ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4674)
+            ST_MakeValid(ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4674))
           ),
-          0.005
+          0.0001
         )
       ) as ameba_preview;
     `);

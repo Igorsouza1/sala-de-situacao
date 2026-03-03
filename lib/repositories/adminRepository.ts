@@ -108,7 +108,19 @@ export async function getBaseLayersByRegionInDb(regionId: number) {
       c.visual_config as "visualConfig",
       c.regiao_id as "regiaoId",
       (
-        SELECT ST_AsGeoJSON(ST_Union(d.geom))
+        SELECT jsonb_build_object(
+          'type', 'FeatureCollection',
+          'features', COALESCE(
+            jsonb_agg(
+              jsonb_build_object(
+                'type', 'Feature',
+                'geometry', ST_AsGeoJSON(d.geom)::jsonb,
+                'properties', COALESCE(d.properties, '{}'::jsonb)
+              )
+            ),
+            '[]'::jsonb
+          )
+        )::text
         FROM monitoramento.layer_data d
         WHERE d.layer_id = c.id
       ) as geojson

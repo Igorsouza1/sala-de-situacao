@@ -36,6 +36,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadId, setUploadId] = useState<string | null>(null);
   const [totalChunks, setTotalChunks] = useState<number>(0);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Settings state
   const [expandBoundary, setExpandBoundary] = useState(false); // Make union optional by default so users don't accidentally check it without reading
@@ -126,56 +127,39 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
          return { id: generatedUploadId, count: tChunks };
       };
 
+      const text = await file.text();
+      let parsed: any;
+      try {
+        parsed = JSON.parse(text);
+      } catch (e) {
+        throw new Error("O arquivo está corrompido, e não é um JSON válido. Redownload do site fonte pode resolver o erro Inesperado de Fim de Arquivo.");
+      }
+
+      if (parsed.type === "FeatureCollection") {
+        previewGeoData = parsed;
+      } else if (parsed.type === "Feature") {
+        previewGeoData = { type: "FeatureCollection", features: [parsed] };
+      } else if (parsed.type === "Point" || parsed.type === "Polygon" || parsed.type === "MultiPolygon" || parsed.type === "GeometryCollection") {
+        previewGeoData = {
+           type: "FeatureCollection",
+           features: [{ type: "Feature", geometry: parsed, properties: {} }]
+        };
+      } else {
+        throw new Error("Formato não suportado ou erro de parse no OpenBuilds geojson.");
+      }
+
       if (isForUnion) {
+        // Apenas pré-carregamos o upload para o Save() ser mais fluído, mas pulamos a API de Preview
+        // porque MapLibre lida com 100.000 features facilmente usando a placa de vídeo.
+        // Tentar unificar 100.000 polígonos no PostgreSQL travava o VectorTiles (Earcut triangulation).
         const { id, count } = await uploadInChunks(file);
-        currentUploadId = id;
-        currentTotalChunks = count;
         setUploadId(id);
         setTotalChunks(count);
         setUploadProgress(null);
-
-        const formData = new FormData();
-        formData.append("regionId", regionId.toString());
-        formData.append("isForUnion", "true");
-        formData.append("uploadId", id);
-        formData.append("totalChunks", count.toString());
-
-        const response = await fetch("/api/admin/regions/preview-union", {
-          method: "POST",
-          body: formData,
-        });
-
-        const data = await response.json();
-
-        if (!data.success) {
-          throw new Error(data.error?.message || "Failed to generate union preview.");
-        }
-
-        previewGeoData = data.data as FeatureCollection;
-      } else {
-        const text = await file.text();
-        let parsed: any;
-        try {
-          parsed = JSON.parse(text);
-        } catch (e) {
-          throw new Error("O arquivo está corrompido, e não é um JSON válido. Redownload do site fonte pode resolver o erro Inesperado de Fim de Arquivo.");
-        }
-
-        if (parsed.type === "FeatureCollection") {
-          previewGeoData = parsed;
-        } else if (parsed.type === "Feature") {
-          previewGeoData = { type: "FeatureCollection", features: [parsed] };
-        } else if (parsed.type === "Point" || parsed.type === "Polygon" || parsed.type === "MultiPolygon" || parsed.type === "GeometryCollection") {
-          previewGeoData = {
-             type: "FeatureCollection",
-             features: [{ type: "Feature", geometry: parsed, properties: {} }]
-          };
-        } else {
-          throw new Error("Formato não suportado ou erro de parse no OpenBuilds geojson.");
-        }
       }
 
       setGeoData(previewGeoData);
+      setPreviewUrl(URL.createObjectURL(file));
       setIsPreviewing(true);
 
       // Auto-generate a name for convenience
@@ -196,6 +180,10 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
     setUploadedFile(null);
     setUploadId(null);
     setTotalChunks(0);
+    if (previewUrl) {
+       URL.revokeObjectURL(previewUrl);
+       setPreviewUrl(null);
+    }
   };
 
   const handleSave = async () => {
@@ -256,6 +244,10 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
       setUploadedFile(null);
       setUploadId(null);
       setTotalChunks(0);
+      if (previewUrl) {
+         URL.revokeObjectURL(previewUrl);
+         setPreviewUrl(null);
+      }
       router.refresh();
 
     } catch (error) {
@@ -399,8 +391,8 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
               })}
 
               {/* Main Region Geometry */}
-              {geoData && (
-                <Source id="main-region-source" type="geojson" data={geoData}>
+              {(previewUrl || geoData) && (
+                <Source id="main-region-source" type="geojson" data={previewUrl || geoData || { type: "FeatureCollection", features: [] }}>
                   <Layer
                     id="main-region-fill"
                     type="fill"
