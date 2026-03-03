@@ -2,100 +2,66 @@ import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
 
-export const maxDuration = 60; // Allow more time for large geometry unions
-
 export async function POST(request: Request) {
   try {
-    const formData = await request.formData().catch((e) => {
-      console.error("Erro ao fazer parse do FormData (possivelmente arquivo muito grande):", e);
-      return null;
-    });
+    const formData = await request.formData().catch(() => null);
     if (!formData) {
-      return apiError("FormData inválido ou arquivo muito grande.", 400);
+      return apiError("FormData é obrigatório.", 400);
     }
 
     const regionIdStr = formData.get("regionId");
     const isForUnionStr = formData.get("isForUnion");
+    const file = formData.get("file") as File;
 
-    // Suporta envio de single file pequeno ou envio de uploadId + totalChunks para arquivos pesados
-    const file = formData.get("file") as File | null;
-    const uploadId = formData.get("uploadId") as string | null;
-    const totalChunksStr = formData.get("totalChunks") as string | null;
-
-    if (!regionIdStr) {
-      return apiError("regionId é obrigatório.", 400);
-    }
-    if (!file && (!uploadId || !totalChunksStr)) {
-      return apiError("Arquivo ou uploadId são obrigatórios.", 400);
+    if (!regionIdStr || !file) {
+      return apiError("regionId e file são obrigatórios.", 400);
     }
 
     const regionId = parseInt(regionIdStr.toString(), 10);
     const isForUnion = isForUnionStr === "true";
 
-    let fileContent = "";
-    if (uploadId && totalChunksStr) {
-      const totalChunks = parseInt(totalChunksStr, 10);
-      try {
-        const { assembleChunks } = await import("@/lib/chunk-upload");
-        fileContent = assembleChunks(uploadId, totalChunks);
-      } catch (e: any) {
-        console.error("Assembly erro:", e);
-        return apiError(e.message || "Erro ao unificar o arquivo GeoJSON.", 500);
-      }
-    } else if (file) {
-      fileContent = await file.text();
+    // Lendo o arquivo pesado direto no servidor
+    const fileContent = await file.text();
+    const newFeature = JSON.parse(fileContent);
+
+    // Extract the pure geometry because ST_GeomFromGeoJSON only supports Geometry objects
+    let geometryToUse = newFeature;
+
+    if (newFeature.type === "FeatureCollection" && newFeature.features?.length > 0) {
+      geometryToUse = {
+        type: "GeometryCollection",
+        geometries: newFeature.features.map((f: any) => f.geometry).filter(Boolean)
+      };
+    } else if (newFeature.type === "Feature") {
+      geometryToUse = newFeature.geometry;
     }
 
-    // ATENÇÃO: Para arquivos muito grandes, JSON.parse seguido de features.map congela o V8 e trava o Next.js.
-    // Vamos mandar o TEXTO PURO direto para o PostGIS analisar na C (muito mais rápido) usando jsonb.
-    const geoJsonString = fileContent;
+    if (!geometryToUse || !geometryToUse.type) {
+        return apiError("Geometria não encontrada no arquivo.", 400);
+    }
 
-    const extractGeomsCTE = sql`
-      WITH payload AS (
-        SELECT ${geoJsonString}::jsonb AS doc
-      ),
-      extracted_geoms AS (
-        SELECT 
-          CASE 
-            WHEN doc->>'type' = 'FeatureCollection' THEN 
-              (SELECT ST_Collect(ST_Simplify(ST_MakeValid(ST_GeomFromGeoJSON(f->'geometry')), 0.02)) FROM jsonb_array_elements(doc->'features') AS f WHERE f->>'geometry' IS NOT NULL)
-            WHEN doc->>'type' = 'Feature' THEN 
-              ST_Simplify(ST_MakeValid(ST_GeomFromGeoJSON(doc->'geometry')), 0.02)
-            ELSE 
-              ST_Simplify(ST_MakeValid(ST_GeomFromGeoJSON(doc)), 0.02)
-          END as geom
-        FROM payload
-      )
-    `;
+    // Convert GeoJSON object back to string for PostGIS ingestion
+    const geoJsonString = JSON.stringify(geometryToUse);
 
     let amebaPreviewString: string;
 
-    if (isForUnion) {
-      // Faz apenas um Collect rápido para não estourar tempo com processamentos topológicos de Union no preview
-      // O Leaflet aceita tranquilamente desenhos sobrepostos numa GeometryCollection
-      const result = await db.execute(sql<{ ameba_preview: string }>`
-        ${extractGeomsCTE}
-        SELECT ST_AsGeoJSON(
-          ST_Collect(
-            ST_Simplify((SELECT geom FROM monitoramento.regioes WHERE id = ${regionId}), 0.02),
-            ST_SetSRID((SELECT geom FROM extracted_geoms), 4674)
-          )
-        ) as ameba_preview;
-      `);
-      amebaPreviewString = result.rows[0]?.ameba_preview as string;
-    } else {
-      // Apenas simplifica o próprio shape para o preview no mapa, minimizado agressivamente p/ navegação leve
-      const result = await db.execute(sql<{ ameba_preview: string }>`
-        ${extractGeomsCTE}
-        SELECT ST_AsGeoJSON(
-          ST_SetSRID((SELECT geom FROM extracted_geoms), 4674)
-        ) as ameba_preview;
-      `);
-      amebaPreviewString = result.rows[0]?.ameba_preview as string;
-    }
+    // Faz o Union pesado
+    const result = await db.execute(sql<{ ameba_preview: string }>`
+      SELECT ST_AsGeoJSON(
+        ST_Simplify(
+          ST_Union(
+            (SELECT geom FROM monitoramento.regioes WHERE id = ${regionId}),
+            ST_SetSRID(ST_GeomFromGeoJSON(${geoJsonString}), 4674)
+          ),
+          0.005
+        )
+      ) as ameba_preview;
+    `);
+
+    amebaPreviewString = (result.rows[0] as { ameba_preview: string })?.ameba_preview;
 
     if (!amebaPreviewString) {
-      return apiError("Falha ao gerar o preview da geometria.", 500);
+      return apiError("Falha ao gerar o preview da geometria de união.", 500);
     }
 
     const amebaGeoJson = JSON.parse(amebaPreviewString);

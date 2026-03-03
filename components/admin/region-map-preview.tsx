@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import dynamic from "next/dynamic";
 import { FeatureCollection, Feature, Geometry } from "geojson";
 import { GeoJsonUploader } from "./geojson-uploader";
 import { Button } from "@/components/ui/button";
@@ -12,19 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { useRouter } from "next/navigation";
 import { BaseLayersManager, BaseLayerDto } from "./base-layers-manager";
-
-const MapContainer = dynamic(
-  () => import("react-leaflet").then((mod) => mod.MapContainer),
-  { ssr: false }
-);
-const TileLayer = dynamic(
-  () => import("react-leaflet").then((mod) => mod.TileLayer),
-  { ssr: false }
-);
-const GeoJSON = dynamic(
-  () => import("react-leaflet").then((mod) => mod.GeoJSON),
-  { ssr: false }
-);
+import Map, { Source, Layer } from "react-map-gl/maplibre";
+import "maplibre-gl/dist/maplibre-gl.css";
 
 interface RegionMapPreviewProps {
   regionId: number;
@@ -40,13 +28,10 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
 
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [uploadId, setUploadId] = useState<string | null>(null);
-  const [totalChunks, setTotalChunks] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
 
   // Settings state
-  const [expandBoundary, setExpandBoundary] = useState(true);
+  const [expandBoundary, setExpandBoundary] = useState(false); // Make union optional by default so users don't accidentally check it without reading
   const [createBaseLayer, setCreateBaseLayer] = useState(true);
   const [isForUnion, setIsForUnion] = useState(false); // Controls preview intensity/type before upload
   const [layerName, setLayerName] = useState("");
@@ -88,67 +73,68 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
 
   const handleGeoJsonUpload = async (file: File) => {
     setIsLoading(true);
-    setUploadProgress(0);
     setUploadedFile(file);
 
     try {
-      const CHUNK_SIZE = 3 * 1024 * 1024; // 3MB chunks
-      const tChunks = Math.ceil(file.size / CHUNK_SIZE);
-      const generatedUploadId = crypto.randomUUID();
-      
-      setTotalChunks(tChunks);
-      setUploadId(generatedUploadId);
+      let previewGeoData: FeatureCollection | null = null;
 
-      // Upload chunks linearly
-      for (let i = 0; i < tChunks; i++) {
-        const chunk = file.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-        const chunkData = new FormData();
-        chunkData.append("uploadId", generatedUploadId);
-        chunkData.append("chunkIndex", i.toString());
-        chunkData.append("chunk", chunk);
+      // Se for para calcular a União, chamamos o banco.
+      if (isForUnion) {
+        const formData = new FormData();
+        formData.append("regionId", regionId.toString());
+        formData.append("isForUnion", "true");
+        formData.append("file", file);
 
-        const chunkRes = await fetch("/api/admin/regions/upload-chunk", {
+        const response = await fetch("/api/admin/regions/preview-union", {
           method: "POST",
-          body: chunkData,
+          body: formData,
         });
 
-        if (!chunkRes.ok) throw new Error("Falha ao enviar o fragmento " + i);
-        setUploadProgress(Math.round(((i + 1) / tChunks) * 100));
+        const data = await response.json();
+
+        if (!data.success) {
+          throw new Error(data.error?.message || "Failed to generate union preview.");
+        }
+
+        previewGeoData = data.data as FeatureCollection;
+
+      } else {
+        // Se NÃO for união (apenas visualizar uma camada base),
+        // Lemos o arquivo 100% no cliente e deixamos o MapLibre (geojson-vt)
+        // fatiar ele em vector tiles na GPU, aguentando 100MB+ sem travar.
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+
+        if (parsed.type === "FeatureCollection") {
+          previewGeoData = parsed;
+        } else if (parsed.type === "Feature") {
+          previewGeoData = { type: "FeatureCollection", features: [parsed] };
+        } else {
+          previewGeoData = {
+            type: "FeatureCollection",
+            features: [
+              {
+                type: "Feature",
+                geometry: parsed,
+                properties: {}
+              }
+            ]
+          };
+        }
       }
 
-      setUploadProgress(null); // finish progress indicator
-
-      const formData = new FormData();
-      formData.append("regionId", regionId.toString());
-      formData.append("isForUnion", isForUnion.toString());
-      formData.append("uploadId", generatedUploadId);
-      formData.append("totalChunks", tChunks.toString());
-
-      const response = await fetch("/api/admin/regions/preview-union", {
-        method: "POST",
-        body: formData, // Sending multipart with uploadId reference
-      });
-
-      const data = await response.json();
-
-      if (!data.success) {
-        throw new Error(data.error?.message || "Failed to generate preview.");
-      }
-
-      setGeoData(data.data as FeatureCollection);
+      setGeoData(previewGeoData);
       setIsPreviewing(true);
 
+      // Auto-generate a name for convenience
       setLayerName(`Nova Camada ${new Date().toLocaleDateString()}`);
 
-    } catch (error: any) {
+    } catch (error) {
       console.error("Preview failed:", error);
-      alert(error instanceof Error ? error.message : "Erro ao gerar preview da união");
+      alert(error instanceof Error ? error.message : "Erro ao carregar o arquivo. O arquivo pode estar mal formatado.");
       setUploadedFile(null);
-      setUploadId(null);
-      setTotalChunks(0);
     } finally {
       setIsLoading(false);
-      setUploadProgress(null);
     }
   };
 
@@ -156,8 +142,6 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
     setGeoData(originalGeoData);
     setIsPreviewing(false);
     setUploadedFile(null);
-    setUploadId(null);
-    setTotalChunks(0);
   };
 
   const handleSave = async () => {
@@ -168,27 +152,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
       const formData = new FormData();
       formData.append("expandBoundary", expandBoundary.toString());
       formData.append("createBaseLayer", createBaseLayer.toString());
-      
-      if (uploadId && totalChunks > 0) {
-         // To completely avoid hitting Next.js timeouts, we send the file pieces again 
-         // prior to triggering commit-union, guaranteeing files haven't been purged from server TMP.
-         setUploadProgress(0);
-         const CHUNK_SIZE = 3 * 1024 * 1024;
-         for (let i = 0; i < totalChunks; i++) {
-            const chunk = uploadedFile.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
-            const chunkData = new FormData();
-            chunkData.append("uploadId", uploadId);
-            chunkData.append("chunkIndex", i.toString());
-            chunkData.append("chunk", chunk);
-            await fetch("/api/admin/regions/upload-chunk", { method: "POST", body: chunkData });
-            setUploadProgress(Math.round(((i + 1) / totalChunks) * 100));
-         }
-         
-         formData.append("uploadId", uploadId);
-         formData.append("totalChunks", totalChunks.toString());
-      } else {
-         formData.append("file", uploadedFile);
-      }
+      formData.append("file", uploadedFile);
 
       if (createBaseLayer) {
         formData.append("layerConfig", JSON.stringify({
@@ -213,20 +177,17 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
       // Success, reset preview state and refresh page to show new initial geometry and layer list
       setIsPreviewing(false);
       setUploadedFile(null);
-      setUploadId(null);
-      setTotalChunks(0);
       router.refresh();
 
-    } catch (error: any) {
+    } catch (error) {
       console.error("Save failed:", error);
       alert(error instanceof Error ? error.message : "Erro ao salvar alterações");
     } finally {
       setIsSaving(false);
-      setUploadProgress(null);
     }
   };
 
-  const defaultCenter: [number, number] = [-23.5505, -46.6333];
+  const defaultCenter = { longitude: -46.6333, latitude: -23.5505, zoom: 9 };
 
   return (
     <div className="w-full space-y-6">
@@ -240,7 +201,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-3 items-end">
+        <div className="flex flex-col sm:flex-row gap-3 items-end z-10">
           {isPreviewing ? (
             <Button
               type="button"
@@ -266,7 +227,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
                 <p className="text-[10px] text-neutral-500 max-w-[250px]">
                   {isForUnion ?
                     "O mapa tentará calcular o preview da União (mais lento em arquivos gigantes)." :
-                    "Ideal para subir apenas Camadas Base pesadas de forma rápida."}
+                    "Ideal para visualizar Camadas Base pesadas instantaneamente."}
                 </p>
                 <div className="pt-1 border-t dark:border-neutral-800">
                   <GeoJsonUploader
@@ -286,52 +247,20 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
 
             {isLoading && (
               <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-sm">
-                <div className="flex flex-col items-center gap-3 w-3/4 max-w-sm">
+                <div className="flex flex-col items-center gap-3">
                   <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
-                  <span className="font-medium text-neutral-800 dark:text-neutral-200">
-                    {uploadProgress !== null ? "Enviando arquivo em partes..." : "Processando união complexa..."}
-                  </span>
-                  {uploadProgress !== null && (
-                     <div className="w-full h-2 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden mt-2">
-                        <div 
-                          className="h-full bg-blue-600 dark:bg-blue-500 transition-all duration-300" 
-                          style={{ width: `${uploadProgress}%` }}
-                        />
-                     </div>
-                  )}
+                  <span className="font-medium text-neutral-800 dark:text-neutral-200">Processando união complexa...</span>
                 </div>
               </div>
             )}
 
-            {isSaving && uploadProgress !== null && (
-              <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-sm">
-                <div className="flex flex-col items-center gap-3 w-3/4 max-w-sm">
-                  <Save className="w-8 h-8 text-neutral-600 dark:text-neutral-400" />
-                  <span className="font-medium text-neutral-800 dark:text-neutral-200">
-                    Re-transmitindo arquivo para o servidor...
-                  </span>
-                  <div className="w-full h-2 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden mt-2">
-                     <div 
-                       className="h-full bg-neutral-600 dark:bg-neutral-500 transition-all duration-300" 
-                       style={{ width: `${uploadProgress}%` }}
-                     />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <MapContainer
+            <Map
               id={`region-map-${regionId}`}
-              center={defaultCenter}
-              zoom={10}
-              style={{ height: "100%", width: "100%", zIndex: 0 }}
+              initialViewState={defaultCenter}
+              mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
+              style={{ width: "100%", height: "100%" }}
             >
-              <TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              />
-
-              {/* Render Base Layers First so region sits on top if needed, or vice-versa */}
+              {/* Render Base Layers First */}
               {baseLayers.map((layer) => {
                  if (!layer.geojson || layer.visualConfig?.defaultVisibility === false) return null;
 
@@ -341,33 +270,49 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
 
                  const styleConfig = layer.visualConfig?.baseStyle || {};
                  return (
-                    <GeoJSON
-                       key={`base-layer-${layer.id}-${layer.visualConfig?.baseStyle?.color}-${layer.visualConfig?.baseStyle?.weight}-${layer.visualConfig?.baseStyle?.fillOpacity}`}
-                       data={parsedLayerGeo}
-                       style={{
-                         color: styleConfig.color || "#000000",
-                         weight: styleConfig.weight || 2,
-                         fillOpacity: styleConfig.fillOpacity ?? 0.2,
-                         fillColor: styleConfig.color || "#000000"
-                       }}
-                    />
+                    <Source key={`source-base-layer-${layer.id}`} type="geojson" data={parsedLayerGeo}>
+                      <Layer
+                        id={`fill-base-layer-${layer.id}`}
+                        type="fill"
+                        paint={{
+                          "fill-color": styleConfig.color || "#000000",
+                          "fill-opacity": styleConfig.fillOpacity ?? 0.2
+                        }}
+                      />
+                      <Layer
+                        id={`line-base-layer-${layer.id}`}
+                        type="line"
+                        paint={{
+                          "line-color": styleConfig.color || "#000000",
+                          "line-width": styleConfig.weight || 2
+                        }}
+                      />
+                    </Source>
                  );
               })}
 
               {/* Main Region Geometry */}
               {geoData && (
-                <GeoJSON
-                  key={JSON.stringify(geoData) + layerColor + layerOpacity[0] + layerWeight[0]}
-                  data={geoData}
-                  style={{
-                    color: isPreviewing ? layerColor : "#10b981",
-                    weight: isPreviewing ? layerWeight[0] : 2,
-                    fillOpacity: isPreviewing ? layerOpacity[0] / 100 : 0.2,
-                    fillColor: isPreviewing ? layerColor : "#10b981"
-                  }}
-                />
+                <Source id="main-region-source" type="geojson" data={geoData}>
+                  <Layer
+                    id="main-region-fill"
+                    type="fill"
+                    paint={{
+                      "fill-color": isPreviewing ? layerColor : "#10b981",
+                      "fill-opacity": isPreviewing ? layerOpacity[0] / 100 : 0.2
+                    }}
+                  />
+                  <Layer
+                    id="main-region-line"
+                    type="line"
+                    paint={{
+                      "line-color": isPreviewing ? layerColor : "#10b981",
+                      "line-width": isPreviewing ? layerWeight[0] : 2
+                    }}
+                  />
+                </Source>
               )}
-            </MapContainer>
+            </Map>
           </div>
 
           {isPreviewing && (
