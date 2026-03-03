@@ -40,6 +40,9 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
 
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadId, setUploadId] = useState<string | null>(null);
+  const [totalChunks, setTotalChunks] = useState<number>(0);
   const [isSaving, setIsSaving] = useState(false);
 
   // Settings state
@@ -85,17 +88,45 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
 
   const handleGeoJsonUpload = async (file: File) => {
     setIsLoading(true);
+    setUploadProgress(0);
     setUploadedFile(file);
 
     try {
+      const CHUNK_SIZE = 3 * 1024 * 1024; // 3MB chunks
+      const tChunks = Math.ceil(file.size / CHUNK_SIZE);
+      const generatedUploadId = crypto.randomUUID();
+      
+      setTotalChunks(tChunks);
+      setUploadId(generatedUploadId);
+
+      // Upload chunks linearly
+      for (let i = 0; i < tChunks; i++) {
+        const chunk = file.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+        const chunkData = new FormData();
+        chunkData.append("uploadId", generatedUploadId);
+        chunkData.append("chunkIndex", i.toString());
+        chunkData.append("chunk", chunk);
+
+        const chunkRes = await fetch("/api/admin/regions/upload-chunk", {
+          method: "POST",
+          body: chunkData,
+        });
+
+        if (!chunkRes.ok) throw new Error("Falha ao enviar o fragmento " + i);
+        setUploadProgress(Math.round(((i + 1) / tChunks) * 100));
+      }
+
+      setUploadProgress(null); // finish progress indicator
+
       const formData = new FormData();
       formData.append("regionId", regionId.toString());
       formData.append("isForUnion", isForUnion.toString());
-      formData.append("file", file);
+      formData.append("uploadId", generatedUploadId);
+      formData.append("totalChunks", tChunks.toString());
 
       const response = await fetch("/api/admin/regions/preview-union", {
         method: "POST",
-        body: formData, // Sending multipart/form-data
+        body: formData, // Sending multipart with uploadId reference
       });
 
       const data = await response.json();
@@ -107,15 +138,17 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
       setGeoData(data.data as FeatureCollection);
       setIsPreviewing(true);
 
-      // Auto-generate a name for convenience
       setLayerName(`Nova Camada ${new Date().toLocaleDateString()}`);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Preview failed:", error);
       alert(error instanceof Error ? error.message : "Erro ao gerar preview da união");
       setUploadedFile(null);
+      setUploadId(null);
+      setTotalChunks(0);
     } finally {
       setIsLoading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -123,6 +156,8 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
     setGeoData(originalGeoData);
     setIsPreviewing(false);
     setUploadedFile(null);
+    setUploadId(null);
+    setTotalChunks(0);
   };
 
   const handleSave = async () => {
@@ -133,7 +168,27 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
       const formData = new FormData();
       formData.append("expandBoundary", expandBoundary.toString());
       formData.append("createBaseLayer", createBaseLayer.toString());
-      formData.append("file", uploadedFile);
+      
+      if (uploadId && totalChunks > 0) {
+         // To completely avoid hitting Next.js timeouts, we send the file pieces again 
+         // prior to triggering commit-union, guaranteeing files haven't been purged from server TMP.
+         setUploadProgress(0);
+         const CHUNK_SIZE = 3 * 1024 * 1024;
+         for (let i = 0; i < totalChunks; i++) {
+            const chunk = uploadedFile.slice(i * CHUNK_SIZE, (i + 1) * CHUNK_SIZE);
+            const chunkData = new FormData();
+            chunkData.append("uploadId", uploadId);
+            chunkData.append("chunkIndex", i.toString());
+            chunkData.append("chunk", chunk);
+            await fetch("/api/admin/regions/upload-chunk", { method: "POST", body: chunkData });
+            setUploadProgress(Math.round(((i + 1) / totalChunks) * 100));
+         }
+         
+         formData.append("uploadId", uploadId);
+         formData.append("totalChunks", totalChunks.toString());
+      } else {
+         formData.append("file", uploadedFile);
+      }
 
       if (createBaseLayer) {
         formData.append("layerConfig", JSON.stringify({
@@ -158,13 +213,16 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
       // Success, reset preview state and refresh page to show new initial geometry and layer list
       setIsPreviewing(false);
       setUploadedFile(null);
+      setUploadId(null);
+      setTotalChunks(0);
       router.refresh();
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Save failed:", error);
       alert(error instanceof Error ? error.message : "Erro ao salvar alterações");
     } finally {
       setIsSaving(false);
+      setUploadProgress(null);
     }
   };
 
@@ -228,9 +286,36 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
 
             {isLoading && (
               <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-sm">
-                <div className="flex flex-col items-center gap-3">
+                <div className="flex flex-col items-center gap-3 w-3/4 max-w-sm">
                   <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
-                  <span className="font-medium text-neutral-800 dark:text-neutral-200">Processando união complexa...</span>
+                  <span className="font-medium text-neutral-800 dark:text-neutral-200">
+                    {uploadProgress !== null ? "Enviando arquivo em partes..." : "Processando união complexa..."}
+                  </span>
+                  {uploadProgress !== null && (
+                     <div className="w-full h-2 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden mt-2">
+                        <div 
+                          className="h-full bg-blue-600 dark:bg-blue-500 transition-all duration-300" 
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                     </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {isSaving && uploadProgress !== null && (
+              <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-sm">
+                <div className="flex flex-col items-center gap-3 w-3/4 max-w-sm">
+                  <Save className="w-8 h-8 text-neutral-600 dark:text-neutral-400" />
+                  <span className="font-medium text-neutral-800 dark:text-neutral-200">
+                    Re-transmitindo arquivo para o servidor...
+                  </span>
+                  <div className="w-full h-2 bg-neutral-200 dark:bg-neutral-800 rounded-full overflow-hidden mt-2">
+                     <div 
+                       className="h-full bg-neutral-600 dark:bg-neutral-500 transition-all duration-300" 
+                       style={{ width: `${uploadProgress}%` }}
+                     />
+                  </div>
                 </div>
               </div>
             )}
