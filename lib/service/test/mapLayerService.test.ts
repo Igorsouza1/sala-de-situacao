@@ -11,7 +11,6 @@ import * as acoesRepo from "@/lib/repositories/acoesRepository";
 // Isso impede que o teste tente conectar no banco de dados real!
 jest.mock("@/lib/repositories/layerRepository", () => ({
     getLayerCatalog: jest.fn(),
-    getLayerGeoJSON: jest.fn(),
     getGenericLayerData: jest.fn(),
 }));
 
@@ -82,7 +81,7 @@ describe("MapLayerService - O Maestro", () => {
         expect(acoesRepo.findAllAcoesDataWithGeometry).toHaveBeenCalled();
 
         // Verificamos se ele NÃO chamou o genérico
-        expect(layerRepo.getLayerGeoJSON).not.toHaveBeenCalled();
+        expect(layerRepo.getGenericLayerData).not.toHaveBeenCalled();
 
         // Verificamos se o resultado final está montado corretamente (DTO)
         expect(resultado).not.toBeNull();
@@ -97,7 +96,7 @@ describe("MapLayerService - O Maestro", () => {
         (layerRepo.getLayerCatalog as jest.Mock).mockResolvedValue(mockCatalogBacia);
 
         // Ensinamos o genérico a retornar um GeoJSON
-        (layerRepo.getLayerGeoJSON as jest.Mock).mockResolvedValue({
+        (layerRepo.getGenericLayerData as jest.Mock).mockResolvedValue({
             type: "FeatureCollection",
             features: []
         });
@@ -128,6 +127,6 @@ describe("MapLayerService - O Maestro", () => {
         // C. VERIFICAÇÃO
         expect(resultado).toBeNull();
         // Garante que não tentou buscar dados se nem existe no catálogo
-        expect(layerRepo.getLayerGeoJSON).not.toHaveBeenCalled();
+        expect(layerRepo.getGenericLayerData).not.toHaveBeenCalled();
     });
 });

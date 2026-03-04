@@ -291,7 +291,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                       let geom = null;
                       try { geom = typeof p.geojson === 'string' ? JSON.parse(p.geojson) : p.geojson; } catch(e){}
                       return {
-                         type: "Feature",
+                         type: "Feature" as const,
                          geometry: geom,
                          properties: { id: p.id, codImovel: p.codImovel, nome: p.nome }
                       }
