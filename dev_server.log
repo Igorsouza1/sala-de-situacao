@@ -1,0 +1,452 @@
+
+> dev
+> next dev
+
+   ▲ Next.js 15.5.8
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.0.2:3000
+
+ ✓ Starting...
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+ ✓ Ready in 2s
+ ○ Compiling /middleware ...
+ ✓ Compiled /middleware in 1874ms (186 modules)
+ ○ Compiling /admin/regions/[id] ...
+Browserslist: browsers data (caniuse-lite) is 7 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+ ✓ Compiled /admin/regions/[id] in 12.9s (1183 modules)
+ ✓ Compiled in 1350ms (357 modules)
+ ✓ Compiled in 416ms (357 modules)
+ ✓ Compiled in 388ms (357 modules)
+ ⨯ Error: Failed query:
+    SELECT
+      r.id,
+      r.nome,
+      r.metadata->>'organizationId' AS "organizationId",
+      o.name AS "organizationName",
+      ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
+      r.created_at AS "createdAt"
+    FROM monitoramento.regioes r
+    LEFT JOIN monitoramento.organizations o
+      ON o.id::text = r.metadata->>'organizationId'
+    WHERE r.id = $1
+
+params: 1
+    at async getRegionByIdInDb (lib/repositories/adminRepository.ts:83:18)
+    at async RegionEditPage (app/admin/regions/[id]/page.tsx:11:35)
+  81 |
+  82 | export async function getRegionByIdInDb(id: number) {
+> 83 |   const result = await db.execute(sql<RegionListItem>`
+     |                  ^
+  84 |     SELECT
+  85 |       r.id,
+  86 |       r.nome, {
+  query: '\n' +
+    '    SELECT\n' +
+    '      r.id,\n' +
+    '      r.nome,\n' +
+    `      r.metadata->>'organizationId' AS "organizationId",\n` +
+    '      o.name AS "organizationName",\n' +
+    '      ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",\n' +
+    '      r.created_at AS "createdAt"\n' +
+    '    FROM monitoramento.regioes r\n' +
+    '    LEFT JOIN monitoramento.organizations o\n' +
+    "      ON o.id::text = r.metadata->>'organizationId'\n" +
+    '    WHERE r.id = $1\n' +
+    '  ',
+  params: [Array],
+  digest: '1846153543',
+  [cause]: AggregateError:
+      at async getRegionByIdInDb (lib/repositories/adminRepository.ts:83:18)
+      at async RegionEditPage (app/admin/regions/[id]/page.tsx:11:35)
+    81 |
+    82 | export async function getRegionByIdInDb(id: number) {
+  > 83 |   const result = await db.execute(sql<RegionListItem>`
+       |                  ^
+    84 |     SELECT
+    85 |       r.id,
+    86 |       r.nome, {
+    code: 'ECONNREFUSED'
+  }
+}
+ GET /admin/regions/1 500 in 16030ms
+ ✓ Compiled in 881ms (357 modules)
+ ✓ Compiled in 427ms (357 modules)
+ ✓ Compiled in 417ms (357 modules)
+ ✓ Compiled in 499ms (357 modules)
+ ✓ Compiled in 398ms (357 modules)
+ ✓ Compiled in 498ms (357 modules)
+ ✓ Compiled in 416ms (357 modules)
+ ✓ Compiled in 426ms (357 modules)
+ ✓ Compiled in 632ms (357 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ✓ Compiled in 657ms (357 modules)
+ ⨯ Error: Failed query:
+    SELECT
+      r.id,
+      r.nome,
+      r.metadata->>'organizationId' AS "organizationId",
+      o.name AS "organizationName",
+      ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
+      r.created_at AS "createdAt"
+    FROM monitoramento.regioes r
+    LEFT JOIN monitoramento.organizations o
+      ON o.id::text = r.metadata->>'organizationId'
+    WHERE r.id = $1
+
+params: 1
+    at async getRegionByIdInDb (lib/repositories/adminRepository.ts:83:18)
+    at async RegionEditPage (app/admin/regions/[id]/page.tsx:11:35)
+  81 |
+  82 | export async function getRegionByIdInDb(id: number) {
+> 83 |   const result = await db.execute(sql<RegionListItem>`
+     |                  ^
+  84 |     SELECT
+  85 |       r.id,
+  86 |       r.nome, {
+  query: '\n' +
+    '    SELECT\n' +
+    '      r.id,\n' +
+    '      r.nome,\n' +
+    `      r.metadata->>'organizationId' AS "organizationId",\n` +
+    '      o.name AS "organizationName",\n' +
+    '      ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",\n' +
+    '      r.created_at AS "createdAt"\n' +
+    '    FROM monitoramento.regioes r\n' +
+    '    LEFT JOIN monitoramento.organizations o\n' +
+    "      ON o.id::text = r.metadata->>'organizationId'\n" +
+    '    WHERE r.id = $1\n' +
+    '  ',
+  params: [Array],
+  digest: '1846153543',
+  [cause]: AggregateError:
+      at async getRegionByIdInDb (lib/repositories/adminRepository.ts:83:18)
+      at async RegionEditPage (app/admin/regions/[id]/page.tsx:11:35)
+    81 |
+    82 | export async function getRegionByIdInDb(id: number) {
+  > 83 |   const result = await db.execute(sql<RegionListItem>`
+       |                  ^
+    84 |     SELECT
+    85 |       r.id,
+    86 |       r.nome, {
+    code: 'ECONNREFUSED'
+  }
+}
+ GET /admin/regions/1 500 in 832ms
+ ✓ Compiled in 801ms (357 modules)
+ ✓ Compiled in 596ms (357 modules)
+ ✓ Compiled in 560ms (357 modules)
+ ✓ Compiled in 390ms (357 modules)
+ ✓ Compiled in 373ms (357 modules)
+ ✓ Compiled in 375ms (357 modules)
+ ✓ Compiled in 378ms (357 modules)
+ ✓ Compiled in 376ms (357 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⨯ Error: Failed query:
+    SELECT
+      r.id,
+      r.nome,
+      r.metadata->>'organizationId' AS "organizationId",
+      o.name AS "organizationName",
+      ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
+      r.created_at AS "createdAt"
+    FROM monitoramento.regioes r
+    LEFT JOIN monitoramento.organizations o
+      ON o.id::text = r.metadata->>'organizationId'
+    WHERE r.id = $1
+
+params: 1
+    at async getRegionByIdInDb (lib/repositories/adminRepository.ts:83:18)
+    at async RegionEditPage (app/admin/regions/[id]/page.tsx:11:35)
+  81 |
+  82 | export async function getRegionByIdInDb(id: number) {
+> 83 |   const result = await db.execute(sql<RegionListItem>`
+     |                  ^
+  84 |     SELECT
+  85 |       r.id,
+  86 |       r.nome, {
+  query: '\n' +
+    '    SELECT\n' +
+    '      r.id,\n' +
+    '      r.nome,\n' +
+    `      r.metadata->>'organizationId' AS "organizationId",\n` +
+    '      o.name AS "organizationName",\n' +
+    '      ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",\n' +
+    '      r.created_at AS "createdAt"\n' +
+    '    FROM monitoramento.regioes r\n' +
+    '    LEFT JOIN monitoramento.organizations o\n' +
+    "      ON o.id::text = r.metadata->>'organizationId'\n" +
+    '    WHERE r.id = $1\n' +
+    '  ',
+  params: [Array],
+  digest: '1846153543',
+  [cause]: AggregateError:
+      at async getRegionByIdInDb (lib/repositories/adminRepository.ts:83:18)
+      at async RegionEditPage (app/admin/regions/[id]/page.tsx:11:35)
+    81 |
+    82 | export async function getRegionByIdInDb(id: number) {
+  > 83 |   const result = await db.execute(sql<RegionListItem>`
+       |                  ^
+    84 |     SELECT
+    85 |       r.id,
+    86 |       r.nome, {
+    code: 'ECONNREFUSED'
+  }
+}
+ ✓ Compiled in 556ms (357 modules)
+ GET /admin/regions/1 500 in 291ms
+ ✓ Compiled in 417ms (357 modules)
+ ✓ Compiled in 402ms (357 modules)
+ ✓ Compiled in 377ms (357 modules)
+ ✓ Compiled in 357ms (357 modules)
+ ✓ Compiled in 342ms (357 modules)
+ ✓ Compiled in 351ms (357 modules)
+ ✓ Compiled in 356ms (357 modules)
+ ✓ Compiled in 375ms (357 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⨯ Error: Failed query:
+    SELECT
+      r.id,
+      r.nome,
+      r.metadata->>'organizationId' AS "organizationId",
+      o.name AS "organizationName",
+      ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
+      r.created_at AS "createdAt"
+    FROM monitoramento.regioes r
+    LEFT JOIN monitoramento.organizations o
+      ON o.id::text = r.metadata->>'organizationId'
+    WHERE r.id = $1
+
+params: 1
+    at async getRegionByIdInDb (lib/repositories/adminRepository.ts:83:18)
+    at async RegionEditPage (app/admin/regions/[id]/page.tsx:11:35)
+  81 |
+  82 | export async function getRegionByIdInDb(id: number) {
+> 83 |   const result = await db.execute(sql<RegionListItem>`
+     |                  ^
+  84 |     SELECT
+  85 |       r.id,
+  86 |       r.nome, {
+  query: '\n' +
+    '    SELECT\n' +
+    '      r.id,\n' +
+    '      r.nome,\n' +
+    `      r.metadata->>'organizationId' AS "organizationId",\n` +
+    '      o.name AS "organizationName",\n' +
+    '      ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",\n' +
+    '      r.created_at AS "createdAt"\n' +
+    '    FROM monitoramento.regioes r\n' +
+    '    LEFT JOIN monitoramento.organizations o\n' +
+    "      ON o.id::text = r.metadata->>'organizationId'\n" +
+    '    WHERE r.id = $1\n' +
+    '  ',
+  params: [Array],
+  digest: '1846153543',
+  [cause]: AggregateError:
+      at async getRegionByIdInDb (lib/repositories/adminRepository.ts:83:18)
+      at async RegionEditPage (app/admin/regions/[id]/page.tsx:11:35)
+    81 |
+    82 | export async function getRegionByIdInDb(id: number) {
+  > 83 |   const result = await db.execute(sql<RegionListItem>`
+       |                  ^
+    84 |     SELECT
+    85 |       r.id,
+    86 |       r.nome, {
+    code: 'ECONNREFUSED'
+  }
+}
+ ✓ Compiled in 558ms (357 modules)
+ GET /admin/regions/1 500 in 644ms
+ ✓ Compiled in 477ms (357 modules)
+ ✓ Compiled in 440ms (357 modules)
+ ✓ Compiled in 534ms (357 modules)
+ ✓ Compiled in 403ms (357 modules)
+ ✓ Compiled in 386ms (357 modules)
+ ✓ Compiled in 384ms (357 modules)
+ ✓ Compiled in 398ms (357 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⨯ Error: Failed query:
+    SELECT
+      r.id,
+      r.nome,
+      r.metadata->>'organizationId' AS "organizationId",
+      o.name AS "organizationName",
+      ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
+      r.created_at AS "createdAt"
+    FROM monitoramento.regioes r
+    LEFT JOIN monitoramento.organizations o
+      ON o.id::text = r.metadata->>'organizationId'
+    WHERE r.id = $1
+
+params: 1
+    at async getRegionByIdInDb (lib/repositories/adminRepository.ts:83:18)
+    at async RegionEditPage (app/admin/regions/[id]/page.tsx:11:35)
+  81 |
+  82 | export async function getRegionByIdInDb(id: number) {
+> 83 |   const result = await db.execute(sql<RegionListItem>`
+     |                  ^
+  84 |     SELECT
+  85 |       r.id,
+  86 |       r.nome, {
+  query: '\n' +
+    '    SELECT\n' +
+    '      r.id,\n' +
+    '      r.nome,\n' +
+    `      r.metadata->>'organizationId' AS "organizationId",\n` +
+    '      o.name AS "organizationName",\n' +
+    '      ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",\n' +
+    '      r.created_at AS "createdAt"\n' +
+    '    FROM monitoramento.regioes r\n' +
+    '    LEFT JOIN monitoramento.organizations o\n' +
+    "      ON o.id::text = r.metadata->>'organizationId'\n" +
+    '    WHERE r.id = $1\n' +
+    '  ',
+  params: [Array],
+  digest: '1846153543',
+  [cause]: AggregateError:
+      at async getRegionByIdInDb (lib/repositories/adminRepository.ts:83:18)
+      at async RegionEditPage (app/admin/regions/[id]/page.tsx:11:35)
+    81 |
+    82 | export async function getRegionByIdInDb(id: number) {
+  > 83 |   const result = await db.execute(sql<RegionListItem>`
+       |                  ^
+    84 |     SELECT
+    85 |       r.id,
+    86 |       r.nome, {
+    code: 'ECONNREFUSED'
+  }
+}
+ ✓ Compiled in 640ms (357 modules)
+ GET /admin/regions/1 500 in 715ms
+ ✓ Compiled in 498ms (357 modules)
+ ✓ Compiled in 539ms (357 modules)
+ ✓ Compiled in 509ms (357 modules)
+ ✓ Compiled in 437ms (357 modules)
+ ✓ Compiled in 374ms (357 modules)
+ ✓ Compiled in 380ms (357 modules)
+ ✓ Compiled in 392ms (357 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ✓ Compiled in 408ms (357 modules)
+ ✓ Compiled in 416ms (357 modules)
+ ✓ Compiled in 363ms (357 modules)
+ ✓ Compiled in 360ms (357 modules)
+ ✓ Compiled in 354ms (357 modules)
+ ✓ Compiled in 358ms (357 modules)
+ ✓ Compiled in 366ms (357 modules)
+ ✓ Compiled in 361ms (357 modules)
+ ✓ Compiled in 368ms (357 modules)
+ ✓ Compiled in 365ms (357 modules)
+ ✓ Compiled in 366ms (357 modules)
+ ✓ Compiled in 357ms (357 modules)
+ ✓ Compiled in 356ms (357 modules)
+ ✓ Compiled in 356ms (357 modules)
+ ✓ Compiled in 363ms (357 modules)
+ ✓ Compiled in 594ms (357 modules)
+ ✓ Compiled in 381ms (357 modules)
+ ✓ Compiled in 363ms (357 modules)
+ ✓ Compiled in 354ms (357 modules)
+ ✓ Compiled in 353ms (357 modules)
+ ✓ Compiled in 360ms (357 modules)
+ ✓ Compiled in 366ms (357 modules)
+ ✓ Compiled in 359ms (357 modules)
+ ✓ Compiled in 357ms (357 modules)
+ ✓ Compiled in 353ms (357 modules)
+ ✓ Compiled in 358ms (357 modules)
+ ✓ Compiled in 346ms (357 modules)
+ ✓ Compiled in 351ms (357 modules)
+ ✓ Compiled in 356ms (357 modules)
+ ✓ Compiled in 352ms (357 modules)
+ ✓ Compiled in 358ms (357 modules)
+ ✓ Compiled in 349ms (357 modules)
+ ✓ Compiled in 347ms (357 modules)
+ ✓ Compiled in 350ms (357 modules)
+ ✓ Compiled in 342ms (357 modules)
+ ✓ Compiled in 338ms (357 modules)
+ ✓ Compiled in 344ms (357 modules)
+ ✓ Compiled in 336ms (357 modules)
+ ✓ Compiled in 342ms (357 modules)
+ ✓ Compiled in 340ms (357 modules)
+ ✓ Compiled in 343ms (357 modules)
+ ✓ Compiled in 341ms (357 modules)
+ ✓ Compiled in 336ms (357 modules)
+ ✓ Compiled in 338ms (357 modules)
+ ✓ Compiled in 343ms (357 modules)
+ ✓ Compiled in 342ms (357 modules)
+ ✓ Compiled in 340ms (357 modules)
+ ✓ Compiled in 342ms (357 modules)
+ ✓ Compiled in 339ms (357 modules)
+ ✓ Compiled in 331ms (357 modules)
+ ✓ Compiled in 342ms (357 modules)
+ ✓ Compiled in 340ms (357 modules)
+ ✓ Compiled in 338ms (357 modules)
+ ✓ Compiled in 339ms (357 modules)
+ ✓ Compiled in 339ms (357 modules)
+ ✓ Compiled in 337ms (357 modules)
+ ✓ Compiled in 337ms (357 modules)
+ ✓ Compiled in 344ms (357 modules)
+ ✓ Compiled in 343ms (357 modules)
+ ✓ Compiled in 344ms (357 modules)
+ ✓ Compiled in 341ms (357 modules)
+ ✓ Compiled in 342ms (357 modules)
+ ✓ Compiled in 345ms (357 modules)
+ ✓ Compiled in 444ms (357 modules)
+ ✓ Compiled in 508ms (357 modules)
+ ✓ Compiled in 660ms (357 modules)
+ ✓ Compiled in 382ms (357 modules)
+ ✓ Compiled in 359ms (357 modules)
+ ✓ Compiled in 354ms (357 modules)
+ ✓ Compiled in 346ms (357 modules)
+ ✓ Compiled in 334ms (357 modules)
+ ✓ Compiled in 341ms (357 modules)
+ ✓ Compiled in 343ms (357 modules)
+ ✓ Compiled in 338ms (357 modules)
+ ✓ Compiled in 332ms (357 modules)
+ ✓ Compiled in 340ms (357 modules)
+ ✓ Compiled in 330ms (357 modules)
+ ✓ Compiled in 335ms (357 modules)
+ ✓ Compiled in 336ms (357 modules)
+ ✓ Compiled in 337ms (357 modules)
+ ✓ Compiled in 333ms (357 modules)
+ ✓ Compiled in 340ms (357 modules)
+ ✓ Compiled in 334ms (357 modules)
+ ✓ Compiled in 343ms (357 modules)
+ ✓ Compiled in 348ms (357 modules)
+ ✓ Compiled in 337ms (357 modules)
+ ✓ Compiled in 340ms (357 modules)
+ ✓ Compiled in 352ms (357 modules)
+ ✓ Compiled in 351ms (357 modules)
+ ✓ Compiled in 338ms (357 modules)
+ ✓ Compiled in 344ms (357 modules)
+ ✓ Compiled in 330ms (357 modules)
+ ✓ Compiled in 335ms (357 modules)
+ ✓ Compiled in 333ms (357 modules)
+ ✓ Compiled in 334ms (357 modules)
+ ✓ Compiled in 344ms (357 modules)
+ ✓ Compiled in 344ms (357 modules)
+ ✓ Compiled in 346ms (357 modules)
+ ✓ Compiled in 347ms (357 modules)
+ ✓ Compiled in 335ms (357 modules)
+ ✓ Compiled in 337ms (357 modules)
+ ✓ Compiled in 342ms (357 modules)
+ ✓ Compiled in 351ms (357 modules)
+ ✓ Compiled in 341ms (357 modules)
+ ✓ Compiled in 339ms (357 modules)
+ ✓ Compiled in 336ms (357 modules)
+ ✓ Compiled in 332ms (357 modules)
+ ✓ Compiled in 340ms (357 modules)
+ ✓ Compiled in 334ms (357 modules)
+ ✓ Compiled in 342ms (357 modules)
+ ✓ Compiled in 351ms (357 modules)
+ ✓ Compiled in 336ms (357 modules)
+ ✓ Compiled in 510ms (357 modules)
+ ✓ Compiled in 387ms (357 modules)
+ ✓ Compiled in 354ms (357 modules)
+ ✓ Compiled in 355ms (357 modules)
+ ✓ Compiled in 342ms (357 modules)
+ ✓ Compiled in 344ms (357 modules)
+ ✓ Compiled in 356ms (357 modules)

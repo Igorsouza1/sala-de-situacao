@@ -19,6 +19,71 @@ export async function findAllPropriedadesDataWithGeometry() {
   return result
 }
 
+export async function findPropertiesByRegion(regiaoId: number) {
+  const result = await db.execute(sql`
+    SELECT id, nome, cod_imovel, municipio, num_area, ST_AsGeoJSON(geom) as geojson
+    FROM monitoramento.propriedades
+    WHERE regiao_id = ${regiaoId}
+    ORDER BY id DESC
+  `);
+  return result.rows;
+}
+
+export async function checkDuplicateProperty(geojson: string, regiaoId: number) {
+  const result = await db.execute(sql`
+    SELECT id FROM monitoramento.propriedades
+    WHERE regiao_id = ${regiaoId}
+    AND ST_Equals(geom, ST_SetSRID(ST_GeomFromGeoJSON(${geojson}), 4674))
+    LIMIT 1
+  `);
+  return result.rows.length > 0;
+}
+
+export async function insertPropriedade(data: {
+  nome?: string;
+  cod_tema?: string;
+  nom_tema?: string;
+  cod_imovel?: string;
+  mod_fiscal?: number;
+  num_area?: number;
+  ind_status?: string;
+  ind_tipo?: string;
+  des_condic?: string;
+  municipio?: string;
+  geojson: string;
+  regiaoId: number;
+  properties?: any;
+}) {
+  return await db.execute(sql`
+    INSERT INTO monitoramento.propriedades (
+      nome, cod_tema, nom_tema, cod_imovel, mod_fiscal, num_area,
+      ind_status, ind_tipo, des_condic, municipio, geom, regiao_id, properties
+    ) VALUES (
+      ${data.nome || null},
+      ${data.cod_tema || null},
+      ${data.nom_tema || null},
+      ${data.cod_imovel || null},
+      ${data.mod_fiscal || null},
+      ${data.num_area || null},
+      ${data.ind_status || null},
+      ${data.ind_tipo || null},
+      ${data.des_condic || null},
+      ${data.municipio || null},
+      ST_Multi(ST_SetSRID(ST_GeomFromGeoJSON(${data.geojson}), 4674)),
+      ${data.regiaoId},
+      ${data.properties || null}
+    )
+    RETURNING id
+  `);
+}
+
+export async function deletePropriedade(id: number) {
+  return await db.execute(sql`
+    DELETE FROM monitoramento.propriedades
+    WHERE id = ${id}
+  `);
+}
+
 export async function findPropriedadeDossieData(id: number) {
   const query = sql`
     WITH prop AS (

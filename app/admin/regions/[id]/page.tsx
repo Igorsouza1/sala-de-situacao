@@ -1,5 +1,6 @@
 import { getRegionById, listOrganizations } from "@/lib/service/adminService";
 import { RegionSimpleEdit } from "@/components/admin/region-simple-edit";
+import { PropertyManager } from "@/components/admin/property-manager";
 import { notFound } from "next/navigation";
 
 export default async function RegionEditPage({ params }: { params: Promise<{ id: string }> }) {
@@ -34,6 +35,8 @@ export default async function RegionEditPage({ params }: { params: Promise<{ id:
           }}
           organizations={organizations}
         />
+
+        <PropertyManager regiaoId={region.id} />
       </div>
     </div>
   );
