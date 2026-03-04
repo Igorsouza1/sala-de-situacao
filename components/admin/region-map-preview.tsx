@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { useRouter } from "next/navigation";
 import { BaseLayersManager, BaseLayerDto } from "./base-layers-manager";
+import { PropertiesManager, PropertyDto } from "./properties-manager";
 import Map, { Source, Layer, MapRef } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import bbox from "@turf/bbox";
@@ -18,9 +19,10 @@ interface RegionMapPreviewProps {
   regionId: number;
   initialGeoJson: string | null;
   baseLayers?: BaseLayerDto[];
+  properties?: PropertyDto[];
 }
 
-export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: RegionMapPreviewProps) {
+export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], properties = [] }: RegionMapPreviewProps) {
   const router = useRouter();
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
   const [originalGeoData, setOriginalGeoData] = useState<FeatureCollection | null>(null);
@@ -29,6 +31,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [activeTab, setActiveTab] = useState<"baseLayers" | "properties">("baseLayers");
 
   // Settings state
   const [layerName, setLayerName] = useState("");
@@ -177,22 +180,36 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
       
       {/* Modern Card Header */}
       <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 z-10 relative mt-4">
-        <div className="flex gap-4 items-center">
+        <div className="flex gap-4 items-center flex-1">
           <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-blue-100 dark:border-blue-900/50">
              <Layers className="w-6 h-6" />
           </div>
           <div>
             <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-50 leading-tight">
-              Mapa e Camadas Base
+              Gerenciamento Territorial
             </h2>
             <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 max-w-xl">
-              Visualize os limites da região, adicione ou estilize as sobreposições georreferenciadas complementares.
+              Visualize os limites da região, adicione propriedades ou camadas complementares.
             </p>
           </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 items-center shrink-0">
-          {isPreviewing ? (
+          <div className="flex rounded-xl bg-neutral-100 dark:bg-neutral-800 p-1 border border-neutral-200 dark:border-neutral-700 shadow-sm mr-2">
+            <button
+              onClick={() => setActiveTab("baseLayers")}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "baseLayers" ? "bg-white dark:bg-neutral-900 shadow text-neutral-900 dark:text-neutral-100" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"}`}
+            >
+              Camadas Base
+            </button>
+            <button
+              onClick={() => setActiveTab("properties")}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "properties" ? "bg-white dark:bg-neutral-900 shadow text-neutral-900 dark:text-neutral-100" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"}`}
+            >
+              Propriedades (CAR)
+            </button>
+          </div>
+          {isPreviewing && activeTab === "baseLayers" ? (
             <Button
               type="button"
               variant="outline"
@@ -203,10 +220,12 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
               <Trash2 className="w-4 h-4 mr-2" /> Descartar Arquivo
             </Button>
           ) : (
-             <GeoJsonUploader
-                onUpload={handleGeoJsonUpload}
-                isUploading={isLoading}
-             />
+             activeTab === "baseLayers" ? (
+               <GeoJsonUploader
+                  onUpload={handleGeoJsonUpload}
+                  isUploading={isLoading}
+               />
+             ) : null
           )}
         </div>
       </div>
@@ -234,36 +253,68 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
               mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
               style={{ width: "100%", height: "100%" }}
             >
-              {/* Render Base Layers First */}
-              {baseLayers.map((layer) => {
-                 if (!layer.geojson || layer.visualConfig?.defaultVisibility === false) return null;
+              {/* Render Base Layers / Properties */}
+              {activeTab === "baseLayers" ? (
+                baseLayers.map((layer) => {
+                   if (!layer.geojson || layer.visualConfig?.defaultVisibility === false) return null;
 
-                 let parsedLayerGeo = null;
-                 try { parsedLayerGeo = typeof layer.geojson === 'string' ? JSON.parse(layer.geojson) : layer.geojson; } catch(e){}
-                 if (!parsedLayerGeo) return null;
+                   let parsedLayerGeo = null;
+                   try { parsedLayerGeo = typeof layer.geojson === 'string' ? JSON.parse(layer.geojson) : layer.geojson; } catch(e){}
+                   if (!parsedLayerGeo) return null;
 
-                 const styleConfig = layer.visualConfig?.baseStyle || {};
-                 return (
-                    <Source key={`source-base-layer-${layer.id}`} type="geojson" data={parsedLayerGeo}>
-                      <Layer
-                        id={`fill-base-layer-${layer.id}`}
-                        type="fill"
-                        paint={{
-                          "fill-color": styleConfig.color || "#000000",
-                          "fill-opacity": styleConfig.fillOpacity ?? 0.2
-                        }}
-                      />
-                      <Layer
-                        id={`line-base-layer-${layer.id}`}
-                        type="line"
-                        paint={{
-                          "line-color": styleConfig.color || "#000000",
-                          "line-width": styleConfig.weight || 2
-                        }}
-                      />
-                    </Source>
-                 );
-              })}
+                   const styleConfig = layer.visualConfig?.baseStyle || {};
+                   return (
+                      <Source key={`source-base-layer-${layer.id}`} type="geojson" data={parsedLayerGeo}>
+                        <Layer
+                          id={`fill-base-layer-${layer.id}`}
+                          type="fill"
+                          paint={{
+                            "fill-color": styleConfig.color || "#000000",
+                            "fill-opacity": styleConfig.fillOpacity ?? 0.2
+                          }}
+                        />
+                        <Layer
+                          id={`line-base-layer-${layer.id}`}
+                          type="line"
+                          paint={{
+                            "line-color": styleConfig.color || "#000000",
+                            "line-width": styleConfig.weight || 2
+                          }}
+                        />
+                      </Source>
+                   );
+                })
+              ) : (
+                <Source key="source-properties-layer" type="geojson" data={{
+                   type: "FeatureCollection",
+                   features: properties.map(p => {
+                      let geom = null;
+                      try { geom = typeof p.geojson === 'string' ? JSON.parse(p.geojson) : p.geojson; } catch(e){}
+                      return {
+                         type: "Feature" as const,
+                         geometry: geom,
+                         properties: { id: p.id, codImovel: p.codImovel, nome: p.nome }
+                      }
+                   }).filter(f => f.geometry)
+                }}>
+                  <Layer
+                    id="fill-properties-layer"
+                    type="fill"
+                    paint={{
+                      "fill-color": "#3b82f6",
+                      "fill-opacity": 0.3
+                    }}
+                  />
+                  <Layer
+                    id="line-properties-layer"
+                    type="line"
+                    paint={{
+                      "line-color": "#1d4ed8",
+                      "line-width": 2
+                    }}
+                  />
+                </Source>
+              )}
 
               {/* Main Region Geometry */}
               {geoData && (
@@ -380,12 +431,20 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [] }: 
                   </Button>
                </div>
             </div>
-          ) : (
+          ) : activeTab === "baseLayers" ? (
              <div className="h-[600px]">
                 <BaseLayersManager
                   regionId={regionId}
                   layers={baseLayers}
                   onLayerUpdate={() => router.refresh()}
+                />
+             </div>
+          ) : (
+             <div className="h-[600px]">
+                <PropertiesManager
+                  regionId={regionId}
+                  properties={properties}
+                  onPropertiesUpdate={() => router.refresh()}
                 />
              </div>
           )}

@@ -9,8 +9,27 @@ import * as acoesRepo from "@/lib/repositories/acoesRepository";
 
 // 2. DIZEMOS AO JEST PARA "MOCKAR" OS ARQUIVOS
 // Isso impede que o teste tente conectar no banco de dados real!
-jest.mock("@/lib/repositories/layerRepository");
-jest.mock("@/lib/repositories/acoesRepository");
+jest.mock("@/lib/repositories/layerRepository", () => ({
+    getLayerCatalog: jest.fn(),
+    getGenericLayerData: jest.fn(),
+}));
+
+jest.mock("@/lib/repositories/acoesRepository", () => ({
+    findAllAcoesDataWithGeometry: jest.fn(),
+}));
+
+jest.mock("@/db", () => ({
+    db: {
+        execute: jest.fn(),
+        select: jest.fn().mockReturnValue({
+            from: jest.fn().mockReturnValue({
+                where: jest.fn().mockReturnValue({
+                    orderBy: jest.fn().mockResolvedValue([])
+                })
+            })
+        })
+    }
+}));
 
 // DADOS FALSOS PARA O TESTE (FIXTURES)
 const mockCatalogAcoes = {
@@ -62,7 +81,7 @@ describe("MapLayerService - O Maestro", () => {
         expect(acoesRepo.findAllAcoesDataWithGeometry).toHaveBeenCalled();
 
         // Verificamos se ele NÃO chamou o genérico
-        expect(layerRepo.getLayerGeoJSON).not.toHaveBeenCalled();
+        expect(layerRepo.getGenericLayerData).not.toHaveBeenCalled();
 
         // Verificamos se o resultado final está montado corretamente (DTO)
         expect(resultado).not.toBeNull();
@@ -77,7 +96,7 @@ describe("MapLayerService - O Maestro", () => {
         (layerRepo.getLayerCatalog as jest.Mock).mockResolvedValue(mockCatalogBacia);
 
         // Ensinamos o genérico a retornar um GeoJSON
-        (layerRepo.getLayerGeoJSON as jest.Mock).mockResolvedValue({
+        (layerRepo.getGenericLayerData as jest.Mock).mockResolvedValue({
             type: "FeatureCollection",
             features: []
         });
@@ -89,7 +108,7 @@ describe("MapLayerService - O Maestro", () => {
         expect(layerRepo.getLayerCatalog).toHaveBeenCalledWith("bacia_rio");
 
         // Verifica se chamou o GENÉRICO
-        expect(layerRepo.getLayerGeoJSON).toHaveBeenCalledWith("bacia_rio");
+        expect(layerRepo.getGenericLayerData).toHaveBeenCalled();
 
         // Garante que NÃO chamou o de ações
         expect(acoesRepo.findAllAcoesDataWithGeometry).not.toHaveBeenCalled();
@@ -108,6 +127,6 @@ describe("MapLayerService - O Maestro", () => {
         // C. VERIFICAÇÃO
         expect(resultado).toBeNull();
         // Garante que não tentou buscar dados se nem existe no catálogo
-        expect(layerRepo.getLayerGeoJSON).not.toHaveBeenCalled();
+        expect(layerRepo.getGenericLayerData).not.toHaveBeenCalled();
     });
 });

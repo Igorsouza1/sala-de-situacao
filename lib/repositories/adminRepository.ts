@@ -99,6 +99,21 @@ export async function getRegionByIdInDb(id: number) {
   return (result.rows[0] as RegionListItem) ?? null;
 }
 
+export async function getPropertiesByRegionInDb(regionId: number) {
+  const result = await db.execute(sql`
+    SELECT
+      id,
+      cod_imovel as "codImovel",
+      nome,
+      municipio,
+      ST_AsGeoJSON(geom) as "geojson"
+    FROM monitoramento.propriedades
+    WHERE regiao_id = ${regionId}
+    ORDER BY id DESC
+  `);
+  return result.rows as any[];
+}
+
 export async function getBaseLayersByRegionInDb(regionId: number) {
   const result = await db.execute(sql`
     SELECT
