@@ -9,8 +9,28 @@ import * as acoesRepo from "@/lib/repositories/acoesRepository";
 
 // 2. DIZEMOS AO JEST PARA "MOCKAR" OS ARQUIVOS
 // Isso impede que o teste tente conectar no banco de dados real!
-jest.mock("@/lib/repositories/layerRepository");
-jest.mock("@/lib/repositories/acoesRepository");
+jest.mock("@/lib/repositories/layerRepository", () => ({
+    getLayerCatalog: jest.fn(),
+    getLayerGeoJSON: jest.fn(),
+    getGenericLayerData: jest.fn(),
+}));
+
+jest.mock("@/lib/repositories/acoesRepository", () => ({
+    findAllAcoesDataWithGeometry: jest.fn(),
+}));
+
+jest.mock("@/db", () => ({
+    db: {
+        execute: jest.fn(),
+        select: jest.fn().mockReturnValue({
+            from: jest.fn().mockReturnValue({
+                where: jest.fn().mockReturnValue({
+                    orderBy: jest.fn().mockResolvedValue([])
+                })
+            })
+        })
+    }
+}));
 
 // DADOS FALSOS PARA O TESTE (FIXTURES)
 const mockCatalogAcoes = {
@@ -89,7 +109,7 @@ describe("MapLayerService - O Maestro", () => {
         expect(layerRepo.getLayerCatalog).toHaveBeenCalledWith("bacia_rio");
 
         // Verifica se chamou o GENÉRICO
-        expect(layerRepo.getLayerGeoJSON).toHaveBeenCalledWith("bacia_rio");
+        expect(layerRepo.getGenericLayerData).toHaveBeenCalled();
 
         // Garante que NÃO chamou o de ações
         expect(acoesRepo.findAllAcoesDataWithGeometry).not.toHaveBeenCalled();

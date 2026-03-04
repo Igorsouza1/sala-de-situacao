@@ -35,6 +35,11 @@ export async function getRegionById(id: number) {
   return getRegionByIdInDb(id);
 }
 
+export async function getPropertiesByRegion(id: number) {
+  const { getPropertiesByRegionInDb } = await import("@/lib/repositories/adminRepository");
+  return getPropertiesByRegionInDb(id);
+}
+
 export async function getBaseLayersByRegion(id: number) {
   const { getBaseLayersByRegionInDb } = await import("@/lib/repositories/adminRepository");
   return getBaseLayersByRegionInDb(id);
