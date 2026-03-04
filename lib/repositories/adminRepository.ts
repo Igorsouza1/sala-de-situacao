@@ -59,6 +59,7 @@ export type RegionListItem = {
   organizationName: string | null;
   sizeKm2: number;
   createdAt: string;
+  geojson?: string;
 };
 
 export async function listRegionsInDb() {
@@ -87,7 +88,8 @@ export async function getRegionByIdInDb(id: number) {
       r.metadata->>'organizationId' AS "organizationId",
       o.name AS "organizationName",
       ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
-      r.created_at AS "createdAt"
+      r.created_at AS "createdAt",
+      ST_AsGeoJSON(r.geom) as "geojson"
     FROM monitoramento.regioes r
     LEFT JOIN monitoramento.organizations o
       ON o.id::text = r.metadata->>'organizationId'
@@ -95,6 +97,37 @@ export async function getRegionByIdInDb(id: number) {
   `);
 
   return (result.rows[0] as RegionListItem) ?? null;
+}
+
+export async function getBaseLayersByRegionInDb(regionId: number) {
+  const result = await db.execute(sql`
+    SELECT
+      c.id,
+      c.name,
+      c.slug,
+      c.visual_config as "visualConfig",
+      c.regiao_id as "regiaoId",
+      (
+        SELECT json_build_object(
+          'type', 'FeatureCollection',
+          'features', COALESCE(json_agg(
+            json_build_object(
+              'type', 'Feature',
+              'geometry', ST_AsGeoJSON(d.geom)::json,
+              'properties', d.properties
+            )
+          ), '[]'::json)
+        )::text
+        FROM monitoramento.layer_data d
+        WHERE d.layer_id = c.id
+      ) as geojson
+    FROM monitoramento.layer_catalog c
+    WHERE c.regiao_id = ${regionId}
+      AND c.visual_config->>'category' = 'Base Territorial'
+    ORDER BY c.ordering DESC, c.id DESC
+  `);
+
+  return result.rows as any[];
 }
 
 export async function createRegionInDb(input: {
