@@ -79,6 +79,11 @@ export function RegionSimpleEdit({
           </Button>
         </div>
         
+        <Link href={`/admin/regions/${region.id}/expand`} className="w-full md:w-auto">
+          <Button variant="secondary" className="w-full h-12 px-6 rounded-xl font-medium gap-2 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 shadow-sm transition-all text-neutral-700 dark:text-neutral-300">
+            <Map className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Expandir Fronteira
+          </Button>
+        </Link>
       </CardFooter>
     </Card>
   );

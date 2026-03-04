@@ -27,6 +27,8 @@
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "@tmcw/togeojson": "^7.1.2",
+    "@turf/bbox": "^7.3.4",
+    "@turf/helpers": "^7.3.4",
     "@turf/turf": "^7.3.3",
     "@types/shapefile": "^0.6.4",
     "@xmldom/xmldom": "^0.9.8",
