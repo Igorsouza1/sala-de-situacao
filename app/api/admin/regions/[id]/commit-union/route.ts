@@ -1,6 +1,7 @@
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
+import { revalidateTag } from "next/cache";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -12,6 +13,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (!formData) return apiError("FormData é obrigatório.", 400);
 
     const expandBoundaryStr = formData.get("expandBoundary");
+    const expandBoundary = expandBoundaryStr === "true";
     const file = formData.get("file") as File;
 
     if (!file || expandBoundaryStr !== "true") {
@@ -55,71 +57,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
          `);
       }
 
-      // 2. Create Base Layer using BATCH inserts for performance
-      if (createBaseLayer && layerConfig) {
-        const slugBase = slugify(layerConfig.name, { lower: true, strict: true });
-        let uniqueSlug = slugBase;
 
-        const existingSlug = await tx.execute(sql`SELECT slug FROM monitoramento.layer_catalog WHERE slug LIKE ${slugBase + '%'}`);
-        if (existingSlug.rowCount && existingSlug.rowCount > 0) {
-          uniqueSlug = `${slugBase}-${Date.now().toString().slice(-4)}`;
-        }
-
-        const visualConfig = {
-          category: "Base Territorial",
-          defaultVisibility: true,
-          baseStyle: {
-            type: "polygon",
-            color: layerConfig.color,
-            fillOpacity: layerConfig.fillOpacity,
-            weight: layerConfig.weight
-          }
-        };
-
-        // Insert into catalog
-        const catalogResult = await tx.insert(layerCatalogInMonitoramento)
-          .values({
-            name: layerConfig.name,
-            slug: uniqueSlug,
-            regiaoId: regionId,
-            visualConfig: visualConfig,
-            schemaConfig: { source: "upload" },
-            ordering: 0
-          })
-          .returning({ id: layerCatalogInMonitoramento.id });
-
-        const newLayerId = catalogResult[0].id;
-
-        // Insert the data into layer_data table using batching
-        if (newFeature.type === "FeatureCollection" && newFeature.features) {
-          const batchSize = 500;
-          for (let i = 0; i < newFeature.features.length; i += batchSize) {
-            const batch = newFeature.features.slice(i, i + batchSize);
-
-            const insertData = batch.filter((f: any) => f.geometry).map((feature: any) => ({
-              layerId: newLayerId,
-              geom: sql`ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(feature.geometry)}), 4674)`,
-              properties: feature.properties || {},
-              dataRegistro: new Date().toISOString()
-            }));
-
-            if (insertData.length > 0) {
-              await tx.insert(layerDataInMonitoramento).values(insertData);
-            }
-          }
-        } else {
-          // Single feature or geometry
-          const geomToInsert = newFeature.type === "Feature" ? newFeature.geometry : newFeature;
-          const props = newFeature.type === "Feature" ? newFeature.properties : {};
-
-          await tx.insert(layerDataInMonitoramento).values({
-            layerId: newLayerId,
-            geom: sql`ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geomToInsert)}), 4674)`,
-            properties: props || {},
-            dataRegistro: new Date().toISOString()
-          });
-        }
-      }
     });
 
     // Revalidate layer catalog cache
