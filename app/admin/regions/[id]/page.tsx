@@ -18,7 +18,7 @@ export default async function RegionEditPage({ params }: { params: Promise<{ id:
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-6 md:p-10">
-      <div className="max-w-4xl mx-auto space-y-6">
+      <div className="max-w-8xl mx-auto space-y-6">
         <header className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
             Editar Região: {region.nome}
