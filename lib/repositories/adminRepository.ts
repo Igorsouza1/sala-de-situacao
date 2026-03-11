@@ -106,6 +106,7 @@ export async function getPropertiesByRegionInDb(regionId: number) {
       cod_imovel as "codImovel",
       nome,
       municipio,
+      properties,
       ST_AsGeoJSON(geom) as "geojson"
     FROM monitoramento.propriedades
     WHERE regiao_id = ${regionId}

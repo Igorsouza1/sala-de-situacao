@@ -2,15 +2,17 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Map as MapIcon, Info, Upload } from "lucide-react";
+import { Loader2, Map as MapIcon, Info, Upload, Edit } from "lucide-react";
 import { GeoJsonUploader } from "./geojson-uploader";
 import { useRouter } from "next/navigation";
+import { PropertyEditDialog } from "./property-edit-dialog";
 
 export interface PropertyDto {
   id: number;
   codImovel?: string | null;
   nome?: string | null;
   municipio?: string | null;
+  properties?: any;
   geojson?: any;
 }
 
@@ -25,6 +27,8 @@ export function PropertiesManager({
 }) {
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState<{current: number, total: number, inserted: number, skipped: number} | null>(null);
+  const [selectedProperty, setSelectedProperty] = useState<PropertyDto | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const router = useRouter();
 
   const handleUpload = async (file: File) => {
@@ -182,13 +186,37 @@ export function PropertiesManager({
                         </p>
                         <p className="text-neutral-500 mt-0.5 truncate max-w-[180px]">{prop.municipio || 'Município não informado'}</p>
                       </div>
-                      <span className="bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-neutral-500 text-[10px] font-mono border border-neutral-200 dark:border-neutral-700">ID: {prop.id}</span>
+                      <div className="flex items-center gap-2">
+                         <span className="bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-neutral-500 text-[10px] font-mono border border-neutral-200 dark:border-neutral-700">ID: {prop.id}</span>
+                         <Button
+                           variant="ghost"
+                           size="icon"
+                           className="h-6 w-6 text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400"
+                           onClick={() => {
+                             setSelectedProperty(prop);
+                             setIsEditDialogOpen(true);
+                           }}
+                         >
+                           <Edit className="w-3.5 h-3.5" />
+                         </Button>
+                      </div>
                    </div>
                  ))}
               </div>
            )}
         </div>
       </div>
+
+      <PropertyEditDialog
+        property={selectedProperty}
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSaved={() => {
+          onPropertiesUpdate();
+          router.refresh();
+        }}
+        regionId={regionId}
+      />
     </div>
   );
 }
