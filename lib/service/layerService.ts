@@ -13,7 +13,7 @@ import { findAllPropriedadesDataWithGeometry } from "../repositories/propriedade
 
 // --- 1. CONFIGURAÇÃO DAS ESTRATÉGIAS ---
 // --- 1. CONFIGURAÇÃO DAS ESTRATÉGIAS ---
-const STATIC_STRATEGIES: Record<string, (start?: Date, end?: Date) => Promise<MapFeatureCollection>> = {
+const STATIC_STRATEGIES: Record<string, (start?: Date, end?: Date, minArea?: number, maxArea?: number) => Promise<MapFeatureCollection>> = {
     "acoes": async (start?: Date, end?: Date) => {
         const data = await findAllAcoesDataWithGeometry(start, end);
         // O helper converte o array de linhas do repo para GeoJSON
@@ -31,8 +31,8 @@ const STATIC_STRATEGIES: Record<string, (start?: Date, end?: Date) => Promise<Ma
         const data = await findAllFirmsDataWithGeometry(start, end);
         return toFeatureCollection(data.rows || data);
     },
-    "propriedades": async () => {
-        const data = await findAllPropriedadesDataWithGeometry();
+        "propriedades": async (start?: Date, end?: Date, minArea?: number, maxArea?: number) => {
+        const data = await findAllPropriedadesDataWithGeometry(minArea, maxArea);
         return toFeatureCollection(data.rows || data);
     },
     // Adicione outras camadas que precisam de tratamento especial
@@ -99,7 +99,7 @@ async function getLayerGroups(slug: string, column: string, schema: string = 'mo
  * THE MAESTRO: Combines Catalog Configuration + Database GeoJSON
  * Orchestrates the assembly of the final LayerResponseDTO.
  */
-export async function getLayer(slug: string, startDate?: Date, endDate?: Date): Promise<LayerResponseDTO | null> {
+export async function getLayer(slug: string, startDate?: Date, endDate?: Date, minArea?: number, maxArea?: number): Promise<LayerResponseDTO | null> {
     try {
         // 1. Busca Metadados no Catálogo
         const catalogEntry = await getLayerCatalog(slug);
@@ -116,7 +116,7 @@ export async function getLayer(slug: string, startDate?: Date, endDate?: Date): 
         // CAMINHO A: É uma camada VIP/Especial? (Hardcoded Strategy)
         if (STATIC_STRATEGIES[slug]) {
             // console.log(`🎻 Maestro: Usando Estratégia Estática para ${slug}`);
-            data = await STATIC_STRATEGIES[slug](startDate, endDate);
+            data = await STATIC_STRATEGIES[slug](startDate, endDate, minArea, maxArea);
         }
 
         // CAMINHO B: É uma camada Padrão do Usuário? (Generic Data)
@@ -210,7 +210,7 @@ export async function getLayer(slug: string, startDate?: Date, endDate?: Date): 
  * Fetches ALL layers defined in the catalog.
  * Robust against individual layer failures.
  */
-export async function getAllLayers(startDate?: Date, endDate?: Date): Promise<LayerResponseDTO[]> {
+export async function getAllLayers(startDate?: Date, endDate?: Date, minArea?: number, maxArea?: number): Promise<LayerResponseDTO[]> {
     const catalogEntries = await db
         .select()
         .from(layerCatalogInMonitoramento)
@@ -218,7 +218,7 @@ export async function getAllLayers(startDate?: Date, endDate?: Date): Promise<La
 
     if (!catalogEntries.length) return [];
 
-    const layerPromises = catalogEntries.map(entry => getLayer(entry.slug, startDate, endDate));
+    const layerPromises = catalogEntries.map(entry => getLayer(entry.slug, startDate, endDate, minArea, maxArea));
     const results = await Promise.allSettled(layerPromises);
 
     const validLayers: LayerResponseDTO[] = [];
