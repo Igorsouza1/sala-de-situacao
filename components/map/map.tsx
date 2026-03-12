@@ -9,6 +9,7 @@ import { CustomZoomControl } from "./CustomZoomControl"
 import { CustomLayerControl } from "./CustomLayerControl"
 import { MapPlaceholder } from "./MapPlaceholder"
 import { DateFilterControl } from "./DateFilterControl"
+import { PropertyFilterControl } from "./PropertyFilterControl"
 import { MeasureControl } from "./MeasureControl"
 import { CoordinateInspector } from "./CoordinateInspector"
 import { SnapshotControl } from "./SnapshotControl"
@@ -53,6 +54,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
   const [visibleDynamicLayers, setVisibleDynamicLayers] = useState<string[]>([])
   const [loadingLayers, setLoadingLayers] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [areaFilter, setAreaFilter] = useState<{ minArea?: number; maxArea?: number }>({})
   const [dataVersion, setDataVersion] = useState(0)
   const initializedRef = useRef(false)
   
@@ -68,6 +70,8 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
       const params = new URLSearchParams();
       if (dateFilter.startDate) params.append('startDate', dateFilter.startDate.toISOString());
       if (dateFilter.endDate) params.append('endDate', dateFilter.endDate.toISOString());
+      if (areaFilter.minArea !== undefined) params.append('minArea', String(areaFilter.minArea));
+      if (areaFilter.maxArea !== undefined) params.append('maxArea', String(areaFilter.maxArea));
       params.append('_t', String(Date.now())); // Prevent caching
 
       const response = await fetch(`/api/map/layers?${params.toString()}`)
@@ -85,7 +89,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
     } finally {
       setLoadingLayers(false)
     }
-  }, [dateFilter.startDate?.toISOString(), dateFilter.endDate?.toISOString()]) // Re-fetch when dates change - using string primitives for stability 
+  }, [dateFilter.startDate?.toISOString(), dateFilter.endDate?.toISOString(), areaFilter.minArea, areaFilter.maxArea])
 
   // Initialize visibility once
   useEffect(() => {
@@ -486,8 +490,9 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
         </Button>
       </div>
 
-      <div className="absolute top-4 left-4 z-[1000]">
+      <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-4">
         <DateFilterControl onDateChange={setDateFilter} />
+        <PropertyFilterControl onFilterChange={setAreaFilter} />
       </div>
 
       <div className="absolute bottom-4 left-4 z-[1000] gap-3 flex flex-col">

@@ -10,11 +10,22 @@ export async function updatePropriedadeName(id: number, nome: string) {
   `);
 }
 
-export async function findAllPropriedadesDataWithGeometry() {
-  const result = await db.execute(`
+export async function findAllPropriedadesDataWithGeometry(minArea?: number, maxArea?: number) {
+  let query = sql`
         SELECT id, cod_tema, nom_tema, cod_imovel, mod_fiscal, num_area, ind_status, ind_tipo, des_condic, municipio, ST_AsGeoJSON(geom) as geojson
         FROM "monitoramento"."propriedades"
-      `)
+        WHERE 1=1
+      `;
+
+  if (minArea !== undefined && minArea !== null) {
+      query = sql`${query} AND num_area >= ${minArea}`;
+  }
+
+  if (maxArea !== undefined && maxArea !== null) {
+      query = sql`${query} AND num_area <= ${maxArea}`;
+  }
+
+  const result = await db.execute(query);
 
   return result
 }
