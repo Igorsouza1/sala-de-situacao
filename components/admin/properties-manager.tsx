@@ -2,15 +2,18 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Map as MapIcon, Info, Upload } from "lucide-react";
+import { Loader2, Map as MapIcon, Info, Upload, Edit, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { GeoJsonUploader } from "./geojson-uploader";
 import { useRouter } from "next/navigation";
+import { PropertyEditDialog } from "./property-edit-dialog";
 
 export interface PropertyDto {
   id: number;
   codImovel?: string | null;
   nome?: string | null;
   municipio?: string | null;
+  properties?: any;
   geojson?: any;
 }
 
@@ -18,14 +21,34 @@ export function PropertiesManager({
   regionId,
   properties,
   onPropertiesUpdate,
+  selectedPropertyId,
+  onPropertySelect,
 }: {
   regionId: number;
   properties: PropertyDto[];
   onPropertiesUpdate: () => void;
+  selectedPropertyId?: number | null;
+  onPropertySelect?: (id: number | null) => void;
 }) {
   const [isUploading, setIsUploading] = useState(false);
   const [progress, setProgress] = useState<{current: number, total: number, inserted: number, skipped: number} | null>(null);
+  const [selectedProperty, setSelectedProperty] = useState<PropertyDto | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
   const router = useRouter();
+
+  const filteredProperties = properties.filter((prop) => {
+    if (selectedPropertyId != null) {
+      return prop.id === selectedPropertyId;
+    }
+    if (!searchTerm) return true;
+    const term = searchTerm.toLowerCase();
+    return (
+      (prop.nome && prop.nome.toLowerCase().includes(term)) ||
+      (prop.codImovel && prop.codImovel.toLowerCase().includes(term)) ||
+      prop.id.toString() === term
+    );
+  });
 
   const handleUpload = async (file: File) => {
     setIsUploading(true);
@@ -164,31 +187,78 @@ export function PropertiesManager({
           )}
         </div>
 
-        <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800">
-           <div className="flex justify-between items-center mb-3">
+        <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 flex flex-col gap-3">
+           <div className="flex justify-between items-center">
              <h4 className="font-semibold text-sm text-neutral-800 dark:text-neutral-200">Propriedades Carregadas</h4>
              <span className="text-xs font-mono bg-neutral-200 dark:bg-neutral-800 px-2 py-0.5 rounded text-neutral-600 dark:text-neutral-400">Total: {properties.length}</span>
            </div>
 
-           {properties.length === 0 ? (
-              <p className="text-xs text-center text-neutral-500 py-6">Nenhuma propriedade cadastrada ainda.</p>
+           <div className="relative">
+             <Search className="absolute left-3 top-2.5 h-4 w-4 text-neutral-500" />
+             <Input
+               placeholder="Buscar por CAR, Nome ou ID..."
+               className="pl-9 h-9 text-sm bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700"
+               value={searchTerm}
+               onChange={(e) => {
+                 setSearchTerm(e.target.value);
+                 if (selectedPropertyId != null && onPropertySelect) {
+                   onPropertySelect(null);
+                 }
+               }}
+             />
+           </div>
+
+           {filteredProperties.length === 0 ? (
+              <p className="text-xs text-center text-neutral-500 py-6">Nenhuma propriedade encontrada.</p>
            ) : (
-              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
-                 {properties.map(prop => (
-                   <div key={prop.id} className="text-xs p-3 rounded-lg border border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-900 flex justify-between items-center shadow-sm">
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1 styling-scrollbar">
+                 {filteredProperties.map(prop => (
+                   <div 
+                     key={prop.id} 
+                     onClick={() => onPropertySelect && onPropertySelect(selectedPropertyId === prop.id ? null : prop.id)}
+                     className={`text-xs p-3 rounded-lg border flex justify-between items-center shadow-sm cursor-pointer transition-colors ${
+                       selectedPropertyId === prop.id 
+                         ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700' 
+                         : 'border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-blue-300 dark:hover:border-blue-700'
+                     }`}
+                   >
                       <div>
                         <p className="font-semibold text-neutral-800 dark:text-neutral-200 truncate max-w-[180px]" title={prop.nome || prop.codImovel || `ID ${prop.id}`}>
                            {prop.nome || prop.codImovel || `Propriedade #${prop.id}`}
                         </p>
                         <p className="text-neutral-500 mt-0.5 truncate max-w-[180px]">{prop.municipio || 'Município não informado'}</p>
                       </div>
-                      <span className="bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-neutral-500 text-[10px] font-mono border border-neutral-200 dark:border-neutral-700">ID: {prop.id}</span>
+                      <div className="flex items-center gap-2">
+                         <span className="bg-neutral-100 dark:bg-neutral-800 px-1.5 py-0.5 rounded text-neutral-500 text-[10px] font-mono border border-neutral-200 dark:border-neutral-700">ID: {prop.id}</span>
+                         <Button
+                           variant="ghost"
+                           size="icon"
+                           className="h-6 w-6 text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400"
+                           onClick={() => {
+                             setSelectedProperty(prop);
+                             setIsEditDialogOpen(true);
+                           }}
+                         >
+                           <Edit className="w-3.5 h-3.5" />
+                         </Button>
+                      </div>
                    </div>
                  ))}
               </div>
            )}
         </div>
       </div>
+
+      <PropertyEditDialog
+        property={selectedProperty}
+        isOpen={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        onSaved={() => {
+          onPropertiesUpdate();
+          router.refresh();
+        }}
+        regionId={regionId}
+      />
     </div>
   );
 }
