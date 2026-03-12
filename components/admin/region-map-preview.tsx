@@ -32,6 +32,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<"baseLayers" | "properties">("baseLayers");
+  const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
 
   // Settings state
   const [layerName, setLayerName] = useState("");
@@ -252,6 +253,17 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
               initialViewState={defaultCenter}
               mapStyle="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
               style={{ width: "100%", height: "100%" }}
+              interactiveLayerIds={activeTab === "properties" ? ["fill-properties-layer"] : undefined}
+              onClick={(e) => {
+                if (activeTab === "properties" && e.features && e.features.length > 0) {
+                  const feature = e.features.find((f: any) => f.layer.id === "fill-properties-layer");
+                  if (feature && feature.properties) {
+                    setSelectedPropertyId(feature.properties.id);
+                  } else {
+                    setSelectedPropertyId(null);
+                  }
+                }
+              }}
             >
               {/* Render Base Layers / Properties */}
               {activeTab === "baseLayers" ? (
@@ -301,16 +313,36 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                     id="fill-properties-layer"
                     type="fill"
                     paint={{
-                      "fill-color": "#3b82f6",
-                      "fill-opacity": 0.3
+                      "fill-color": [
+                        "case",
+                        ["==", ["get", "id"], selectedPropertyId || -1],
+                        "#eab308", // Yellow for selected
+                        "#3b82f6"  // Blue for default
+                      ],
+                      "fill-opacity": [
+                        "case",
+                        ["==", ["get", "id"], selectedPropertyId || -1],
+                        0.6,
+                        0.3
+                      ]
                     }}
                   />
                   <Layer
                     id="line-properties-layer"
                     type="line"
                     paint={{
-                      "line-color": "#1d4ed8",
-                      "line-width": 2
+                      "line-color": [
+                        "case",
+                        ["==", ["get", "id"], selectedPropertyId || -1],
+                        "#ca8a04",
+                        "#1d4ed8"
+                      ],
+                      "line-width": [
+                        "case",
+                        ["==", ["get", "id"], selectedPropertyId || -1],
+                        3,
+                        2
+                      ]
                     }}
                   />
                 </Source>
@@ -445,6 +477,27 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                   regionId={regionId}
                   properties={properties}
                   onPropertiesUpdate={() => router.refresh()}
+                  selectedPropertyId={selectedPropertyId}
+                  onPropertySelect={(id: number | null) => {
+                    if (id === null || selectedPropertyId === id) {
+                      setSelectedPropertyId(null);
+                    } else {
+                      setSelectedPropertyId(id);
+                      const prop = properties.find((p) => p.id === id);
+                      if (prop && prop.geojson && mapRef.current) {
+                        try {
+                          const geom = typeof prop.geojson === 'string' ? JSON.parse(prop.geojson) : prop.geojson;
+                          const [minLng, minLat, maxLng, maxLat] = bbox(geom);
+                          mapRef.current.fitBounds(
+                            [[minLng, minLat], [maxLng, maxLat]],
+                            { padding: 40, duration: 1000 }
+                          );
+                        } catch (e) {
+                          console.error("Failed to parse/fit bounds for property", e);
+                        }
+                      }
+                    }
+                  }}
                 />
              </div>
           )}
