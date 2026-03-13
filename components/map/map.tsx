@@ -10,6 +10,7 @@ import { CustomLayerControl } from "./CustomLayerControl"
 import { MapPlaceholder } from "./MapPlaceholder"
 import { DateFilterControl } from "./DateFilterControl"
 import { PropertyFilterControl } from "./PropertyFilterControl"
+import { FaunaHeatmapControl } from "./FaunaHeatmapControl"
 import { MeasureControl } from "./MeasureControl"
 import { CoordinateInspector } from "./CoordinateInspector"
 import { SnapshotControl } from "./SnapshotControl"
@@ -493,6 +494,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
       <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-4">
         <DateFilterControl onDateChange={setDateFilter} />
         <PropertyFilterControl onFilterChange={setAreaFilter} />
+        <FaunaHeatmapControl />
       </div>
 
       <div className="absolute bottom-4 left-4 z-[1000] gap-3 flex flex-col">
