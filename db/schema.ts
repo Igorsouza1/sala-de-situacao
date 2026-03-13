@@ -296,3 +296,10 @@ type BaseTrilhaData = InferInsertModel<typeof trilhasInMonitoramento>;
 export type NewTrilhaData = Omit<BaseTrilhaData, 'geom'> & {
 	geom: string;
 };
+export const javaliAvistamentosInMonitoramento = monitoramento.table("javali_avistamentos", {
+	id: serial().primaryKey().notNull(),
+	tipo: varchar({ length: 100 }).notNull(),
+	observacoes: text(),
+	geom: geometry({ type: "point", srid: 4674 }).notNull(),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+});
