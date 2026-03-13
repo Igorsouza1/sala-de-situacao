@@ -5,7 +5,7 @@ import { PawPrint } from "lucide-react"
 import { FilterPopover } from "./FilterPopover"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { useMap } from "react-leaflet"
+import { useMap, CircleMarker, Tooltip } from "react-leaflet"
 import L from "leaflet"
 import "leaflet.heat"
 
@@ -22,13 +22,26 @@ function FaunaHeatmapLayer({
   useEffect(() => {
     if (!isActive || data.length === 0) return
 
+    // Ensure L.heatLayer is available
+    if (typeof (L as any).heatLayer !== "function") {
+      console.error("Leaflet.heat plugin is not loaded correctly.")
+      return
+    }
+
+    // Create a custom pane so the heatmap draws ON TOP of GeoJSON layers
+    if (!map.getPane("heatmapPane")) {
+      const pane = map.createPane("heatmapPane")
+      pane.style.zIndex = "450" // overlayPane is 400, shadowPane is 500
+      pane.style.pointerEvents = "none" // allow clicks to pass through to underlying layers
+    }
+
     // Create heat layer using L.heatLayer
-    // The cast to any is due to leaflet.heat typings sometimes having issues
-    // or missing on standard L object directly.
     const heatLayer = (L as any).heatLayer(data, {
-      radius: 25,
-      blur: 15,
+      radius: 40,
+      blur: 25,
       maxZoom: 17,
+      max: 0.5, // Increased sensitivity for small quantity of points
+      pane: "heatmapPane",
       gradient: {
         0.4: "blue",
         0.6: "cyan",
@@ -50,15 +63,52 @@ function FaunaHeatmapLayer({
   return null
 }
 
+function FaunaLocationsLayer({
+  data,
+  isActive
+}: {
+  data: [number, number, number][]
+  isActive: boolean
+}) {
+  if (!isActive || data.length === 0) return null
+
+  return (
+    <>
+      {data.map((point, index) => (
+        <CircleMarker
+          key={index}
+          center={[point[0], point[1]]}
+          radius={6}
+          pathOptions={{ 
+            color: "#ea580c", // orange-600
+            fillColor: "#f97316", // orange-500
+            fillOpacity: 0.7,
+            weight: 2
+          }}
+        >
+          <Tooltip>
+            Registro de Fauna Exótica (Javali)<br/>
+            Lat: {point[0].toFixed(4)} Lng: {point[1].toFixed(4)}
+          </Tooltip>
+        </CircleMarker>
+      ))}
+    </>
+  )
+}
+
 export function FaunaHeatmapControl() {
-  const [isActive, setIsActive] = useState(false)
+  const [isHeatmapActive, setIsHeatmapActive] = useState(false)
+  const [isLocationsActive, setIsLocationsActive] = useState(false)
+  
   const [data, setData] = useState<[number, number, number][]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [hasFetched, setHasFetched] = useState(false)
 
+  const isAnyActive = isHeatmapActive || isLocationsActive
+
   useEffect(() => {
     // Only fetch when activated for the first time
-    if (isActive && !hasFetched && !isLoading) {
+    if (isAnyActive && !hasFetched && !isLoading) {
       const fetchData = async () => {
         setIsLoading(true)
         try {
@@ -79,26 +129,40 @@ export function FaunaHeatmapControl() {
 
       fetchData()
     }
-  }, [isActive, hasFetched, isLoading])
+  }, [isAnyActive, hasFetched, isLoading])
 
   return (
     <>
-      {isActive && <FaunaHeatmapLayer data={data} isActive={isActive} />}
+      <FaunaHeatmapLayer data={data} isActive={isHeatmapActive} />
+      <FaunaLocationsLayer data={data} isActive={isLocationsActive} />
 
-      <FilterPopover icon={PawPrint} title="Fauna Exótica">
+      <FilterPopover icon={PawPrint} title="Fauna Exótica (Javalis)">
         {() => (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <Label htmlFor="heatmap-switch" className="text-sm font-medium text-slate-700 cursor-pointer">
-                Mapa de Calor (Javalis)
+                Mapa de Calor
               </Label>
               <Switch
                 id="heatmap-switch"
-                checked={isActive}
-                onCheckedChange={setIsActive}
+                checked={isHeatmapActive}
+                onCheckedChange={setIsHeatmapActive}
                 disabled={isLoading}
               />
             </div>
+            
+            <div className="flex items-center justify-between">
+              <Label htmlFor="locations-switch" className="text-sm font-medium text-slate-700 cursor-pointer">
+                Localizações Pontuais
+              </Label>
+              <Switch
+                id="locations-switch"
+                checked={isLocationsActive}
+                onCheckedChange={setIsLocationsActive}
+                disabled={isLoading}
+              />
+            </div>
+
             {isLoading && (
               <p className="text-xs text-slate-500 animate-pulse">Carregando dados...</p>
             )}

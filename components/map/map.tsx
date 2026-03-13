@@ -473,6 +473,12 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
             }}
           />
         ))}
+
+        <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-4">
+          <DateFilterControl onDateChange={setDateFilter} />
+          <PropertyFilterControl onFilterChange={setAreaFilter} />
+          <FaunaHeatmapControl />
+        </div>
       </MapContainer>
 
       <div className="absolute top-44 right-4 z-[400]">
@@ -489,12 +495,6 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
             className={`h-4 w-4 ${loadingLayers ? 'animate-spin' : ''}`} 
           />
         </Button>
-      </div>
-
-      <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-4">
-        <DateFilterControl onDateChange={setDateFilter} />
-        <PropertyFilterControl onFilterChange={setAreaFilter} />
-        <FaunaHeatmapControl />
       </div>
 
       <div className="absolute bottom-4 left-4 z-[1000] gap-3 flex flex-col">
