@@ -1,199 +1,77 @@
-# Sala de Situação - Monitoramento Geoespacial
+# PRISMA - Monitoramento Geoespacial Inteligente
 
-O **Sala de Situação** é um sistema de monitoramento geoespacial que permite a visualização e análise de dados ambientais, como desmatamento, incêndios e ações de preservação. O projeto utiliza **Next.js 15**, **Drizzle ORM**, **PostGIS** e **Leaflet.js** para exibição e manipulação de dados geoespaciais.
+O **PRISMA (Sala de Situação)** é uma plataforma avançada de inteligência e monitoramento geoespacial voltada inicialmente para a tomada de decisões no **Município de Bonito-MS**. 
 
-Com a sala conseguimos analisar dados georeferenciados como pontos de ações realizadas pelo IHP, passivos ambientais, vestigios de pesca ou crimes ambientais.
-Reunimos em 1 só lugar dados de focos de incendio, desmatamento para que seja possivel tomar decisões mais acertadas. 
-A plataforma gerencia todos os seus dados para que voce se concentre na tomada de decisões relevantes no longo prazo.
+O sistema substitui processos manuais e lentos de recolhimento de dados espalhados, unificando informações críticas em um único painel. Através do cruzamento de dados geoespaciais e relatórios detalhados, o PRISMA capacita gestores ambientais, o IHP (Instituto Homem Pantaneiro) e as autoridades locais a proteger ativos naturais, monitorar incidentes e compreender o cenário ambiental em tempo real.
 
-## 📌 Requisitos de Configuração
+## 📌 Principais Funcionalidades e Domínios
 
-Para rodar o projeto, você precisa configurar as seguintes variáveis de ambiente:
+O coração e diferencial do PRISMA é a capacidade de gerar cruzamento de informações e relatórios profundos orientados a propriedades rurais (através do Cadastro Ambiental Rural - CAR).
+
+- **Dossiê de Propriedades (O Diferencial):** Geração de relatórios completos e consolidados de propriedades rurais. Cruza dados da propriedade com alertas de desmatamento, focos de incêndio, avistamento de animais, e mais, automatizando auditorias ambientais.
+- **Painel de Controle e Dashboards:** Visão macro com gráficos sobre desmatamento, focos de incêndio (dados FIRMS) e atividades na região.
+- **Alertas Ambientais:** Mapeamento em tempo real de pontos de desmatamento e Raw FIRMS (focos de calor/fogo via satélite). 
+- **Monitoramento de Fauna (Javalis):** Registro estruturado de avistamentos de javalis, abordando uma grande dor ambiental e econômica do município de Bonito.
+- **Estações de Monitoramento:** Integração com dados de qualidade da água e clima, como o *Deque de Pedras* (turbidez da água, secchi) e a *Ponte do Cure* (chuva, nível da água).
+- **Ações, Fiscalizações e Trilhas:** Registro de incursões georreferenciadas. *(Nota: O mapeamento via arquivos GPX e roteamentos complexos de expedições estão sendo gradualmente descontinuados para manter o sistema ágil e focado).*
+
+## 🛠 Arquitetura e Tecnologias
+
+O PRISMA foi reconstruído para ser rápido, escalável e focado em alta complexidade geográfica.
+
+- **Frontend & Backend:** [Next.js 15](https://nextjs.org/) (App Router, API Routes, Server Actions).
+- **Banco de Dados Geoespacial:** [PostgreSQL](https://www.postgresql.org/) com extensão [PostGIS](https://postgis.net/) para consultas de raios, interseções e áreas.
+- **ORM:** [Drizzle ORM](https://orm.drizzle.team/), o que garante queries seguras (type-safe) e eficientes, especialmente nas geometrias complexas.
+- **Mapas:** [Leaflet.js](https://leafletjs.com/) e/ou [MapLibre GL JS](https://maplibre.org/) operando os CustomLayers para exibir Shapes (GeoJSON), polígonos e marcações.
+- **Autenticação & Funções Severless:** [Supabase](https://supabase.com/).
+- **Storage:** Servidor de Arquivos da **Azure Blob Storage** para guarda de documentos e imagens vinculados às ações e propriedades.
+
+## 🚀 Setup e Execução (Para Desenvolvedores)
+
+Siga os passos abaixo para preparar seu ambiente de desenvolvimento local.
+
+### 1. Variáveis de Ambiente (`.env.local`)
+Você precisará das chaves dos serviços externos. Crie e preencha o `.env.local`:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=<sua_supabase_url>
 NEXT_PUBLIC_SUPABASE_ANON_KEY=<sua_supabase_anon_key>
-DATABASE_URL=<sua_database_url>
+DATABASE_URL=<sua_database_url_postgresql_com_postgis>
+
 AZURE_STORAGE_ACCOUNT_NAME=<sua_conta_azure>
 AZURE_STORAGE_CONTAINER_NAME=<seu_container>
-AZURE_STORAGE_ACCOUNT_KEY=<sua_chave>
+AZURE_STORAGE_ACCOUNT_KEY=<sua_chave_azure>
 AZURE_STORAGE_CONNECTION_STRING=<sua_connection_string>
 AZURE_STORAGE_BASE_URL=<url_base_blob>
 ```
 
----
+### 2. Instalação e Execução
 
-## 🚧 Funcionalidades em Desenvolvimento
-
-### 📌 **API Admin (`/api/admin/routes.ts`)**
-✅ Buscar lista de tabelas  
-✅ Listar dados de uma tabela específica  
-✅ Editar uma linha específica  
-✅ Excluir uma linha específica  
-⏳ Inserir uma única linha  
-⏳ Inserir várias linhas (CSV ou GeoJSON)
-[] Aceitar um arquivo GPX - Inserir no banco
-
-### 📌 **Painel Administrativo (`/components/admin-painel`)**
-✅ Lista de tabelas no banco  
-✅ Tabela de itens do banco  
-✅ Ícones de editar e excluir na tabela  
-✅ Modal para inserção de CSV e GeoJSON  
-✅ Modal para inserir um único item  
-✅ Modal para editar um item  
-
-### 📌 **Mapa (`/components/map`)**
-✅ Exibir shapes no `CustomLayer` 
-✅ Exibir ações no `CustomLayer`  
-✅ Exibir shapes e ações marcados no mapa
-✅ Modal com mais informações  
-✅ Componente de Filtragem por data
-[] Vizualizar o trajeto (expedições)
-
-### 📌 **Contexto Mapa (`/context/mapContext`)**
-✅ Concentrar informações dos shapes
-✅ Concentrar informações dos açoes
-
-
-### 📌 **API do Mapa (`/api/map`)**
-✅ Listar todos os itens (exceto ações) 
-✅ Agrupar e listar ações por categoria  
-✅ Buscar mais informações de um ponto ou shape específico  
-
-### 📌 **Dashboard (`/components/dashboard`)**
-✅ Dashboard principal  
-✅ Gráficos de fogo, desmatamento e ações  
-✅ Gráficos ambientais (`Deque de pedras`, `Ponte do Cure`)  
-[] Novo Grafico de turbidez
-
-### 📌 **API do Dashboard (`/api/dashboard`)**
-✅ Buscar dados de fogo  
-✅ Buscar dados de desmatamento  
-✅ Buscar dados de chuva  
-✅ Buscar dados do rio  
-
-[] Botão de notificações de alerta
-[] Tela para gerenciar os alertas
-
-[] Colocar o alerta de desmatamento na nuvem
-[] colocar o alerta de fogo na nuvem
-
----
-
-## 💊 Estrutura das Tabelas Geoespaciais
-
-| Tabela                 | Geometry Column | SRID  | Tipo de Geometria  | Observação |
-|------------------------|----------------|-------|--------------------|------------|
-| Bacia_Rio_Da_Prata     | geom           | 4326  | MULTIPOLYGON      |            |
-| Banhado_Rio_Da_Prata   | geom           | 4326  | MULTIPOLYGON      |            |
-| Leito_Rio_Da_Prata     | geom           | 4326  | MULTILINESTRING   |            |
-| Acoes                  | geom           | 4326  | POINT             |            |
-| Deque de pedras        | -              | -     | -                 |            |
-| Desmatamento           | geom           | 4326  | GEOMETRY          |            |
-| Estradas               | geom           | 4326  | GEOMETRY          |            |
-| Ponte do Cure          | -              | -     | -                 |            |
-| Propriedades           | geom           | 4326  | MULTIPOLYGON      |            |
-| Raw Firms              | geom           | 4326  | POINT             |            |
-
----
-
-Acoes
-"id","name","latitude","longitude","elevation","time","descricao","mes","atuacao","acao","geom"
-Deque de pedras
-"id","local","mes","data","turbidez","secchi_vertical","secchi_horizontal","chuva"
-Desmatamento
-"id","alertid","alertcode","alertha","source","detectat","detectyear","state","stateha","geom"
-Estradas
-"id","nome","tipo","codigo","geom"
-Ponte do cure
-"id","local","mes","data","chuva","nivel","visibilidade"
-propriedades
-"id","cod_tema","nom_tema","cod_imovel","mod_fiscal","num_area","ind_status","ind_tipo","des_condic","municipio","geom"
-raw_firms
-"latitude","longitude","bright_ti4","scan","track","acq_date","acq_time","satellite","instrument","confidence","version","bright_ti5","frp","daynight","type","hora_deteccao","geom"
-
-
-
-
-## 💽 Estrutura do Projeto
-
-### 📁 **Backend (APIs)**
-
-```plaintext
-app/
-└── api/
-    ├── postgis/
-    │   ├── route.ts       # Endpoints gerais para PostGIS
-    ├── dashboard/         # Dados para dashboards
-    │   ├── route.ts      
-    ├── admin/             # Operações administrativas
-    │   ├── add-item/
-            ├── route.ts
-    │   ├── delete-item/
-            ├── route.ts
-    │   ├── table-data/
-            ├── route.ts
-    │   ├── table-fields/
-            ├── route.ts
-    │   ├── tables/
-            ├── route.ts
-    │   ├── update-item/
-            ├── route.ts
-    ├── authentication/
-        ├── actions.ts       # Autenticação de usuários
-```
-
-### 📁 **Banco de Dados** (Drizzle ORM e PostGIS)
-
-```plaintext
-src/
-└── db/
-    ├── drizzle.ts         # Configuração do Drizzle ORM
-    ├── schema.ts          # Definição das tabelas
-```
-
-### 📁 **Utilidades e Funções Auxiliares**
-
-```plaintext
-src/
-└── lib/
-    ├── utils.ts           # Funções auxiliares
-```
-
----
-
-## 🚀 Como Rodar o Projeto
-
-### 1️⃣ **Instalar Dependências**
 ```bash
-yarn install
-# ou
+# 1. Instalar dependências
 npm install
-```
-
-### 2️⃣ **Rodar o Servidor de Desenvolvimento**
-```bash
-yarn dev
 # ou
-npm run dev
-```
+yarn install
 
-### 3️⃣ **Rodar as Migrações do Banco**
-Caso esteja utilizando Drizzle ORM, rode:
-```bash
-yarn drizzle migrate
-# ou
+# 2. Rodar migrações do Drizzle no banco (Garante a criação de todas as tabelas e Enums PostGIS)
 npm run drizzle migrate
+# ou
+yarn drizzle migrate
+
+# 3. Rodar o servidor de desenvolvimento
+npm run dev
+# ou
+yarn dev
 ```
 
----
+A aplicação subirá na porta `http://localhost:3000`.
 
-## 🛠 Tecnologias Utilizadas
-- **Next.js 15** (API Routes e Server Actions)
-- **Drizzle ORM** (Gerenciamento do banco de dados)
-- **PostGIS** (Dados geoespaciais)
-- **Supabase** (Autenticação e storage)
-- **Leaflet.js/react-leaflet** (Mapas interativos)
+## 🗺 Roadmap e Próximos Passos (Futuro)
 
-Caso tenha alguma dúvida ou sugestão, entre em contato! 🚀
+O PRISMA está em constante evolução. O foco técnico e de produto atual engloba:
 
+- **Turbinar o Dossiê de Propriedades:** Incorporar cruzamento de novos parâmetros (como dados fluviais próximos e análises ambientais mais robustas) no relatório do imóvel.
+- **Integração de Estações Meteorológicas:** Adicionar módulos e gráficos específicos de estações climáticas para monitoramento do balanço hídrico e tempo.
+- **Evolução de Dashboards:** Melhorar gráficos de análise (ex: Gráficos aprimões de Turbidez em Bonito) e tornar os dados mais interativos.
+- **Alertas Escaláveis:** Estruturar sistemas de *Push/Email Notifications* para alertas automáticos de desmatamento e fogo ocorrendo em tempo real na nuvem.
+- **Depreciação Guiada:** Limpar fluxos dependentes de arquivos legados (GPX soltos, fluxos de expedição antigos) consolidando tudo nas bases PostGIS principais.
