@@ -296,6 +296,18 @@ type BaseTrilhaData = InferInsertModel<typeof trilhasInMonitoramento>;
 export type NewTrilhaData = Omit<BaseTrilhaData, 'geom'> & {
 	geom: string;
 };
+export const balnearioMunicipalInMonitoramento = monitoramento.table("balneario_municipal", {
+	id: serial().primaryKey().notNull(),
+	local: varchar({ length: 255 }),
+	mes: varchar({ length: 50 }),
+	data: date(),
+	turbidez: numeric({ precision: 5, scale: 2 }),
+	secchiVertical: numeric("secchi_vertical", { precision: 5, scale: 2 }),
+	nivelAgua: numeric("nivel_agua", { precision: 7, scale: 2 }),
+	pluviometria: numeric({ precision: 5, scale: 2 }),
+	observacao: text(),
+});
+
 export const javaliAvistamentosInMonitoramento = monitoramento.table("javali_avistamentos", {
 	id: serial().primaryKey().notNull(),
 	tipo: varchar({ length: 100 }).notNull(),

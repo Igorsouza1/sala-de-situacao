@@ -10,6 +10,7 @@ import { PonteCureForm } from "./forms/PonteCureForm"
 import { DequePedrasForm } from "./forms/DequePedrasForm"
 import { AcoesForm } from "./forms/AcoesForm"
 import { DynamicLayerForm } from "./forms/DynamicLayerForm"
+import { BalnearioMunicipalForm } from "./forms/BalnearioMunicipalForm"
 import { useDataInsert } from "./hooks/useDataInsert"
 import { useToast } from "@/hooks/use-toast"
 
@@ -72,6 +73,7 @@ export function DataInsertDialog({ isOpen, onClose }: DataInsertDialogProps) {
         estrada: "/api/estradas",
         ponteCure: "/api/ponte-cure",
         dequePedras: "/api/deque-pedras",
+        balnearioMunicipal: "/api/balneario-municipal",
         acoes: "/api/acoes",
         dynamic: `/api/layers/${previewData.layerSlug}/data` // Dynamic Endpoint
       }[selectedType];
@@ -152,6 +154,8 @@ export function DataInsertDialog({ isOpen, onClose }: DataInsertDialogProps) {
             return <PonteCureForm onValidate={setIsValidated} onPreview={setPreviewData} />
           case "dequePedras":
             return <DequePedrasForm onValidate={setIsValidated} onPreview={setPreviewData} />
+          case "balnearioMunicipal":
+            return <BalnearioMunicipalForm onValidate={setIsValidated} onPreview={setPreviewData} />
           case "acoes":
             return <AcoesForm onValidate={setIsValidated} onPreview={setPreviewData} />
           case "dynamic":

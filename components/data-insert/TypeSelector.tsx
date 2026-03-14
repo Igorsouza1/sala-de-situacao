@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { RouteIcon as Road, BracketsIcon as Bridge, Layers, MapPin } from "lucide-react"
 
-type DataType = "estrada" | "ponteCure" | "dequePedras" | "acoes" | "dynamic"
+type DataType = "estrada" | "ponteCure" | "dequePedras" | "balnearioMunicipal" | "acoes" | "dynamic"
 
 interface TypeSelectorProps {
   selectedType: DataType | null
@@ -35,6 +35,14 @@ const dataTypes = [
     icon: Layers,
     color: "bg-cyan-500",
     requirements: ["Local", "Data", "Turbidez (opcional)", "Secchi V/H (opcional)", "Chuva (opcional)"],
+  },
+  {
+    id: "balnearioMunicipal" as DataType,
+    title: "Balneário Municipal",
+    description: "Monitoramento de qualidade da água com turbidez, secchi, nível e pluviometria",
+    icon: Layers,
+    color: "bg-teal-500",
+    requirements: ["Data", "Turbidez (opcional)", "Secchi Vertical (opcional)", "Nível da Água (opcional)", "Pluviometria (opcional)", "Observação (opcional)"],
   },
   {
     id: "acoes" as DataType,

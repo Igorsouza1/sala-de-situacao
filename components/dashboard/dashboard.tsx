@@ -25,7 +25,8 @@ import {
   DequePedrasProvider,
   useDequePedras,
 } from "@/context/DequePedrasContext";
-import { PonteCureProvider, usePonteCure } from "@/context/PonteCureContext";
+import { PonteCureProvider, usePonteCure } from "@/context/PonteCureContext"
+import { BalnearioMunicipalProvider, useBalnearioMunicipal } from "@/context/BalnearioMunicipalContext";
 import {
   Globe,
   Zap,
@@ -170,6 +171,7 @@ function DashboardContent() {
   const { setSelectedYear: setSelectedYearDesmatamento } = useDesmatamento();
   const { setSelectedYear: setSelectedYearDequePedras } = useDequePedras();
   const { setSelectedYear: setSelectedYearPonteCure } = usePonteCure();
+  const { setSelectedYear: setSelectedYearBalneario } = useBalnearioMunicipal();
 
   const handleAnoChange = (ano: string) => {
     setAnoSelecionado(ano);
@@ -178,6 +180,7 @@ function DashboardContent() {
     setSelectedYearDesmatamento(ano);
     setSelectedYearDequePedras(ano);
     setSelectedYearPonteCure(ano);
+    setSelectedYearBalneario(ano);
   };
 
   const [nivelRio, setNivelRio] = useState<{
@@ -597,6 +600,12 @@ function DashboardContent() {
                     </h4>
                     <GraficoPontos ponto="ponte" ano={anoSelecionado} />
                   </div>
+                  <div>
+                    <h4 className="text-sm font-medium text-foreground mb-3">
+                      Balneário Municipal
+                    </h4>
+                    <GraficoPontos ponto="balneario" ano={anoSelecionado} />
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -614,7 +623,9 @@ export function DashboardAmbiental() {
         <DesmatamentoProvider>
           <DequePedrasProvider>
             <PonteCureProvider>
-              <DashboardContent />
+              <BalnearioMunicipalProvider>
+                <DashboardContent />
+              </BalnearioMunicipalProvider>
             </PonteCureProvider>
           </DequePedrasProvider>
         </DesmatamentoProvider>

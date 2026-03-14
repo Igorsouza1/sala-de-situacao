@@ -6,19 +6,25 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useDequePedras } from "@/context/DequePedrasContext"
 import { usePonteCure } from "@/context/PonteCureContext"
+import { useBalnearioMunicipal } from "@/context/BalnearioMunicipalContext"
 
 const meses = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 
-export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte"; ano: string }) {
+export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "balneario"; ano: string }) {
   const [tipoGrafico, setTipoGrafico] = useState("chuva")
   const { filteredDequePedrasData, isLoading: isLoadingDeque, error: errorDeque } = useDequePedras()
   const { filteredPonteCureData, isLoading: isLoadingPonte, error: errorPonte } = usePonteCure()
+  const { filteredBalnearioData, isLoading: isLoadingBalneario, error: errorBalneario } = useBalnearioMunicipal()
 
   if (ponto === "deque" && isLoadingDeque) {
     return <p className="text-muted-foreground">Carregando...</p>
   }
 
   if (ponto === "ponte" && isLoadingPonte) {
+    return <p className="text-muted-foreground">Carregando...</p>
+  }
+
+  if (ponto === "balneario" && isLoadingBalneario) {
     return <p className="text-muted-foreground">Carregando...</p>
   }
 
@@ -30,16 +36,39 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte"; ano: s
     return <p className="text-destructive">{errorPonte}</p>
   }
 
+  if (ponto === "balneario" && errorBalneario) {
+    return <p className="text-destructive">{errorBalneario}</p>
+  }
+
   const dadosChuva = meses.map((mes, index) => ({
     mes,
-    chuva: ponto === "deque" ? filteredDequePedrasData[index]?.chuva || 0 : filteredPonteCureData[index]?.chuva || 0,
+    chuva:
+      ponto === "deque"
+        ? filteredDequePedrasData[index]?.chuva || 0
+        : ponto === "balneario"
+        ? filteredBalnearioData[index]?.pluviometria || 0
+        : filteredPonteCureData[index]?.chuva || 0,
   }))
 
   const dadosTurbidez = meses.map((mes, index) => ({
     mes,
-    turbidezMax: filteredDequePedrasData[index]?.turbidezMax || 0,
-    turbidezMin: filteredDequePedrasData[index]?.turbidezMin || 0,
-    turbidezMedia: filteredDequePedrasData[index]?.turbidezMedia || 0,
+    turbidezMax:
+      ponto === "balneario"
+        ? filteredBalnearioData[index]?.turbidezMax || 0
+        : filteredDequePedrasData[index]?.turbidezMax || 0,
+    turbidezMin:
+      ponto === "balneario"
+        ? filteredBalnearioData[index]?.turbidezMin || 0
+        : filteredDequePedrasData[index]?.turbidezMin || 0,
+    turbidezMedia:
+      ponto === "balneario"
+        ? filteredBalnearioData[index]?.turbidezMedia || 0
+        : filteredDequePedrasData[index]?.turbidezMedia || 0,
+  }))
+
+  const dadosNivelBalneario = meses.map((mes, index) => ({
+    mes,
+    nivel: filteredBalnearioData[index]?.nivelAguaMedia || 0,
   }))
 
   const dadosVisibilidade = meses.map((mes, index) => ({
@@ -57,15 +86,18 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte"; ano: s
   return (
     <div>
       <Tabs value={tipoGrafico} onValueChange={setTipoGrafico}>
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="chuva">Chuva</TabsTrigger>
-          {ponto === "deque" ? (
-            <TabsTrigger value="turbidez">Turbidez</TabsTrigger>
-          ) : (
+        <TabsList className={`grid w-full ${ponto === "balneario" ? "grid-cols-3" : "grid-cols-3"}`}>
+          <TabsTrigger value="chuva">{ponto === "balneario" ? "Pluviometria" : "Chuva"}</TabsTrigger>
+          {ponto === "ponte" ? (
             <TabsTrigger value="visibilidade">Visibilidade</TabsTrigger>
+          ) : (
+            <TabsTrigger value="turbidez">Turbidez</TabsTrigger>
           )}
           {ponto === "ponte" && (
             <TabsTrigger value="nivel">Nível do Rio</TabsTrigger>
+          )}
+          {ponto === "balneario" && (
+            <TabsTrigger value="nivel">Nível da Água</TabsTrigger>
           )}
         </TabsList>
 
@@ -102,7 +134,7 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte"; ano: s
           </ChartContainer>
         </TabsContent>
 
-        {ponto === "deque" && (
+        {(ponto === "deque" || ponto === "balneario") && (
           <TabsContent value="turbidez">
             <ChartContainer
               config={{
@@ -198,7 +230,7 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte"; ano: s
               config={{
                 nivel: {
                   label: "Nível do Rio (m)",
-                  color: "hsl(var(--chart-2))", // Green
+                  color: "hsl(var(--chart-2))",
                 },
               }}
               className="h-[300px]"
@@ -206,27 +238,34 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte"; ano: s
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={dadosNivel}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis
-                    dataKey="mes"
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={10}
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                  />
-                  <YAxis
-                    tickLine={false}
-                    axisLine={false}
-                    tickMargin={10}
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
-                  />
+                  <XAxis dataKey="mes" tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Area
-                    type="monotone"
-                    dataKey="nivel"
-                    stroke="var(--color-nivel)"
-                    fill="var(--color-nivel)"
-                    fillOpacity={0.3}
-                  />
+                  <Area type="monotone" dataKey="nivel" stroke="var(--color-nivel)" fill="var(--color-nivel)" fillOpacity={0.3} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          </TabsContent>
+        )}
+
+        {ponto === "balneario" && (
+          <TabsContent value="nivel">
+            <ChartContainer
+              config={{
+                nivel: {
+                  label: "Nível da Água (cm)",
+                  color: "hsl(var(--chart-2))",
+                },
+              }}
+              className="h-[300px]"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={dadosNivelBalneario}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="mes" tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Area type="monotone" dataKey="nivel" stroke="var(--color-nivel)" fill="var(--color-nivel)" fillOpacity={0.3} />
                 </AreaChart>
               </ResponsiveContainer>
             </ChartContainer>
