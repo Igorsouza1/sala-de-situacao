@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { NivelRioCard } from "./kpis/NivelRioCard";
 import { GraficoFogo } from "./charts/grafico-fogo";
 import { GraficoDesmatamento } from "./charts/grafico-desmatamento";
 import { GraficoAcoes } from "./charts/grafico-acoes";
@@ -313,31 +314,22 @@ function DashboardContent() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             {loading ? (
-              <IndicatorCard
-                title="Nível do Rio vs Ano Passado"
-                icon={Waves}
-                value="Carregando..."
-                comparison=""
-                trend="estavel"
-                unit=""
-                colorScheme="blue"
+              <NivelRioCard
+                titulo="Nível do Rio (Última Coleta)"
+                icone={Waves}
+                valor={null}
+                dataRegistro={null}
+                tendencia30Dias="estavel"
+                loading={true}
               />
             ) : (
-              <IndicatorCard
-                title="Nível do Rio vs Ano Passado"
-                icon={Waves}
-                value={fmtNumber(nivelRio?.atual, 2)}
-                comparison={
-                  nivelRio?.percentual === null
-                    ? "Sem base de comparação"
-                    : `${nivelRio?.percentual! >= 0 ? "+" : ""}${fmtNumber(
-                        nivelRio?.percentual,
-                        1
-                      )}% vs ano passado (${fmtNumber(nivelRio?.anoPassado, 2)}m)`
-                }
-                trend={nivelRio?.tendencia || "estavel"}
-                unit="m"
-                colorScheme="blue"
+              <NivelRioCard
+                titulo="Nível do Rio (Última Coleta)"
+                icone={Waves}
+                valor={nivelRio?.atual ?? null}
+                dataRegistro={nivelRio?.avisos?.ultimaDataUsada ?? new Date().toISOString()}
+                tendencia30Dias={nivelRio?.tendencia || "estavel"}
+                loading={false}
               />
             )}
 
