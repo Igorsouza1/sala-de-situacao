@@ -1,6 +1,6 @@
 import { db } from "@/db"
 import { balnearioMunicipalInMonitoramento } from "@/db/schema"
-import { gte, lte } from "drizzle-orm"
+import { and, gte, lte } from "drizzle-orm"
 
 export type NewBalnearioData = typeof balnearioMunicipalInMonitoramento.$inferInsert;
 
@@ -10,17 +10,15 @@ export async function findAllBalnearioData() {
 }
 
 export async function findBalnearioDataByDateRange(startDate: string, endDate: string) {
-  let query = db
+  const conditions = []
+
+  if (startDate) conditions.push(gte(balnearioMunicipalInMonitoramento.data, startDate))
+  if (endDate)   conditions.push(lte(balnearioMunicipalInMonitoramento.data, endDate))
+
+  const query = db
     .select()
-    .from(balnearioMunicipalInMonitoramento).$dynamic()
-
-  if (startDate) {
-    query = query.where(gte(balnearioMunicipalInMonitoramento.data, startDate))
-  }
-
-  if (endDate) {
-    query = query.where(lte(balnearioMunicipalInMonitoramento.data, endDate))
-  }
+    .from(balnearioMunicipalInMonitoramento)
+    .where(conditions.length ? and(...conditions) : undefined)
 
   return query.execute()
 }

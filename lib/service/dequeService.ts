@@ -173,3 +173,70 @@ export async function getchuvaComparativoPct() {
     },
   }
 }
+
+export async function getTurbidezIndicador() {
+  const today = new Date()
+  const fmt = (d: Date) => {
+    const y = d.getFullYear()
+    const m = String(d.getMonth() + 1).padStart(2, "0")
+    const dd = String(d.getDate()).padStart(2, "0")
+    return `${y}-${m}-${dd}`
+  }
+  const toNum = (v: any) => (v == null ? NaN : Number(v))
+
+  const startThis = new Date(today.getTime() - 7 * 86400000)
+  const endLast = new Date(startThis.getTime() - 86400000)
+  const startLast = new Date(endLast.getTime() - 6 * 86400000)
+  const start14 = new Date(today.getTime() - 14 * 86400000)
+
+  const [thisWeekRows, lastWeekRows, last14Rows] = await Promise.all([
+    getDequeDataByDateRange(fmt(startThis), fmt(today)),
+    getDequeDataByDateRange(fmt(startLast), fmt(endLast)),
+    getDequeDataByDateRange(fmt(start14), fmt(today)),
+  ])
+
+  const byDate = (a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime()
+
+  const validThis = thisWeekRows
+    .filter((r) => Number.isFinite(toNum(r.turbidez)))
+    .sort(byDate)
+
+  const validLast = lastWeekRows.filter((r) => Number.isFinite(toNum(r.turbidez)))
+
+  const lastRow = validThis.length ? validThis[validThis.length - 1] : null
+
+  const mean = (rows: any[], field: string) => {
+    const vals = rows.map((r) => toNum(r[field])).filter((v) => Number.isFinite(v))
+    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
+  }
+
+  const current = lastRow ? toNum(lastRow.turbidez) : null
+  const thisWeekAvg = mean(validThis, "turbidez")
+  const lastWeekAvg = mean(validLast, "turbidez")
+  const deltaPct =
+    thisWeekAvg !== null && lastWeekAvg !== null && lastWeekAvg !== 0
+      ? ((thisWeekAvg - lastWeekAvg) / lastWeekAvg) * 100
+      : null
+
+  const secchiRaw = lastRow ? toNum(lastRow.secchiVertical) : NaN
+  const secchiVertical = Number.isFinite(secchiRaw) ? secchiRaw : null
+
+  const sparkline = last14Rows
+    .filter((r) => Number.isFinite(toNum(r.turbidez)))
+    .sort(byDate)
+    .map((r) => toNum(r.turbidez))
+
+  const status: "normal" | "atencao" | "critico" =
+    current === null ? "normal" : current > 100 ? "critico" : current > 40 ? "atencao" : "normal"
+
+  return {
+    current,
+    thisWeekAvg,
+    lastWeekAvg,
+    deltaPct,
+    sparkline,
+    status,
+    lastDate: lastRow?.data ?? null,
+    secchiVertical,
+  }
+}
