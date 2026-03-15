@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db";
-import { acoesInMonitoramento } from "@/db/schema";
-import { eq, isNotNull, and } from "drizzle-orm";
+import { acoesInMonitoramento, javaliAvistamentosInMonitoramento } from "@/db/schema";
+import { eq, isNotNull, and, sql } from "drizzle-orm";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 
 export async function GET() {
@@ -22,7 +22,7 @@ export async function GET() {
 
     // Filter out rows with invalid or missing coordinates
     // Map data to the format leaflet.heat expects: [lat, lng, intensity]
-    const heatData = data
+    const acoesHeatData = data
       .filter(row => row.latitude !== null && row.longitude !== null)
       .map((row) => [
         parseFloat(row.latitude as string),
@@ -30,7 +30,24 @@ export async function GET() {
         1 // Default intensity
       ]);
 
-    return apiSuccess(heatData);
+    const avistamentosData = await db
+      .select({
+        latitude: sql<number>`ST_Y(${javaliAvistamentosInMonitoramento.geom}::geometry)`,
+        longitude: sql<number>`ST_X(${javaliAvistamentosInMonitoramento.geom}::geometry)`,
+      })
+      .from(javaliAvistamentosInMonitoramento);
+
+    const avistamentosHeatData = avistamentosData
+      .filter(row => row.latitude !== null && row.longitude !== null)
+      .map((row) => [
+        row.latitude,
+        row.longitude,
+        1
+      ]);
+
+    const combinedData = [...acoesHeatData, ...avistamentosHeatData];
+
+    return apiSuccess(combinedData);
   } catch (error) {
     console.error("Error fetching fauna exotica heatmap data:", error);
     return apiError(

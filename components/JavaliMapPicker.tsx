@@ -45,8 +45,8 @@ interface JavaliMapPickerProps {
 }
 
 export default function JavaliMapPicker({ initialCoords, onLocationSelected }: JavaliMapPickerProps) {
-  // Default center of Brazil roughly
-  const defaultCenter: [number, number] = [-14.2350, -51.9253]
+  // Centro padrão: região de Bonito/MS onde ocorre o monitoramento
+  const defaultCenter: [number, number] = [-21.3277, -56.6947]
   const center = initialCoords ? [initialCoords.lat, initialCoords.lng] : defaultCenter
   const zoom = initialCoords ? 14 : 4
 
@@ -59,7 +59,7 @@ export default function JavaliMapPicker({ initialCoords, onLocationSelected }: J
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       <MapEvents onLocationSelected={onLocationSelected} />
       <FlyToCoords coords={initialCoords} />
