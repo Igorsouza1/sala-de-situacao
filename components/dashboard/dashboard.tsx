@@ -290,51 +290,9 @@ function DashboardContent() {
   }, [])
 
   return (
-    <div className="min-h-screen w-full bg-background text-foreground dark">
-      <div className="max-w-7xl mx-auto p-6 space-y-8">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-card rounded-xl p-6 shadow-lg border border-border">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary/20 rounded-lg flex items-center justify-center border border-primary/30">
-                <BarChart3 className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold text-foreground">
-                  Dashboard Ambiental
-                </h1>
-                <p className="text-muted-foreground">
-                  Monitoramento inteligente de dados geoespaciais
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <Badge
-              variant="outline"
-              className="border-emerald-500 text-emerald-500 bg-emerald-500/10"
-            >
-              <CheckCircle className="h-3 w-3 mr-1" />
-              Sistema Ativo
-            </Badge>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                loadIndicadorNivelRio()
-                loadIndicadorChuva()
-              }}
-              disabled={loading}
-              className="border-border text-foreground hover:bg-muted"
-            >
-              <RefreshCw
-                className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
-              />
-              {loading ? "Atualizando..." : "Atualizar"}
-            </Button>
-          </div>
-        </div>
+    <div className="min-h-screen w-full bg-slate-50 text-foreground dark">
+      <div className="w-full px-4 md:px-8 py-6 space-y-8">
+       
         {errorMsg && <p className="text-sm text-red-400">{errorMsg}</p>}
 
         {/* 1. Indicadores Baseados em Dados Históricos/Atuais */}
