@@ -237,6 +237,27 @@ export async function getFocosByRegionInDb(regionId: number) {
   return result.rows as any[];
 }
 
+export async function getDesmatamentoByRegionInDb(regionId: number) {
+  const result = await db.execute(sql`
+    SELECT
+      id,
+      alertid,
+      alertcode,
+      alertha,
+      source,
+      detectat,
+      detectyear,
+      state,
+      stateha,
+      ST_AsGeoJSON(geom) as "geojson"
+    FROM monitoramento.desmatamento
+    WHERE regiao_id = ${regionId}
+    ORDER BY id DESC
+    LIMIT 500
+  `);
+  return result.rows as any[];
+}
+
 export async function deleteRegionInDb(id: number) {
   const result = await db.execute(sql<{ id: number }>`
     DELETE FROM monitoramento.regioes

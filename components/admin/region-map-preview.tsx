@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { BaseLayersManager, BaseLayerDto } from "./base-layers-manager";
 import { PropertiesManager, PropertyDto } from "./properties-manager";
 import { FocosManager, FocoDto } from "./focos-manager";
+import { DesmatamentoManager, DesmatamentoDto } from "./desmatamento-manager";
 import Map, { Source, Layer, MapRef } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import bbox from "@turf/bbox";
@@ -22,9 +23,10 @@ interface RegionMapPreviewProps {
   baseLayers?: BaseLayerDto[];
   properties?: PropertyDto[];
   focos?: FocoDto[];
+  desmatamento?: DesmatamentoDto[];
 }
 
-export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], properties = [], focos = [] }: RegionMapPreviewProps) {
+export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], properties = [], focos = [], desmatamento = [] }: RegionMapPreviewProps) {
   const router = useRouter();
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
   const [originalGeoData, setOriginalGeoData] = useState<FeatureCollection | null>(null);
@@ -33,7 +35,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<"baseLayers" | "properties" | "focos">("baseLayers");
+  const [activeTab, setActiveTab] = useState<"baseLayers" | "properties" | "focos" | "desmatamento">("baseLayers");
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
 
   // Settings state
@@ -217,6 +219,12 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
             >
               Focos
             </button>
+            <button
+              onClick={() => setActiveTab("desmatamento")}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "desmatamento" ? "bg-white dark:bg-neutral-900 shadow text-neutral-900 dark:text-neutral-100" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"}`}
+            >
+              Desmatamento
+            </button>
           </div>
           {isPreviewing && activeTab === "baseLayers" ? (
             <Button
@@ -391,6 +399,40 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                 </Source>
               )}
 
+              {/* Render Desmatamento */}
+              {activeTab === "desmatamento" && desmatamento.length > 0 && (
+                <Source
+                  key="source-desmatamento-layer"
+                  type="geojson"
+                  data={{
+                    type: "FeatureCollection",
+                    features: desmatamento
+                      .map((d) => {
+                        let geom = null;
+                        try { geom = d.geojson ? JSON.parse(d.geojson) : null; } catch (e) {}
+                        if (!geom) return null;
+                        return {
+                          type: "Feature" as const,
+                          geometry: geom,
+                          properties: { id: d.id, alertha: d.alertha, source: d.source },
+                        };
+                      })
+                      .filter(Boolean) as any[],
+                  }}
+                >
+                  <Layer
+                    id="desmatamento-fill-layer"
+                    type="fill"
+                    paint={{ "fill-color": "#dc2626", "fill-opacity": 0.35 }}
+                  />
+                  <Layer
+                    id="desmatamento-line-layer"
+                    type="line"
+                    paint={{ "line-color": "#b91c1c", "line-width": 1.5 }}
+                  />
+                </Source>
+              )}
+
               {/* Main Region Geometry */}
               {geoData && (
                 <Source id="main-region-source" type="geojson" data={geoData}>
@@ -543,12 +585,20 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                   }}
                 />
              </div>
-          ) : (
+          ) : activeTab === "focos" ? (
              <div className="h-[600px]">
                 <FocosManager
                   regionId={regionId}
                   focos={focos}
                   onFocosUpdate={() => router.refresh()}
+                />
+             </div>
+          ) : (
+             <div className="h-[600px]">
+                <DesmatamentoManager
+                  regionId={regionId}
+                  desmatamento={desmatamento}
+                  onUpdate={() => router.refresh()}
                 />
              </div>
           )}

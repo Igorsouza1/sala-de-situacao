@@ -50,6 +50,11 @@ export async function getFocosByRegion(id: number) {
   return getFocosByRegionInDb(id);
 }
 
+export async function getDesmatamentoByRegion(id: number) {
+  const { getDesmatamentoByRegionInDb } = await import("@/lib/repositories/adminRepository");
+  return getDesmatamentoByRegionInDb(id);
+}
+
 export async function createRegion(payload: RegionPayload) {
   return createRegionInDb({
     nome: payload.nome,
