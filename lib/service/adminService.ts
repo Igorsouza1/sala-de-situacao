@@ -45,6 +45,11 @@ export async function getBaseLayersByRegion(id: number) {
   return getBaseLayersByRegionInDb(id);
 }
 
+export async function getFocosByRegion(id: number) {
+  const { getFocosByRegionInDb } = await import("@/lib/repositories/adminRepository");
+  return getFocosByRegionInDb(id);
+}
+
 export async function createRegion(payload: RegionPayload) {
   return createRegionInDb({
     nome: payload.nome,

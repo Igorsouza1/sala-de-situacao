@@ -1,4 +1,4 @@
-import { getRegionById, listOrganizations, getBaseLayersByRegion, getPropertiesByRegion } from "@/lib/service/adminService";
+import { getRegionById, listOrganizations, getBaseLayersByRegion, getPropertiesByRegion, getFocosByRegion } from "@/lib/service/adminService";
 import { RegionSimpleEdit } from "@/components/admin/region-simple-edit";
 import { RegionMapPreview } from "@/components/admin/region-map-preview";
 import { notFound } from "next/navigation";
@@ -8,11 +8,12 @@ export default async function RegionEditPage({ params }: { params: Promise<{ id:
   const regionId = parseInt(id, 10);
   if (isNaN(regionId)) return notFound();
 
-  const [region, organizations, baseLayers, properties] = await Promise.all([
+  const [region, organizations, baseLayers, properties, focos] = await Promise.all([
     getRegionById(regionId),
     listOrganizations(),
     getBaseLayersByRegion(regionId),
     getPropertiesByRegion(regionId),
+    getFocosByRegion(regionId),
   ]);
 
   if (!region) return notFound();
@@ -44,6 +45,7 @@ export default async function RegionEditPage({ params }: { params: Promise<{ id:
             initialGeoJson={region.geojson || null}
             baseLayers={baseLayers}
             properties={properties}
+            focos={focos}
           />
         </div>
       </div>

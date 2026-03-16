@@ -11,6 +11,7 @@ import { Slider } from "@/components/ui/slider";
 import { useRouter } from "next/navigation";
 import { BaseLayersManager, BaseLayerDto } from "./base-layers-manager";
 import { PropertiesManager, PropertyDto } from "./properties-manager";
+import { FocosManager, FocoDto } from "./focos-manager";
 import Map, { Source, Layer, MapRef } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import bbox from "@turf/bbox";
@@ -20,9 +21,10 @@ interface RegionMapPreviewProps {
   initialGeoJson: string | null;
   baseLayers?: BaseLayerDto[];
   properties?: PropertyDto[];
+  focos?: FocoDto[];
 }
 
-export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], properties = [] }: RegionMapPreviewProps) {
+export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], properties = [], focos = [] }: RegionMapPreviewProps) {
   const router = useRouter();
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
   const [originalGeoData, setOriginalGeoData] = useState<FeatureCollection | null>(null);
@@ -31,7 +33,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<"baseLayers" | "properties">("baseLayers");
+  const [activeTab, setActiveTab] = useState<"baseLayers" | "properties" | "focos">("baseLayers");
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
 
   // Settings state
@@ -209,6 +211,12 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
             >
               Propriedades (CAR)
             </button>
+            <button
+              onClick={() => setActiveTab("focos")}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "focos" ? "bg-white dark:bg-neutral-900 shadow text-neutral-900 dark:text-neutral-100" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"}`}
+            >
+              Focos
+            </button>
           </div>
           {isPreviewing && activeTab === "baseLayers" ? (
             <Button
@@ -228,6 +236,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                />
              ) : null
           )}
+
         </div>
       </div>
 
@@ -265,49 +274,48 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                 }
               }}
             >
-              {/* Render Base Layers / Properties */}
-              {activeTab === "baseLayers" ? (
-                baseLayers.map((layer) => {
-                   if (!layer.geojson || layer.visualConfig?.defaultVisibility === false) return null;
+              {/* Render Base Layers */}
+              {activeTab === "baseLayers" && baseLayers.map((layer) => {
+                if (!layer.geojson || layer.visualConfig?.defaultVisibility === false) return null;
+                let parsedLayerGeo = null;
+                try { parsedLayerGeo = typeof layer.geojson === 'string' ? JSON.parse(layer.geojson) : layer.geojson; } catch(e){}
+                if (!parsedLayerGeo) return null;
+                const styleConfig = layer.visualConfig?.baseStyle || {};
+                return (
+                  <Source key={`source-base-layer-${layer.id}`} type="geojson" data={parsedLayerGeo}>
+                    <Layer
+                      id={`fill-base-layer-${layer.id}`}
+                      type="fill"
+                      paint={{
+                        "fill-color": styleConfig.color || "#000000",
+                        "fill-opacity": styleConfig.fillOpacity ?? 0.2
+                      }}
+                    />
+                    <Layer
+                      id={`line-base-layer-${layer.id}`}
+                      type="line"
+                      paint={{
+                        "line-color": styleConfig.color || "#000000",
+                        "line-width": styleConfig.weight || 2
+                      }}
+                    />
+                  </Source>
+                );
+              })}
 
-                   let parsedLayerGeo = null;
-                   try { parsedLayerGeo = typeof layer.geojson === 'string' ? JSON.parse(layer.geojson) : layer.geojson; } catch(e){}
-                   if (!parsedLayerGeo) return null;
-
-                   const styleConfig = layer.visualConfig?.baseStyle || {};
-                   return (
-                      <Source key={`source-base-layer-${layer.id}`} type="geojson" data={parsedLayerGeo}>
-                        <Layer
-                          id={`fill-base-layer-${layer.id}`}
-                          type="fill"
-                          paint={{
-                            "fill-color": styleConfig.color || "#000000",
-                            "fill-opacity": styleConfig.fillOpacity ?? 0.2
-                          }}
-                        />
-                        <Layer
-                          id={`line-base-layer-${layer.id}`}
-                          type="line"
-                          paint={{
-                            "line-color": styleConfig.color || "#000000",
-                            "line-width": styleConfig.weight || 2
-                          }}
-                        />
-                      </Source>
-                   );
-                })
-              ) : (
+              {/* Render Properties */}
+              {activeTab === "properties" && (
                 <Source key="source-properties-layer" type="geojson" data={{
-                   type: "FeatureCollection",
-                   features: properties.map(p => {
-                      let geom = null;
-                      try { geom = typeof p.geojson === 'string' ? JSON.parse(p.geojson) : p.geojson; } catch(e){}
-                      return {
-                         type: "Feature" as const,
-                         geometry: geom,
-                         properties: { id: p.id, codImovel: p.codImovel, nome: p.nome }
-                      }
-                   }).filter(f => f.geometry)
+                  type: "FeatureCollection",
+                  features: properties.map(p => {
+                    let geom = null;
+                    try { geom = typeof p.geojson === 'string' ? JSON.parse(p.geojson) : p.geojson; } catch(e){}
+                    return {
+                      type: "Feature" as const,
+                      geometry: geom,
+                      properties: { id: p.id, codImovel: p.codImovel, nome: p.nome }
+                    }
+                  }).filter(f => f.geometry)
                 }}>
                   <Layer
                     id="fill-properties-layer"
@@ -316,8 +324,8 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                       "fill-color": [
                         "case",
                         ["==", ["get", "id"], selectedPropertyId || -1],
-                        "#eab308", // Yellow for selected
-                        "#3b82f6"  // Blue for default
+                        "#eab308",
+                        "#3b82f6"
                       ],
                       "fill-opacity": [
                         "case",
@@ -343,6 +351,41 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                         3,
                         2
                       ]
+                    }}
+                  />
+                </Source>
+              )}
+
+              {/* Render Focos */}
+              {activeTab === "focos" && focos.length > 0 && (
+                <Source
+                  key="source-focos-layer"
+                  type="geojson"
+                  data={{
+                    type: "FeatureCollection",
+                    features: focos.map(f => ({
+                      type: "Feature" as const,
+                      geometry: { type: "Point" as const, coordinates: [f.longitude, f.latitude] },
+                      properties: { id: f.id, confidence: f.confidence, frp: f.frp }
+                    }))
+                  }}
+                >
+                  <Layer
+                    id="focos-circle-layer"
+                    type="circle"
+                    paint={{
+                      "circle-radius": 6,
+                      "circle-color": [
+                        "case",
+                        ["==", ["get", "confidence"], "high"], "#ef4444",
+                        ["==", ["get", "confidence"], "h"], "#ef4444",
+                        ["==", ["get", "confidence"], "nominal"], "#f97316",
+                        ["==", ["get", "confidence"], "n"], "#f97316",
+                        "#eab308"
+                      ],
+                      "circle-opacity": 0.85,
+                      "circle-stroke-width": 1.5,
+                      "circle-stroke-color": "#fff"
                     }}
                   />
                 </Source>
@@ -471,7 +514,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                   onLayerUpdate={() => router.refresh()}
                 />
              </div>
-          ) : (
+          ) : activeTab === "properties" ? (
              <div className="h-[600px]">
                 <PropertiesManager
                   regionId={regionId}
@@ -498,6 +541,14 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                       }
                     }
                   }}
+                />
+             </div>
+          ) : (
+             <div className="h-[600px]">
+                <FocosManager
+                  regionId={regionId}
+                  focos={focos}
+                  onFocosUpdate={() => router.refresh()}
                 />
              </div>
           )}

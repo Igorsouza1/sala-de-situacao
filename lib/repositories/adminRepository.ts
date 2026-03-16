@@ -217,6 +217,26 @@ export async function updateRegionMetadataInDb(
   return (result.rows[0] as RegionListItem) ?? null;
 }
 
+export async function getFocosByRegionInDb(regionId: number) {
+  const result = await db.execute(sql`
+    SELECT
+      id,
+      latitude,
+      longitude,
+      acq_date AS "acqDate",
+      acq_time AS "acqTime",
+      satellite,
+      confidence,
+      frp,
+      daynight
+    FROM monitoramento.raw_firms
+    WHERE regiao_id = ${regionId}
+    ORDER BY acq_date DESC, acq_time DESC
+    LIMIT 500
+  `);
+  return result.rows as any[];
+}
+
 export async function deleteRegionInDb(id: number) {
   const result = await db.execute(sql<{ id: number }>`
     DELETE FROM monitoramento.regioes
