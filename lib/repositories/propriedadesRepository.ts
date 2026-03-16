@@ -36,11 +36,12 @@ export async function findPropriedadeDossieData(id: number) {
       SELECT * FROM "monitoramento"."propriedades" WHERE id = ${id}
     )
     SELECT
-      p.id, 
-      p.nome, 
-      p.cod_imovel, 
-      p.municipio, 
+      p.id,
+      p.nome,
+      p.cod_imovel,
+      p.municipio,
       p.num_area,
+      p.properties,
       ST_X(ST_Centroid(p.geom)) as "centerLng",
       ST_Y(ST_Centroid(p.geom)) as "centerLat",
       ST_AsGeoJSON(p.geom) as geojson,

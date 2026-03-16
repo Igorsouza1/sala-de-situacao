@@ -16,6 +16,7 @@ export interface PropriedadeData {
     cod_imovel: string;
     municipio: string;
     num_area: number;
+    properties?: any;
     geojson: any;
     centerLat: number;
     centerLng: number;
@@ -114,10 +115,69 @@ export function PropriedadeDossieTemplate({ data, isPrintMode = false }: Proprie
                         </div>
                     </section>
                     
-                    {/* --- 2. INDICADORES --- */}
+                    {/* --- 2. DADOS CAR (JSONB) --- */}
+                    {data.properties && Object.keys(data.properties).length > 0 && (
+                    <section aria-label="Dados CAR">
+                        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-brand-primary pl-2 mb-4">
+                            02. Dados Cadastrais (CAR / SICAR)
+                        </h2>
+
+                        {/* Status highlight */}
+                        {data.properties.ind_status && (
+                            <div className={`mb-3 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded border ${
+                                data.properties.ind_status.toUpperCase() === "AT"
+                                    ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                                    : "bg-red-50 border-red-200 text-red-800"
+                            }`}>
+                                Status: {data.properties.ind_status.toUpperCase() === "AT" ? "Ativo" :
+                                         data.properties.ind_status.toUpperCase() === "CA" ? "Cancelado" :
+                                         data.properties.ind_status.toUpperCase() === "PE" ? "Pendente" :
+                                         data.properties.ind_status.toUpperCase() === "SU" ? "Suspenso" :
+                                         data.properties.ind_status}
+                                {data.properties.des_condic ? ` — ${data.properties.des_condic}` : ""}
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-2 border border-slate-900 text-xs">
+                            {data.properties.ind_tipo && (
+                                <PrintCarCell label="Tipo de Imóvel" value={
+                                    data.properties.ind_tipo === "IRU" ? "Imóvel Rural" :
+                                    data.properties.ind_tipo === "IRB" ? "Imóvel Rural (Beneficiário)" :
+                                    data.properties.ind_tipo
+                                } />
+                            )}
+                            {data.properties.area_imovel && (
+                                <PrintCarCell label="Área Total" value={data.properties.area_imovel} />
+                            )}
+                            {data.properties.mod_fiscal != null && (
+                                <PrintCarCell label="Módulo Fiscal" value={String(data.properties.mod_fiscal)} />
+                            )}
+                            {data.properties.situacao_reserva_legal && (
+                                <PrintCarCell label="Situação da Reserva Legal" value={data.properties.situacao_reserva_legal} />
+                            )}
+                            {data.properties.area_remanescente && (
+                                <PrintCarCell label="Área Remanescente (Veg. Nativa)" value={data.properties.area_remanescente} />
+                            )}
+                            {data.properties.area_uso_consolidado && (
+                                <PrintCarCell label="Área de Uso Consolidado" value={data.properties.area_uso_consolidado} />
+                            )}
+                            {data.properties.cadastrante && data.properties.cadastrante !== "Nao Informado" && (
+                                <PrintCarCell label="Cadastrante" value={data.properties.cadastrante} />
+                            )}
+                            {(data.properties.dat_criaca || data.properties.data_registro) && (
+                                <PrintCarCell label="Data de Registro" value={data.properties.dat_criaca || data.properties.data_registro} />
+                            )}
+                            {(data.properties.dat_atuali || data.properties.data_ultima_retificacao) && (
+                                <PrintCarCell label="Última Retificação" value={data.properties.dat_atuali || data.properties.data_ultima_retificacao} />
+                            )}
+                        </div>
+                    </section>
+                    )}
+
+                    {/* --- 3. INDICADORES --- */}
                     <section aria-label="Indicadores">
                         <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-brand-primary pl-2 mb-4">
-                            02. Indicadores de Monitoramento
+                            03. Indicadores de Monitoramento
                         </h2>
                         <div className="grid grid-cols-3 gap-4">
                             <PrintStatCard label="Ações Realizadas" value={data.acoes?.length || 0} icon={Tag} />
@@ -126,10 +186,10 @@ export function PropriedadeDossieTemplate({ data, isPrintMode = false }: Proprie
                         </div>
                     </section>
 
-                    {/* --- 3. MAPA --- */}
+                    {/* --- 4. MAPA --- */}
                     <section aria-label="Mapa" className="break-inside-avoid">
                         <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-brand-primary pl-2 mb-4">
-                            03. Contexto Espacial
+                            04. Contexto Espacial
                         </h2>
                         <div className="border border-slate-300 bg-slate-100 p-1 h-[350px]">
                              <PropriedadeMap propriedadeGeoJson={data.geojson} acoes={data.acoes} />
@@ -139,10 +199,10 @@ export function PropriedadeDossieTemplate({ data, isPrintMode = false }: Proprie
                         </p>
                     </section>
 
-                {/* --- 4. LISTA DE AÇÕES --- */}
+                {/* --- 5. LISTA DE AÇÕES --- */}
                     <section aria-label="Ações" className="space-y-4">
                         <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-brand-primary pl-2">
-                             04. Detalhamento de Ocorrências e Alertas
+                             05. Detalhamento de Ocorrências e Alertas
                         </h2>
                         
                         {/* AÇÕES */}
@@ -231,6 +291,15 @@ export function PropriedadeDossieTemplate({ data, isPrintMode = false }: Proprie
             </div>
         </div>
     )
+}
+
+function PrintCarCell({ label, value }: { label: string; value: string }) {
+    return (
+        <div className="p-2 border-r border-b border-slate-900 last:border-r-0 bg-white">
+            <span className="block text-[9px] font-bold text-slate-400 uppercase mb-0.5">{label}</span>
+            <span className="font-medium text-slate-900">{value}</span>
+        </div>
+    );
 }
 
 function PrintStatCard({ label, value, sub, icon: Icon, alert }: any) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Map as MapIcon, Tag, Flame, AlertTriangle, Ruler, Printer } from "lucide-react"
+import { Map as MapIcon, Tag, Flame, AlertTriangle, Ruler, Printer, ClipboardList, CheckCircle2, XCircle, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import dynamic from "next/dynamic"
 
@@ -49,6 +49,7 @@ interface PropriedadeData {
     cod_imovel: string;
     municipio: string;
     num_area: number;
+    properties?: any;
     geojson: any;
     centerLat: number;
     centerLng: number;
@@ -138,6 +139,11 @@ export function PropriedadeDossie({ propriedadeId }: { propriedadeId: number }) 
                 <Printer className="w-4 h-4 mr-2" /> Imprimir Relatório
             </Button>
         </div>
+
+        {/* Dados CAR */}
+        {data.properties && Object.keys(data.properties).length > 0 && (
+            <CarDataSection properties={data.properties} />
+        )}
 
         {/* Stats Grid */}
         <div className="grid grid-cols-3 gap-4">
@@ -250,6 +256,130 @@ export function PropriedadeDossie({ propriedadeId }: { propriedadeId: number }) 
 
     </div>
   )
+}
+
+const STATUS_MAP: Record<string, { label: string; color: string; Icon: any }> = {
+    AT: { label: "Ativo", color: "text-emerald-700 bg-emerald-50 border-emerald-200", Icon: CheckCircle2 },
+    CA: { label: "Cancelado", color: "text-red-700 bg-red-50 border-red-200", Icon: XCircle },
+    PE: { label: "Pendente", color: "text-yellow-700 bg-yellow-50 border-yellow-200", Icon: Clock },
+    SU: { label: "Suspenso", color: "text-orange-700 bg-orange-50 border-orange-200", Icon: AlertTriangle },
+};
+
+const TIPO_MAP: Record<string, string> = {
+    IRU: "Imóvel Rural",
+    IRB: "Imóvel Rural (Beneficiário)",
+};
+
+function CarDataSection({ properties: p }: { properties: any }) {
+    const statusEntry = p.ind_status ? (STATUS_MAP[p.ind_status.toUpperCase()] ?? null) : null;
+    const StatusIcon = statusEntry?.Icon ?? null;
+
+    const hasArea = p.area_imovel || p.num_area;
+    const hasLegal = p.situacao_reserva_legal || p.area_remanescente || p.area_uso_consolidado;
+    const hasDates = p.dat_criaca || p.data_registro || p.dat_atuali || p.data_ultima_retificacao;
+
+    return (
+        <div className="space-y-3">
+            <div className="flex justify-between items-end border-b pb-2 border-slate-100">
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-widest flex items-center gap-2">
+                    <ClipboardList className="w-4 h-4 text-brand-primary" />
+                    Dados Cadastrais (CAR)
+                </h3>
+                {statusEntry && StatusIcon && (
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1 ${statusEntry.color}`}>
+                        <StatusIcon className="w-3 h-3" /> {statusEntry.label}
+                    </span>
+                )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+                {/* Identificação */}
+                {p.ind_tipo && (
+                    <div className="col-span-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <span className="block text-slate-400 font-bold uppercase text-[10px] mb-0.5">Tipo de Imóvel</span>
+                        <span className="text-slate-700 font-medium">{TIPO_MAP[p.ind_tipo] ?? p.ind_tipo}</span>
+                    </div>
+                )}
+
+                {/* Condição / Status */}
+                {p.des_condic && (
+                    <div className="col-span-2 p-3 bg-red-50 rounded-lg border border-red-100">
+                        <span className="block text-red-400 font-bold uppercase text-[10px] mb-0.5">Condição do CAR</span>
+                        <span className="text-red-700 font-medium">{p.des_condic}</span>
+                    </div>
+                )}
+
+                {/* Áreas */}
+                {hasArea && (
+                    <>
+                        {(p.area_imovel || p.num_area) && (
+                            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                <span className="block text-slate-400 font-bold uppercase text-[10px] mb-0.5">Área Total</span>
+                                <span className="text-slate-700 font-medium font-mono">{p.area_imovel || `${p.num_area} ha`}</span>
+                            </div>
+                        )}
+                        {p.mod_fiscal != null && (
+                            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                <span className="block text-slate-400 font-bold uppercase text-[10px] mb-0.5">Módulo Fiscal</span>
+                                <span className="text-slate-700 font-medium font-mono">{p.mod_fiscal}</span>
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {/* Reserva Legal */}
+                {hasLegal && (
+                    <div className="col-span-2 p-3 bg-emerald-50 rounded-lg border border-emerald-100 space-y-2">
+                        <span className="block text-emerald-600 font-bold uppercase text-[10px]">Reserva Legal e Vegetação</span>
+                        {p.situacao_reserva_legal && (
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">Situação da RL</span>
+                                <span className="text-slate-700 font-medium">{p.situacao_reserva_legal}</span>
+                            </div>
+                        )}
+                        {p.area_remanescente && (
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">Remanescente veg. nativa</span>
+                                <span className="text-slate-700 font-medium font-mono">{p.area_remanescente}</span>
+                            </div>
+                        )}
+                        {p.area_uso_consolidado && (
+                            <div className="flex justify-between">
+                                <span className="text-slate-500">Uso consolidado</span>
+                                <span className="text-slate-700 font-medium font-mono">{p.area_uso_consolidado}</span>
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Cadastrante */}
+                {p.cadastrante && p.cadastrante !== "Nao Informado" && (
+                    <div className="col-span-2 p-3 bg-slate-50 rounded-lg border border-slate-200">
+                        <span className="block text-slate-400 font-bold uppercase text-[10px] mb-0.5">Cadastrante</span>
+                        <span className="text-slate-700 font-medium">{p.cadastrante}</span>
+                    </div>
+                )}
+
+                {/* Datas */}
+                {hasDates && (
+                    <>
+                        {(p.dat_criaca || p.data_registro) && (
+                            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                <span className="block text-slate-400 font-bold uppercase text-[10px] mb-0.5">Data de Registro</span>
+                                <span className="text-slate-700 font-medium font-mono">{p.dat_criaca || p.data_registro}</span>
+                            </div>
+                        )}
+                        {(p.dat_atuali || p.data_ultima_retificacao) && (
+                            <div className="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                                <span className="block text-slate-400 font-bold uppercase text-[10px] mb-0.5">Última Retificação</span>
+                                <span className="text-slate-700 font-medium font-mono">{p.dat_atuali || p.data_ultima_retificacao}</span>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+        </div>
+    );
 }
 
 function DesmatamentoCard({ data }: { data: DesmatamentoData }) {

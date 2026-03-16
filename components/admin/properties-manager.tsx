@@ -2,11 +2,12 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Loader2, Map as MapIcon, Info, Upload, Edit, Search } from "lucide-react";
+import { Loader2, Map as MapIcon, Info, Upload, Edit, Search, FileText } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { GeoJsonUploader } from "./geojson-uploader";
 import { useRouter } from "next/navigation";
 import { PropertyEditDialog } from "./property-edit-dialog";
+import { PropertyDossierDialog } from "./property-dossier-dialog";
 
 export interface PropertyDto {
   id: number;
@@ -34,6 +35,8 @@ export function PropertiesManager({
   const [progress, setProgress] = useState<{current: number, total: number, inserted: number, skipped: number} | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<PropertyDto | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDossierOpen, setIsDossierOpen] = useState(false);
+  const [dossierProperty, setDossierProperty] = useState<PropertyDto | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const router = useRouter();
 
@@ -233,8 +236,23 @@ export function PropertiesManager({
                          <Button
                            variant="ghost"
                            size="icon"
+                           title="Ver Dossiê"
+                           className="h-6 w-6 text-neutral-500 hover:text-indigo-600 dark:hover:text-indigo-400"
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             setDossierProperty(prop);
+                             setIsDossierOpen(true);
+                           }}
+                         >
+                           <FileText className="w-3.5 h-3.5" />
+                         </Button>
+                         <Button
+                           variant="ghost"
+                           size="icon"
+                           title="Editar"
                            className="h-6 w-6 text-neutral-500 hover:text-blue-600 dark:hover:text-blue-400"
-                           onClick={() => {
+                           onClick={(e) => {
+                             e.stopPropagation();
                              setSelectedProperty(prop);
                              setIsEditDialogOpen(true);
                            }}
@@ -258,6 +276,12 @@ export function PropertiesManager({
           router.refresh();
         }}
         regionId={regionId}
+      />
+
+      <PropertyDossierDialog
+        property={dossierProperty}
+        isOpen={isDossierOpen}
+        onOpenChange={setIsDossierOpen}
       />
     </div>
   );
