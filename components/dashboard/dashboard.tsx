@@ -141,7 +141,7 @@ function DashboardContent() {
         <DashboardHeader />
 
         {/* ── KPIs em Tempo Real ───────────────────────────────── */}
-        <section>
+        <section className="bg-card/40 backdrop-blur-md border border-white/5 dark:border-border/50 rounded-3xl p-6 md:p-8 shadow-sm">
           <SectionHeading
             icon={Zap}
             title="Indicadores em Tempo Real"
@@ -153,7 +153,7 @@ function DashboardContent() {
         </section>
 
         {/* ── Balneário Municipal — Série Histórica ─────────────── */}
-        <section className="space-y-5">
+        <section className="bg-card/40 backdrop-blur-md border border-white/5 dark:border-border/50 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
           <SectionHeading
             icon={Waves}
             title="Balneário Municipal — Série Histórica"
@@ -161,15 +161,17 @@ function DashboardContent() {
             iconClass="text-blue-500"
             bgClass="bg-blue-500/10 border-blue-500/20"
           />
-          <GraficoNivelRioBalneario />
-          <GraficoPluviometriaBalneario />
-          <GraficoSecchiBalneario />
-          <GraficoSaudeRio />
-          <GraficoProximidadeBalneario />
+          <div className="space-y-6">
+            <GraficoNivelRioBalneario />
+            <GraficoPluviometriaBalneario />
+            <GraficoSecchiBalneario />
+            <GraficoSaudeRio />
+            <GraficoProximidadeBalneario />
+          </div>
         </section>
 
         {/* ── Análises Micro ────────────────────────────────────── */}
-        <section className="space-y-4">
+        <section className="bg-card/40 backdrop-blur-md border border-white/5 dark:border-border/50 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
           <SectionHeading
             icon={Droplets}
             title="Análises Micro"
@@ -178,7 +180,7 @@ function DashboardContent() {
             bgClass="bg-blue-500/10 border-blue-500/20"
           />
 
-          <Card className="shadow-sm border-border bg-card">
+          <Card className="shadow-none border border-white/10 dark:border-border/60 bg-background/50 backdrop-blur-sm rounded-2xl">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
                 <div className="w-6 h-6 bg-blue-500/10 rounded-md flex items-center justify-center border border-blue-500/20">
@@ -199,8 +201,8 @@ function DashboardContent() {
         </section>
 
         {/* ── Análises Macro ────────────────────────────────────── */}
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
+        <section className="bg-card/40 backdrop-blur-md border border-white/5 dark:border-border/50 rounded-3xl p-6 md:p-8 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <SectionHeading
               icon={Globe}
               title="Análises Macro"
@@ -209,15 +211,15 @@ function DashboardContent() {
               bgClass="bg-emerald-500/10 border-emerald-500/20"
             />
 
-            <div className="flex items-center gap-2 -mt-6">
-              <span className="text-xs text-muted-foreground hidden sm:block">
+            <div className="flex items-center gap-3 sm:-mt-6">
+              <span className="text-sm font-medium text-muted-foreground hidden sm:block">
                 Filtrar por ano:
               </span>
               <Select value={anoSelecionado} onValueChange={handleAnoChange}>
-                <SelectTrigger className="w-[150px] h-8 text-xs bg-card border-border text-foreground">
+                <SelectTrigger className="w-[160px] h-10 text-sm bg-background/50 backdrop-blur-sm border-white/10 dark:border-border/60 rounded-xl focus:ring-emerald-500/20 text-foreground transition-all hover:bg-background/80">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-card border-border text-foreground text-xs">
+                <SelectContent className="bg-card border-border/60 text-foreground rounded-xl shadow-lg">
                   <SelectItem value="todos">Período Completo</SelectItem>
                   <SelectItem value="2021">2021</SelectItem>
                   <SelectItem value="2022">2022</SelectItem>
@@ -230,13 +232,13 @@ function DashboardContent() {
           </div>
 
           {/* Ameaças ambientais — Fogo + Desmatamento */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <GraficoFogo />
             <GraficoDesmatamento />
           </div>
 
           {/* Pontos consolidados — full width */}
-          <Card className="shadow-sm border-border bg-card">
+          <Card className="shadow-none border border-white/10 dark:border-border/60 bg-background/50 backdrop-blur-sm rounded-2xl">
             <CardHeader className="pb-3">
               <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
                 <div className="w-6 h-6 bg-blue-500/10 rounded-md flex items-center justify-center border border-blue-500/20">
@@ -249,21 +251,24 @@ function DashboardContent() {
               </p>
             </CardHeader>
             <CardContent>
-              <div className="space-y-6">
+              <div className="space-y-8">
                 <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500/50"></span>
                     Deque de Pedras
                   </h4>
                   <GraficoPontos ponto="deque" ano={anoSelecionado} />
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500/50"></span>
                     Ponte do Cure
                   </h4>
                   <GraficoPontos ponto="ponte" ano={anoSelecionado} />
                 </div>
                 <div>
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500/50"></span>
                     Balneário Municipal
                   </h4>
                   <GraficoPontos ponto="balneario" ano={anoSelecionado} />
