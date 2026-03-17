@@ -14,7 +14,6 @@ import {
 import { KpiSection } from "./kpis/KpiSection";
 import { GraficoFogo } from "./charts/grafico-fogo";
 import { GraficoDesmatamento } from "./charts/grafico-desmatamento";
-import { GraficoAcoes } from "./charts/grafico-acoes";
 import { GraficoPontos } from "./charts/grafico-pontos";
 import { GraficoTurbidezDiario } from "./charts/GraficoTurbidezDiario";
 import { GraficoNivelRioBalneario } from "./charts/GraficoNivelRioBalneario";
@@ -22,7 +21,7 @@ import { GraficoPluviometriaBalneario } from "./charts/GraficoPluviometriaBalnea
 import { GraficoSecchiBalneario } from "./charts/GraficoSecchiBalneario";
 import { GraficoSaudeRio } from "./charts/GraficoSaudeRio";
 import { GraficoProximidadeBalneario } from "./charts/GraficoProximidadeBalneario";
-import { AcoesProvider, useAcoes } from "@/context/AcoesContext";
+import { AcoesProvider } from "@/context/AcoesContext";
 import { FogoProvider, useFogo } from "@/context/FogoContext";
 import { DesmatamentoProvider, useDesmatamento } from "@/context/DesmatamentoContext";
 import { DequePedrasProvider, useDequePedras } from "@/context/DequePedrasContext";
@@ -33,7 +32,7 @@ import {
   Leaf,
   Globe,
   Zap,
-  TrendingUp,
+  Waves,
   Flame,
   TreePine,
   Droplets,
@@ -48,7 +47,7 @@ function DashboardHeader() {
   const capitalized = dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1);
 
   return (
-    <header className="border-b border-border/60 bg-background pb-6 mb-8">
+    <header className="border-b border-border/60 pb-6 mb-8">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
 
         {/* Left — identity */}
@@ -115,7 +114,6 @@ function SectionHeading({
 
 function DashboardContent() {
   const [anoSelecionado, setAnoSelecionado] = useState<string>("todos");
-  const { setSelectedYear: setSelectedYearAcoes } = useAcoes();
   const { setSelectedYear: setSelectedYearFogo } = useFogo();
   const { setSelectedYear: setSelectedYearDesmatamento } = useDesmatamento();
   const { setSelectedYear: setSelectedYearDequePedras } = useDequePedras();
@@ -124,7 +122,6 @@ function DashboardContent() {
 
   const handleAnoChange = (ano: string) => {
     setAnoSelecionado(ano);
-    setSelectedYearAcoes(ano);
     setSelectedYearFogo(ano);
     setSelectedYearDesmatamento(ano);
     setSelectedYearDequePedras(ano);
@@ -133,8 +130,12 @@ function DashboardContent() {
   };
 
   return (
-    <div className="min-h-screen w-full bg-background text-foreground">
-      <div className="w-full max-w-screen-2xl mx-auto px-6 md:px-10 py-8 space-y-12">
+    <div className="min-h-screen w-full bg-background relative text-foreground overflow-hidden">
+      {/* Decorative Premium Background Gradients */}
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(16,185,129,0.12),rgba(16,185,129,0))] pointer-events-none" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_60%_at_100%_100%,rgba(59,130,246,0.08),rgba(59,130,246,0))] pointer-events-none" />
+      
+      <div className="relative w-full max-w-screen-2xl mx-auto px-6 md:px-10 py-8 space-y-12 z-10">
 
         {/* ── Header ───────────────────────────────────────────── */}
         <DashboardHeader />
@@ -151,8 +152,15 @@ function DashboardContent() {
           <KpiSection />
         </section>
 
-        {/* ── Série Histórica — Balneário Municipal ────────────── */}
+        {/* ── Balneário Municipal — Série Histórica ─────────────── */}
         <section className="space-y-5">
+          <SectionHeading
+            icon={Waves}
+            title="Balneário Municipal — Série Histórica"
+            subtitle="Nível do rio, pluviometria, transparência e saúde da água — Rio Formoso"
+            iconClass="text-blue-500"
+            bgClass="bg-blue-500/10 border-blue-500/20"
+          />
           <GraficoNivelRioBalneario />
           <GraficoPluviometriaBalneario />
           <GraficoSecchiBalneario />
@@ -221,96 +229,49 @@ function DashboardContent() {
             </div>
           </div>
 
+          {/* Ameaças ambientais — Fogo + Desmatamento */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-
-            <Card className="shadow-sm border-border bg-card hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-                  <div className="w-6 h-6 bg-red-500/10 rounded-md flex items-center justify-center border border-red-500/20">
-                    <Flame className="h-3.5 w-3.5 text-red-500" />
-                  </div>
-                  Focos de Incêndio
-                </CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  Distribuição temporal de focos detectados via satélite
-                </p>
-              </CardHeader>
-              <CardContent>
-                <GraficoFogo />
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-sm border-border bg-card hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-                  <div className="w-6 h-6 bg-emerald-500/10 rounded-md flex items-center justify-center border border-emerald-500/20">
-                    <TreePine className="h-3.5 w-3.5 text-emerald-500" />
-                  </div>
-                  Desmatamento
-                </CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  Área desmatada por período (hectares)
-                </p>
-              </CardHeader>
-              <CardContent>
-                <GraficoDesmatamento />
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-sm border-border bg-card hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-                  <div className="w-6 h-6 bg-purple-500/10 rounded-md flex items-center justify-center border border-purple-500/20">
-                    <TrendingUp className="h-3.5 w-3.5 text-purple-500" />
-                  </div>
-                  Ações Realizadas
-                </CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  Distribuição de ações por categoria
-                </p>
-              </CardHeader>
-              <CardContent>
-                <GraficoAcoes />
-              </CardContent>
-            </Card>
-
-            <Card className="shadow-sm border-border bg-card hover:shadow-md transition-shadow">
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
-                  <div className="w-6 h-6 bg-blue-500/10 rounded-md flex items-center justify-center border border-blue-500/20">
-                    <MapPin className="h-3.5 w-3.5 text-blue-500" />
-                  </div>
-                  Pontos de Monitoramento Consolidados
-                </CardTitle>
-                <p className="text-xs text-muted-foreground">
-                  Dados consolidados dos pontos de coleta
-                </p>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div>
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                      Deque de Pedras
-                    </h4>
-                    <GraficoPontos ponto="deque" ano={anoSelecionado} />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                      Ponte do Cure
-                    </h4>
-                    <GraficoPontos ponto="ponte" ano={anoSelecionado} />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
-                      Balneário Municipal
-                    </h4>
-                    <GraficoPontos ponto="balneario" ano={anoSelecionado} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
+            <GraficoFogo />
+            <GraficoDesmatamento />
           </div>
+
+          {/* Pontos consolidados — full width */}
+          <Card className="shadow-sm border-border bg-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold text-foreground flex items-center gap-2">
+                <div className="w-6 h-6 bg-blue-500/10 rounded-md flex items-center justify-center border border-blue-500/20">
+                  <MapPin className="h-3.5 w-3.5 text-blue-500" />
+                </div>
+                Pontos de Monitoramento Consolidados
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">
+                Dados consolidados dos pontos de coleta
+              </p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                <div>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                    Deque de Pedras
+                  </h4>
+                  <GraficoPontos ponto="deque" ano={anoSelecionado} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                    Ponte do Cure
+                  </h4>
+                  <GraficoPontos ponto="ponte" ano={anoSelecionado} />
+                </div>
+                <div>
+                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">
+                    Balneário Municipal
+                  </h4>
+                  <GraficoPontos ponto="balneario" ano={anoSelecionado} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
         </section>
 
       </div>
