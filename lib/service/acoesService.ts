@@ -12,7 +12,7 @@ import {
   insertTrilhaData,
   insertWaypointDataInWaypointsTable,
 } from "@/lib/repositories/exepedicoesRepository";
-import { uploadAzure } from "../azure";
+import { createAdminClient } from "../supabase/admin";
 
 import type { TrilhaInput, WaypointInput } from "@/lib/validations/acoes";
 
@@ -121,9 +121,14 @@ export async function createAcoesWithTrilha(input: {
 
     const acaoId = acaoRecord.id;
     if (wp.fotos) {
+      const supabase = createAdminClient()
       for (const file of wp.fotos) {
         const path = `${acaoId}/${Date.now()}-${file.name}`;
-        const imageUrl = await uploadAzure(file, path);
+        const buffer = Buffer.from(await file.arrayBuffer())
+        await supabase.storage.from("acoes").upload(path, buffer, {
+          contentType: file.type || "application/octet-stream",
+          upsert: false,
+        })
         // await addAcaoImageById(acaoId, imageUrl, wp.descricao ?? "");
       }
     }

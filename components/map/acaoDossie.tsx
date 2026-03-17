@@ -136,13 +136,12 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
              
              const { uploadUrl, blobUrl } = urlData.data
 
-             // Upload File to Azure
+             // Upload File to Supabase Storage
              const uploadRes = await fetch(uploadUrl, {
                  method: 'PUT',
                  body: input.file,
                  headers: {
-                     'x-ms-blob-type': 'BlockBlob',
-                     // 'Content-Type': input.file.type // Often optional or required depending on SAS config
+                     'Content-Type': input.file.type || 'application/octet-stream',
                  }
              })
              

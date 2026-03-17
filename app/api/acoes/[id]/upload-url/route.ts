@@ -1,11 +1,13 @@
 // app/api/acoes/[id]/upload-url/route.ts
 import { apiError, apiSuccess } from "@/lib/api/responses"
-import { getAzureUploadUrls } from "@/lib/azure"
+import { createAdminClient } from "@/lib/supabase/admin"
+
+const BUCKET = "acoes"
 
 export async function POST(request: Request, context: any) {
   try {
     const { id } = await context.params as { id: string }
-    const acaoId = await Number(id)
+    const acaoId = Number(id)
 
     if (Number.isNaN(acaoId)) {
       return apiError("ID de ação inválido", 400)
@@ -18,9 +20,19 @@ export async function POST(request: Request, context: any) {
     }
 
     const path = `${acaoId}/${Date.now()}-${body.fileName}`
-    const { uploadUrl, blobUrl } = getAzureUploadUrls(path)
+    const supabase = createAdminClient()
 
-    return apiSuccess({ uploadUrl, blobUrl })
+    const { data, error } = await supabase.storage
+      .from(BUCKET)
+      .createSignedUploadUrl(path)
+
+    if (error || !data) {
+      throw new Error(error?.message || "Erro ao gerar URL de upload")
+    }
+
+    const blobUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/${BUCKET}/${path}`
+
+    return apiSuccess({ uploadUrl: data.signedUrl, blobUrl })
   } catch (error) {
     console.error("Erro ao gerar URL de upload:", error)
     return apiError("Erro ao gerar URL de upload", 500)
