@@ -85,6 +85,16 @@ export function DateFilterControl({ onDateChange }: DateFilterControlProps) {
     setIsExpanded(false)
   }
 
+  const applySpecificYearFilter = (year: number) => {
+    const start = new Date(year, 0, 1)
+    const end = new Date(year, 11, 31, 23, 59, 59, 999)
+
+    setStartDate(start)
+    setEndDate(end)
+    onDateChange(start, end)
+    setIsExpanded(false)
+  }
+
   return (
     <Card className="bg-brand-dark/95 border border-white/10 text-slate-200 shadow-xl w-auto max-w-[300px] rounded-xl overflow-hidden backdrop-blur-sm">
       <CardContent className="p-0">
@@ -121,6 +131,22 @@ export function DateFilterControl({ onDateChange }: DateFilterControlProps) {
                 Esse Ano
               </Button>
             </div>
+
+            <div className="text-[10px] text-slate-400 mb-2 mt-1 font-medium uppercase tracking-wider">Histórico por Ano</div>
+            <div className="grid grid-cols-5 gap-1 mb-4">
+              {[2026, 2025, 2024, 2023, 2022].map((year) => (
+                <Button 
+                  key={year}
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => applySpecificYearFilter(year)} 
+                  className="text-xs px-1 h-8 border-white/10 bg-transparent text-slate-300 hover:bg-brand-primary/20 hover:text-white hover:border-brand-primary/50"
+                >
+                  {year}
+                </Button>
+              ))}
+            </div>
+
             <div className="space-y-2">
               <Popover>
                 <PopoverTrigger asChild>

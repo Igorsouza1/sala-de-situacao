@@ -29,7 +29,11 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     // Coletar todos os alertids presentes no arquivo
     const alertidsNoArquivo = features
-      .map((f) => f.properties?.alertid as string | undefined)
+      .map((f) => {
+        const p = f.properties || {};
+        const id = p.ALERTID ?? p.alertid;
+        return id != null ? String(id) : undefined;
+      })
       .filter((id): id is string => !!id);
 
     // Buscar quais alertids já existem para essa região
@@ -57,7 +61,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         continue;
       }
 
-      const alertid: string | null = props.alertid || null;
+      const alertid: string | null = String(props.ALERTID ?? props.alertid ?? "") || null;
 
       // Deduplicação por alertid quando disponível
       if (alertid && existingAlertids.has(alertid)) {
@@ -65,13 +69,16 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         continue;
       }
 
-      const alertcode: string | null = props.alertcode || null;
-      const alertha: number | null = props.alertha != null ? parseFloat(props.alertha) : null;
-      const source: string | null = props.source || null;
-      const detectat: string | null = props.detectat || null;
-      const detectyear: number | null = props.detectyear != null ? parseInt(props.detectyear, 10) : null;
-      const state: string | null = props.state || null;
-      const stateha: number | null = props.stateha != null ? parseFloat(props.stateha) : null;
+      const alertcode: string | null = String(props.ALERTCODE ?? props.alertcode ?? "") || null;
+      const rawAlertHA = props.ALERTHA ?? props.alertha;
+      const alertha: number | null = rawAlertHA != null ? parseFloat(rawAlertHA) : null;
+      const source: string | null = props.SOURCE ?? props.source ?? null;
+      const detectat: string | null = props.DETECTAT ?? props.detectat ?? null;
+      const rawDetectYear = props.DETECTYEAR ?? props.detectyear;
+      const detectyear: number | null = rawDetectYear != null ? parseInt(rawDetectYear, 10) : null;
+      const state: string | null = props.STATE ?? props.state ?? null;
+      const rawStateHA = props.STATEHA ?? props.stateha;
+      const stateha: number | null = rawStateHA != null ? parseFloat(rawStateHA) : null;
 
       const geomJson = JSON.stringify(geometry);
 
