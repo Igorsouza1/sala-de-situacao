@@ -1,6 +1,6 @@
 import { db } from "@/db"
 import { balnearioMunicipalInMonitoramento } from "@/db/schema"
-import { and, gte, lte } from "drizzle-orm"
+import { and, gte, lte, desc } from "drizzle-orm"
 
 export type NewBalnearioData = typeof balnearioMunicipalInMonitoramento.$inferInsert;
 
@@ -19,6 +19,7 @@ export async function findBalnearioDataByDateRange(startDate: string, endDate: s
     .select()
     .from(balnearioMunicipalInMonitoramento)
     .where(conditions.length ? and(...conditions) : undefined)
+    .orderBy(desc(balnearioMunicipalInMonitoramento.data))
 
   return query.execute()
 }
