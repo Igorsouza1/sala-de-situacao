@@ -7,10 +7,11 @@ import { Button } from "@/components/ui/button"
 interface FilterPopoverProps {
   icon: LucideIcon
   title: string
+  count?: number | null
   children: (close: () => void) => ReactNode
 }
 
-export function FilterPopover({ icon: Icon, title, children }: FilterPopoverProps) {
+export function FilterPopover({ icon: Icon, title, count, children }: FilterPopoverProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   const close = () => setIsOpen(false)
@@ -18,17 +19,24 @@ export function FilterPopover({ icon: Icon, title, children }: FilterPopoverProp
   return (
     <div className="relative z-[1000]">
       {/* Ícone principal circular */}
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => setIsOpen(!isOpen)}
-        className={`bg-white hover:bg-gray-100 shadow-md text-slate-700 border-input rounded-full w-10 h-10 transition-colors ${
-          isOpen ? "ring-2 ring-brand-primary ring-offset-2" : ""
-        }`}
-        title={title}
-      >
-        <Icon className="h-5 w-5" />
-      </Button>
+      <div className="relative inline-block">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setIsOpen(!isOpen)}
+          className={`bg-white hover:bg-gray-100 shadow-md text-slate-700 border-input rounded-full w-10 h-10 transition-colors ${
+            isOpen ? "ring-2 ring-brand-primary ring-offset-2" : ""
+          }`}
+          title={title}
+        >
+          <Icon className="h-5 w-5" />
+        </Button>
+        {count != null && (
+          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-brand-primary text-white text-[10px] font-bold leading-none shadow">
+            {count}
+          </span>
+        )}
+      </div>
 
       {/* Painel de Filtro com Animação */}
       <div
