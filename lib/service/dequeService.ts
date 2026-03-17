@@ -174,6 +174,77 @@ export async function getchuvaComparativoPct() {
   }
 }
 
+// ─── Históricos mensais ───────────────────────────────────────────────────────
+
+function iterMonths(startYear: number, endYear: number, endMonth: number) {
+  const months: { key: string; y: number; m: number }[] = []
+  let y = startYear, m = 1
+  while (y < endYear || (y === endYear && m <= endMonth)) {
+    months.push({ key: `${y}-${String(m).padStart(2, "0")}`, y, m })
+    m++; if (m > 12) { m = 1; y++ }
+  }
+  return months
+}
+
+export async function getTurbidezDequeHistorico() {
+  const data = await findAllDequeData()
+  const byMonth: Record<string, number[]> = {}
+  for (const row of data) {
+    if (!row.data || row.turbidez == null) continue
+    const d = new Date(row.data)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    const v = Number(row.turbidez)
+    if (Number.isFinite(v)) {
+      if (!byMonth[key]) byMonth[key] = []
+      byMonth[key].push(v)
+    }
+  }
+  const now = new Date()
+  return iterMonths(2024, now.getFullYear(), now.getMonth() + 1).map(({ key }) => {
+    const vals = byMonth[key] ?? []
+    const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
+    return { periodo: key, turbidez: avg !== null ? Math.round(avg * 100) / 100 : null }
+  })
+}
+
+export async function getSecchiDequeHistorico() {
+  const data = await findAllDequeData()
+  const byMonth: Record<string, number[]> = {}
+  for (const row of data) {
+    if (!row.data || row.secchiVertical == null) continue
+    const d = new Date(row.data)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    const v = Number(row.secchiVertical)
+    if (Number.isFinite(v) && v > 0) {
+      if (!byMonth[key]) byMonth[key] = []
+      byMonth[key].push(v)
+    }
+  }
+  const now = new Date()
+  return iterMonths(2024, now.getFullYear(), now.getMonth() + 1).map(({ key }) => {
+    const vals = byMonth[key] ?? []
+    const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
+    return { periodo: key, secchi: avg !== null ? Math.round(avg * 100) / 100 : null }
+  })
+}
+
+export async function getPluviometriaDequeHistorico() {
+  const data = await findAllDequeData()
+  const byMonth: Record<string, number> = {}
+  for (const row of data) {
+    if (!row.data || row.chuva == null) continue
+    const d = new Date(row.data)
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    const v = Number(row.chuva)
+    if (Number.isFinite(v)) byMonth[key] = (byMonth[key] ?? 0) + v
+  }
+  const now = new Date()
+  return iterMonths(2024, now.getFullYear(), now.getMonth() + 1).map(({ key }) => ({
+    periodo: key,
+    pluviometria: Math.round((byMonth[key] ?? 0) * 10) / 10,
+  }))
+}
+
 export async function getTurbidezIndicador() {
   const today = new Date()
   const fmt = (d: Date) => {

@@ -27,8 +27,10 @@ import { KpiCard } from "./kpis/KpiCard";
 import type { KpiColorScheme, KpiTrend } from "./kpis/KpiCard";
 import { GraficoFogo } from "./charts/grafico-fogo";
 import { GraficoDesmatamento } from "./charts/grafico-desmatamento";
-import { GraficoPontos } from "./charts/grafico-pontos";
 import { GraficoTurbidezDiario } from "./charts/GraficoTurbidezDiario";
+import { GraficoTurbidezDeque } from "./charts/GraficoTurbidezDeque";
+import { GraficoSecchiDeque } from "./charts/GraficoSecchiDeque";
+import { GraficoPluviometriaDeque } from "./charts/GraficoPluviometriaDeque";
 import { GraficoNivelRioBalneario } from "./charts/GraficoNivelRioBalneario";
 import { GraficoPluviometriaBalneario } from "./charts/GraficoPluviometriaBalneario";
 import { GraficoSecchiBalneario } from "./charts/GraficoSecchiBalneario";
@@ -781,6 +783,111 @@ function turbColor(v: number | null): string {
   return "#ef4444";
 }
 
+function MiniSparkline({ data, color }: { data: number[]; color: string }) {
+  if (data.length < 2) return null;
+  const max = Math.max(...data);
+  const min = Math.min(...data);
+  const range = max - min || 1;
+  const H = 28;
+  const points = data
+    .map((v, i) => {
+      const x = (i / (data.length - 1)) * 100;
+      const y = H - ((v - min) / range) * (H - 6) - 3;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  return (
+    <svg width="100%" height={H} viewBox={`0 0 100 ${H}`} preserveAspectRatio="none" className="w-full">
+      <polyline fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" points={points} />
+    </svg>
+  );
+}
+
+// ─── Status Deque de Pedras (mini painel lateral) ─────────────────────────────
+
+function StatusDeque() {
+  const turbidez = useFetch<TurbidezIndicador>("/api/deque-pedras/indicadores/turbidez");
+  const chuva    = useFetch<ChuvaIndicador>("/api/deque-pedras/indicadores/chuva");
+
+  const turb  = turbidez.data;
+  const color = turbColor(turb?.current ?? null);
+
+  const statusLabel = turb?.status === "critico" ? "Crítico" : turb?.status === "atencao" ? "Atenção" : "Normal";
+  const statusCls =
+    turb?.status === "critico"
+      ? "bg-red-500/15 text-red-400 border-red-500/30"
+      : turb?.status === "atencao"
+      ? "bg-yellow-500/15 text-yellow-400 border-yellow-500/30"
+      : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30";
+
+  return (
+    <div className="bg-card border border-border/70 rounded-2xl flex flex-col h-full overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-2.5 px-4 py-2.5 border-b border-border/50 flex-none bg-muted/20">
+        <div className="w-7 h-7 rounded-lg bg-teal-500/10 border border-teal-500/20 flex items-center justify-center flex-none">
+          <Droplets className="w-3.5 h-3.5 text-teal-500" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-foreground leading-none">Deque de Pedras</p>
+          <p className="text-[10px] text-muted-foreground mt-0.5">Rio da Prata · status atual</p>
+        </div>
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 flex flex-col justify-between px-4 py-4 min-h-0">
+        {turbidez.loading ? (
+          <div className="flex items-center justify-center h-full gap-2 text-muted-foreground text-xs">
+            <div className="w-3.5 h-3.5 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
+          </div>
+        ) : (
+          <>
+            {/* Turbidez big number */}
+            <div className="flex flex-col items-center gap-1.5">
+              <div className="text-5xl font-bold tabular-nums leading-none" style={{ color }}>
+                {fmtNum(turb?.current ?? null, 1)}
+              </div>
+              <div className="text-xs text-muted-foreground">NTU · turbidez</div>
+              <span className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full border ${statusCls}`}>
+                {statusLabel}
+              </span>
+            </div>
+
+            {/* Sparkline */}
+            {turb?.sparkline && turb.sparkline.length > 1 && (
+              <div className="w-full px-1 mt-2">
+                <MiniSparkline data={turb.sparkline} color={color} />
+              </div>
+            )}
+
+            {/* Stats grid */}
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="bg-muted/30 rounded-lg px-2.5 py-2 text-center">
+                <div className="text-[10px] text-muted-foreground mb-0.5">Secchi</div>
+                <div className="text-sm font-semibold text-foreground tabular-nums">
+                  {fmtNum(turb?.secchiVertical ?? null)} <span className="text-[10px] text-muted-foreground font-normal">m</span>
+                </div>
+              </div>
+              <div className="bg-muted/30 rounded-lg px-2.5 py-2 text-center">
+                <div className="text-[10px] text-muted-foreground mb-0.5">Chuva mês</div>
+                <div className="text-sm font-semibold text-foreground tabular-nums">
+                  {fmtNum(chuva.data?.mtdAtual ?? null)} <span className="text-[10px] text-muted-foreground font-normal">mm</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Last date */}
+            {turb?.lastDate && (
+              <p className="text-[10px] text-muted-foreground text-center mt-2">
+                Coleta em <span className="font-semibold text-foreground">{fmtDate(turb.lastDate)}</span>
+              </p>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Tab: Visão Geral (Bento Box) ─────────────────────────────────────────────
 
 function TabVisaoGeral() {
@@ -868,9 +975,10 @@ function TabVisaoGeral() {
         />
       </div>
 
-      {/* ── Row 2: Últimos Registros Formoso ─────────────────── */}
-      <div className="min-h-0">
+      {/* ── Row 2: Formoso table + Deque status ──────────────── */}
+      <div className="min-h-0 grid grid-cols-[1fr_240px] gap-4">
         <UltimosRegistrosFormoso />
+        <StatusDeque />
       </div>
     </div>
   );
@@ -970,7 +1078,7 @@ function TabFormoso() {
 
 // ─── Tab: Prata ───────────────────────────────────────────────────────────────
 
-function TabPrata({ anoSelecionado }: { anoSelecionado: string }) {
+function TabPrata() {
   const turbidez = useFetch<TurbidezIndicador>(
     "/api/deque-pedras/indicadores/turbidez"
   );
@@ -1028,8 +1136,9 @@ function TabPrata({ anoSelecionado }: { anoSelecionado: string }) {
         </div>
 
         {/* Charts */}
-        <GraficoTurbidezDiario />
-        <GraficoPontos ponto="deque" ano={anoSelecionado} />
+        <GraficoTurbidezDeque />
+        <GraficoSecchiDeque />
+        <GraficoPluviometriaDeque />
       </div>
     </div>
   );
@@ -1140,7 +1249,7 @@ function DashboardContent() {
             value="prata"
             className="h-full m-0 data-[state=inactive]:hidden"
           >
-            <TabPrata anoSelecionado={anoSelecionado} />
+            <TabPrata />
           </TabsContent>
         </div>
       </Tabs>
