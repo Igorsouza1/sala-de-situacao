@@ -145,7 +145,7 @@ export function DataInsertDialog({ isOpen, onClose }: DataInsertDialogProps) {
   const renderStepContent = () => {
     switch (currentStep) {
       case 1:
-        return <TypeSelector selectedType={selectedType} onTypeSelect={setSelectedType} />
+        return <TypeSelector selectedType={selectedType} onTypeSelect={(type) => setSelectedType(type)} />
       case 2:
         switch (selectedType) {
           case "estrada":

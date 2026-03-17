@@ -43,8 +43,8 @@ function saveQueue(queue: PendingSighting[]) {
 }
 
 function generateId(): string {
-  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-    return generateId()
+  if (typeof crypto !== 'undefined' && (crypto as any).randomUUID) {
+    return (crypto as any).randomUUID()
   }
   // Fallback para contextos sem crypto.randomUUID (HTTP local)
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
@@ -132,7 +132,7 @@ export default function AvistamentoJavali() {
         .then((reg) => {
           // Pede Background Sync ao SW (Chrome/Edge)
           if ('sync' in reg) {
-            reg.sync.register('javali-sync').catch(() => {})
+            (reg as any).sync.register('javali-sync').catch(() => {})
           }
           // Escuta mensagens do SW para sincronizar
           navigator.serviceWorker.addEventListener('message', (event) => {

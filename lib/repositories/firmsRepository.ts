@@ -104,6 +104,24 @@ class FirmsRepository {
         )
       );
   }
+
+  async getFirmsDataByDateRange(startDate: string, endDate: string) {
+    return await db
+      .select({
+        id: rawFirmsInMonitoramento.id,
+        acqDate: rawFirmsInMonitoramento.acqDate,
+        acqTime: rawFirmsInMonitoramento.acqTime,
+        latitude: rawFirmsInMonitoramento.latitude,
+        longitude: rawFirmsInMonitoramento.longitude,
+      })
+      .from(rawFirmsInMonitoramento)
+      .where(
+        and(
+          sql`${rawFirmsInMonitoramento.acqDate} >= ${startDate}`,
+          sql`${rawFirmsInMonitoramento.acqDate} <= ${endDate}`
+        )
+      );
+  }
 }
 
 export const firmsRepository = new FirmsRepository();

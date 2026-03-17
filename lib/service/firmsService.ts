@@ -344,3 +344,43 @@ export async function getAllFirmsData() {
 
   return data;
 }
+
+export async function getFocosIndicador() {
+  const today = new Date();
+  const fmt = (d: Date) => d.toISOString().split("T")[0];
+
+  // 1. Define ranges: Current (last 30 days) and Previous (30 days before that)
+  const endCurrent = today;
+  const startCurrent = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+  const startPrevious = new Date(startCurrent.getTime() - 30 * 24 * 60 * 60 * 1000);
+
+  // 2. Fetch data
+  const [currentFirms, previousFirms] = await Promise.all([
+    firmsRepository.getFirmsDataByDateRange(fmt(startCurrent), fmt(endCurrent)),
+    firmsRepository.getFirmsDataByDateRange(fmt(startPrevious), fmt(startCurrent)),
+  ]);
+
+  const current = currentFirms.length;
+  const previous = previousFirms.length;
+
+  // 3. Calculate deltaPct
+  const deltaPct = previous > 0 ? ((current - previous) / previous) * 100 : null;
+
+  // 4. Generate Sparkline (Daily counts for last 30 days)
+  const sparkMap = new Map<string, number>();
+  for (const f of currentFirms) {
+    if (f.acqDate) {
+      const key = f.acqDate; // acqDate is "YYYY-MM-DD"
+      sparkMap.set(key, (sparkMap.get(key) ?? 0) + 1);
+    }
+  }
+
+  const sparkline: number[] = [];
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+    const key = fmt(d);
+    sparkline.push(sparkMap.get(key) ?? 0);
+  }
+
+  return { current, previous, deltaPct, sparkline };
+}

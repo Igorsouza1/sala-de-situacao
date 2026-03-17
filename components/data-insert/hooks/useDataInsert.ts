@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 
-type DataType = "estrada" | "ponteCure" | "dequePedras" | "acoes" | "dynamic"
+type DataType = "estrada" | "ponteCure" | "dequePedras" | "balnearioMunicipal" | "acoes" | "dynamic"
 
 export function useDataInsert() {
   const [selectedType, setSelectedType] = useState<DataType | null>(null)
