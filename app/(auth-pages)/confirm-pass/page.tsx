@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { completeInviteAction } from "@/app/api/authentication/actions";
 import { FormMessage, type Message } from "@/components/auth/form-message";
 import { SubmitButton } from "@/components/auth/submit-button";
@@ -9,102 +8,78 @@ export default async function Invite(props: { searchParams: Promise<Message> }) 
   const searchParams = await props.searchParams;
 
   return (
-    <div className="flex min-h-screen w-full bg-brand-dark">
-      {/* Coluna da esquerda com imagem */}
-      <div className="hidden lg:flex lg:w-1/4 relative h-full bg-slate-900">
-        <Image
-          src="/signin_novo.png"
-          alt="Rio da Prata"
-          layout="fill"
-          objectFit="cover"
-          priority
-          className="object-center"
-        />
+    <>
+      <div className="flex flex-col space-y-1.5 mb-8">
+        <div className="mb-4">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8 text-blue-600">
+            <path d="M12 5v14M18.364 8.636l-12.728 12.728M18.364 15.364 5.636 2.636" />
+          </svg>
+        </div>
+        <h1 className="text-[26px] font-bold tracking-tight text-slate-900">
+          Ative sua conta
+        </h1>
       </div>
 
-      {/* Coluna da direita com formulário */}
-      <div className="w-full lg:w-2/3 flex flex-col items-center justify-center min-h-screen bg-brand-dark border-l border-white/5">
-        <div className="w-full max-w-sm space-y-10 px-8">
-          <div className="flex flex-col items-center space-y-2">
-            <div className="mb-4">
-               <Image 
-                 src="/logo.png" 
-                 alt="Logo Prisma" 
-                 width={180} 
-                 height={60} 
-                 className="h-auto w-auto"
-               />
-            </div>
+      <form className="space-y-6">
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="name" className="text-[13px] font-bold text-slate-800">
+              Nome
+            </Label>
+            <Input
+              name="name"
+              id="name"
+              placeholder="Seu nome"
+              required
+              className="w-full px-4 h-11 bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 
+                focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl
+                transition-all duration-200 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+            />
           </div>
 
-          <form className="space-y-6">
-            <div>
-              <h2 className="text-2xl font-semibold text-white tracking-tight text-center">
-                Ative sua conta
-              </h2>
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="password" className="text-[13px] font-bold text-slate-800">
+              Senha
+            </Label>
+            <Input
+              type="password"
+              name="password"
+              id="password"
+              required
+              placeholder="••••••••"
+              className="w-full px-4 h-11 bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 
+                focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl
+                transition-all duration-200 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+            />
+          </div>
 
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-                  Nome
-                </Label>
-                <Input
-                  name="name"
-                  id="name"
-                  placeholder="Seu nome"
-                  required
-                  className="w-full px-4 py-3 bg-slate-900 border-white/10 text-white placeholder:text-slate-600 
-                    focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 rounded-md
-                    transition-all duration-200"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-                  Senha
-                </Label>
-                <Input
-                  type="password"
-                  name="password"
-                  id="password"
-                  required
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 bg-slate-900 border-white/10 text-white placeholder:text-slate-600 
-                    focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 rounded-md
-                    transition-all duration-200"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword" className="text-xs font-medium text-slate-400 uppercase tracking-wider">
-                  Confirmar Senha
-                </Label>
-                <Input
-                  type="password"
-                  name="confirmPassword"
-                  id="confirmPassword"
-                  required
-                  placeholder="••••••••"
-                  className="w-full px-4 py-3 bg-slate-900 border-white/10 text-white placeholder:text-slate-600 
-                    focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/50 rounded-md
-                    transition-all duration-200"
-                />
-              </div>
-            </div>
-
-            <SubmitButton
-              formAction={completeInviteAction}
-              className="w-full py-3 bg-brand-primary hover:bg-blue-600 text-white font-medium 
-                transition-all duration-200 rounded-lg shadow-lg shadow-blue-900/20"
-            >
-              Salvar
-            </SubmitButton>
-
-            <FormMessage message={searchParams} />
-          </form>
+          <div className="space-y-1.5">
+            <Label htmlFor="confirmPassword" className="text-[13px] font-bold text-slate-800">
+              Confirmar Senha
+            </Label>
+            <Input
+              type="password"
+              name="confirmPassword"
+              id="confirmPassword"
+              required
+              placeholder="••••••••"
+              className="w-full px-4 h-11 bg-white border border-slate-200 text-slate-900 placeholder:text-slate-400 
+                focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl
+                transition-all duration-200 shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+            />
+          </div>
         </div>
-      </div>
-    </div>
+
+        <SubmitButton
+          formAction={completeInviteAction}
+          className="w-full h-11 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-[15px]
+            transition-all duration-200 rounded-xl shadow-[0_4px_14px_0_rgb(37,99,235,0.25)]"
+        >
+          Salvar
+        </SubmitButton>
+
+        <FormMessage message={searchParams} />
+      </form>
+    </>
   );
 }
