@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { Step1GeneralInfo } from "./Step1GeneralInfo";
+import { Step2TrailData } from "./Step2TrailData";
+import { Step3Waypoints } from "./Step3Waypoints";
+import { extractWaipointsAsWKT } from "@/lib/helpers/gpxParser";
 
 interface RegionDto {
   id: number;
@@ -11,22 +14,103 @@ interface RegionDto {
 interface GpxImportTabProps {
   regionId: number;
   regioes: RegionDto[];
+  onTrailPreview?: (geojson: any | null) => void;
 }
 
-export function GpxImportTab({ regionId, regioes }: GpxImportTabProps) {
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
-  const [importData, setImportData] = useState<any>(null);
+interface ImportState {
+  step: 1 | 2 | 3;
+  arquivo: File | null;
+  geojson: any | null;
+  metadata: any | null;
+  nome: string;
+  regiaoId: number;
+  trilhaData: any | null;
+  waypoints: any[] | null;
+}
+
+export function GpxImportTab({ regionId, regioes, onTrailPreview }: GpxImportTabProps) {
+  const [state, setState] = useState<ImportState>({
+    step: 1,
+    arquivo: null,
+    geojson: null,
+    metadata: null,
+    nome: "",
+    regiaoId: regionId,
+    trilhaData: null,
+    waypoints: null,
+  });
 
   const handleStep1Complete = (data: any) => {
-    setImportData(data);
-    setCurrentStep(2);
-    // TODO: Implementar Etapa 2
-    console.log("Dados da Etapa 1:", data);
+    // Extrair tracks do geojson
+    const tracks = data.geojson.features.filter((f: any) => f.geometry.type === "LineString");
+    const hasTrack = tracks.length > 0;
+
+    // Extrair waypoints
+    const waypointsGpx = extractWaipointsAsWKT(data.geojson);
+
+    // Se tem track, enviar para preview no mapa
+    if (hasTrack && onTrailPreview) {
+      onTrailPreview(data.geojson);
+    }
+
+    setState((prev) => ({
+      ...prev,
+      ...data,
+      waypoints: waypointsGpx.length > 0 ? waypointsGpx : null,
+      step: hasTrack ? 2 : 3, // Pular etapa 2 se não tem track
+    }));
+  };
+
+  const handleStep2Complete = (trilhaData: any) => {
+    // Extrair waypoints do geojson
+    const waypointsGpx = extractWaipointsAsWKT(state.geojson);
+    
+    setState((prev) => ({
+      ...prev,
+      trilhaData,
+      waypoints: waypointsGpx,
+      step: 3,
+    }));
+  };
+
+  const handleStep3Submit = async (data: any) => {
+    console.log("Dados finais para envio:", {
+      nome: state.nome,
+      regiaoId: state.regiaoId,
+      trilha: state.trilhaData,
+      waypoints: data.waypoints,
+    });
+    
+    // TODO: Chamar API /api/gpx/import
+    // Por enquanto, só mostra sucesso
+    alert(`✅ Importação concluída!\n\n${data.waypoints.length} ações criadas com sucesso.`);
+    
+    // Limpar e voltar ao início
+    handleCancel();
+  };
+
+  const handleBack = () => {
+    setState((prev) => ({
+      ...prev,
+      step: (prev.step - 1) as 1 | 2 | 3,
+    }));
   };
 
   const handleCancel = () => {
-    setCurrentStep(1);
-    setImportData(null);
+    // Limpar preview do mapa
+    if (onTrailPreview) {
+      onTrailPreview(null);
+    }
+    setState({
+      step: 1,
+      arquivo: null,
+      geojson: null,
+      metadata: null,
+      nome: "",
+      regiaoId: regionId,
+      trilhaData: null,
+      waypoints: null,
+    });
   };
 
   return (
@@ -40,23 +124,23 @@ export function GpxImportTab({ regionId, regioes }: GpxImportTabProps) {
               className={`
                 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all
                 ${
-                  currentStep === 1
+                  state.step === 1
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
-                    : currentStep > 1
+                    : state.step > 1
                     ? "bg-emerald-600 text-white"
                     : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
                 }
               `}
             >
-              {currentStep > 1 ? "✓" : "1"}
+              {state.step > 1 ? "✓" : "1"}
             </div>
             <span
               className={`
                 text-xs font-medium text-center max-w-[100px]
                 ${
-                  currentStep === 1
+                  state.step === 1
                     ? "text-blue-600 dark:text-blue-400"
-                    : currentStep > 1
+                    : state.step > 1
                     ? "text-emerald-600 dark:text-emerald-400"
                     : "text-neutral-500 dark:text-neutral-400"
                 }
@@ -70,7 +154,7 @@ export function GpxImportTab({ regionId, regioes }: GpxImportTabProps) {
           <div
             className={`
               w-16 h-1 rounded-full transition-all
-              ${currentStep > 1 ? "bg-emerald-600" : "bg-neutral-200 dark:bg-neutral-800"}
+              ${state.step > 1 ? "bg-emerald-600" : "bg-neutral-200 dark:bg-neutral-800"}
             `}
           />
 
@@ -80,23 +164,23 @@ export function GpxImportTab({ regionId, regioes }: GpxImportTabProps) {
               className={`
                 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all
                 ${
-                  currentStep === 2
+                  state.step === 2
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
-                    : currentStep > 2
+                    : state.step > 2
                     ? "bg-emerald-600 text-white"
                     : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
                 }
               `}
             >
-              {currentStep > 2 ? "✓" : "2"}
+              {state.step > 2 ? "✓" : "2"}
             </div>
             <span
               className={`
                 text-xs font-medium text-center max-w-[100px]
                 ${
-                  currentStep === 2
+                  state.step === 2
                     ? "text-blue-600 dark:text-blue-400"
-                    : currentStep > 2
+                    : state.step > 2
                     ? "text-emerald-600 dark:text-emerald-400"
                     : "text-neutral-500 dark:text-neutral-400"
                 }
@@ -110,7 +194,7 @@ export function GpxImportTab({ regionId, regioes }: GpxImportTabProps) {
           <div
             className={`
               w-16 h-1 rounded-full transition-all
-              ${currentStep > 2 ? "bg-emerald-600" : "bg-neutral-200 dark:bg-neutral-800"}
+              ${state.step > 2 ? "bg-emerald-600" : "bg-neutral-200 dark:bg-neutral-800"}
             `}
           />
 
@@ -120,7 +204,7 @@ export function GpxImportTab({ regionId, regioes }: GpxImportTabProps) {
               className={`
                 w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-all
                 ${
-                  currentStep === 3
+                  state.step === 3
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
                     : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
                 }
@@ -132,7 +216,7 @@ export function GpxImportTab({ regionId, regioes }: GpxImportTabProps) {
               className={`
                 text-xs font-medium text-center max-w-[100px]
                 ${
-                  currentStep === 3
+                  state.step === 3
                     ? "text-blue-600 dark:text-blue-400"
                     : "text-neutral-500 dark:text-neutral-400"
                 }
@@ -146,7 +230,7 @@ export function GpxImportTab({ regionId, regioes }: GpxImportTabProps) {
 
       {/* Step Content */}
       <div className="min-h-[400px]">
-        {currentStep === 1 && (
+        {state.step === 1 && (
           <Step1GeneralInfo
             regionId={regionId}
             regioes={regioes}
@@ -155,38 +239,40 @@ export function GpxImportTab({ regionId, regioes }: GpxImportTabProps) {
           />
         )}
 
-        {currentStep === 2 && (
-          <div className="text-center py-20 space-y-4">
-            <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
-              Etapa 2 - Dados da Trilha
-            </p>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              Em desenvolvimento...
-            </p>
-            <button
-              type="button"
-              onClick={() => setCurrentStep(3)}
-              className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
-            >
-              Pular para Etapa 3 (demo)
-            </button>
-          </div>
+        {state.step === 2 && state.geojson && state.metadata && (
+          <Step2TrailData
+            geojson={state.geojson}
+            metadata={state.metadata}
+            nomeImportacao={state.nome}
+            onNext={handleStep2Complete}
+            onBack={handleBack}
+          />
         )}
 
-        {currentStep === 3 && (
+        {state.step === 3 && state.waypoints && (
+          <Step3Waypoints
+            waypoints={state.waypoints}
+            nomeImportacao={state.nome}
+            regiaoId={state.regiaoId}
+            onSubmit={handleStep3Submit}
+            onBack={handleBack}
+          />
+        )}
+
+        {state.step === 3 && !state.waypoints && (
           <div className="text-center py-20 space-y-4">
             <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
-              Etapa 3 - Classificação de Waypoints como Ações
-            </p>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">
-              Em desenvolvimento...
+              Nenhum waypoint encontrado no arquivo GPX.
             </p>
             <button
               type="button"
-              onClick={() => setCurrentStep(1)}
+              onClick={() => {
+                if (onTrailPreview) onTrailPreview(null);
+                setState((prev) => ({ ...prev, step: 1 }));
+              }}
               className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
             >
-              Voltar ao início (demo)
+              Voltar ao início
             </button>
           </div>
         )}

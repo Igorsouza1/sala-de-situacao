@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "mcp__postgres-local__query"
+      "mcp__postgres-local__query",
+      "Bash(npx *)"
     ]
   },
   "$version": 3

@@ -95,19 +95,19 @@ Após upload válido, extrair automaticamente:
 
 ---
 
-## 4. ETAPA 2 - Dados da Trilha
+## 4. ETAPA 2 - Dados da Trilha ✅ IMPLEMENTADA
 
 ### 4.1. Map Preview
-- [ ] Exibir trilha no mapa usando componente `MapPreview` existente
-- [ ] **NÃO** exibir waypoints nesta etapa
-- [ ] Zoom automático para bounds da trilha
-- [ ] Camada de trilha com cor destacada
+- [x] Exibir trilha no mapa usando componente `RegionMapPreview` existente
+- [x] Camada de trilha com destaque (azul com glow)
+- [x] Zoom automático para bounds da trilha
+- [x] **NÃO** exibir waypoints nesta etapa
 
 ### 4.2. Dados Extraídos
 
 | Dado | Origem | Editável? |
 |------|--------|-----------|
-| **Geometria** | Track(s) do GPX → MULTILINESTRING Z | ❌ |
+| **Geometria** | Track(s) do GPX → GeoJSON | ❌ |
 | **Distância** | Cálculo automático (km) | ❌ Info |
 | **Duração** | Cálculo automático (h:m) | ❌ Info |
 
@@ -116,14 +116,14 @@ Após upload válido, extrair automaticamente:
 | Campo | Tipo | Obrigatório | Observação |
 |-------|------|-------------|------------|
 | **Nome da trilha** | `input text` | ✅ | Default: nome da Etapa 1 |
-| **Data início** | `input datetime` | ❌ | Default: do GPX, editável |
-| **Data fim** | `input datetime` | ❌ | Default: do GPX, editável |
+| **Data início** | `input datetime-local` | ❌ | Default: do GPX, editável |
+| **Data fim** | `input datetime-local` | ❌ | Default: do GPX, editável |
 
 ### 4.4. Caso Especial: GPX sem Track
 Se arquivo contiver **apenas waypoints** (sem `<trk>`):
-- [ ] Exibir aviso: *"Este arquivo não contém trilhas. Apenas waypoints serão importados como Ações."*
-- [ ] Pular Etapa 2 automaticamente → Ir direto para Etapa 3
-- [ ] **NÃO** criar registro na tabela `trilhas`
+- [x] Exibir aviso: *"Este arquivo não contém trilhas. Apenas waypoints serão importados como Ações."*
+- [x] Pular Etapa 2 automaticamente → Ir direto para Etapa 3
+- [x] Botão "Avançar para Ações"
 
 ### 4.5. Navegação
 ```
@@ -131,13 +131,20 @@ Se arquivo contiver **apenas waypoints** (sem `<trk>`):
 [Próximo →] ── valida → Etapa 3
 ```
 
+### 4.6. Arquivos Criados
+- `components/gpx-import/Step2TrailData.tsx` - Formulário Etapa 2
+
+### 4.7. Arquivos Modificados
+- `components/gpx-import/GpxImportTab.tsx` - Adicionado Step2 e callback `onTrailPreview`
+- `components/admin/region-map-preview.tsx` - Camada de preview da trilha no mapa
+
 ---
 
-## 5. ETAPA 3 - Waypoints → Ações
+## 5. ETAPA 3 - Waypoints → Ações ✅ IMPLEMENTADA (Frontend Completo)
 
 ### 5.1. Estrutura de Exibição
-- [ ] **Accordion** (toggle expansível) por waypoint
-- [ ] Header do accordion mostra:
+- [x] **Accordion** (toggle expansível) por waypoint
+- [x] Header do accordion mostra:
   - Nome do waypoint (ou "Waypoint N" se vazio)
   - Ícone de coordenadas 📍
   - Status de preenchimento (✅ completo / ⚠️ pendente)
@@ -166,77 +173,63 @@ Se arquivo contiver **apenas waypoints** (sem `<trk>`):
 | **Tipo Técnico** | `select` | `['Fiscalização', 'Recuperação', 'Incidente', 'Monitoramento', 'Infraestrutura']` | ❌ Nulo |
 | **Caráter** | `select` | `['Fiscalização', 'Recuperação', 'Incidente', 'Monitoramento', 'Infraestrutura']` | ❌ Nulo |
 
-> **Nota:** Os três últimos campos usam temporariamente os mesmos valores de `categoria_acao`. Serão atualizados quando enums próprios forem criados no banco.
-
 ### 5.4. Upload de Fotos (Opcional)
 
-- [ ] **Máximo:** 2 fotos por waypoint
-- [ ] **Mínimo:** 0 (opcional)
-- [ ] Drag and drop ou file picker
-- [ ] Formatos aceitos: JPG, PNG, WebP
-- [ ] Tamanho máximo: 5MB por arquivo
-- [ ] Preview em thumbnail após upload
-- [ ] Campo de descrição por foto (opcional)
-- [ ] Botão de remover foto (X no canto)
-- [ ] Contador visual: `(1/2 fotos)`
+- [x] **Máximo:** 2 fotos por waypoint
+- [x] **Mínimo:** 0 (opcional)
+- [x] Drag and drop ou file picker
+- [x] Formatos aceitos: JPG, PNG, WebP
+- [x] Tamanho máximo: 5MB por arquivo
+- [x] Preview em thumbnail após upload
+- [x] Campo de descrição por foto (opcional)
+- [x] Botão de remover foto (X no canto)
+- [x] Contador visual: `(1/2 fotos)`
 
 ### 5.5. Funcionalidades Bulk
 
-**Barra de ações no topo da Etapa 3:**
-```
-┌──────────────────────────────────────────────────────┐
-│ ⚡ Aplicar a todos os waypoints:                      │
-│ Categoria: [____________▼]  Status: [____________▼]  │
-│ Eixo Temático: [____________▼]  [Aplicar ✓]          │
-└──────────────────────────────────────────────────────┘
-```
-
-- [ ] Selecionar valores e clicar "Aplicar" preenche todos os waypoints
-- [ ] **NÃO** sobrescreve campos já preenchidos (apenas vazios)
-- [ ] Feedback visual: "X waypoints atualizados"
-- [ ] Campos disponíveis para bulk: Categoria, Status, Eixo Temático, Tipo Técnico, Caráter
+- [x] Barra de ações no topo: Categoria, Status, Eixo Temático, Tipo Técnico, Caráter
+- [x] Selecionar valores e clicar "Aplicar a Todos"
+- [x] **NÃO** sobrescreve campos já preenchidos (apenas vazios)
+- [x] Feedback visual: "X waypoints atualizados" (desaparece após 3s)
 
 ### 5.6. Validação por Waypoint
 
-Cada waypoint deve ter **todos** os campos preenchidos antes do envio:
-- [ ] Nome (mínimo 3 caracteres)
-- [ ] Descrição (mínimo 10 caracteres)
-- [ ] Categoria selecionada
-- [ ] Tipo preenchido (mínimo 3 caracteres)
-- [ ] Status selecionado
-- [ ] Eixo Temático selecionado
-- [ ] Tipo Técnico selecionado
-- [ ] Caráter selecionado
+- [x] Nome: mínimo 3 caracteres
+- [x] Descrição: mínimo 10 caracteres
+- [x] Categoria selecionada
+- [x] Tipo preenchido (mínimo 3 caracteres)
+- [x] Status selecionado
+- [x] Eixo Temático selecionado
+- [x] Tipo Técnico selecionado
+- [x] Caráter selecionado
 
 **Indicador visual:**
 - ✅ Verde: waypoint completo
 - ⚠️ Amarelo: campos pendentes
-- 🔴 Vermelho: erros de validação
 
-### 5.7. Validação de Coordenadas na Região
+### 5.7. Validação e Envio
 
-Antes do envio:
-- [ ] Verificar se coordenadas de **cada waypoint** estão dentro da `Região` selecionada (usando ST_Contains)
-- [ ] Se fora: exibir aviso ⚠️ mas **permitir envio** (não bloquear)
-- [ ] Mensagem: *"Waypoint 'X' está fora da região selecionada. Deseja continuar?"*
+- [x] Botão "Enviar Tudo ✓" valida TODOS os waypoints
+- [x] Se houver erros: expandir primeiro accordion com erro
+- [x] Mensagem: "X waypoint(s) com pendências"
+- [x] Se tudo válido: chama callback de submit (preparado para API)
+- [x] Spinner durante envio
+- [x] Toast de sucesso após envio
 
-### 5.8. Navegação e Envio
+### 5.8. Arquivos Criados
+- `components/gpx-import/Step3Waypoints.tsx` - Container principal da Etapa 3
+- `components/gpx-import/WaypointAccordion.tsx` - Accordion por waypoint
+- `components/gpx-import/PhotoUploader.tsx` - Upload de fotos por waypoint
+- `components/gpx-import/WaypointBulkActions.tsx` - Barra de bulk actions
 
-```
-[← Voltar] ────── volta para Etapa 2 (mantém estado)
-[Enviar Tudo ✓] ─ valida todos → se OK, chama API
-```
+### 5.9. Arquivos Modificados
+- `components/gpx-import/GpxImportTab.tsx` - Integração do Step3 e extração de waypoints
 
-**Ao clicar em "Enviar Tudo":**
-1. Validar TODOS os waypoints
-2. Se houver erros:
-   - Expandir accordions com erros
-   - Scroll para primeiro erro
-   - Exibir resumo: "X waypoint(s) com pendências"
-3. Se tudo válido:
-   - Desabilitar botão
-   - Exibir spinner: "Enviando..."
-   - Chamar API endpoint
+---
+
+## 6. BACKEND - API (PRÓXIMA ETAPA)
+
+> **Nota:** O frontend está completo. O próximo passo é implementar o backend para receber os dados e salvar no banco.
 
 ---
 

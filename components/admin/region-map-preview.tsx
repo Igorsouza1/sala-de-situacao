@@ -44,6 +44,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
   const [isSaving, setIsSaving] = useState(false);
   const [activeTab, setActiveTab] = useState<"baseLayers" | "properties" | "focos" | "desmatamento" | "acoes">("baseLayers");
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
+  const [trailGeojson, setTrailGeojson] = useState<any>(null);
 
   // Settings state
   const [layerName, setLayerName] = useState("");
@@ -467,6 +468,30 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                   />
                 </Source>
               )}
+
+              {/* Trail Preview from GPX Import */}
+              {trailGeojson && activeTab === "acoes" && (
+                <Source id="trail-preview-source" type="geojson" data={trailGeojson}>
+                  <Layer
+                    id="trail-preview-line"
+                    type="line"
+                    paint={{
+                      "line-color": "#3b82f6",
+                      "line-width": 4,
+                      "line-opacity": 0.9
+                    }}
+                  />
+                  <Layer
+                    id="trail-preview-glow"
+                    type="line"
+                    paint={{
+                      "line-color": "#60a5fa",
+                      "line-width": 8,
+                      "line-opacity": 0.3
+                    }}
+                  />
+                </Source>
+              )}
             </Map>
           </div>
         </div>
@@ -619,6 +644,20 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                 <GpxImportTab
                   regionId={regionId}
                   regioes={regioes}
+                  onTrailPreview={(geojson) => {
+                    setTrailGeojson(geojson);
+                    if (geojson && mapRef.current) {
+                      try {
+                        const [minLng, minLat, maxLng, maxLat] = bbox(geojson);
+                        mapRef.current.fitBounds(
+                          [[minLng, minLat], [maxLng, maxLat]],
+                          { padding: 40, duration: 1000 }
+                        );
+                      } catch (e) {
+                        console.error("Failed to fit bounds for trail preview", e);
+                      }
+                    }
+                  }}
                 />
              </div>
           )}
