@@ -1,4 +1,4 @@
-import { getRegionById, listOrganizations, getBaseLayersByRegion, getPropertiesByRegion, getFocosByRegion, getDesmatamentoByRegion } from "@/lib/service/adminService";
+import { getRegionById, listOrganizations, getBaseLayersByRegion, getPropertiesByRegion, getFocosByRegion, getDesmatamentoByRegion, listRegions } from "@/lib/service/adminService";
 import { RegionSimpleEdit } from "@/components/admin/region-simple-edit";
 import { RegionMapPreview } from "@/components/admin/region-map-preview";
 import { notFound } from "next/navigation";
@@ -8,13 +8,14 @@ export default async function RegionEditPage({ params }: { params: Promise<{ id:
   const regionId = parseInt(id, 10);
   if (isNaN(regionId)) return notFound();
 
-  const [region, organizations, baseLayers, properties, focos, desmatamento] = await Promise.all([
+  const [region, organizations, baseLayers, properties, focos, desmatamento, regioes] = await Promise.all([
     getRegionById(regionId),
     listOrganizations(),
     getBaseLayersByRegion(regionId),
     getPropertiesByRegion(regionId),
     getFocosByRegion(regionId),
     getDesmatamentoByRegion(regionId),
+    listRegions(),
   ]);
 
   if (!region) return notFound();
@@ -48,6 +49,7 @@ export default async function RegionEditPage({ params }: { params: Promise<{ id:
             properties={properties}
             focos={focos}
             desmatamento={desmatamento}
+            regioes={regioes.map(r => ({ id: r.id, nome: r.nome }))}
           />
         </div>
       </div>

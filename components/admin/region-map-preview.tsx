@@ -13,9 +13,15 @@ import { BaseLayersManager, BaseLayerDto } from "./base-layers-manager";
 import { PropertiesManager, PropertyDto } from "./properties-manager";
 import { FocosManager, FocoDto } from "./focos-manager";
 import { DesmatamentoManager, DesmatamentoDto } from "./desmatamento-manager";
+import { GpxImportTab } from "@/components/gpx-import/GpxImportTab";
 import Map, { Source, Layer, MapRef } from "react-map-gl/maplibre";
 import "maplibre-gl/dist/maplibre-gl.css";
 import bbox from "@turf/bbox";
+
+interface RegionDto {
+  id: number;
+  nome: string;
+}
 
 interface RegionMapPreviewProps {
   regionId: number;
@@ -24,9 +30,10 @@ interface RegionMapPreviewProps {
   properties?: PropertyDto[];
   focos?: FocoDto[];
   desmatamento?: DesmatamentoDto[];
+  regioes?: RegionDto[];
 }
 
-export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], properties = [], focos = [], desmatamento = [] }: RegionMapPreviewProps) {
+export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], properties = [], focos = [], desmatamento = [], regioes = [] }: RegionMapPreviewProps) {
   const router = useRouter();
   const [geoData, setGeoData] = useState<FeatureCollection | null>(null);
   const [originalGeoData, setOriginalGeoData] = useState<FeatureCollection | null>(null);
@@ -35,7 +42,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState<"baseLayers" | "properties" | "focos" | "desmatamento">("baseLayers");
+  const [activeTab, setActiveTab] = useState<"baseLayers" | "properties" | "focos" | "desmatamento" | "acoes">("baseLayers");
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
 
   // Settings state
@@ -224,6 +231,12 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
               className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "desmatamento" ? "bg-white dark:bg-neutral-900 shadow text-neutral-900 dark:text-neutral-100" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"}`}
             >
               Desmatamento
+            </button>
+            <button
+              onClick={() => setActiveTab("acoes")}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "acoes" ? "bg-white dark:bg-neutral-900 shadow text-neutral-900 dark:text-neutral-100" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"}`}
+            >
+              Ações
             </button>
           </div>
           {isPreviewing && activeTab === "baseLayers" ? (
@@ -593,12 +606,19 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                   onFocosUpdate={() => router.refresh()}
                 />
              </div>
-          ) : (
+          ) : activeTab === "desmatamento" ? (
              <div className="h-[600px]">
                 <DesmatamentoManager
                   regionId={regionId}
                   desmatamento={desmatamento}
                   onUpdate={() => router.refresh()}
+                />
+             </div>
+          ) : (
+             <div className="h-[600px] overflow-y-auto">
+                <GpxImportTab
+                  regionId={regionId}
+                  regioes={regioes}
                 />
              </div>
           )}
