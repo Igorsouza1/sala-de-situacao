@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Table,
   TableBody,
@@ -38,9 +38,31 @@ interface AcoesManagerProps {
   acoes: AcaoDto[];
 }
 
-export function AcoesManager({ regionId, acoes }: AcoesManagerProps) {
+export function AcoesManager({ regionId, acoes: initialAcoes }: AcoesManagerProps) {
+  const [acoes, setAcoes] = useState<AcaoDto[]>(initialAcoes);
   const [uploadingAcaoId, setUploadingAcaoId] = useState<number | null>(null);
   const [openPhotoDialog, setOpenPhotoDialog] = useState<number | null>(null);
+
+  // Refetch acoes após upload
+  const refetchAcoes = async () => {
+    try {
+      const response = await fetch(`/api/admin/regions/${regionId}/acoes`, {
+        cache: "no-store",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success) {
+          setAcoes(data.data);
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao atualizar ações:", error);
+    }
+  };
+
+  useEffect(() => {
+    setAcoes(initialAcoes);
+  }, [initialAcoes]);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "—";
@@ -74,8 +96,9 @@ export function AcoesManager({ regionId, acoes }: AcoesManagerProps) {
           throw new Error(result.error?.message || "Falha no upload");
         }
       }
-      // Recarregar página para atualizar dados
-      window.location.reload();
+      // Aguardar banco de dados sincronizar e atualizar tabela
+      await new Promise(resolve => setTimeout(resolve, 500));
+      await refetchAcoes();
     } catch (error) {
       console.error("Erro no upload:", error);
       alert(error instanceof Error ? error.message : "Erro ao fazer upload da foto");

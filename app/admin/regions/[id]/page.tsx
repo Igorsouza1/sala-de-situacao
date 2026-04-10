@@ -3,6 +3,9 @@ import { RegionSimpleEdit } from "@/components/admin/region-simple-edit";
 import { RegionMapPreview } from "@/components/admin/region-map-preview";
 import { AcoesManager } from "@/components/admin/acoes-manager";
 import { notFound } from "next/navigation";
+import { revalidatePath } from "next/cache";
+
+export const dynamic = "force-dynamic";
 
 export default async function RegionEditPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -58,6 +61,7 @@ export default async function RegionEditPage({ params }: { params: Promise<{ id:
         {/* Tabela de Ações - Abaixo do mapa */}
         <div className="pt-8">
           <AcoesManager
+            key={`acoes-${region.id}`}
             regionId={region.id}
             acoes={acoes}
           />
