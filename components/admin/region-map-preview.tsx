@@ -714,10 +714,6 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                   }}
                   onWaypointsPreview={(waypoints) => {
                     setWaypointsPreview(waypoints);
-                    setRemovedWaypointIndexes(new Set());
-                  }}
-                  onWaypointRemoved={(index: number) => {
-                    setRemovedWaypointIndexes((prev) => new Set([...prev, index]));
                   }}
                 />
              </div>

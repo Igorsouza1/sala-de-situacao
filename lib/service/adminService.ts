@@ -55,6 +55,11 @@ export async function getDesmatamentoByRegion(id: number) {
   return getDesmatamentoByRegionInDb(id);
 }
 
+export async function getAcoesByRegion(id: number) {
+  const { getAcoesByRegionInDb } = await import("@/lib/repositories/adminRepository");
+  return getAcoesByRegionInDb(id);
+}
+
 export async function createRegion(payload: RegionPayload) {
   return createRegionInDb({
     nome: payload.nome,

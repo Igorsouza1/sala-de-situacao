@@ -1,6 +1,6 @@
 import { db } from "@/db";
-import { organizationsInMonitoramento } from "@/db/schema";
-import { asc, eq, sql } from "drizzle-orm";
+import { organizationsInMonitoramento, acoesInMonitoramento, fotosAcoesInMonitoramento } from "@/db/schema";
+import { asc, desc, eq, sql, inArray } from "drizzle-orm";
 
 export async function listOrganizationsInDb() {
   return db
@@ -266,4 +266,57 @@ export async function deleteRegionInDb(id: number) {
   `);
 
   return (result.rows[0] as { id: number }) ?? null;
+}
+
+export interface AcaoDto {
+  id: number;
+  name: string | null;
+  descricao: string | null;
+  time: string | null;
+  acao: string | null;
+  categoria: string | null;
+  tipo: string | null;
+  status: string | null;
+  eixoTematico: string | null;
+  tipoTecnico: string | null;
+  carater: string | null;
+  latitude: string | null;
+  longitude: string | null;
+  elevation: string | null;
+  ultimaFotoUrl: string | null;
+  totalFotos: number;
+}
+
+export async function getAcoesByRegionInDb(regionId: number): Promise<AcaoDto[]> {
+  const result = await db.execute(sql<any>`
+    SELECT
+      a.id,
+      a.name,
+      a.descricao,
+      a.time,
+      a.acao,
+      a.categoria,
+      a.tipo,
+      a.status,
+      a.eixo_tematico AS "eixoTematico",
+      a.tipo_tecnico AS "tipoTecnico",
+      a.carater,
+      a.latitude,
+      a.longitude,
+      a.elevation,
+      f.ultima_foto_url AS "ultimaFotoUrl",
+      f.total_fotos AS "totalFotos"
+    FROM monitoramento.acoes a
+    LEFT JOIN LATERAL (
+      SELECT
+        MAX(fa.url) AS ultima_foto_url,
+        COUNT(fa.id) AS total_fotos
+      FROM monitoramento.fotos_acoes fa
+      WHERE fa.acao_id = a.id
+    ) f ON true
+    WHERE a.regiao_id = ${regionId}
+    ORDER BY a.time DESC NULLS LAST, a.id DESC
+  `);
+
+  return result.rows as unknown as AcaoDto[];
 }
