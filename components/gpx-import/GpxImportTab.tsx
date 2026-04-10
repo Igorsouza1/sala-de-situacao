@@ -89,44 +89,44 @@ export function GpxImportTab({ regionId, regioes, onTrailPreview, onWaypointsPre
       // Adicionar trilha se presente
       if (state.trilhaData) {
         try {
-          console.log("📊 state.geojson:", state.geojson);
-          console.log("📊 state.trilhaData:", state.trilhaData);
-          
           const geomWkt = extractTrackAsWKT(state.geojson);
-          console.log("📐 WKT gerado (completo):", geomWkt);
-          console.log("📐 WKT length:", geomWkt.length);
-          
           const trilhaPayload = {
             nome: state.trilhaData.nome || state.nome,
             geom: geomWkt,
             dataInicio: state.trilhaData.dataInicio,
             dataFim: state.trilhaData.dataFim,
           };
-          console.log("📦 trilhaPayload:", trilhaPayload);
-          
           formData.append("trilha", JSON.stringify(trilhaPayload));
         } catch (e) {
           console.error("❌ Erro ao extrair geometria da trilha:", e);
-          console.log("⚠️ Continuando sem trilha...");
         }
       }
 
+      // Data padrão: metadata do GPX > data editada da trilha > undefined
+      const dataPadrao = state.metadata?.dataInicio || state.trilhaData?.dataInicio || undefined;
+
       // Adicionar acoes
-      const acoesPayload = data.waypoints.map((wp: any) => ({
-        nome: wp.nome,
-        acao: wp.acao,
-        descricao: wp.descricao,
-        categoria: wp.categoria,
-        tipo: wp.tipo,
-        status: wp.status,
-        eixoTematico: wp.eixoTematico,
-        tipoTecnico: wp.tipoTecnico,
-        carater: wp.carater,
-        latitude: wp.lat,
-        longitude: wp.lon,
-        elevation: wp.ele || undefined,
-        time: wp.horario || wp.recordedat || undefined,
-      }));
+      const acoesPayload = data.waypoints.map((wp: any) => {
+        const horarioWp = wp.horario || wp.recordedat;
+        const timeFinal = horarioWp || dataPadrao || undefined;
+        
+        return {
+          nome: wp.nome,
+          acao: wp.categoria,
+          descricao: wp.descricao || "",
+          categoria: wp.categoria,
+          tipo: wp.tipo,
+          status: wp.status,
+          eixoTematico: wp.eixoTematico,
+          tipoTecnico: wp.tipoTecnico,
+          carater: wp.carater,
+          latitude: wp.lat,
+          longitude: wp.lon,
+          elevation: wp.ele || undefined,
+          time: timeFinal,
+        };
+      });
+      
       formData.append("acoes", JSON.stringify(acoesPayload));
 
       // Adicionar fotos

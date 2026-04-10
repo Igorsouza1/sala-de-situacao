@@ -53,13 +53,7 @@ export async function POST(request: Request) {
       acoes: acoesParsed,
     };
 
-    // Debug: log do payload recebido
-    console.log("📥 Payload recebido:", {
-      regiaoId,
-      trilhaGeomFull: trilhaParsed?.geom,
-      trilhaNome: trilhaParsed?.nome,
-      totalAcoes: acoesParsed?.length,
-    });
+
 
     // Validar com Zod
     const parsed = gpxImportRequestSchema.safeParse(requestPayload);
@@ -113,9 +107,9 @@ export async function POST(request: Request) {
         ...acao,
         fotos: fotos
           ? fotos.map((f) => ({
-              file: f.file,
-              descricao: f.descricao,
-            }))
+            file: f.file,
+            descricao: f.descricao,
+          }))
           : undefined,
       };
     });

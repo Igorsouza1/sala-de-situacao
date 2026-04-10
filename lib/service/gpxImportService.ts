@@ -16,7 +16,7 @@ export interface FotoUpload {
 export interface AcaoData {
   nome: string;
   acao: string;
-  descricao: string;
+  descricao?: string;
   categoria: "Fiscalização" | "Recuperação" | "Incidente" | "Monitoramento" | "Infraestrutura";
   tipo: string;
   status: "Identificado" | "Em Recuperação" | "Concluído";
@@ -110,7 +110,7 @@ export async function importGpx(data: GpxImportData): Promise<GpxImportResult> {
           .values({
             name: acao.nome,
             acao: acao.acao,
-            descricao: acao.descricao,
+            descricao: acao.descricao || null,
             categoria: acao.categoria,
             tipo: acao.tipo,
             status: acao.status,

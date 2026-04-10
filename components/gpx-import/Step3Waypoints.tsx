@@ -149,10 +149,7 @@ export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, 
       console.log("  ❌ Ação falhou:", wp.acao);
       errors.push("Ação");
     }
-    if (!wp.descricao || wp.descricao.trim().length < 3) {
-      console.log("  ❌ Descrição falhou:", wp.descricao);
-      errors.push("Descrição (mín. 3 caracteres)");
-    }
+    // Descrição é opcional - não validar
     if (!wp.categoria) {
       console.log("  ❌ Categoria falhou:", wp.categoria);
       errors.push("Categoria");

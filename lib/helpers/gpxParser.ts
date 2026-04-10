@@ -71,17 +71,27 @@ const isPoint = (g: Geometry): g is Point => g.type === "Point";
  * @returns Um array de objetos, cada um representando um waypoint.
  */
 export function extractWaipointsAsWKT(geojson: FeatureCollection){
-  const pointFeatures = geojson.features.filter(feature => 
+  const pointFeatures = geojson.features.filter(feature =>
     isPoint(feature.geometry)
   );
 
+  // Helper para validar se é uma data válida
+  const isValidDate = (val: unknown): val is string => {
+    if (typeof val !== 'string') return false;
+    const d = new Date(val);
+    return !isNaN(d.getTime());
+  };
+
   const waypoints = pointFeatures.map(feature => {
-    const geom = feature.geometry as Point; 
+    const geom = feature.geometry as Point;
     const [lon, lat, ele] = geom.coordinates;
+
+    const timeRaw = feature.properties?.time ?? null;
+    const horario = isValidDate(timeRaw) ? timeRaw : null;
 
     return {
       nome: feature.properties?.name ?? null,
-      horario: feature.properties?.time ?? null,
+      horario,
       lon: lon,
       lat: lat,
       ele: ele ?? 0,

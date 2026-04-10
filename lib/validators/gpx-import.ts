@@ -29,7 +29,7 @@ const fotoAcaoSchema = z.object({
 const acaoSchema = z.object({
   nome: z.string().min(3).max(255),
   acao: z.string().min(3).max(100),
-  descricao: z.string().min(3).max(255),
+  descricao: z.string().max(255).optional().or(z.literal("")),
   categoria: categoriaAcaoSchema,
   tipo: z.string().min(3).max(100),
   status: statusAcoesSchema,

@@ -194,7 +194,7 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
           {/* Descrição */}
           <div className="space-y-2">
             <Label htmlFor={`wp-desc-${waypoint.index}`} className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-              Descrição <span className="text-red-500">*</span>
+              Descrição <span className="text-neutral-400 font-normal text-xs">(opcional)</span>
             </Label>
             <Textarea
               id={`wp-desc-${waypoint.index}`}
