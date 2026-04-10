@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Step1GeneralInfo } from "./Step1GeneralInfo";
 import { Step2TrailData } from "./Step2TrailData";
 import { Step3Waypoints } from "./Step3Waypoints";
-import { extractWaipointsAsWKT } from "@/lib/helpers/gpxParser";
+import { extractWaipointsAsWKT, extractTrackAsWKT } from "@/lib/helpers/gpxParser";
 
 interface RegionDto {
   id: number;
@@ -81,19 +81,112 @@ export function GpxImportTab({ regionId, regioes, onTrailPreview, onWaypointsPre
   };
 
   const handleStep3Submit = async (data: any) => {
-    console.log("Dados finais para envio:", {
-      nome: state.nome,
-      regiaoId: state.regiaoId,
-      trilha: state.trilhaData,
-      waypoints: data.waypoints,
-    });
-    
-    // TODO: Chamar API /api/gpx/import
-    // Por enquanto, só mostra sucesso
-    alert(`✅ Importação concluída!\n\n${data.waypoints.length} ações criadas com sucesso.`);
-    
-    // Limpar e voltar ao início
-    handleCancel();
+    try {
+      // Montar FormData para envio
+      const formData = new FormData();
+      formData.append("regiaoId", state.regiaoId.toString());
+
+      // Adicionar trilha se presente
+      if (state.trilhaData) {
+        try {
+          console.log("📊 state.geojson:", state.geojson);
+          console.log("📊 state.trilhaData:", state.trilhaData);
+          
+          const geomWkt = extractTrackAsWKT(state.geojson);
+          console.log("📐 WKT gerado (completo):", geomWkt);
+          console.log("📐 WKT length:", geomWkt.length);
+          
+          const trilhaPayload = {
+            nome: state.trilhaData.nome || state.nome,
+            geom: geomWkt,
+            dataInicio: state.trilhaData.dataInicio,
+            dataFim: state.trilhaData.dataFim,
+          };
+          console.log("📦 trilhaPayload:", trilhaPayload);
+          
+          formData.append("trilha", JSON.stringify(trilhaPayload));
+        } catch (e) {
+          console.error("❌ Erro ao extrair geometria da trilha:", e);
+          console.log("⚠️ Continuando sem trilha...");
+        }
+      }
+
+      // Adicionar acoes
+      const acoesPayload = data.waypoints.map((wp: any) => ({
+        nome: wp.nome,
+        acao: wp.acao,
+        descricao: wp.descricao,
+        categoria: wp.categoria,
+        tipo: wp.tipo,
+        status: wp.status,
+        eixoTematico: wp.eixoTematico,
+        tipoTecnico: wp.tipoTecnico,
+        carater: wp.carater,
+        latitude: wp.lat,
+        longitude: wp.lon,
+        elevation: wp.ele || undefined,
+        time: wp.horario || wp.recordedat || undefined,
+      }));
+      formData.append("acoes", JSON.stringify(acoesPayload));
+
+      // Adicionar fotos
+      data.waypoints.forEach((wp: any, acaoIndex: number) => {
+        if (wp.fotos && wp.fotos.length > 0) {
+          wp.fotos.forEach((foto: any, fotoIndex: number) => {
+            formData.append(
+              `acoes[${acaoIndex}]_fotos[${fotoIndex}]`,
+              foto.file
+            );
+            if (foto.descricao) {
+              formData.append(
+                `acoes[${acaoIndex}]_fotosDesc[${fotoIndex}]`,
+                foto.descricao
+              );
+            }
+          });
+        }
+      });
+
+      // Chamar API
+      const response = await fetch("/api/gpx/import", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        const errorMsg = result.error?.message || "Erro ao importar GPX";
+        const details = result.error?.details;
+
+        if (details && details.length > 0) {
+          console.error("Detalhes do erro:", details);
+          alert(
+            `❌ Erro na validação:\n${details
+              .map((d: any) => `- ${d.field}: ${d.message}`)
+              .join("\n")}`
+          );
+        } else {
+          alert(`❌ ${errorMsg}`);
+        }
+        return;
+      }
+
+      // Sucesso
+      const totalAcoes = result.data.acoesIds.length;
+      const totalFotos = result.data.totalFotos;
+      alert(
+        `✅ Importação concluída!\n\n${totalAcoes} ações criadas com sucesso.${
+          totalFotos > 0 ? `\n📷 ${totalFotos} fotos enviadas.` : ""
+        }`
+      );
+
+      // Limpar e voltar ao início
+      handleCancel();
+    } catch (error) {
+      console.error("Erro ao importar GPX:", error);
+      alert("❌ Erro inesperado. Tente novamente.");
+    }
   };
 
   const handleBack = () => {

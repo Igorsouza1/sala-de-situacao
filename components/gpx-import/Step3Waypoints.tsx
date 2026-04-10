@@ -124,15 +124,64 @@ export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, 
   // Validar waypoint individual
   const validateWaypoint = (wp: WaypointFormState): string[] => {
     const errors: string[] = [];
-    if (!wp.nome || wp.nome.trim().length < 3) errors.push("Nome mínimo 3 caracteres");
-    if (!wp.acao) errors.push("Ação obrigatória");
-    if (!wp.descricao || wp.descricao.trim().length < 10) errors.push("Descrição mínimo 10 caracteres");
-    if (!wp.categoria) errors.push("Categoria obrigatória");
-    if (!wp.tipo || wp.tipo.trim().length < 3) errors.push("Tipo mínimo 3 caracteres");
-    if (!wp.status) errors.push("Status obrigatório");
-    if (!wp.eixoTematico) errors.push("Eixo Temático obrigatório");
-    if (!wp.tipoTecnico) errors.push("Tipo Técnico obrigatório");
-    if (!wp.carater) errors.push("Caráter obrigatório");
+    
+    // Debug individual
+    console.log(`🔎 Validando waypoint:`, {
+      nome: wp.nome,
+      nomeLen: wp.nome?.trim().length,
+      acao: wp.acao,
+      descricao: wp.descricao,
+      descricaoLen: wp.descricao?.trim().length,
+      categoria: wp.categoria,
+      tipo: wp.tipo,
+      tipoLen: wp.tipo?.trim().length,
+      status: wp.status,
+      eixoTematico: wp.eixoTematico,
+      tipoTecnico: wp.tipoTecnico,
+      carater: wp.carater,
+    });
+    
+    if (!wp.nome || wp.nome.trim().length < 3) {
+      console.log("  ❌ Nome falhou:", wp.nome);
+      errors.push("Nome");
+    }
+    if (!wp.acao) {
+      console.log("  ❌ Ação falhou:", wp.acao);
+      errors.push("Ação");
+    }
+    if (!wp.descricao || wp.descricao.trim().length < 3) {
+      console.log("  ❌ Descrição falhou:", wp.descricao);
+      errors.push("Descrição (mín. 3 caracteres)");
+    }
+    if (!wp.categoria) {
+      console.log("  ❌ Categoria falhou:", wp.categoria);
+      errors.push("Categoria");
+    }
+    if (!wp.tipo || wp.tipo.trim().length < 3) {
+      console.log("  ❌ Tipo falhou:", wp.tipo);
+      errors.push("Tipo");
+    }
+    if (!wp.status) {
+      console.log("  ❌ Status falhou:", wp.status);
+      errors.push("Status");
+    }
+    if (!wp.eixoTematico) {
+      console.log("  ❌ Eixo Temático falhou:", wp.eixoTematico);
+      errors.push("Eixo Temático");
+    }
+    if (!wp.tipoTecnico) {
+      console.log("  ❌ Tipo Técnico falhou:", wp.tipoTecnico);
+      errors.push("Tipo Técnico");
+    }
+    if (!wp.carater) {
+      console.log("  ❌ Caráter falhou:", wp.carater);
+      errors.push("Caráter");
+    }
+    
+    if (errors.length === 0) {
+      console.log("  ✅ Waypoint válido!");
+    }
+    
     return errors;
   };
 
@@ -147,19 +196,36 @@ export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, 
       .filter((_, index) => !removedIndexes.has(index));
 
     const errors: number[] = [];
+    const allErrors: { index: number; field: string; message: string }[] = [];
+    
     activeWaypoints.forEach((wp) => {
       const wpData = waypointsData[wp.dataIndex];
       const wpErrors = validateWaypoint(wpData);
       if (wpErrors.length > 0) {
         errors.push(wp.dataIndex);
+        wpErrors.forEach((msg) => {
+          allErrors.push({ index: wp.dataIndex, field: "", message: msg });
+        });
       }
     });
 
     if (errors.length > 0) {
       setValidationErrors(errors);
       setOpenIndex(errors[0]); // Abrir primeiro com erro
+      
+      // Montar mensagem detalhada por waypoint
+      const mensagens = errors.map((idx) => {
+        const wpErrors = validateWaypoint(waypointsData[idx]);
+        return `Waypoint ${idx + 1}: ${wpErrors.join(", ")}`;
+      });
+      
+      console.log("🔍 Erros de validação detalhados:");
+      errors.forEach((idx) => {
+        console.log(`  Waypoint ${idx + 1}:`, waypointsData[idx]);
+      });
+      
       setError(
-        `${errors.length} waypoint(s) com pendências. Corrija antes de enviar.`
+        `${errors.length} waypoint(s) com pendências:\n${mensagens.join("\n")}`
       );
       return;
     }

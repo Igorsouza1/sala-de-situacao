@@ -227,9 +227,9 @@ Se arquivo contiver **apenas waypoints** (sem `<trk>`):
 
 ---
 
-## 6. BACKEND - API (PRÓXIMA ETAPA)
+## 6. BACKEND - API ✅ IMPLEMENTADA
 
-> **Nota:** O frontend está completo. O próximo passo é implementar o backend para receber os dados e salvar no banco.
+> **Status:** Backend completo com transações, upload de fotos e rollback automático.
 
 ---
 
@@ -327,10 +327,18 @@ POST /api/gpx/import
 
 ### 6.5. Transação e Rollback
 
-- [ ] **TUDO** em transação única
-- [ ] Se qualquer insert falhar → rollback completo
-- [ ] Se upload de foto falhar → rollback de inserts anteriores
-- [ ] Log de erro com detalhes para debug
+- [x] **TUDO** em transação única
+- [x] Se qualquer insert falhar → rollback completo
+- [x] Se upload de foto falhar → rollback de inserts anteriores
+- [x] Log de erro com detalhes para debug
+
+### 6.6. Arquivos Criados
+- `lib/validators/gpx-import.ts` - Schema Zod para validação
+- `lib/service/gpxImportService.ts` - Serviço de importação com transação
+- `app/api/gpx/import/route.ts` - Endpoint POST da API
+
+### 6.7. Arquivos Modificados
+- `components/gpx-import/GpxImportTab.tsx` - Integração com API `/api/gpx/import`
 
 ---
 

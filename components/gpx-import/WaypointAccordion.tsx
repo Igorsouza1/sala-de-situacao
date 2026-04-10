@@ -71,13 +71,20 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
   return (
     <div className="border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-hidden transition-all">
       {/* Header */}
-      <button
-        type="button"
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onToggle}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggle();
+          }
+        }}
         className={`
-          w-full flex items-center justify-between px-4 py-3 text-left transition-colors
-          ${isOpen 
-            ? "bg-blue-50 dark:bg-blue-950/20 border-b border-neutral-200 dark:border-neutral-700" 
+          w-full flex items-center justify-between px-4 py-3 text-left transition-colors cursor-pointer
+          ${isOpen
+            ? "bg-blue-50 dark:bg-blue-950/20 border-b border-neutral-200 dark:border-neutral-700"
             : "bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800"
           }
         `}
@@ -122,7 +129,7 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
             <Trash2 className="w-4 h-4" />
           </button>
         </div>
-      </button>
+      </div>
 
       {/* Content */}
       {isOpen && (
