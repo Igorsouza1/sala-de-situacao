@@ -5,9 +5,20 @@ import { Zap, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  ACAO_OPTIONS,
+  CATEGORIA_OPTIONS,
+  TIPO_OPTIONS,
+  STATUS_OPTIONS,
+  EIXO_TEMATICO_OPTIONS,
+  TIPO_TECNICO_OPTIONS,
+  CARATER_OPTIONS,
+} from "./waypoint-constants";
 
 interface BulkFormData {
+  acao: string;
   categoria: string;
+  tipo: string;
   status: string;
   eixoTematico: string;
   tipoTecnico: string;
@@ -19,14 +30,10 @@ interface WaypointBulkActionsProps {
   onApply: (data: BulkFormData, fields: string[]) => void;
 }
 
-const CATEGORIA_OPTIONS = ["Fiscalização", "Recuperação", "Incidente", "Monitoramento", "Infraestrutura"];
-const STATUS_OPTIONS = ["Identificado", "Em Recuperação", "Concluído"];
-const EIXO_TEMATICO_OPTIONS = CATEGORIA_OPTIONS;
-const TIPO_TECNICO_OPTIONS = CATEGORIA_OPTIONS;
-const CARATER_OPTIONS = CATEGORIA_OPTIONS;
-
 export function WaypointBulkActions({ totalWaypoints, onApply }: WaypointBulkActionsProps) {
+  const [acao, setAcao] = useState("");
   const [categoria, setCategoria] = useState("");
+  const [tipo, setTipo] = useState("");
   const [status, setStatus] = useState("");
   const [eixoTematico, setEixoTematico] = useState("");
   const [tipoTecnico, setTipoTecnico] = useState("");
@@ -36,14 +43,18 @@ export function WaypointBulkActions({ totalWaypoints, onApply }: WaypointBulkAct
   const handleApply = () => {
     const fields: string[] = [];
     const data: BulkFormData = {
+      acao: "",
       categoria: "",
+      tipo: "",
       status: "",
       eixoTematico: "",
       tipoTecnico: "",
       carater: "",
     };
 
+    if (acao) { data.acao = acao; fields.push("acao"); }
     if (categoria) { data.categoria = categoria; fields.push("categoria"); }
+    if (tipo) { data.tipo = tipo; fields.push("tipo"); }
     if (status) { data.status = status; fields.push("status"); }
     if (eixoTematico) { data.eixoTematico = eixoTematico; fields.push("eixoTematico"); }
     if (tipoTecnico) { data.tipoTecnico = tipoTecnico; fields.push("tipoTecnico"); }
@@ -53,13 +64,15 @@ export function WaypointBulkActions({ totalWaypoints, onApply }: WaypointBulkAct
 
     onApply(data, fields);
     setAppliedCount(totalWaypoints);
-    
+
     // Reset after 3 seconds
     setTimeout(() => setAppliedCount(null), 3000);
   };
 
   const handleReset = () => {
+    setAcao("");
     setCategoria("");
+    setTipo("");
     setStatus("");
     setEixoTematico("");
     setTipoTecnico("");
@@ -91,7 +104,21 @@ export function WaypointBulkActions({ totalWaypoints, onApply }: WaypointBulkAct
       </div>
 
       {/* Bulk Form Fields */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-amber-900 dark:text-amber-300">Ação</Label>
+          <Select value={acao} onValueChange={setAcao}>
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="..." />
+            </SelectTrigger>
+            <SelectContent>
+              {ACAO_OPTIONS.map((opt) => (
+                <SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="space-y-1">
           <Label className="text-xs font-medium text-amber-900 dark:text-amber-300">Categoria</Label>
           <Select value={categoria} onValueChange={setCategoria}>
@@ -100,6 +127,20 @@ export function WaypointBulkActions({ totalWaypoints, onApply }: WaypointBulkAct
             </SelectTrigger>
             <SelectContent>
               {CATEGORIA_OPTIONS.map((opt) => (
+                <SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1">
+          <Label className="text-xs font-medium text-amber-900 dark:text-amber-300">Tipo</Label>
+          <Select value={tipo} onValueChange={setTipo}>
+            <SelectTrigger className="h-9 text-xs">
+              <SelectValue placeholder="..." />
+            </SelectTrigger>
+            <SelectContent>
+              {TIPO_OPTIONS.map((opt) => (
                 <SelectItem key={opt} value={opt} className="text-xs">{opt}</SelectItem>
               ))}
             </SelectContent>
@@ -177,7 +218,7 @@ export function WaypointBulkActions({ totalWaypoints, onApply }: WaypointBulkAct
         <Button
           type="button"
           onClick={handleApply}
-          disabled={![categoria, status, eixoTematico, tipoTecnico, carater].some(Boolean)}
+          disabled={![acao, categoria, tipo, status, eixoTematico, tipoTecnico, carater].some(Boolean)}
           className="h-8 text-xs gap-1.5 bg-amber-600 hover:bg-amber-700 text-white"
         >
           <CheckCircle2 className="w-3.5 h-3.5" />

@@ -1,12 +1,21 @@
 "use client";
 
 import { useState, useCallback } from "react";
-import { ChevronDown, ChevronRight, MapPin, AlertCircle, CheckCircle2, Calendar, Ruler } from "lucide-react";
+import { ChevronDown, ChevronRight, MapPin, AlertCircle, CheckCircle2, Calendar, Ruler, Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PhotoUploader } from "./PhotoUploader";
+import {
+  ACAO_OPTIONS,
+  CATEGORIA_OPTIONS,
+  TIPO_OPTIONS,
+  STATUS_OPTIONS,
+  EIXO_TEMATICO_OPTIONS,
+  TIPO_TECNICO_OPTIONS,
+  CARATER_OPTIONS,
+} from "./waypoint-constants";
 
 interface PhotoFile {
   file: File;
@@ -21,6 +30,7 @@ interface WaypointData {
   lon: number;
   ele?: number;
   recordedat?: string;
+  acao: string;
   descricao: string;
   categoria: string;
   tipo: string;
@@ -34,19 +44,14 @@ interface WaypointData {
 interface WaypointAccordionProps {
   waypoint: WaypointData;
   onChange: (data: Partial<WaypointData>) => void;
+  onDelete: () => void;
   isOpen: boolean;
   onToggle: () => void;
 }
 
-const CATEGORIA_OPTIONS = ["Fiscalização", "Recuperação", "Incidente", "Monitoramento", "Infraestrutura"];
-const STATUS_OPTIONS = ["Identificado", "Em Recuperação", "Concluído"];
-// Temporariamente usando mesmos valores - serão atualizados quando enums próprios forem criados
-const EIXO_TEMATICO_OPTIONS = CATEGORIA_OPTIONS;
-const TIPO_TECNICO_OPTIONS = CATEGORIA_OPTIONS;
-const CARATER_OPTIONS = CATEGORIA_OPTIONS;
-
-export function WaypointAccordion({ waypoint, onChange, isOpen, onToggle }: WaypointAccordionProps) {
+export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onToggle }: WaypointAccordionProps) {
   const hasErrors = !waypoint.nome || waypoint.nome.length < 3 ||
+                    !waypoint.acao ||
                     !waypoint.descricao || waypoint.descricao.length < 10 ||
                     !waypoint.categoria || !waypoint.tipo || waypoint.tipo.length < 3 ||
                     !waypoint.status || !waypoint.eixoTematico || !waypoint.tipoTecnico || !waypoint.carater;
@@ -103,6 +108,19 @@ export function WaypointAccordion({ waypoint, onChange, isOpen, onToggle }: Wayp
           <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
             {isComplete ? "Completo" : "Pendente"}
           </span>
+          
+          {/* Botão de Remover */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="ml-2 p-1.5 rounded-md text-red-500 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+            title="Remover waypoint"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
       </button>
 
@@ -147,6 +165,23 @@ export function WaypointAccordion({ waypoint, onChange, isOpen, onToggle }: Wayp
               placeholder={`Ex: Ponto de Coleta ${waypoint.index + 1}`}
               className="h-10"
             />
+          </div>
+
+          {/* Ação */}
+          <div className="space-y-2">
+            <Label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              Ação <span className="text-red-500">*</span>
+            </Label>
+            <Select value={waypoint.acao} onValueChange={(v) => onChange({ acao: v })}>
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent>
+                {ACAO_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Descrição */}
@@ -200,16 +235,19 @@ export function WaypointAccordion({ waypoint, onChange, isOpen, onToggle }: Wayp
 
           {/* Tipo */}
           <div className="space-y-2">
-            <Label htmlFor={`wp-tipo-${waypoint.index}`} className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            <Label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
               Tipo <span className="text-red-500">*</span>
             </Label>
-            <Input
-              id={`wp-tipo-${waypoint.index}`}
-              value={waypoint.tipo}
-              onChange={(e) => onChange({ tipo: e.target.value })}
-              placeholder="Ex: Desmatamento, Queimada, etc."
-              className="h-10"
-            />
+            <Select value={waypoint.tipo} onValueChange={(v) => onChange({ tipo: v })}>
+              <SelectTrigger className="h-10">
+                <SelectValue placeholder="Selecione..." />
+              </SelectTrigger>
+              <SelectContent>
+                {TIPO_OPTIONS.map((opt) => (
+                  <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Eixo Temático, Tipo Técnico, Caráter */}

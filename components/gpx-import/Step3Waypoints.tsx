@@ -23,6 +23,7 @@ interface WaypointGpxData {
 
 interface WaypointFormState {
   nome: string;
+  acao: string;
   descricao: string;
   categoria: string;
   tipo: string;
@@ -48,11 +49,15 @@ export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [validationErrors, setValidationErrors] = useState<number[]>([]);
+  const [lastRemovedIndex, setLastRemovedIndex] = useState<number | null>(null);
 
   // Inicializar estado de todos os waypoints
+  // removedIndexes rastreia waypoints marcados para remoção
+  const [removedIndexes, setRemovedIndexes] = useState<Set<number>>(new Set());
   const [waypointsData, setWaypointsData] = useState<WaypointFormState[]>(
     waypoints.map((wp, index) => ({
       nome: wp.nome || `Waypoint ${index + 1}`,
+      acao: "",
       descricao: "",
       categoria: "",
       tipo: "",
@@ -62,6 +67,18 @@ export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, 
       carater: "",
       fotos: [],
     }))
+  );
+
+  // Remover waypoint
+  const handleDelete = useCallback(
+    (index: number) => {
+      setRemovedIndexes((prev) => new Set([...prev, index]));
+      setLastRemovedIndex(index);
+      
+      // Fechar toast após 3 segundos
+      setTimeout(() => setLastRemovedIndex(null), 3000);
+    },
+    []
   );
 
   // Atualizar waypoint individual
@@ -80,7 +97,10 @@ export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, 
   const handleBulkApply = useCallback(
     (bulkData: any, fields: string[]) => {
       setWaypointsData((prev) =>
-        prev.map((wp) => {
+        prev.map((wp, index) => {
+          // Não aplicar em waypoints removidos
+          if (removedIndexes.has(index)) return wp;
+          
           const updated = { ...wp };
           fields.forEach((field) => {
             // Apenas preencher campos vazios
@@ -92,13 +112,14 @@ export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, 
         })
       );
     },
-    []
+    [removedIndexes]
   );
 
   // Validar waypoint individual
   const validateWaypoint = (wp: WaypointFormState): string[] => {
     const errors: string[] = [];
     if (!wp.nome || wp.nome.trim().length < 3) errors.push("Nome mínimo 3 caracteres");
+    if (!wp.acao) errors.push("Ação obrigatória");
     if (!wp.descricao || wp.descricao.trim().length < 10) errors.push("Descrição mínimo 10 caracteres");
     if (!wp.categoria) errors.push("Categoria obrigatória");
     if (!wp.tipo || wp.tipo.trim().length < 3) errors.push("Tipo mínimo 3 caracteres");
@@ -114,11 +135,17 @@ export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, 
     setError(null);
     setValidationErrors([]);
 
+    // Filtrar waypoints não removidos
+    const activeWaypoints = waypoints
+      .map((wp, index) => ({ ...wp, dataIndex: index }))
+      .filter((_, index) => !removedIndexes.has(index));
+
     const errors: number[] = [];
-    waypointsData.forEach((wp, index) => {
-      const wpErrors = validateWaypoint(wp);
+    activeWaypoints.forEach((wp) => {
+      const wpData = waypointsData[wp.dataIndex];
+      const wpErrors = validateWaypoint(wpData);
       if (wpErrors.length > 0) {
-        errors.push(index);
+        errors.push(wp.dataIndex);
       }
     });
 
@@ -133,9 +160,9 @@ export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, 
 
     setIsSubmitting(true);
     try {
-      const completeData = waypoints.map((wp, index) => ({
+      const completeData = activeWaypoints.map((wp) => ({
         ...wp,
-        ...waypointsData[index],
+        ...waypointsData[wp.dataIndex],
       }));
 
       onSubmit({ waypoints: completeData });
@@ -146,12 +173,14 @@ export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, 
     }
   };
 
-  // Contar waypoints completos
-  const completeCount = waypointsData.filter(
-    (wp) => validateWaypoint(wp).length === 0
-  ).length;
-  const totalCount = waypointsData.length;
-  const allComplete = completeCount === totalCount;
+  // Contar waypoints completos (apenas ativos)
+  const activeWaypointsCount = waypoints.length - removedIndexes.size;
+  const completeCount = waypoints
+    .map((_, index) => ({ index, removed: removedIndexes.has(index) }))
+    .filter(({ removed }) => !removed)
+    .filter(({ index }) => validateWaypoint(waypointsData[index]).length === 0).length;
+  const totalCount = activeWaypointsCount;
+  const allComplete = completeCount === totalCount && totalCount > 0;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -193,30 +222,46 @@ export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, 
         </Alert>
       )}
 
+      {/* Removed Waypoint Toast */}
+      {lastRemovedIndex !== null && (
+        <Alert className="bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700">
+          <AlertCircle className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
+          <AlertDescription className="text-neutral-700 dark:text-neutral-300">
+            Waypoint {lastRemovedIndex + 1} removido com sucesso
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Bulk Actions */}
-      <WaypointBulkActions
-        totalWaypoints={totalCount}
-        onApply={handleBulkApply}
-      />
+      {activeWaypointsCount > 0 && (
+        <WaypointBulkActions
+          totalWaypoints={activeWaypointsCount}
+          onApply={handleBulkApply}
+        />
+      )}
 
       {/* Waypoints List */}
       <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-        {waypoints.map((wp, index) => (
-          <WaypointAccordion
-            key={index}
-            waypoint={{
-              index,
-              lat: wp.lat,
-              lon: wp.lon,
-              ele: wp.ele,
-              recordedat: wp.recordedat || undefined,
-              ...waypointsData[index],
-            }}
-            onChange={(data) => handleWaypointChange(index, data)}
-            isOpen={openIndex === index}
-            onToggle={() => setOpenIndex(openIndex === index ? null : index)}
-          />
-        ))}
+        {waypoints
+          .map((wp, index) => ({ wp, index }))
+          .filter(({ index }) => !removedIndexes.has(index))
+          .map(({ wp, index }) => (
+            <WaypointAccordion
+              key={index}
+              waypoint={{
+                index,
+                lat: wp.lat,
+                lon: wp.lon,
+                ele: wp.ele,
+                recordedat: wp.recordedat || undefined,
+                ...waypointsData[index],
+              }}
+              onChange={(data) => handleWaypointChange(index, data)}
+              onDelete={() => handleDelete(index)}
+              isOpen={openIndex === index}
+              onToggle={() => setOpenIndex(openIndex === index ? null : index)}
+            />
+          ))}
       </div>
 
       {/* Navigation Buttons */}
