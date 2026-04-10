@@ -16,6 +16,7 @@ interface GpxImportTabProps {
   regioes: RegionDto[];
   onTrailPreview?: (geojson: any | null) => void;
   onWaypointsPreview?: (waypoints: any[] | null) => void;
+  onWaypointRemoved?: (index: number) => void;
 }
 
 interface ImportState {
@@ -29,7 +30,7 @@ interface ImportState {
   waypoints: any[] | null;
 }
 
-export function GpxImportTab({ regionId, regioes, onTrailPreview, onWaypointsPreview }: GpxImportTabProps) {
+export function GpxImportTab({ regionId, regioes, onTrailPreview, onWaypointsPreview, onWaypointRemoved }: GpxImportTabProps) {
   const [state, setState] = useState<ImportState>({
     step: 1,
     arquivo: null,
@@ -265,6 +266,7 @@ export function GpxImportTab({ regionId, regioes, onTrailPreview, onWaypointsPre
             regiaoId={state.regiaoId}
             onSubmit={handleStep3Submit}
             onBack={handleBack}
+            onWaypointRemoved={onWaypointRemoved}
           />
         )}
 

@@ -46,6 +46,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
   const [selectedPropertyId, setSelectedPropertyId] = useState<number | null>(null);
   const [trailGeojson, setTrailGeojson] = useState<any>(null);
   const [waypointsPreview, setWaypointsPreview] = useState<any[] | null>(null);
+  const [removedWaypointIndexes, setRemovedWaypointIndexes] = useState<Set<number>>(new Set());
 
   // Settings state
   const [layerName, setLayerName] = useState("");
@@ -495,49 +496,56 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
               )}
 
               {/* Waypoints Preview from GPX Import */}
-              {waypointsPreview && waypointsPreview.length > 0 && activeTab === "acoes" && (
-                <Source
-                  id="waypoints-preview-source"
-                  type="geojson"
-                  data={{
-                    type: "FeatureCollection",
-                    features: waypointsPreview.map((wp: any) => ({
-                      type: "Feature" as const,
-                      geometry: {
-                        type: "Point" as const,
-                        coordinates: [wp.lon, wp.lat, wp.ele || 0]
-                      },
-                      properties: {
-                        nome: wp.nome || "Waypoint",
-                        ele: wp.ele || 0
-                      }
-                    }))
-                  }}
-                >
-                  {/* Círculos externos (glow) */}
-                  <Layer
-                    id="waypoints-glow"
-                    type="circle"
-                    paint={{
-                      "circle-radius": 10,
-                      "circle-color": "#f59e0b",
-                      "circle-opacity": 0.3
+              {waypointsPreview && waypointsPreview.length > 0 && activeTab === "acoes" && (() => {
+                // Filtrar waypoints removidos
+                const filteredWaypoints = waypointsPreview.filter((_, index) => !removedWaypointIndexes.has(index));
+                
+                if (filteredWaypoints.length === 0) return null;
+                
+                return (
+                  <Source
+                    id="waypoints-preview-source"
+                    type="geojson"
+                    data={{
+                      type: "FeatureCollection",
+                      features: filteredWaypoints.map((wp: any) => ({
+                        type: "Feature" as const,
+                        geometry: {
+                          type: "Point" as const,
+                          coordinates: [wp.lon, wp.lat, wp.ele || 0]
+                        },
+                        properties: {
+                          nome: wp.nome || "Waypoint",
+                          ele: wp.ele || 0
+                        }
+                      }))
                     }}
-                  />
-                  {/* Círculos internos */}
-                  <Layer
-                    id="waypoints-circle"
-                    type="circle"
-                    paint={{
-                      "circle-radius": 6,
-                      "circle-color": "#f59e0b",
-                      "circle-opacity": 0.9,
-                      "circle-stroke-width": 2,
-                      "circle-stroke-color": "#ffffff"
-                    }}
-                  />
-                </Source>
-              )}
+                  >
+                    {/* Círculos externos (glow) */}
+                    <Layer
+                      id="waypoints-glow"
+                      type="circle"
+                      paint={{
+                        "circle-radius": 10,
+                        "circle-color": "#f59e0b",
+                        "circle-opacity": 0.3
+                      }}
+                    />
+                    {/* Círculos internos */}
+                    <Layer
+                      id="waypoints-circle"
+                      type="circle"
+                      paint={{
+                        "circle-radius": 6,
+                        "circle-color": "#f59e0b",
+                        "circle-opacity": 0.9,
+                        "circle-stroke-width": 2,
+                        "circle-stroke-color": "#ffffff"
+                      }}
+                    />
+                  </Source>
+                );
+              })()}
             </Map>
           </div>
         </div>
@@ -706,6 +714,10 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                   }}
                   onWaypointsPreview={(waypoints) => {
                     setWaypointsPreview(waypoints);
+                    setRemovedWaypointIndexes(new Set());
+                  }}
+                  onWaypointRemoved={(index: number) => {
+                    setRemovedWaypointIndexes((prev) => new Set([...prev, index]));
                   }}
                 />
              </div>

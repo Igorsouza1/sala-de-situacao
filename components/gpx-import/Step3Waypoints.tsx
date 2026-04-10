@@ -42,9 +42,10 @@ interface Step3Props {
     waypoints: (WaypointGpxData & WaypointFormState)[];
   }) => void;
   onBack: () => void;
+  onWaypointRemoved?: (index: number) => void;
 }
 
-export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, onBack }: Step3Props) {
+export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, onBack, onWaypointRemoved }: Step3Props) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,10 +76,15 @@ export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, 
       setRemovedIndexes((prev) => new Set([...prev, index]));
       setLastRemovedIndex(index);
       
+      // Notificar o mapa sobre a remoção
+      if (onWaypointRemoved) {
+        onWaypointRemoved(index);
+      }
+      
       // Fechar toast após 3 segundos
       setTimeout(() => setLastRemovedIndex(null), 3000);
     },
-    []
+    [onWaypointRemoved]
   );
 
   // Atualizar waypoint individual
