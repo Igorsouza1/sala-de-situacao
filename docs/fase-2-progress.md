@@ -5,8 +5,8 @@
 
 ## Checklist
 
-- [ ] **2.1** — `lib/feature-flags.ts` + `lib/api/tenant-context.ts`
-- [ ] **2.2** — Expandir `require-auth.ts` com `requireAuthWithTenant()`
+- [X] **2.1** — `lib/feature-flags.ts` + `lib/api/tenant-context.ts`
+- [X] **2.2** — Expandir `require-auth.ts` com `requireAuthWithTenant()`
 - [ ] **2.3** — Atualizar repositories com filtro de `tenantId`
   - [ ] `acoesRepository.ts`
   - [ ] `propriedadesRepository.ts`
