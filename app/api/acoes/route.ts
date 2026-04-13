@@ -3,29 +3,32 @@
 import { getAllAcoesData, getAllAcoesForMap, createAcoesWithTrilha } from "@/lib/service/acoesService";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { createAcoesSchema } from "@/lib/validations/acoes";
+import { requireAuthWithTenant } from "@/lib/api/require-auth";
 import { revalidatePath } from "next/cache";
 
 
 
 export async function GET(request: Request) {
+  const { tenantId, response: authResponse } = await requireAuthWithTenant();
+  if (authResponse) return authResponse;
+
   try {
     const { searchParams } = new URL(request.url);
     const view = searchParams.get("view");
 
     if (view === "dashboard") {
-      const result = await getAllAcoesData();
+      const result = await getAllAcoesData(tenantId);
       return apiSuccess(result);
     }
 
     if (view === "map") {
-      const result = await getAllAcoesForMap();
+      const result = await getAllAcoesForMap(tenantId);
       return apiSuccess(result);
     }
 
     return apiError("Visualização não especificada ou inválida.", 400);
 
   } catch (error) {
-
     console.error("Erro ao buscar dados de Ações:", error);
     return apiError("Falha ao obter os dados de Ações.", 500);
   }

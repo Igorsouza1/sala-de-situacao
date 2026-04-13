@@ -1,7 +1,11 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getAllLayers } from "@/lib/service/layerService";
+import { requireAuthWithTenant } from "@/lib/api/require-auth";
 
 export async function GET(request: NextRequest) {
+    const { tenantId, response: authResponse } = await requireAuthWithTenant();
+    if (authResponse) return authResponse;
+
     try {
         const searchParams = request.nextUrl.searchParams;
         const startDateParam = searchParams.get('startDate');
@@ -14,13 +18,11 @@ export async function GET(request: NextRequest) {
         const minArea = minAreaParam ? parseFloat(minAreaParam) : undefined;
         const maxArea = maxAreaParam ? parseFloat(maxAreaParam) : undefined;
 
-        // Se datas inválidas, ignora (ou poderia setar default month aqui se não fosse fazer no front)
         if (startDate && isNaN(startDate.getTime())) {
             console.warn("Invalid startDate provided");
         }
 
-        // tenantId will be injected here in task 2.4 via requireAuthWithTenant()
-        const layers = await getAllLayers(undefined, startDate, endDate, minArea, maxArea);
+        const layers = await getAllLayers(tenantId, startDate, endDate, minArea, maxArea);
         return NextResponse.json(layers);
     } catch (error) {
         console.error("Error fetching layers:", error);

@@ -14,7 +14,7 @@
   - [X] `firmsRepository.ts`
   - [X] `desmatamentoReposiroty.ts`
   - [X] `estradasRepository.ts`
-- [ ] **2.4** — Atualizar services + rotas para usar `requireAuthWithTenant()`
+- [X] **2.4** — Atualizar services + rotas para usar `requireAuthWithTenant()`
 - [ ] **2.5** — Ownership check nas rotas com `[id]`
 
 ---
