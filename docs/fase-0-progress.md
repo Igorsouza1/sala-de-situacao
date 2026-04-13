@@ -2,10 +2,10 @@
 
 ## Checklist
 
-- [ ] **0.1** — Corrigir SQL Injection em `commit-desmatamento`
-- [ ] **0.2** — Criar helper `require-auth.ts` + aplicar em todas as rotas admin
-- [ ] **0.3** — Criar migration com índices GiST ausentes
-- [ ] **0.4** — Adicionar `maxDuration` nas rotas pesadas
+- [X] **0.1** — Corrigir SQL Injection em `commit-desmatamento`
+- [X] **0.2** — Criar helper `require-auth.ts` + aplicar em todas as rotas admin
+- [X] **0.3** — Criar migration com índices GiST ausentes
+- [X] **0.4** — Adicionar `maxDuration` nas rotas pesadas
 
 ---
 
