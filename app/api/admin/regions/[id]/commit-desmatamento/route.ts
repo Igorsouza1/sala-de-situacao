@@ -2,6 +2,7 @@ import { apiError } from "@/lib/api/responses";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
 import { desmatamentoInMonitoramento } from "@/db/schema";
+import { findExistingDesmatamentoAlertids } from "@/lib/repositories/desmatamentoReposiroty";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -36,18 +37,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       })
       .filter((id): id is string => !!id);
 
-    // Buscar quais alertids já existem para essa região
-    const existingAlertids = new Set<string>();
-    if (alertidsNoArquivo.length > 0) {
-      const existingResult = await db.execute(sql`
-        SELECT alertid FROM monitoramento.desmatamento
-        WHERE regiao_id = ${regionId}
-          AND alertid = ANY(ARRAY[${sql.raw(alertidsNoArquivo.map((id) => `'${id.replace(/'/g, "''")}'`).join(","))}]::text[])
-      `);
-      for (const row of existingResult.rows as any[]) {
-        if (row.alertid) existingAlertids.add(row.alertid);
-      }
-    }
+    // Buscar quais alertids já existem para essa região (query parametrizada — sem sql.raw)
+    const existingAlertids = await findExistingDesmatamentoAlertids(regionId, alertidsNoArquivo);
 
     let insertedCount = 0;
     let skippedCount = 0;
