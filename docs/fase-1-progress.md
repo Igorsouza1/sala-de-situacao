@@ -4,11 +4,11 @@
 
 ## Checklist
 
-- [ ] **1.1** — Migration SQL: renomear `organizations` → `tenants` + novas colunas
-- [ ] **1.2** — Migration SQL: criar tabela `roles` + migrar dados de `user_access`
-- [ ] **1.3** — Migration SQL: adicionar `tenant_id` em todas as tabelas de dados
-- [ ] **1.4** — Migration SQL: criar índices compostos de performance
-- [ ] **1.5** — Atualizar `db/schema.ts` para refletir o novo banco + testes
+- [X] **1.1** — Migration SQL: renomear `organizations` → `tenants` + novas colunas
+- [X] **1.2** — Migration SQL: criar tabela `roles` + migrar dados de `user_access`
+- [X] **1.3** — Migration SQL: adicionar `tenant_id` em todas as tabelas de dados
+- [X] **1.4** — Migration SQL: criar índices compostos de performance
+- [X] **1.5** — Atualizar `db/schema.ts` para refletir o novo banco + testes
 
 ---
 
