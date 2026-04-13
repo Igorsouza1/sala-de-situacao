@@ -1,3 +1,5 @@
+export const maxDuration = 300; // 5 minutos — ST_Union preview
+
 import { requireAuth } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";

@@ -1,3 +1,5 @@
+export const maxDuration = 300; // 5 minutos — ingestão batch de propriedades
+
 import { requireAuth } from "@/lib/api/require-auth";
 import { apiError } from "@/lib/api/responses";
 import { db } from "@/db";

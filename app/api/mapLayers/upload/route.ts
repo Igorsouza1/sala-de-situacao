@@ -1,3 +1,5 @@
+export const maxDuration = 300; // 5 minutos — upload + ST_Simplify + ST_MakeValid em batch
+
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { layerCatalogInMonitoramento, layerDataInMonitoramento } from "@/db/schema";
