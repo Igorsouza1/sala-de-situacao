@@ -7,13 +7,13 @@
 
 - [X] **2.1** — `lib/feature-flags.ts` + `lib/api/tenant-context.ts`
 - [X] **2.2** — Expandir `require-auth.ts` com `requireAuthWithTenant()`
-- [ ] **2.3** — Atualizar repositories com filtro de `tenantId`
-  - [ ] `acoesRepository.ts`
-  - [ ] `propriedadesRepository.ts`
-  - [ ] `layerRepository.ts`
-  - [ ] `firmsRepository.ts`
-  - [ ] `desmatamentoReposiroty.ts`
-  - [ ] `estradasRepository.ts`
+- [X] **2.3** — Atualizar repositories com filtro de `tenantId`
+  - [X] `acoesRepository.ts`
+  - [X] `propriedadesRepository.ts`
+  - [X] `layerRepository.ts`
+  - [X] `firmsRepository.ts`
+  - [X] `desmatamentoReposiroty.ts`
+  - [X] `estradasRepository.ts`
 - [ ] **2.4** — Atualizar services + rotas para usar `requireAuthWithTenant()`
 - [ ] **2.5** — Ownership check nas rotas com `[id]`
 

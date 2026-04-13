@@ -28,8 +28,10 @@ export async function findAcaoById(id: number) {
   return result.rows[0];
 }
 
-export async function findAllAcoesData() {
-  const result = await db
+export async function findAllAcoesData(tenantId?: string | null) {
+  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+
+  return db
     .select({
       id: acoesInMonitoramento.id,
       name: acoesInMonitoramento.name,
@@ -40,38 +42,41 @@ export async function findAllAcoesData() {
       acao: acoesInMonitoramento.acao,
     })
     .from(acoesInMonitoramento)
-    .execute()
-
-  return result;
+    .where(effectiveTenantId ? eq(acoesInMonitoramento.tenantId, effectiveTenantId) : undefined);
 }
 
-export async function findAllAcoesDataWithGeometry(startDate?: Date, endDate?: Date) {
-  let query = `
-    SELECT a.id, a.acao, a.name, a.descricao, a.mes, a.atuacao, a.time, TO_CHAR(a.time, 'DD/MM/YYYY HH24:MI') as time_formatado, a.status, a.categoria, a.tipo, a.eixo_tematico, a.tipo_tecnico, a.carater, ST_AsGeoJSON(a.geom) as geojson,
+export async function findAllAcoesDataWithGeometry(tenantId?: string | null, startDate?: Date, endDate?: Date) {
+  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+
+  const conditions: ReturnType<typeof sql>[] = [];
+
+  if (effectiveTenantId) {
+    conditions.push(sql`a.tenant_id = ${effectiveTenantId}::uuid`);
+  }
+  if (startDate) {
+    conditions.push(sql`a.time >= ${startDate.toISOString()}::timestamp`);
+  }
+  if (endDate) {
+    conditions.push(sql`a.time <= ${endDate.toISOString()}::timestamp`);
+  }
+
+  const whereSql = conditions.length > 0
+    ? sql`WHERE ${sql.join(conditions, sql` AND `)}`
+    : sql``;
+
+  const result = await db.execute(sql`
+    SELECT a.id, a.acao, a.name, a.descricao, a.mes, a.atuacao, a.time,
+    TO_CHAR(a.time, 'DD/MM/YYYY HH24:MI') as time_formatado,
+    a.status, a.categoria, a.tipo, a.eixo_tematico, a.tipo_tecnico, a.carater,
+    ST_AsGeoJSON(a.geom) as geojson,
     MAX(f.created_at) as ultima_foto_em
     FROM "monitoramento"."acoes" a
     LEFT JOIN "monitoramento"."fotos_acoes" f ON a.id = f.acao_id
-  `;
+    ${whereSql}
+    GROUP BY a.id
+  `);
 
-  const conditions: string[] = [];
-
-  if (startDate) {
-    conditions.push(`a.time >= '${startDate.toISOString()}'`);
-  }
-
-  if (endDate) {
-    conditions.push(`a.time <= '${endDate.toISOString()}'`);
-  }
-
-  if (conditions.length > 0) {
-    query += ` WHERE ${conditions.join(' AND ')}`;
-  }
-
-  query += ` GROUP BY a.id`;
-
-  const result = await db.execute(query);
-
-  return result.rows
+  return result.rows;
 }
 
 

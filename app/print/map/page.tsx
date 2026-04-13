@@ -26,7 +26,8 @@ export default async function PrintMapPage({ searchParams }: PrintMapPageProps) 
   const startDate = params.startDate ? new Date(params.startDate) : undefined
   const endDate = params.endDate ? new Date(params.endDate) : undefined
 
-  const allLayers = await getAllLayers(startDate, endDate)
+  // tenantId will be injected here in task 2.4 via requireAuthWithTenant()
+  const allLayers = await getAllLayers(undefined, startDate, endDate)
   
   const activeLayers: LayerResponseDTO[] = []
 

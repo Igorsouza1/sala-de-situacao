@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
             console.warn("Invalid startDate provided");
         }
 
-        const layers = await getAllLayers(startDate, endDate, minArea, maxArea);
+        // tenantId will be injected here in task 2.4 via requireAuthWithTenant()
+        const layers = await getAllLayers(undefined, startDate, endDate, minArea, maxArea);
         return NextResponse.json(layers);
     } catch (error) {
         console.error("Error fetching layers:", error);

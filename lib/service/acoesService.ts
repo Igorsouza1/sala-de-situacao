@@ -18,15 +18,13 @@ import type { TrilhaInput, WaypointInput } from "@/lib/validations/acoes";
 
 // Retorna todas as ações
 // UTILIZAREMOS PARA O DASHBOARD
-export async function getAllAcoesData() {
-  const acoesData = await findAllAcoesData();
-  return acoesData;
+export async function getAllAcoesData(tenantId?: string | null) {
+  return findAllAcoesData(tenantId);
 }
 
 // Retorna todas as ações com geometria
-export async function getAllAcoesForMap() {
-  const acoesDataWithGeometry = await findAllAcoesDataWithGeometry();
-  return acoesDataWithGeometry;
+export async function getAllAcoesForMap(tenantId?: string | null) {
+  return findAllAcoesDataWithGeometry(tenantId);
 }
 
 export async function deleteAcaoItemHistoryById(id: number) {

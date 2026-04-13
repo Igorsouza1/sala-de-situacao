@@ -12,9 +12,14 @@ export async function findAllFirmsData() {
   return result
 }
 
-export async function findAllFirmsDataWithGeometry(startDate?: Date, endDate?: Date) {
+export async function findAllFirmsDataWithGeometry(tenantId?: string | null, startDate?: Date, endDate?: Date) {
+  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+
   const whereClauses = [];
 
+  if (effectiveTenantId) {
+    whereClauses.push(sql`tenant_id = ${effectiveTenantId}::uuid`);
+  }
   if (startDate) {
     whereClauses.push(sql`acq_date >= ${startDate.toISOString().split('T')[0]}::date`);
   }
@@ -30,9 +35,9 @@ export async function findAllFirmsDataWithGeometry(startDate?: Date, endDate?: D
       SELECT id, acq_date, acq_time, frp, satellite, cod_imovel, ST_AsGeoJSON(geom) as geojson
       FROM "monitoramento"."raw_firms"
       ${whereSql}
-    `)
+    `);
 
-  return result
+  return result;
 }
 
 export type RawFirmInsert = InferInsertModel<typeof rawFirmsInMonitoramento>;

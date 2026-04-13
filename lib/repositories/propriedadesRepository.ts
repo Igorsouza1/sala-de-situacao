@@ -10,17 +10,21 @@ export async function updatePropriedadeName(id: number, nome: string) {
   `);
 }
 
-export async function countPropriedades(minArea?: number, maxArea?: number) {
+export async function countPropriedades(tenantId?: string | null, minArea?: number, maxArea?: number) {
+  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+
   let query = sql`
     SELECT COUNT(*)::int as count
     FROM "monitoramento"."propriedades"
     WHERE 1=1
   `;
 
+  if (effectiveTenantId) {
+    query = sql`${query} AND tenant_id = ${effectiveTenantId}::uuid`;
+  }
   if (minArea !== undefined && minArea !== null) {
     query = sql`${query} AND num_area >= ${minArea}`;
   }
-
   if (maxArea !== undefined && maxArea !== null) {
     query = sql`${query} AND num_area <= ${maxArea}`;
   }
@@ -29,24 +33,27 @@ export async function countPropriedades(minArea?: number, maxArea?: number) {
   return (result.rows?.[0] ?? (result as any)[0])?.count as number;
 }
 
-export async function findAllPropriedadesDataWithGeometry(minArea?: number, maxArea?: number) {
+export async function findAllPropriedadesDataWithGeometry(tenantId?: string | null, minArea?: number, maxArea?: number) {
+  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+
   let query = sql`
-        SELECT id, cod_tema, nom_tema, cod_imovel, mod_fiscal, num_area, ind_status, ind_tipo, des_condic, municipio, ST_AsGeoJSON(geom) as geojson
-        FROM "monitoramento"."propriedades"
-        WHERE 1=1
-      `;
+    SELECT id, cod_tema, nom_tema, cod_imovel, mod_fiscal, num_area, ind_status, ind_tipo, des_condic, municipio, ST_AsGeoJSON(geom) as geojson
+    FROM "monitoramento"."propriedades"
+    WHERE 1=1
+  `;
 
-  if (minArea !== undefined && minArea !== null) {
-      query = sql`${query} AND num_area >= ${minArea}`;
+  if (effectiveTenantId) {
+    query = sql`${query} AND tenant_id = ${effectiveTenantId}::uuid`;
   }
-
+  if (minArea !== undefined && minArea !== null) {
+    query = sql`${query} AND num_area >= ${minArea}`;
+  }
   if (maxArea !== undefined && maxArea !== null) {
-      query = sql`${query} AND num_area <= ${maxArea}`;
+    query = sql`${query} AND num_area <= ${maxArea}`;
   }
 
   const result = await db.execute(query);
-
-  return result
+  return result;
 }
 
 export async function findPropriedadeDossieData(id: number) {

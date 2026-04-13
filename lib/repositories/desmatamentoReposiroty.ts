@@ -3,9 +3,14 @@ import { desmatamentoInMonitoramento } from "@/db/schema"
 
 import { sql, and, eq, inArray } from "drizzle-orm"
 
-export async function findAllDesmatamentoDataWithGeometry(startDate?: Date, endDate?: Date) {
+export async function findAllDesmatamentoDataWithGeometry(tenantId?: string | null, startDate?: Date, endDate?: Date) {
+  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+
   const whereClauses = [];
 
+  if (effectiveTenantId) {
+    whereClauses.push(sql`tenant_id = ${effectiveTenantId}::uuid`);
+  }
   if (startDate) {
     whereClauses.push(sql`detectat::date >= ${startDate.toISOString().split('T')[0]}::date`);
   }
@@ -21,9 +26,9 @@ export async function findAllDesmatamentoDataWithGeometry(startDate?: Date, endD
       SELECT id, alertid, alertcode, alertha, source, detectat, detectyear, state, stateha, ST_AsGeoJSON(geom) as geojson
       FROM "monitoramento"."desmatamento"
       ${whereSql}
-    `)
+    `);
 
-  return result
+  return result;
 }
 
 /**

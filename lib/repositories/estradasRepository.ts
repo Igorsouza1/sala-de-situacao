@@ -3,14 +3,20 @@ import { estradasInMonitoramento, type NewEstradaData } from "@/db/schema";
 
 
 
-export async function findAllEstradasDataWithGeometry() {
-  const result = await db.execute(`
-        SELECT id, nome, tipo, codigo, ST_AsGeoJSON(geom) as geojson
-        FROM "monitoramento"."estradas"
-      `)
+export async function findAllEstradasDataWithGeometry(tenantId?: string | null) {
+  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
 
-  return result
+  const whereSql = effectiveTenantId
+    ? sql`WHERE tenant_id = ${effectiveTenantId}::uuid`
+    : sql``;
 
+  const result = await db.execute(sql`
+    SELECT id, nome, tipo, codigo, ST_AsGeoJSON(geom) as geojson
+    FROM "monitoramento"."estradas"
+    ${whereSql}
+  `);
+
+  return result;
 }
 
 

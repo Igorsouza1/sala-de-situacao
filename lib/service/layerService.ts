@@ -12,27 +12,27 @@ import { findAllPropriedadesDataWithGeometry } from "../repositories/propriedade
 
 
 // --- 1. CONFIGURAÇÃO DAS ESTRATÉGIAS ---
-// --- 1. CONFIGURAÇÃO DAS ESTRATÉGIAS ---
-const STATIC_STRATEGIES: Record<string, (start?: Date, end?: Date, minArea?: number, maxArea?: number) => Promise<MapFeatureCollection>> = {
-    "acoes": async (start?: Date, end?: Date) => {
-        const data = await findAllAcoesDataWithGeometry(start, end);
-        // O helper converte o array de linhas do repo para GeoJSON
+type StaticStrategy = (tenantId: string | null | undefined, start?: Date, end?: Date, minArea?: number, maxArea?: number) => Promise<MapFeatureCollection>;
+
+const STATIC_STRATEGIES: Record<string, StaticStrategy> = {
+    "acoes": async (tenantId, start, end) => {
+        const data = await findAllAcoesDataWithGeometry(tenantId, start, end);
         return toFeatureCollection(data);
     },
-    "estradas": async () => {
-        const data = await findAllEstradasDataWithGeometry();
+    "estradas": async (tenantId) => {
+        const data = await findAllEstradasDataWithGeometry(tenantId);
         return toFeatureCollection(data.rows || data);
     },
-    "desmatamento": async (start?: Date, end?: Date) => {
-        const data = await findAllDesmatamentoDataWithGeometry(start, end);
+    "desmatamento": async (tenantId, start, end) => {
+        const data = await findAllDesmatamentoDataWithGeometry(tenantId, start, end);
         return toFeatureCollection(data.rows || data);
     },
-    "raw_firms": async (start?: Date, end?: Date) => {
-        const data = await findAllFirmsDataWithGeometry(start, end);
+    "raw_firms": async (tenantId, start, end) => {
+        const data = await findAllFirmsDataWithGeometry(tenantId, start, end);
         return toFeatureCollection(data.rows || data);
     },
-        "propriedades": async (start?: Date, end?: Date, minArea?: number, maxArea?: number) => {
-        const data = await findAllPropriedadesDataWithGeometry(minArea, maxArea);
+    "propriedades": async (tenantId, _start, _end, minArea, maxArea) => {
+        const data = await findAllPropriedadesDataWithGeometry(tenantId, minArea, maxArea);
         return toFeatureCollection(data.rows || data);
     },
     // Adicione outras camadas que precisam de tratamento especial
@@ -99,7 +99,7 @@ async function getLayerGroups(slug: string, column: string, schema: string = 'mo
  * THE MAESTRO: Combines Catalog Configuration + Database GeoJSON
  * Orchestrates the assembly of the final LayerResponseDTO.
  */
-export async function getLayer(slug: string, startDate?: Date, endDate?: Date, minArea?: number, maxArea?: number): Promise<LayerResponseDTO | null> {
+export async function getLayer(slug: string, tenantId?: string | null, startDate?: Date, endDate?: Date, minArea?: number, maxArea?: number): Promise<LayerResponseDTO | null> {
     try {
         // 1. Busca Metadados no Catálogo
         const catalogEntry = await getLayerCatalog(slug);
@@ -115,8 +115,7 @@ export async function getLayer(slug: string, startDate?: Date, endDate?: Date, m
 
         // CAMINHO A: É uma camada VIP/Especial? (Hardcoded Strategy)
         if (STATIC_STRATEGIES[slug]) {
-            // console.log(`🎻 Maestro: Usando Estratégia Estática para ${slug}`);
-            data = await STATIC_STRATEGIES[slug](startDate, endDate, minArea, maxArea);
+            data = await STATIC_STRATEGIES[slug](tenantId, startDate, endDate, minArea, maxArea);
         }
 
         // CAMINHO B: É uma camada Padrão do Usuário? (Generic Data)
@@ -137,7 +136,8 @@ export async function getLayer(slug: string, startDate?: Date, endDate?: Date, m
             data = await getGenericLayerData(catalogEntry.id, 'monitoramento', {
                 limit: isLatest ? 1 : undefined,
                 startDate: shouldFilterDate ? startDate : undefined,
-                endDate: shouldFilterDate ? endDate : undefined
+                endDate: shouldFilterDate ? endDate : undefined,
+                tenantId,
             });
         }
 
@@ -210,7 +210,7 @@ export async function getLayer(slug: string, startDate?: Date, endDate?: Date, m
  * Fetches ALL layers defined in the catalog.
  * Robust against individual layer failures.
  */
-export async function getAllLayers(startDate?: Date, endDate?: Date, minArea?: number, maxArea?: number): Promise<LayerResponseDTO[]> {
+export async function getAllLayers(tenantId?: string | null, startDate?: Date, endDate?: Date, minArea?: number, maxArea?: number): Promise<LayerResponseDTO[]> {
     const catalogEntries = await db
         .select()
         .from(layerCatalogInMonitoramento)
@@ -218,7 +218,7 @@ export async function getAllLayers(startDate?: Date, endDate?: Date, minArea?: n
 
     if (!catalogEntries.length) return [];
 
-    const layerPromises = catalogEntries.map(entry => getLayer(entry.slug, startDate, endDate, minArea, maxArea));
+    const layerPromises = catalogEntries.map(entry => getLayer(entry.slug, tenantId, startDate, endDate, minArea, maxArea));
     const results = await Promise.allSettled(layerPromises);
 
     const validLayers: LayerResponseDTO[] = [];
