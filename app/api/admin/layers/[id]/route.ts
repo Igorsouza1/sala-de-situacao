@@ -1,3 +1,4 @@
+import { requireAuth } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";
 import { layerCatalogInMonitoramento, layerDataInMonitoramento } from "@/db/schema";
@@ -6,6 +7,9 @@ import { revalidateTag } from "next/cache";
 
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { response: authResponse } = await requireAuth();
+    if (authResponse) return authResponse;
+
     const params = await context.params;
     const layerId = parseInt(params.id, 10);
     if (isNaN(layerId)) return apiError("ID da camada inválido.", 400);

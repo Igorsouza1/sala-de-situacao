@@ -1,9 +1,13 @@
+import { requireAuth } from "@/lib/api/require-auth";
 import { NextResponse } from "next/server";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { getAcoesByRegion } from "@/lib/service/adminService";
 
 export async function GET(request: Request, context: any) {
   try {
+    const { response: authResponse } = await requireAuth();
+    if (authResponse) return authResponse;
+
     const { id } = await context.params as { id: string };
     const regionId = Number(id);
 

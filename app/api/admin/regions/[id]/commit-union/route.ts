@@ -1,3 +1,4 @@
+import { requireAuth } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
@@ -5,6 +6,9 @@ import { revalidateTag } from "next/cache";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { response: authResponse } = await requireAuth();
+    if (authResponse) return authResponse;
+
     const params = await context.params;
     const regionId = parseInt(params.id, 10);
     if (isNaN(regionId)) return apiError("ID da região inválido.", 400);

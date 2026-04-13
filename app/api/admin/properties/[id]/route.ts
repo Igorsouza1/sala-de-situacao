@@ -1,3 +1,4 @@
+import { requireAuth } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";
 import { propriedadesInMonitoramento } from "@/db/schema";
@@ -9,6 +10,9 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { response: authResponse } = await requireAuth();
+    if (authResponse) return authResponse;
+
     const params = await context.params;
     const propertyId = parseInt(params.id, 10);
 

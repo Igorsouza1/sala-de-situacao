@@ -1,3 +1,4 @@
+import { requireAuth } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { z } from "zod";
 import { db } from "@/db";
@@ -12,6 +13,9 @@ const visualPayloadSchema = z.object({
 
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { response: authResponse } = await requireAuth();
+    if (authResponse) return authResponse;
+
     const params = await context.params;
     const layerId = parseInt(params.id, 10);
     if (isNaN(layerId)) return apiError("ID da camada inválido.", 400);

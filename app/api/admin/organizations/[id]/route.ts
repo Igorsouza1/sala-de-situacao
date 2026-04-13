@@ -1,9 +1,13 @@
+import { requireAuth } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { deleteOrganization, updateOrganization } from "@/lib/service/adminService";
 import { organizationIdSchema, organizationPayloadSchema } from "@/lib/validations/admin";
 
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { response: authResponse } = await requireAuth();
+    if (authResponse) return authResponse;
+
     const params = await context.params;
     const idParsed = organizationIdSchema.safeParse(params);
     if (!idParsed.success) {
@@ -34,6 +38,9 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 
 export async function DELETE(_: Request, context: { params: Promise<{ id: string }> }) {
   try {
+    const { response: authResponse } = await requireAuth();
+    if (authResponse) return authResponse;
+
     const params = await context.params;
     const idParsed = organizationIdSchema.safeParse(params);
     if (!idParsed.success) {

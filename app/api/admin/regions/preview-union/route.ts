@@ -1,9 +1,13 @@
+import { requireAuth } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
 
 export async function POST(request: Request) {
   try {
+    const { response: authResponse } = await requireAuth();
+    if (authResponse) return authResponse;
+
     const formData = await request.formData().catch(() => null);
     if (!formData) {
       return apiError("FormData é obrigatório.", 400);
