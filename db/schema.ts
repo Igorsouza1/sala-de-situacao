@@ -9,25 +9,104 @@ export const statusAcoesInMonitoramento = monitoramento.enum("status_acoes", ['I
 export const baciaRioDaPrataIdSeqInMonitoramento = monitoramento.sequence("Bacia_RioDaPrata_id_seq", { startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
 export const rioDaPrataLeitoIdSeqInMonitoramento = monitoramento.sequence("Rio da Prata - Leito_id_seq", { startWith: "1", increment: "1", minValue: "1", maxValue: "2147483647", cache: "1", cycle: false })
 
+// ─────────────────────────────────────────────────────────────
+// TENANTS (renomeada de organizations — migration 0005)
+// Mantém organizationsInMonitoramento como alias para não quebrar
+// código existente durante a transição (Fase 1 → Fase 2).
+// ─────────────────────────────────────────────────────────────
+export const tenantsInMonitoramento = monitoramento.table("tenants", {
+	id:              uuid().defaultRandom().primaryKey().notNull(),
+	name:            varchar({ length: 255 }).notNull(),
+	// notNull aplicado no banco (migration 0005). Opcional no Drizzle durante transição Fase 1→2.
+	slug:            text(),
+	plan:            text().notNull().default('free'),
+	maxRegions:      integer("max_regions").default(1),
+	maxUsers:        integer("max_users").notNull().default(5),
+	storageQuotaGb:  integer("storage_quota_gb").notNull().default(10),
+	active:          boolean().notNull().default(true),
+	metadata:        jsonb(),
+	createdAt:       timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt:       timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	unique("tenants_slug_unique").on(table.slug),
+]);
+
+/** @deprecated Use tenantsInMonitoramento. Mantido para compatibilidade enquanto adminRepository é migrado. */
+export const organizationsInMonitoramento = tenantsInMonitoramento;
+
+// ─────────────────────────────────────────────────────────────
+// USER_ACCESS (mantida intacta — expand, não replace)
+// ─────────────────────────────────────────────────────────────
+export const userAccessInMonitoramento = monitoramento.table("user_access", {
+	id:             serial().primaryKey().notNull(),
+	userId:         uuid("user_id").notNull(),
+	organizationId: uuid("organization_id").notNull(),
+	regiaoId:       integer("regiao_id"),
+	role:           varchar({ length: 50 }).default('viewer').notNull(),
+});
+
+// ─────────────────────────────────────────────────────────────
+// ROLES (nova tabela RBAC — migration 0005 seção 1.2)
+// ─────────────────────────────────────────────────────────────
+export const rolesInMonitoramento = monitoramento.table("roles", {
+	id:        serial().primaryKey().notNull(),
+	tenantId:  uuid("tenant_id").notNull(),
+	userId:    uuid("user_id").notNull(),
+	role:      varchar({ length: 20 }).notNull().default('viewer'),
+	regionId:  integer("region_id"),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	foreignKey({
+		columns: [table.tenantId],
+		foreignColumns: [tenantsInMonitoramento.id],
+		name: "roles_tenant_id_tenants_id_fk"
+	}),
+	unique("roles_tenant_user_region_unique").on(table.tenantId, table.userId, table.regionId),
+]);
+
+// ─────────────────────────────────────────────────────────────
+// REGIOES
+// ─────────────────────────────────────────────────────────────
+export const regioesInMonitoramento = monitoramento.table("regioes", {
+	id:        serial().primaryKey().notNull(),
+	nome:      varchar({ length: 255 }).notNull(),
+	descricao: text(),
+	geom:      geometry({ type: "multipolygon", srid: 4674 }),
+	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	cor:       text(),
+	slug:      text(),
+	metadata:  jsonb(),
+}, (table) => [
+	index("idx_regioes_geom").using("gist", table.geom.asc().nullsLast().op("gist_geometry_ops_2d")),
+	unique("regioes_slug_unique").on(table.slug),
+]);
+
+// ─────────────────────────────────────────────────────────────
+// ACOES — tenantId adicionado (migration 0005 seção 1.3)
+// Opcional no TypeScript (DB tem DEFAULT = seed tenant).
+// Fase 2 tornará obrigatório nas queries.
+// ─────────────────────────────────────────────────────────────
 export const acoesInMonitoramento = monitoramento.table("acoes", {
-	id: serial().primaryKey().notNull(),
-	name: varchar({ length: 255 }),
-	latitude: numeric({ precision: 10, scale: 6 }),
-	longitude: numeric({ precision: 10, scale: 6 }),
-	elevation: numeric({ precision: 8, scale: 2 }),
-	time: timestamp({ mode: 'string' }),
-	descricao: varchar({ length: 255 }),
-	mes: varchar({ length: 50 }),
-	atuacao: varchar({ length: 100 }),
-	acao: varchar({ length: 100 }),
-	geom: geometry({ type: "pointz", srid: 4674 }),
-	regiaoId: integer("regiao_id"),
-	categoria: categoriaAcaoInMonitoramento(),
-	tipo: text(),
-	status: statusAcoesInMonitoramento(),
+	id:           serial().primaryKey().notNull(),
+	name:         varchar({ length: 255 }),
+	latitude:     numeric({ precision: 10, scale: 6 }),
+	longitude:    numeric({ precision: 10, scale: 6 }),
+	elevation:    numeric({ precision: 8, scale: 2 }),
+	time:         timestamp({ mode: 'string' }),
+	descricao:    varchar({ length: 255 }),
+	mes:          varchar({ length: 50 }),
+	atuacao:      varchar({ length: 100 }),
+	acao:         varchar({ length: 100 }),
+	geom:         geometry({ type: "pointz", srid: 4674 }),
+	regiaoId:     integer("regiao_id"),
+	categoria:    categoriaAcaoInMonitoramento(),
+	tipo:         text(),
+	status:       statusAcoesInMonitoramento(),
 	eixoTematico: varchar("eixo_tematico", { length: 100 }),
-	tipoTecnico: varchar("tipo_tecnico", { length: 100 }),
-	carater: varchar({ length: 50 }),
+	tipoTecnico:  varchar("tipo_tecnico", { length: 100 }),
+	carater:      varchar({ length: 50 }),
+	tenantId:     uuid("tenant_id"),
 }, (table) => [
 	foreignKey({
 		columns: [table.regiaoId],
@@ -37,13 +116,14 @@ export const acoesInMonitoramento = monitoramento.table("acoes", {
 ]);
 
 export const trilhasInMonitoramento = monitoramento.table("trilhas", {
-	id: serial().primaryKey().notNull(),
-	nome: text().notNull(),
-	geom: geometry({ type: "multilinestringz", srid: 4674 }).notNull(),
-	dataInicio: timestamp("data_inicio", { mode: 'string' }),
-	dataFim: timestamp("data_fim", { mode: 'string' }),
+	id:             serial().primaryKey().notNull(),
+	nome:           text().notNull(),
+	geom:           geometry({ type: "multilinestringz", srid: 4674 }).notNull(),
+	dataInicio:     timestamp("data_inicio", { mode: 'string' }),
+	dataFim:        timestamp("data_fim", { mode: 'string' }),
 	duracaoMinutos: integer("duracao_minutos"),
-	regiaoId: integer("regiao_id"),
+	regiaoId:       integer("regiao_id"),
+	tenantId:       uuid("tenant_id"),
 }, (table) => [
 	foreignKey({
 		columns: [table.regiaoId],
@@ -52,91 +132,15 @@ export const trilhasInMonitoramento = monitoramento.table("trilhas", {
 	}),
 ]);
 
-export const organizationsInMonitoramento = monitoramento.table("organizations", {
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	name: varchar({ length: 255 }).notNull(),
-	maxRegions: integer("max_regions").default(1),
-	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-});
-
-export const userAccessInMonitoramento = monitoramento.table("user_access", {
-	id: serial().primaryKey().notNull(),
-	userId: uuid("user_id").notNull(),
-	organizationId: uuid("organization_id").notNull(),
-	regiaoId: integer("regiao_id"),
-	role: varchar({ length: 50 }).default('viewer').notNull(),
-});
-
-export const dequeDePedrasInMonitoramento = monitoramento.table("deque_de_pedras", {
-	id: serial().primaryKey().notNull(),
-	local: varchar({ length: 255 }),
-	mes: varchar({ length: 50 }),
-	data: date(),
-	turbidez: numeric({ precision: 5, scale: 2 }),
-	secchiVertical: numeric("secchi_vertical", { precision: 5, scale: 2 }),
-	secchiHorizontal: numeric("secchi_horizontal", { precision: 5, scale: 2 }),
-	chuva: numeric({ precision: 5, scale: 2 }),
-});
-
-export const fotosAcoesInMonitoramento = monitoramento.table("fotos_acoes", {
-	id: serial().primaryKey().notNull(),
-	acaoId: integer("acao_id").notNull(),
-	url: varchar({ length: 1000 }).notNull(),
-	descricao: varchar({ length: 255 }),
-	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow(),
-	atualizacao: date(),
-}, (table) => [
-	foreignKey({
-		columns: [table.acaoId],
-		foreignColumns: [acoesInMonitoramento.id],
-		name: "fotos_acoes_acao_id_acoes_id_fk"
-	}),
-]);
-
-export const destinatariosAlertasInMonitoramento = monitoramento.table("destinatarios_alertas", {
-	id: serial().primaryKey().notNull(),
-	regiaoId: integer("regiao_id").notNull(),
-	email: varchar({ length: 255 }).notNull(),
-	nome: varchar({ length: 255 }),
-	ativo: boolean().default(true).notNull(),
-	preferencias: jsonb().default({ "fogo": true, "nivel_rio": true, "relatorio_semanal": true }),
-	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-});
-
-export const ponteDoCureInMonitoramento = monitoramento.table("ponte_do_cure", {
-	id: serial().primaryKey().notNull(),
-	local: varchar({ length: 255 }),
-	mes: varchar({ length: 50 }),
-	data: date(),
-	chuva: numeric({ precision: 5, scale: 2 }),
-	nivel: numeric({ precision: 5, scale: 2 }),
-	visibilidade: varchar({ length: 50 }),
-});
-
-export const regioesInMonitoramento = monitoramento.table("regioes", {
-	id: serial().primaryKey().notNull(),
-	nome: varchar({ length: 255 }).notNull(),
-	descricao: text(),
-	geom: geometry({ type: "multipolygon", srid: 4674 }),
-	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-	updatedAt: timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-	cor: text(),
-	slug: text(),
-	metadata: jsonb(),
-}, (table) => [
-	index("idx_regioes_geom").using("gist", table.geom.asc().nullsLast().op("gist_geometry_ops_2d")),
-	unique("regioes_slug_unique").on(table.slug),
-]);
-
 export const waypointsInMonitoramento = monitoramento.table("waypoints", {
-	id: serial().primaryKey().notNull(),
-	trilhaId: integer("trilha_id").notNull(),
-	nome: text(),
-	geom: geometry({ type: "pointz", srid: 4674 }).notNull(),
-	ele: doublePrecision(),
-	recordedat: timestamp({ mode: 'string' }),
-	regiaoId: integer("regiao_id"),
+	id:          serial().primaryKey().notNull(),
+	trilhaId:    integer("trilha_id").notNull(),
+	nome:        text(),
+	geom:        geometry({ type: "pointz", srid: 4674 }).notNull(),
+	ele:         doublePrecision(),
+	recordedat:  timestamp({ mode: 'string' }),
+	regiaoId:    integer("regiao_id"),
+	tenantId:    uuid("tenant_id"),
 }, (table) => [
 	foreignKey({
 		columns: [table.regiaoId],
@@ -150,40 +154,90 @@ export const waypointsInMonitoramento = monitoramento.table("waypoints", {
 	}).onDelete("cascade"),
 ]);
 
-export const layerCatalogInMonitoramento = monitoramento.table("layer_catalog", {
-	id: serial().primaryKey().notNull(),
-	name: text().notNull(),
-	slug: text().notNull(),
-	schemaConfig: jsonb("schema_config"),
-	visualConfig: jsonb("visual_config"),
-	regiaoId: integer("regiao_id"),
-	ordering: integer().default(0),
+export const desmatamentoInMonitoramento = monitoramento.table("desmatamento", {
+	id:          serial().primaryKey().notNull(),
+	alertid:     text(),
+	alertcode:   text(),
+	alertha:     doublePrecision(),
+	source:      text(),
+	detectat:    text(),
+	detectyear:  integer(),
+	state:       text(),
+	stateha:     doublePrecision(),
+	geom:        geometry({ type: "geometry", srid: 4674 }),
+	regiaoId:    integer("regiao_id"),
+	tenantId:    uuid("tenant_id"),
 }, (table) => [
-	unique("layer_catalog_slug_unique").on(table.slug),
+	foreignKey({
+		columns: [table.regiaoId],
+		foreignColumns: [regioesInMonitoramento.id],
+		name: "desmatamento_regiao_id_regioes_id_fk"
+	}),
+]);
+
+export const estradasInMonitoramento = monitoramento.table("estradas", {
+	id:       serial().primaryKey().notNull(),
+	nome:     varchar({ length: 255 }),
+	tipo:     varchar({ length: 100 }),
+	codigo:   varchar({ length: 50 }),
+	geom:     geometry({ type: "multilinestringz", srid: 4674 }),
+	regiaoId: integer("regiao_id"),
+	tenantId: uuid("tenant_id"),
+}, (table) => [
+	foreignKey({
+		columns: [table.regiaoId],
+		foreignColumns: [regioesInMonitoramento.id],
+		name: "estradas_regiao_id_regioes_id_fk"
+	}),
+]);
+
+export const propriedadesInMonitoramento = monitoramento.table("propriedades", {
+	id:        serial().primaryKey().notNull(),
+	codTema:   varchar("cod_tema", { length: 50 }),
+	nomTema:   varchar("nom_tema", { length: 100 }),
+	codImovel: varchar("cod_imovel", { length: 100 }),
+	modFiscal: doublePrecision("mod_fiscal"),
+	numArea:   doublePrecision("num_area"),
+	indStatus: varchar("ind_status", { length: 20 }),
+	indTipo:   varchar("ind_tipo", { length: 20 }),
+	desCondic: text("des_condic"),
+	municipio: varchar({ length: 100 }),
+	geom:      geometry({ type: "multipolygon", srid: 4674 }),
+	nome:      text(),
+	regiaoId:  integer("regiao_id"),
+	properties: jsonb(),
+	tenantId:  uuid("tenant_id"),
+}, (table) => [
+	foreignKey({
+		columns: [table.regiaoId],
+		foreignColumns: [regioesInMonitoramento.id],
+		name: "propriedades_regiao_id_regioes_id_fk"
+	}),
 ]);
 
 export const rawFirmsInMonitoramento = monitoramento.table("raw_firms", {
-	latitude: doublePrecision(),
-	longitude: doublePrecision(),
-	brightTi4: doublePrecision("bright_ti4"),
-	scan: doublePrecision(),
-	track: doublePrecision(),
-	acqDate: date("acq_date"),
-	acqTime: text("acq_time"),
-	satellite: text(),
-	instrument: text(),
-	confidence: text(),
-	version: text(),
-	brightTi5: doublePrecision("bright_ti5"),
-	frp: doublePrecision(),
-	daynight: text(),
-	type: text(),
-	horaDeteccao: time("hora_deteccao"),
-	geom: geometry({ type: "point", srid: 4674 }),
-	id: uuid().defaultRandom().primaryKey().notNull(),
-	regiaoId: integer("regiao_id"),
+	latitude:      doublePrecision(),
+	longitude:     doublePrecision(),
+	brightTi4:     doublePrecision("bright_ti4"),
+	scan:          doublePrecision(),
+	track:         doublePrecision(),
+	acqDate:       date("acq_date"),
+	acqTime:       text("acq_time"),
+	satellite:     text(),
+	instrument:    text(),
+	confidence:    text(),
+	version:       text(),
+	brightTi5:     doublePrecision("bright_ti5"),
+	frp:           doublePrecision(),
+	daynight:      text(),
+	type:          text(),
+	horaDeteccao:  time("hora_deteccao"),
+	geom:          geometry({ type: "point", srid: 4674 }),
+	id:            uuid().defaultRandom().primaryKey().notNull(),
+	regiaoId:      integer("regiao_id"),
 	alertaEnviado: boolean("alerta_enviado").default(false),
-	codImovel: text("cod_imovel"),
+	codImovel:     text("cod_imovel"),
+	tenantId:      uuid("tenant_id"),
 }, (table) => [
 	uniqueIndex("idx_firms_point_unique").using("btree", table.latitude.asc().nullsLast().op("date_ops"), table.longitude.asc().nullsLast().op("float8_ops"), table.acqDate.asc().nullsLast().op("date_ops"), table.acqTime.asc().nullsLast().op("text_ops")),
 	foreignKey({
@@ -194,12 +248,26 @@ export const rawFirmsInMonitoramento = monitoramento.table("raw_firms", {
 	unique("raw_firms_id_key").on(table.id),
 ]);
 
+export const layerCatalogInMonitoramento = monitoramento.table("layer_catalog", {
+	id:           serial().primaryKey().notNull(),
+	name:         text().notNull(),
+	slug:         text().notNull(),
+	schemaConfig: jsonb("schema_config"),
+	visualConfig: jsonb("visual_config"),
+	regiaoId:     integer("regiao_id"),
+	ordering:     integer().default(0),
+	tenantId:     uuid("tenant_id"),
+}, (table) => [
+	unique("layer_catalog_slug_unique").on(table.slug),
+]);
+
 export const layerDataInMonitoramento = monitoramento.table("layer_data", {
-	id: serial().primaryKey().notNull(),
-	layerId: integer("layer_id"),
-	geom: geometry({ type: "geometry", srid: 4674 }),
-	properties: jsonb(),
+	id:           serial().primaryKey().notNull(),
+	layerId:      integer("layer_id"),
+	geom:         geometry({ type: "geometry", srid: 4674 }),
+	properties:   jsonb(),
 	dataRegistro: timestamp("data_registro", { mode: 'string' }),
+	tenantId:     uuid("tenant_id"),
 }, (table) => [
 	index("idx_layer_data_data_registro").using("btree", table.dataRegistro.asc().nullsLast().op("timestamp_ops")),
 	index("idx_layer_data_geom").using("gist", table.geom.asc().nullsLast().op("gist_geometry_ops_2d")),
@@ -210,108 +278,88 @@ export const layerDataInMonitoramento = monitoramento.table("layer_data", {
 	}),
 ]);
 
-export const desmatamentoInMonitoramento = monitoramento.table("desmatamento", {
-	id: serial().primaryKey().notNull(),
-	alertid: text(),
-	alertcode: text(),
-	alertha: doublePrecision(),
-	source: text(),
-	detectat: text(),
-	detectyear: integer(),
-	state: text(),
-	stateha: doublePrecision(),
-	geom: geometry({ type: "geometry", srid: 4674 }),
-	regiaoId: integer("regiao_id"),
+export const javaliAvistamentosInMonitoramento = monitoramento.table("javali_avistamentos", {
+	id:          serial().primaryKey().notNull(),
+	tipo:        varchar({ length: 100 }).notNull(),
+	observacoes: text(),
+	geom:        geometry({ type: "point", srid: 4674 }).notNull(),
+	createdAt:   timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	tenantId:    uuid("tenant_id"),
+});
+
+export const dequeDePedrasInMonitoramento = monitoramento.table("deque_de_pedras", {
+	id:               serial().primaryKey().notNull(),
+	local:            varchar({ length: 255 }),
+	mes:              varchar({ length: 50 }),
+	data:             date(),
+	turbidez:         numeric({ precision: 5, scale: 2 }),
+	secchiVertical:   numeric("secchi_vertical", { precision: 5, scale: 2 }),
+	secchiHorizontal: numeric("secchi_horizontal", { precision: 5, scale: 2 }),
+	chuva:            numeric({ precision: 5, scale: 2 }),
+	tenantId:         uuid("tenant_id"),
+});
+
+export const balnearioMunicipalInMonitoramento = monitoramento.table("balneario_municipal", {
+	id:             serial().primaryKey().notNull(),
+	local:          varchar({ length: 255 }),
+	mes:            varchar({ length: 50 }),
+	data:           date(),
+	turbidez:       numeric({ precision: 5, scale: 2 }),
+	secchiVertical: numeric("secchi_vertical", { precision: 5, scale: 2 }),
+	nivelAgua:      numeric("nivel_agua", { precision: 7, scale: 2 }),
+	pluviometria:   numeric({ precision: 5, scale: 2 }),
+	observacao:     text(),
+	tenantId:       uuid("tenant_id"),
+});
+
+export const ponteDoCureInMonitoramento = monitoramento.table("ponte_do_cure", {
+	id:           serial().primaryKey().notNull(),
+	local:        varchar({ length: 255 }),
+	mes:          varchar({ length: 50 }),
+	data:         date(),
+	chuva:        numeric({ precision: 5, scale: 2 }),
+	nivel:        numeric({ precision: 5, scale: 2 }),
+	visibilidade: varchar({ length: 50 }),
+	tenantId:     uuid("tenant_id"),
+});
+
+export const fotosAcoesInMonitoramento = monitoramento.table("fotos_acoes", {
+	id:          serial().primaryKey().notNull(),
+	acaoId:      integer("acao_id").notNull(),
+	url:         varchar({ length: 1000 }).notNull(),
+	descricao:   varchar({ length: 255 }),
+	createdAt:   timestamp("created_at", { mode: 'string' }).defaultNow(),
+	atualizacao: date(),
 }, (table) => [
 	foreignKey({
-		columns: [table.regiaoId],
-		foreignColumns: [regioesInMonitoramento.id],
-		name: "desmatamento_regiao_id_regioes_id_fk"
+		columns: [table.acaoId],
+		foreignColumns: [acoesInMonitoramento.id],
+		name: "fotos_acoes_acao_id_acoes_id_fk"
 	}),
 ]);
 
-export const estradasInMonitoramento = monitoramento.table("estradas", {
-	id: serial().primaryKey().notNull(),
-	nome: varchar({ length: 255 }),
-	tipo: varchar({ length: 100 }),
-	codigo: varchar({ length: 50 }),
-	geom: geometry({ type: "multilinestringz", srid: 4674 }),
-	regiaoId: integer("regiao_id"),
-}, (table) => [
-	foreignKey({
-		columns: [table.regiaoId],
-		foreignColumns: [regioesInMonitoramento.id],
-		name: "estradas_regiao_id_regioes_id_fk"
-	}),
-]);
+export const destinatariosAlertasInMonitoramento = monitoramento.table("destinatarios_alertas", {
+	id:           serial().primaryKey().notNull(),
+	regiaoId:     integer("regiao_id").notNull(),
+	email:        varchar({ length: 255 }).notNull(),
+	nome:         varchar({ length: 255 }),
+	ativo:        boolean().default(true).notNull(),
+	preferencias: jsonb().default({ "fogo": true, "nivel_rio": true, "relatorio_semanal": true }),
+	createdAt:    timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+	updatedAt:    timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+});
 
-export const propriedadesInMonitoramento = monitoramento.table("propriedades", {
-	id: serial().primaryKey().notNull(),
-	codTema: varchar("cod_tema", { length: 50 }),
-	nomTema: varchar("nom_tema", { length: 100 }),
-	codImovel: varchar("cod_imovel", { length: 100 }),
-	modFiscal: doublePrecision("mod_fiscal"),
-	numArea: doublePrecision("num_area"),
-	indStatus: varchar("ind_status", { length: 20 }),
-	indTipo: varchar("ind_tipo", { length: 20 }),
-	desCondic: text("des_condic"),
-	municipio: varchar({ length: 100 }),
-	geom: geometry({ type: "multipolygon", srid: 4674 }),
-	nome: text(),
-	regiaoId: integer("regiao_id"),
-	properties: jsonb(),
-}, (table) => [
-	foreignKey({
-		columns: [table.regiaoId],
-		foreignColumns: [regioesInMonitoramento.id],
-		name: "propriedades_regiao_id_regioes_id_fk"
-	}),
-]);
-
-
-
+// ─────────────────────────────────────────────────────────────
+// TIPOS UTILITÁRIOS (InferInsertModel sem geom raw)
+// ─────────────────────────────────────────────────────────────
 type BaseAcoesData = InferInsertModel<typeof acoesInMonitoramento>;
-
-export type NewAcoesData = Omit<BaseAcoesData, 'geom'> & {
-	geom: string;
-};
-
+export type NewAcoesData = Omit<BaseAcoesData, 'geom'> & { geom: string };
 
 type BaseWaypointData = InferInsertModel<typeof waypointsInMonitoramento>;
-
-export type NewWaypointData = Omit<BaseWaypointData, 'geom'> & {
-	geom: string;
-};
-
+export type NewWaypointData = Omit<BaseWaypointData, 'geom'> & { geom: string };
 
 type BaseEstradaData = InferInsertModel<typeof estradasInMonitoramento>;
-
-export type NewEstradaData = Omit<BaseEstradaData, 'geom'> & {
-	geom: string;
-};
-
+export type NewEstradaData = Omit<BaseEstradaData, 'geom'> & { geom: string };
 
 type BaseTrilhaData = InferInsertModel<typeof trilhasInMonitoramento>;
-
-export type NewTrilhaData = Omit<BaseTrilhaData, 'geom'> & {
-	geom: string;
-};
-export const balnearioMunicipalInMonitoramento = monitoramento.table("balneario_municipal", {
-	id: serial().primaryKey().notNull(),
-	local: varchar({ length: 255 }),
-	mes: varchar({ length: 50 }),
-	data: date(),
-	turbidez: numeric({ precision: 5, scale: 2 }),
-	secchiVertical: numeric("secchi_vertical", { precision: 5, scale: 2 }),
-	nivelAgua: numeric("nivel_agua", { precision: 7, scale: 2 }),
-	pluviometria: numeric({ precision: 5, scale: 2 }),
-	observacao: text(),
-});
-
-export const javaliAvistamentosInMonitoramento = monitoramento.table("javali_avistamentos", {
-	id: serial().primaryKey().notNull(),
-	tipo: varchar({ length: 100 }).notNull(),
-	observacoes: text(),
-	geom: geometry({ type: "point", srid: 4674 }).notNull(),
-	createdAt: timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
-});
+export type NewTrilhaData = Omit<BaseTrilhaData, 'geom'> & { geom: string };
