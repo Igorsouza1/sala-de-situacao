@@ -36,7 +36,8 @@ export async function deleteAcaoItemHistoryById(id: number) {
 
 export async function updateAcaoFieldsById(
   id: number,
-  formData: FormData
+  formData: FormData,
+  tenantId?: string | null
 ) {
   const textUpdates: Record<string, string> = {}
 
@@ -56,7 +57,7 @@ export async function updateAcaoFieldsById(
   // --- LOGIC FOR STATUS HISTORY ---
   if (textUpdates.status) {
     try {
-      const currentAcao = await findAcaoById(id)
+      const currentAcao = await findAcaoById(id, tenantId)
       if (currentAcao && currentAcao.status !== textUpdates.status) {
         const oldStatus = currentAcao.status || "Sem status"
         const newStatus = textUpdates.status
@@ -73,7 +74,7 @@ export async function updateAcaoFieldsById(
   }
   // -------------------------------
 
-  await updateAcaoById(id, textUpdates)
+  await updateAcaoById(id, textUpdates, tenantId)
   return { message: "Ação atualizada com sucesso!" }
 }
 
@@ -137,10 +138,11 @@ export async function createAcoesWithTrilha(input: {
 
 
 
-export async function getAcaoDossie(id: number) {
+export async function getAcaoDossie(id: number, tenantId?: string | null) {
   // 1. Busca os dados principais e o histórico em paralelo
+  // findAcaoById filtra por tenant_id → retorna null se pertencer a outro tenant (IDOR prevention)
   const [acaoPrincipal, historico] = await Promise.all([
-    findAcaoById(id),
+    findAcaoById(id, tenantId),
     findAllAcoesUpdates(id)
   ]);
 

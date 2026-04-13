@@ -1,20 +1,22 @@
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { getAcaoDossie, updateAcaoFieldsById } from "@/lib/service/acoesService";
+import { requireAuthWithTenant } from "@/lib/api/require-auth";
 import { revalidateTag } from "next/cache";
 
-// Update this type definition
 type RouteContext = {
   params: Promise<{ id: string }>
 }
 
 export async function PUT(request: Request, context: RouteContext) {
+  const { tenantId, response: authResponse } = await requireAuthWithTenant();
+  if (authResponse) return authResponse;
+
   try {
-    // Await the params directly from context
     const { id } = await context.params;
     const numId = Number(id);
 
     const formData = await request.formData();
-    const result = await updateAcaoFieldsById(numId, formData);
+    const result = await updateAcaoFieldsById(numId, formData, tenantId);
     revalidateTag("acoes");
     return apiSuccess(result);
   } catch (error) {
@@ -24,8 +26,10 @@ export async function PUT(request: Request, context: RouteContext) {
 }
 
 export async function GET(_request: Request, context: RouteContext) {
+  const { tenantId, response: authResponse } = await requireAuthWithTenant();
+  if (authResponse) return authResponse;
+
   try {
-    // Await the params directly from context
     const { id } = await context.params;
     const numId = Number(id);
 
@@ -33,7 +37,7 @@ export async function GET(_request: Request, context: RouteContext) {
       return apiError("ID inválido", 400);
     }
 
-    const result = await getAcaoDossie(numId);
+    const result = await getAcaoDossie(numId, tenantId);
 
     if (!result) {
       return apiError("Ação não encontrada", 404);

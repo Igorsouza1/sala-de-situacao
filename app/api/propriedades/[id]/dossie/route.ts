@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { findPropriedadeDossieData } from "@/lib/repositories/propriedadesRepository";
+import { requireAuthWithTenant } from "@/lib/api/require-auth";
 
 export async function GET(
     request: NextRequest,
-    // 1. Update the type definition here to Promise
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const { tenantId, response: authResponse } = await requireAuthWithTenant();
+    if (authResponse) return authResponse;
+
     try {
-        // 2. You are already correctly awaiting it here, which is great!
         const { id } = await params;
 
         const parsedId = parseInt(id);
@@ -18,7 +20,7 @@ export async function GET(
             );
         }
 
-        const data = await findPropriedadeDossieData(parsedId);
+        const data = await findPropriedadeDossieData(parsedId, tenantId);
 
         if (!data) {
             return NextResponse.json(

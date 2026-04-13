@@ -1,11 +1,15 @@
 
 import { updatePropriedadeName } from "@/lib/repositories/propriedadesRepository";
+import { requireAuthWithTenant } from "@/lib/api/require-auth";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
+    const { tenantId, response: authResponse } = await requireAuthWithTenant();
+    if (authResponse) return authResponse;
+
     try {
         const { id } = await params
         const body = await request.json()
@@ -19,8 +23,7 @@ export async function PUT(
             return NextResponse.json({ success: false, error: "Nome inválido" }, { status: 400 })
         }
 
-        // Call Repository
-        const updated = await updatePropriedadeName(parseInt(id), nome)
+        const updated = await updatePropriedadeName(parseInt(id), nome, tenantId)
 
         return NextResponse.json({ success: true, data: updated })
     } catch (error: any) {

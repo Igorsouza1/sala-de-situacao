@@ -5,10 +5,15 @@ import { acoesInMonitoramento, fotosAcoesInMonitoramento, NewAcoesData } from "@
 import { eq, desc, sql } from "drizzle-orm";
 
 
-export async function findAcaoById(id: number) {
+export async function findAcaoById(id: number, tenantId?: string | null) {
+  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+  const tenantFilter = effectiveTenantId
+    ? sql`AND a.tenant_id = ${effectiveTenantId}::uuid`
+    : sql``;
+
   // Uses raw SQL to perform spatial JOINs
   const query = sql`
-    SELECT 
+    SELECT
       a.*,
       p.nome as propriedade,
       p.cod_imovel as "propriedadeCodigo",
@@ -16,12 +21,11 @@ export async function findAcaoById(id: number) {
       ST_AsGeoJSON(ld.geom) as "banhadoGeoJson"
     FROM "monitoramento"."acoes" a
     LEFT JOIN "monitoramento"."propriedades" p ON ST_Intersects(p.geom, a.geom)
-    LEFT JOIN "monitoramento"."layer_data" ld 
+    LEFT JOIN "monitoramento"."layer_data" ld
       ON ld.layer_id = (SELECT id FROM "monitoramento"."layer_catalog" WHERE slug = 'banhado' LIMIT 1)
-      -- Alterado de ST_Intersects para ST_DWithin
-      -- Cast ::geography garante o cálculo em METROS
       AND ST_DWithin(ld.geom::geography, a.geom::geography, 5000)
     WHERE a.id = ${id}
+    ${tenantFilter}
   `;
 
   const result = await db.execute(query);
@@ -115,13 +119,19 @@ export async function deleteAcaoById(id: number) {
   return result
 }
 
-export async function updateAcaoById(id: number, data: any) {
+export async function updateAcaoById(id: number, data: any, tenantId?: string | null) {
+  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+
+  const whereClause = effectiveTenantId
+    ? sql`id = ${id} AND tenant_id = ${effectiveTenantId}::uuid`
+    : sql`id = ${id}`;
+
   const result = await db
     .update(acoesInMonitoramento)
     .set(data)
-    .where(eq(acoesInMonitoramento.id, id))
-    .execute()
-  return result
+    .where(whereClause)
+    .execute();
+  return result;
 }
 
 export async function addAcaoImageById(acaoId: number, url: string, descricao: string, atualizacao: Date) {

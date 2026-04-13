@@ -2,11 +2,17 @@ import { db } from "@/db";
 import { sql } from "drizzle-orm";
 
 
-export async function updatePropriedadeName(id: number, nome: string) {
+export async function updatePropriedadeName(id: number, nome: string, tenantId?: string | null) {
+  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+  const tenantFilter = effectiveTenantId
+    ? sql`AND tenant_id = ${effectiveTenantId}::uuid`
+    : sql``;
+
   return await db.execute(sql`
     UPDATE "monitoramento"."propriedades"
     SET nome = ${nome}
     WHERE id = ${id}
+    ${tenantFilter}
   `);
 }
 
@@ -56,10 +62,15 @@ export async function findAllPropriedadesDataWithGeometry(tenantId?: string | nu
   return result;
 }
 
-export async function findPropriedadeDossieData(id: number) {
+export async function findPropriedadeDossieData(id: number, tenantId?: string | null) {
+  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+  const tenantFilter = effectiveTenantId
+    ? sql`AND tenant_id = ${effectiveTenantId}::uuid`
+    : sql``;
+
   const query = sql`
     WITH prop AS (
-      SELECT * FROM "monitoramento"."propriedades" WHERE id = ${id}
+      SELECT * FROM "monitoramento"."propriedades" WHERE id = ${id} ${tenantFilter}
     )
     SELECT
       p.id,

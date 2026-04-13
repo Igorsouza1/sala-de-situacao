@@ -1,8 +1,12 @@
 import { apiError, apiSuccess } from "@/lib/api/responses"
 import { addAcaoUpdate, deleteAcaoItemHistoryById } from "@/lib/service/acoesService"
+import { requireAuthWithTenant } from "@/lib/api/require-auth"
 import { revalidateTag } from "next/cache"
 
 export async function POST(request: Request, context: any) {
+  const { response: authResponse } = await requireAuthWithTenant();
+  if (authResponse) return authResponse;
+
   try {
     const { id } = await context.params as { id: string }
     const acaoId = Number(id)
@@ -50,8 +54,11 @@ export async function POST(request: Request, context: any) {
 // DELETE /api/acoes/[id]/updates?updateId=123
 export async function DELETE(
   request: Request,
-  context: any, // <- mesmo esquema aqui
+  context: any,
 ) {
+  const { response: authResponse } = await requireAuthWithTenant();
+  if (authResponse) return authResponse;
+
   try {
     const { id } = await context.params as { id: string }
     const acaoId = Number(id)
