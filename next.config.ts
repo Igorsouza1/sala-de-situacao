@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  transpilePackages: ['shapefile'],
+  transpilePackages: ['shapefile', 'react-map-gl', 'maplibre-gl'],
   webpack: (config) => {
     config.resolve.fallback = { fs: false, path: false, stream: false };
     return config;

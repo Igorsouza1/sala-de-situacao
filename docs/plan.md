@@ -416,314 +416,330 @@ Com `NEXT_PUBLIC_MULTI_TENANT=false` (default), o `tenantId` usa o seed tenant e
 
 ---
 
-## Fase 3 — Layer Catalog Unificado (Semana 6-7) 🟠
+## Fase 3 — MapLibre Core: Engine Swap (Semana 6-7) 🟠
+
+> Troca o engine de renderização de Leaflet para MapLibre GL, consumindo a mesma API GeoJSON
+> existente. Nenhuma mudança no banco ou na API. Feature flag garante rollback imediato.
+>
+> **Por que antes do Catalog:** O `visual_config` do catalog precisa armazenar paint/layout JSON
+> no formato MapLibre. Fazer o engine swap primeiro permite projetar o schema corretamente na
+> Fase 4, sem precisar migrar dados depois.
+
+### 3.1 — Instalar dependências MapLibre
+
+```bash
+npm install maplibre-gl react-map-gl
+npm install --save-dev @types/maplibre-gl
+```
+
+Adicionar ao `next.config.js` (transpile necessário para react-map-gl):
+```js
+transpilePackages: ['react-map-gl', 'maplibre-gl'],
+```
+
+### 3.2 — Criar `MapLibreMap.tsx` paralelo ao Leaflet
+
+**Arquivo a criar:** `components/map/MapLibreMap.tsx`
+
+Consome a mesma API `/api/mapLayers` que o Leaflet usa hoje. Sem lazy loading ainda — isso vem
+na Fase 5. O objetivo aqui é paridade visual.
+
+```typescript
+'use client';
+import Map, { Source, Layer, NavigationControl } from 'react-map-gl/maplibre';
+import 'maplibre-gl/dist/maplibre-gl.css';
+import { useEffect, useState } from 'react';
+
+interface MapLibreMapProps {
+  center?: [number, number]; // [lng, lat]
+  zoom?: number;
+}
+
+export default function MapLibreMap({
+  center = [-56.694734, -21.327773],
+  zoom = 11,
+}: MapLibreMapProps) {
+  const [layers, setLayers] = useState<Record<string, GeoJSON.FeatureCollection>>({});
+
+  useEffect(() => {
+    fetch('/api/mapLayers')
+      .then(r => r.json())
+      .then(setLayers);
+  }, []);
+
+  return (
+    <Map
+      initialViewState={{ longitude: center[0], latitude: center[1], zoom }}
+      style={{ width: '100%', height: '100%' }}
+      mapStyle="https://demotiles.maplibre.org/style.json"
+    >
+      <NavigationControl position="top-right" />
+      {Object.entries(layers).map(([slug, data]) => (
+        <Source key={slug} id={slug} type="geojson" data={data}>
+          <Layer id={`${slug}-fill`} type="fill" paint={defaultPaint(slug)} />
+        </Source>
+      ))}
+    </Map>
+  );
+}
+
+function defaultPaint(slug: string) {
+  // Mapeamento provisório até o Layer Catalog (Fase 4) fornecer visual_config real
+  const palette: Record<string, string> = {
+    acoes: '#f97316', estradas: '#6b7280', desmatamento: '#dc2626',
+    raw_firms: '#f59e0b', propriedades: '#16a34a',
+  };
+  return { 'fill-color': palette[slug] ?? '#3b82f6', 'fill-opacity': 0.6 };
+}
+```
+
+### 3.3 — Feature flag e entry point unificado
+
+**Arquivo a criar:** `components/map/index.tsx`
+```typescript
+import { FEATURES } from '@/lib/feature-flags';
+import dynamic from 'next/dynamic';
+
+const LeafletMap = dynamic(() => import('./map'), { ssr: false });
+const MapLibreMap = dynamic(() => import('./MapLibreMap'), { ssr: false });
+
+export default function Map(props: MapProps) {
+  return FEATURES.MAP_ENGINE === 'maplibre'
+    ? <MapLibreMap {...props} />
+    : <LeafletMap {...props} />;
+}
+```
+
+Atualizar `app/page.tsx` para importar de `@/components/map` ao invés de `@/components/map/map`.
+
+`.env.local`:
+```
+NEXT_PUBLIC_MAP_ENGINE=maplibre   # trocar para leaflet para rollback
+```
+
+### 3.4 — Validação de paridade
+
+Conferir visualmente com `NEXT_PUBLIC_MAP_ENGINE=maplibre` que todas as layers renderizam
+corretamente. Não é necessário paridade de controles ainda (isso é Fase 5).
+
+---
+
+**Rollback Fase 3:** `NEXT_PUBLIC_MAP_ENGINE=leaflet` → Leaflet volta imediatamente. Nenhuma
+mudança de banco ou API para desfazer.  
+**Critério de avanço:** Todas as layers aparecem no MapLibre com cores corretas. Nenhuma regressão
+com `MAP_ENGINE=leaflet`. Dataset real de desmatamento renderiza sem travar.
+
+---
+
+## Fase 4 — Layer Catalog Unificado (Semana 8-9) 🟠
 
 > Refatora o sistema de camadas para ser data-driven, sem código hardcoded por entidade.
+> O `visual_config` usa formato MapLibre paint/layout JSON desde o início — sem retrabalho futuro.
 
-### 3.1 — Expandir `layer_catalog` com `schema_config` tipado
+### 4.1 — Seed dos slugs estáticos no catalog (com visual_config MapLibre-native)
+
+`visual_config` armazena diretamente os objetos `paint` e `layout` do MapLibre GL — sem
+tradução na hora de renderizar.
 
 **Migration:**
 ```sql
--- layer_catalog já tem schema_config e visual_config como JSONB
--- Garantir que os slugs estáticos existam no catalog
-
 INSERT INTO monitoramento.layer_catalog (slug, name, tenant_id, schema_config, visual_config, regiao_id)
-VALUES 
-  ('acoes', 'Ações', '<seed_tenant_id>', 
+VALUES
+  ('acoes', 'Ações', '<seed_tenant_id>',
    '{"sourceType":"table","tableName":"acoes","geometryColumn":"geom","filterColumns":["categoria","status","eixo_tematico"],"dateColumn":"time"}'::jsonb,
-   '{"color":"#f97316","opacity":0.8,"iconType":"map-pin","clusterRadius":50}'::jsonb,
+   '{"type":"circle","paint":{"circle-color":"#f97316","circle-radius":6,"circle-opacity":0.8},"cluster":{"enabled":true,"radius":50}}'::jsonb,
    1),
   ('estradas', 'Estradas', '<seed_tenant_id>',
    '{"sourceType":"table","tableName":"estradas","geometryColumn":"geom"}'::jsonb,
-   '{"color":"#6b7280","opacity":0.7,"strokeWidth":2}'::jsonb,
+   '{"type":"line","paint":{"line-color":"#6b7280","line-width":2,"line-opacity":0.7}}'::jsonb,
    1),
   ('desmatamento', 'Desmatamento', '<seed_tenant_id>',
    '{"sourceType":"table","tableName":"desmatamento","geometryColumn":"geom","filterColumns":["ano"],"dateColumn":"data"}'::jsonb,
-   '{"color":"#dc2626","opacity":0.5,"fillColor":"#fca5a5"}'::jsonb,
+   '{"type":"fill","paint":{"fill-color":"#dc2626","fill-opacity":0.5,"fill-outline-color":"#fca5a5"}}'::jsonb,
    1),
   ('raw_firms', 'Focos de Calor', '<seed_tenant_id>',
    '{"sourceType":"table","tableName":"raw_firms","geometryColumn":"geom","filterColumns":["satellite"],"dateColumn":"acq_date"}'::jsonb,
-   '{"color":"#f59e0b","opacity":0.9,"clusterRadius":40}'::jsonb,
+   '{"type":"circle","paint":{"circle-color":"#f59e0b","circle-radius":5,"circle-opacity":0.9},"cluster":{"enabled":true,"radius":40}}'::jsonb,
    1),
   ('propriedades', 'Propriedades', '<seed_tenant_id>',
-   '{"sourceType":"table","tableName":"propriedades","geometryColumn":"geom","filterColumns":[]}'::jsonb,
-   '{"color":"#16a34a","opacity":0.4,"fillColor":"#86efac"}'::jsonb,
+   '{"sourceType":"table","tableName":"propriedades","geometryColumn":"geom"}'::jsonb,
+   '{"type":"fill","paint":{"fill-color":"#16a34a","fill-opacity":0.4,"fill-outline-color":"#86efac"}}'::jsonb,
    1)
-ON CONFLICT (slug) DO UPDATE SET 
+ON CONFLICT (slug) DO UPDATE SET
   schema_config = EXCLUDED.schema_config,
   visual_config = EXCLUDED.visual_config;
 ```
 
-### 3.2 — Criar resolver de camadas genérico
+### 4.2 — Criar resolver de camadas genérico
 
 **Arquivo a criar:** `lib/service/layer-resolver.ts`
+
+**Atenção:** `tableName` vem do banco (catalog), não do usuário. Validar contra whitelist
+antes de qualquer interpolação para evitar SQL injection via dados corrompidos no catalog.
+
 ```typescript
-import { SchemaConfig, VisualConfig } from '@/types/layer-config';
+import { SchemaConfig } from '@/types/layer-config';
 import { db } from '@/db';
-import { sql, and, eq, gte, lte } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
+
+// Whitelist de tabelas válidas — tableName do catalog nunca vem do request do usuário
+const ALLOWED_TABLES = new Set([
+  'acoes', 'estradas', 'desmatamento', 'raw_firms',
+  'propriedades', 'layer_data',
+]);
 
 interface ResolveOptions {
   tenantId: string;
   startDate?: Date;
   endDate?: Date;
-  minArea?: number;
-  maxArea?: number;
-  zoom?: number;
-  bbox?: [number, number, number, number];
 }
 
 export async function resolveLayerData(
   schemaConfig: SchemaConfig,
   options: ResolveOptions
 ): Promise<GeoJSON.FeatureCollection> {
-  const { sourceType } = schemaConfig;
-  
-  switch (sourceType) {
-    case 'table':
-      return resolveTableLayer(schemaConfig, options);
-    case 'layer_data':
-      return resolveLayerDataSource(schemaConfig, options);
-    case 'static_file':
-      return fetchStaticFile(schemaConfig.url!);
-    default:
-      throw new Error(`Unsupported sourceType: ${sourceType}`);
+  switch (schemaConfig.sourceType) {
+    case 'table':      return resolveTableLayer(schemaConfig, options);
+    case 'layer_data': return resolveLayerDataSource(schemaConfig, options);
+    case 'static_file': return fetchStaticFile(schemaConfig.url!);
+    default: throw new Error(`Unsupported sourceType: ${schemaConfig.sourceType}`);
   }
 }
 
-async function resolveTableLayer(
-  config: SchemaConfig,
-  options: ResolveOptions
-): Promise<GeoJSON.FeatureCollection> {
+async function resolveTableLayer(config: SchemaConfig, options: ResolveOptions) {
   const { tableName, geometryColumn = 'geom', dateColumn } = config;
-  const { tenantId, startDate, endDate, zoom, bbox } = options;
-  
-  // Tolerância de simplificação baseada no zoom
-  const simplifyTolerance = zoom 
-    ? zoom >= 14 ? 0 : zoom >= 11 ? 0.0005 : 0.001
-    : 0;
-  
-  const geomExpr = simplifyTolerance > 0
-    ? `ST_AsGeoJSON(ST_Simplify(${geometryColumn}, ${simplifyTolerance}))`
-    : `ST_AsGeoJSON(${geometryColumn})`;
-  
-  const bboxFilter = bbox 
-    ? `AND ST_Intersects(${geometryColumn}, ST_MakeEnvelope(${bbox.join(',')}, 4674))`
-    : '';
-    
-  const dateFilter = dateColumn && startDate 
-    ? `AND ${dateColumn} >= '${startDate.toISOString()}'`
-    : '';
-  const dateFilterEnd = dateColumn && endDate
-    ? `AND ${dateColumn} <= '${endDate.toISOString()}'`
-    : '';
-  
-  const result = await db.execute(sql.raw(`
-    SELECT *, ${geomExpr} as geojson
-    FROM monitoramento.${tableName}
-    WHERE tenant_id = '${tenantId}'
-    ${bboxFilter}
-    ${dateFilter}
-    ${dateFilterEnd}
-  `));
-  
-  return toFeatureCollection(result.rows || result);
+  const { tenantId, startDate, endDate } = options;
+
+  if (!ALLOWED_TABLES.has(tableName)) {
+    throw new Error(`Table not allowed: ${tableName}`);
+  }
+
+  const result = await db.execute(sql`
+    SELECT id, properties,
+      ST_AsGeoJSON(${sql.identifier(geometryColumn)}) as geojson
+    FROM ${sql.identifier('monitoramento')}.${sql.identifier(tableName)}
+    WHERE tenant_id = ${tenantId}
+      ${startDate && dateColumn ? sql`AND ${sql.identifier(dateColumn)} >= ${startDate}` : sql``}
+      ${endDate && dateColumn ? sql`AND ${sql.identifier(dateColumn)} <= ${endDate}` : sql``}
+  `);
+
+  return toFeatureCollection(result.rows);
 }
 ```
 
-### 3.3 — Refatorar `layerService.ts` para usar o resolver
+### 4.3 — Refatorar `layerService.ts` para usar o resolver
 
-**Arquivo:** `lib/service/layerService.ts`
+Substituir `STATIC_STRATEGIES` hardcoded pelo resolver genérico:
 
-Substituir o `STATIC_STRATEGIES` hardcoded:
 ```typescript
-// ANTES: cada entidade tem sua própria estratégia
-const STATIC_STRATEGIES: Record<string, ...> = {
-  "acoes": async (...) => { ... },
-  "estradas": async (...) => { ... },
-  // ...
-};
-
-// DEPOIS: resolver genérico lê o catalog
 export async function getAllLayers(
   tenantId: string,
   startDate?: Date,
   endDate?: Date,
-  minArea?: number,
-  maxArea?: number
 ): Promise<LayerResponseDTO[]> {
   const catalog = await getLayerCatalog(tenantId);
-  
+
   const results = await Promise.allSettled(
     catalog.map(async (entry) => {
       const schemaConfig = entry.schemaConfig as SchemaConfig;
-      const visualConfig = entry.visualConfig as VisualConfig;
-      
-      // sourceType 'mvt' retorna apenas URL, não dados
-      if (schemaConfig.sourceType === 'mvt') {
-        return buildMvtLayerDTO(entry, visualConfig);
-      }
-      
-      const geoData = await resolveLayerData(schemaConfig, { 
-        tenantId, startDate, endDate, minArea, maxArea 
-      });
-      
-      return buildLayerDTO(entry, geoData, visualConfig);
+      const geoData = await resolveLayerData(schemaConfig, { tenantId, startDate, endDate });
+      return buildLayerDTO(entry, geoData);
     })
   );
-  
+
   return results
     .filter(r => r.status === 'fulfilled')
     .map(r => (r as PromiseFulfilledResult<LayerResponseDTO>).value);
 }
 ```
 
-### 3.4 — API para gerenciar layer catalog (admin)
+O `MapLibreMap.tsx` (criado na Fase 3) lê o `visual_config` diretamente do catalog e passa o
+objeto `paint` para `<Layer>` sem tradução — o formato já está correto.
+
+### 4.4 — API CRUD para gerenciar layer catalog (admin)
 
 **Arquivo a criar:** `app/api/admin/layer-catalog/route.ts`
 ```typescript
-// GET /api/admin/layer-catalog — lista camadas do tenant
-// POST /api/admin/layer-catalog — cria nova camada
-// PUT /api/admin/layer-catalog/[slug] — atualiza camada
-// DELETE /api/admin/layer-catalog/[slug] — remove camada
+// GET    /api/admin/layer-catalog          — lista camadas do tenant
+// POST   /api/admin/layer-catalog          — cria nova camada
+// PUT    /api/admin/layer-catalog/[slug]   — atualiza camada
+// DELETE /api/admin/layer-catalog/[slug]   — remove camada
 ```
 
-### 3.5 — Adicionar `properties JSONB` nas tabelas de entidade
+### 4.5 — Adicionar `properties JSONB` nas tabelas de entidade
 
 ```sql
-ALTER TABLE monitoramento.acoes ADD COLUMN IF NOT EXISTS properties JSONB;
+ALTER TABLE monitoramento.acoes        ADD COLUMN IF NOT EXISTS properties JSONB;
 ALTER TABLE monitoramento.propriedades ADD COLUMN IF NOT EXISTS properties JSONB;
 ALTER TABLE monitoramento.desmatamento ADD COLUMN IF NOT EXISTS properties JSONB;
 
-CREATE INDEX idx_acoes_properties ON monitoramento.acoes USING gin(properties);
+CREATE INDEX idx_acoes_properties        ON monitoramento.acoes        USING gin(properties);
 CREATE INDEX idx_propriedades_properties ON monitoramento.propriedades USING gin(properties);
 ```
 
 ---
 
-**Rollback Fase 3:** Restaurar `layerService.ts` da versão anterior. A API `/api/map/layers` continua com a mesma interface — o rollback é transparente para o frontend.  
-**Critério de avanço:** Admin pode adicionar nova camada via UI sem deploy. API `/api/map/layers` retorna a nova camada.
+**Rollback Fase 4:** Restaurar `layerService.ts` da versão anterior. A API `/api/map/layers`
+mantém a mesma interface — rollback transparente para o frontend.  
+**Critério de avanço:** Admin pode adicionar nova camada via UI sem deploy. Layer nova aparece
+no mapa. Tenant isolation: layer de tenant A não aparece para tenant B.
 
 ---
 
-## Fase 4 — MapLibre GL: Migração do Mapa Principal (Semana 8-10) 🟡
+## Fase 5 — MapLibre Avançado: Performance e Controles (Semana 10-11) 🟡
 
-> Substitui Leaflet por MapLibre GL com lazy loading e clustering. Leaflet fica disponível via feature flag.
+> Adiciona lazy loading, clustering, vector tiles (MVT) e porta todos os controles do Leaflet.
+> Executada depois que o Layer Catalog está estável e o visual_config está em uso real.
 
-### 4.1 — Criar componente `MapLibreMap` paralelo
+### 5.1 — Lazy loading de layers
 
-**Arquivo a criar:** `components/map/MapLibreMap.tsx`
+Atualizar `MapLibreMap.tsx` para carregar dados apenas quando a camada é ativada:
 
-Estrutura de componente que replica a API externa de `map.tsx`:
 ```typescript
-interface MapLibreMapProps {
-  center?: [number, number]; // [lng, lat]
-  zoom?: number;
-}
+const [loadedLayers, setLoadedLayers] = useState<Record<string, GeoJSON.FeatureCollection>>({});
+const [activeLayers, setActiveLayers] = useState<Set<string>>(new Set());
 
-export default function MapLibreMap({ 
-  center = [-56.694734, -21.327773],
-  zoom = 11 
-}: MapLibreMapProps) {
-  // Map State
-  const [loadedLayers, setLoadedLayers] = useState<Record<string, GeoJSON.FeatureCollection>>({});
-  const [activeLayers, setActiveLayers] = useState<Set<string>>(new Set());
-  const mapRef = useRef<MapRef>(null);
-  
-  // Lazy load: só busca quando camada é ativada
-  const toggleLayer = useCallback(async (slug: string, catalogEntry: LayerCatalogEntry) => {
-    if (activeLayers.has(slug)) {
-      setActiveLayers(prev => { const s = new Set(prev); s.delete(slug); return s; });
-      return;
-    }
-    
-    if (!loadedLayers[slug]) {
-      // Buscar dados apenas agora
-      const data = await fetchLayerData(slug, { zoom: mapRef.current?.getZoom() });
-      setLoadedLayers(prev => ({ ...prev, [slug]: data }));
-    }
-    setActiveLayers(prev => new Set([...prev, slug]));
-  }, [activeLayers, loadedLayers]);
-  
-  // ... render com react-map-gl Map + Sources + Layers
-}
-```
-
-**Suporte a sourceType no MapLibre:**
-```typescript
-function renderSource(entry: LayerCatalogEntry, data?: GeoJSON.FeatureCollection) {
-  const { schemaConfig, visualConfig } = entry;
-  
-  if (schemaConfig.sourceType === 'mvt') {
-    return (
-      <Source type="vector" tiles={[schemaConfig.mvtEndpoint!]} key={entry.slug}>
-        <Layer type="fill" paint={{ 'fill-color': visualConfig.color }} />
-      </Source>
-    );
+const toggleLayer = useCallback(async (slug: string) => {
+  if (activeLayers.has(slug)) {
+    setActiveLayers(prev => { const s = new Set(prev); s.delete(slug); return s; });
+    return;
   }
-  
-  const isPoint = data?.features?.[0]?.geometry?.type === 'Point';
-  return (
-    <Source 
-      type="geojson" 
-      data={data!}
-      cluster={isPoint}
-      clusterRadius={visualConfig.clusterRadius ?? 50}
-      key={entry.slug}
-    >
-      {isPoint ? (
-        <Layer type="circle" paint={{ 
-          'circle-color': visualConfig.color,
-          'circle-radius': 6 
-        }} />
-      ) : (
-        <Layer type="fill" paint={{ 
-          'fill-color': visualConfig.fillColor ?? visualConfig.color,
-          'fill-opacity': visualConfig.opacity 
-        }} />
-      )}
-    </Source>
-  );
-}
+  if (!loadedLayers[slug]) {
+    const data = await fetch(`/api/map/layers/${slug}`).then(r => r.json());
+    setLoadedLayers(prev => ({ ...prev, [slug]: data }));
+  }
+  setActiveLayers(prev => new Set([...prev, slug]));
+}, [activeLayers, loadedLayers]);
 ```
 
-### 4.2 — Port das funcionalidades de controle
-
-Para cada controle existente, criar versão MapLibre:
-
-| Controle Leaflet | Controle MapLibre | Estratégia |
-|---|---|---|
-| `DateFilterControl` | Manter componente, passa `onChange` para reload | Compatível sem mudança |
-| `PropertyFilterControl` | Manter componente | Compatível sem mudança |
-| `MeasureControl` | `MaplibreMeasureControl` | Usar `turf/length` + draw points no click |
-| `CoordinateInspector` | `MaplibreCoordinateInspector` | `onMouseMove` do `react-map-gl` |
-| `SnapshotControl` | `MaplibreSnapshotControl` | `map.getCanvas().toDataURL()` |
-| `FaunaHeatmapControl` | Layer nativo `heatmap` do MapLibre | Mais simples que Leaflet |
-
-### 4.3 — Endpoint de Vector Tiles (MVT)
+### 5.2 — Endpoint de Vector Tiles (MVT) para datasets grandes
 
 **Arquivo a criar:** `app/api/tiles/[slug]/[z]/[x]/[y]/route.ts`
+
+Usar para layers com >5k features. O `schema_config` sinaliza quando usar MVT:
+`"sourceType":"mvt"`.
+
 ```typescript
 export const maxDuration = 30;
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { slug: string; z: string; x: string; y: string } }
-) {
+export async function GET(request, { params }) {
   const { user, tenantId, response } = await requireAuthWithTenant();
   if (response) return response;
-  
+
   const { slug, z, x, y } = params;
   const catalog = await getLayerCatalogBySlug(slug, tenantId);
   if (!catalog) return NextResponse.json({ error: 'Layer not found' }, { status: 404 });
-  
+
   const { tableName, geometryColumn = 'geom' } = catalog.schemaConfig as SchemaConfig;
-  
+
+  if (!ALLOWED_TABLES.has(tableName)) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
   const tile = await db.execute(sql`
-    SELECT ST_AsMVT(tile, ${slug}, 4096, 'geom') 
+    SELECT ST_AsMVT(tile, ${slug}, 4096, 'geom')
     FROM (
-      SELECT 
-        id,
-        properties,
+      SELECT id, properties,
         ST_AsMVTGeom(
           ${sql.identifier(geometryColumn)},
           ST_TileEnvelope(${parseInt(z)}, ${parseInt(x)}, ${parseInt(y)}),
@@ -737,90 +753,64 @@ export async function GET(
         )
     ) tile
   `);
-  
-  const mvtBuffer = (tile.rows[0] as any)['st_asmvt'];
-  
-  return new Response(mvtBuffer, {
+
+  return new Response((tile.rows[0] as any)['st_asmvt'], {
     headers: {
       'Content-Type': 'application/x-protobuf',
       'Cache-Control': 'public, max-age=300',
-    }
+    },
   });
 }
 ```
 
-### 4.4 — Feature Flag e switch entre engines
+### 5.3 — Port dos controles
 
-**Arquivo:** `components/map/index.tsx` (novo entry point)
-```typescript
-import { FEATURES } from '@/lib/feature-flags';
-import dynamic from 'next/dynamic';
+| Controle Leaflet | Controle MapLibre | Estratégia |
+|---|---|---|
+| `DateFilterControl` | Manter, passa `onChange` para reload de layer | Compatível sem mudança |
+| `PropertyFilterControl` | Manter | Compatível sem mudança |
+| `MeasureControl` | `MaplibreMeasureControl` | `turf/length` + click handler no mapa |
+| `CoordinateInspector` | `MaplibreCoordinateInspector` | `onMouseMove` do `react-map-gl` |
+| `SnapshotControl` | `MaplibreSnapshotControl` | `map.getCanvas().toDataURL()` |
+| `FaunaHeatmapControl` | Layer nativa `heatmap` do MapLibre | Mais simples que Leaflet |
 
-const LeafletMap = dynamic(() => import('./map'), { ssr: false });
-const MapLibreMap = dynamic(() => import('./MapLibreMap'), { ssr: false });
+### 5.4 — Remover Leaflet
 
-export default function Map(props: MapProps) {
-  if (FEATURES.MAP_ENGINE === 'maplibre') {
-    return <MapLibreMap {...props} />;
-  }
-  return <LeafletMap {...props} />;
-}
-```
-
-Atualizar `app/page.tsx` para importar de `@/components/map` ao invés de `@/components/map/map`.
-
-### 4.5 — Atualizar API de layers para suportar bbox e zoom
-
-**Arquivo:** `app/api/map/layers/route.ts` (adicionar parâmetros)
-```typescript
-const zoomParam = searchParams.get('zoom');
-const bboxParam = searchParams.get('bbox'); // "minLng,minLat,maxLng,maxLat"
-
-const zoom = zoomParam ? parseInt(zoomParam) : undefined;
-const bbox = bboxParam 
-  ? bboxParam.split(',').map(Number) as [number, number, number, number]
-  : undefined;
-```
-
-### 4.6 — Remover Leaflet (última etapa)
-
-Após validação completa do MapLibre em produção por 2 semanas:
+Após 2 semanas de validação em produção com MapLibre:
 ```bash
-# Remover dependências
 npm uninstall leaflet react-leaflet @types/leaflet
-
-# Remover arquivos Leaflet-específicos
-# (conferir cada um antes de deletar)
+# Remover components/map/map.tsx e imports Leaflet-específicos
 ```
 
 ---
 
-**Rollback Fase 4:** `NEXT_PUBLIC_MAP_ENGINE=leaflet` → reverte para Leaflet. O Leaflet permanece funcional até a etapa 4.6.  
-**Critério de avanço:** Mapa MapLibre tem paridade de funcionalidades com Leaflet. Performance > 10.000 features sem lag verificada.
+**Rollback Fase 5:** `NEXT_PUBLIC_MAP_ENGINE=leaflet` enquanto Leaflet não for removido.  
+**Critério de avanço:** Lazy loading validado (0 fetch no boot). MVT benchmark com dataset real.
+Todos os controles com paridade funcional. Performance >10k features sem lag.
 
 ---
 
-## Fase 5 — Hardening e Produção (Semana 11-12) 🟢
+## Fase 6 — Hardening e Produção (Semana 12-13) 🟢
 
-### 5.1 — Testes de regressão completos
+### 6.1 — Testes de regressão completos
 
 - Criar testes Jest para todos os repositories com `tenantId`
 - Testar IDOR: verificar que usuário de tenant A não acessa tenant B
 - Testar lazy loading: verificar que nenhum fetch acontece no boot do mapa
 
-### 5.2 — Rate limiting em rotas públicas
+### 6.2 — Rate limiting em rotas públicas
 
 **Arquivo a criar:** `lib/api/rate-limit.ts`
 
 Usar `@upstash/ratelimit` (Redis via Upstash) ou implementação simples com cache em memória para `/api/javali-avistamentos/report`.
 
-### 5.3 — Onboarding de tenants
+### 6.3 — Onboarding de tenants
 
 **Arquivo a criar:** `app/api/admin/tenants/route.ts`
 - POST para criar novo tenant
 - Popula `app_metadata.tenant_id` no usuário via Supabase Admin SDK
 
-### 5.4 — Monitoramento de performance
+### 6.4 — Monitoramento de performance
 
 Adicionar logs de tempo de execução nas queries pesadas:
 ```typescript
@@ -852,26 +842,33 @@ Fase 2 — Tenant no Runtime
   [ ] Ownership check em rotas [id]
   [ ] Feature flag testada (on/off)
 
-Fase 3 — Layer Catalog Unificado
-  [ ] Slugs estáticos no catalog
-  [ ] layer-resolver.ts funcionando
-  [ ] layerService.ts refatorado
+Fase 3 — MapLibre Core (Engine Swap)
+  [ ] maplibre-gl + react-map-gl instalados
+  [ ] MapLibreMap.tsx criado consumindo /api/mapLayers
+  [ ] Feature flag NEXT_PUBLIC_MAP_ENGINE funcionando
+  [ ] Todas as layers renderizam corretamente
+  [ ] Leaflet funciona com MAP_ENGINE=leaflet (rollback ok)
+
+Fase 4 — Layer Catalog Unificado
+  [ ] visual_config em formato MapLibre paint/layout JSON
+  [ ] Slugs estáticos seedados no catalog
+  [ ] layer-resolver.ts com whitelist de tabelas
+  [ ] layerService.ts refatorado (STATIC_STRATEGIES removido)
   [ ] Nova camada adicionada via admin sem deploy
+  [ ] Tenant isolation verificada
 
-Fase 4 — MapLibre GL
-  [ ] MapLibreMap.tsx criado
+Fase 5 — MapLibre Avançado
   [ ] Lazy loading funcionando (0 fetch no boot)
-  [ ] Clustering ativo em layers de pontos
+  [ ] Clustering ativo em layers de pontos (via visual_config)
   [ ] Endpoint MVT funcionando
-  [ ] Feature flag testada (leaflet/maplibre)
   [ ] Todos os controles portados
-  [ ] Performance 10k features validada
+  [ ] Performance >10k features validada
+  [ ] Leaflet removido
 
-Fase 5 — Produção
+Fase 6 — Produção
   [ ] Testes regressão passando
   [ ] Rate limiting em rotas públicas
   [ ] Onboarding de tenant funcional
-  [ ] Leaflet removido (opcional)
 ```
 
 ---
@@ -881,23 +878,30 @@ Fase 5 — Produção
 | Risco | Probabilidade | Mitigação |
 |---|---|---|
 | Migration de banco com dados em produção falha | Média | Testar migration em branch Supabase antes. Usar `CONCURRENTLY` nos índices |
-| Funcionalidade do Leaflet sem equivalente no MapLibre | Baixa | Feature flag mantém Leaflet disponível. Investigar antes de iniciar Fase 4 |
-| Performance MVT pior que GeoJSON para datasets pequenos | Média | MVT apenas para datasets > 5.000 features; configurável por camada |
+| Funcionalidade do Leaflet sem equivalente no MapLibre | Baixa | Feature flag mantém Leaflet disponível até Fase 5.4. Investigar antes de iniciar Fase 5 |
+| Performance MVT pior que GeoJSON para datasets pequenos | Média | MVT apenas para datasets > 5.000 features; configurável por camada no schema_config |
 | Tenant seed não populado no JWT de usuário existente | Alta | Script de seed obrigatório antes de ativar `NEXT_PUBLIC_MULTI_TENANT=true` |
-| layer-resolver com SQL dinâmico introduz injection | Média | Validar `tableName` e `geometryColumn` via whitelist do layer_catalog; nunca aceitar input do cliente direto |
+| layer-resolver com SQL dinâmico introduz injection | Média | Whitelist `ALLOWED_TABLES` no resolver; `sql.identifier()` para nomes de coluna; tableName nunca vem do request |
+| visual_config com formato errado bloqueia renderização | Baixa | Validar schema JSONB no admin CRUD antes de salvar; fallback no MapLibreMap para layers com config inválida |
 
 ---
 
 ## Dependências entre Fases
 
 ```
-Fase 0 ──────────────────────────────────┐
-                                          │
-Fase 1 (banco) ──► Fase 2 (runtime) ────►│
-                                          │
-Fase 3 (catalog) ──────────────────────► Fase 5
-                                          │
-Fase 4 (MapLibre) ─────────────────────►│
+Fase 0 ──────────────────────────────────────────────────────────┐
+                                                                  │
+Fase 1 (banco) ──► Fase 2 (runtime) ──► Fase 3 (MapLibre Core) ──►│
+                                              │                   │
+                                              ▼                   │
+                                        Fase 4 (Catalog) ────────►│
+                                              │                   │
+                                              ▼                   │
+                                        Fase 5 (MapLibre Avançado) ► Fase 6
 ```
 
-Fase 0 deve ser completa antes de qualquer outra. Fase 1 bloqueia Fase 2. Fases 3 e 4 são paralelas entre si (dependem apenas de Fase 2 estar em andamento).
+- **Fase 0** bloqueia tudo.
+- **Fase 3** (MapLibre Core) pode começar depois de Fase 2 — não depende de banco nem API.
+- **Fase 4** (Catalog) depende de Fase 3 estar rodando para projetar o `visual_config` correto.
+- **Fase 5** (MapLibre Avançado) depende de Fase 4 — precisa do catalog estável para lazy loading e MVT.
+- **Fase 6** só começa após Fase 5 validada.

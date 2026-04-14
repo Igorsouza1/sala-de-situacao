@@ -2,7 +2,7 @@
 
 import dynamic from 'next/dynamic';
 
-const DynamicMap = dynamic(() => import('../../components/map/map'), { ssr: false });
+const DynamicMap = dynamic(() => import('../../components/map'), { ssr: false });
 // import tipagem do schema
 type GeoJSONFeatureCollection = {
     type: "FeatureCollection"
