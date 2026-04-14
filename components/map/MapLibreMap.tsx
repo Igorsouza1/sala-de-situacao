@@ -49,59 +49,71 @@ export default function MapLibreMap({
     >
       <NavigationControl position="top-right" />
 
-      {layers.map(layer => {
-        if (!layer.data?.features?.length) return null;
+      {layers.flatMap(layer => {
+        if (!layer.data?.features?.length) return [];
 
         const vc = layer.visualConfig;
         const style = vc?.baseStyle ?? vc;
         const firstFeature = layer.data.features[0] as any;
         const layerType = resolveLayerType(style, firstFeature);
 
-        return (
+        const source = (
           <Source
-            key={layer.slug}
+            key={`src-${layer.slug}`}
             id={layer.slug}
             type="geojson"
             data={layer.data as any}
-          >
-            {layerType === 'fill' && (
-              <>
-                <Layer
-                  id={`${layer.slug}-fill`}
-                  source={layer.slug}
-                  type="fill"
-                  paint={toFillPaint(style)}
-                />
-                <Layer
-                  id={`${layer.slug}-outline`}
-                  source={layer.slug}
-                  type="line"
-                  paint={{
-                    'line-color': style?.color ?? '#3b82f6',
-                    'line-width': style?.weight ?? 1,
-                    'line-opacity': (style?.opacity ?? 0.8),
-                  }}
-                />
-              </>
-            )}
-            {layerType === 'circle' && (
-              <Layer
-                id={`${layer.slug}-circle`}
-                source={layer.slug}
-                type="circle"
-                paint={toCirclePaint(style)}
-              />
-            )}
-            {layerType === 'line' && (
-              <Layer
-                id={`${layer.slug}-line`}
-                source={layer.slug}
-                type="line"
-                paint={toLinePaint(style)}
-              />
-            )}
-          </Source>
+          />
         );
+
+        if (layerType === 'fill') {
+          return [
+            source,
+            <Layer
+              key={`${layer.slug}-fill`}
+              id={`${layer.slug}-fill`}
+              source={layer.slug}
+              type="fill"
+              paint={toFillPaint(style)}
+            />,
+            <Layer
+              key={`${layer.slug}-outline`}
+              id={`${layer.slug}-outline`}
+              source={layer.slug}
+              type="line"
+              paint={{
+                'line-color': style?.color ?? '#3b82f6',
+                'line-width': style?.weight ?? 1,
+                'line-opacity': style?.opacity ?? 0.8,
+              }}
+            />,
+          ];
+        }
+
+        if (layerType === 'circle') {
+          return [
+            source,
+            <Layer
+              key={`${layer.slug}-circle`}
+              id={`${layer.slug}-circle`}
+              source={layer.slug}
+              type="circle"
+              paint={toCirclePaint(style)}
+            />,
+          ];
+        }
+
+        // line
+        return [
+          source,
+          <Layer
+            key={`${layer.slug}-line`}
+            id={`${layer.slug}-line`}
+            source={layer.slug}
+            type="line"
+            paint={toLinePaint(style)}
+          />,
+        ];
       })}
     </Map>
   );
