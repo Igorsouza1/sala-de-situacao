@@ -686,12 +686,31 @@ no mapa. Tenant isolation: layer de tenant A não aparece para tenant B.
 
 ---
 
-## Fase 5 — MapLibre Avançado: Performance e Controles (Semana 10-11) 🟡
+## Fase 5 — MapLibre Avançado: Performance e Controles (Semanas 10-13) 🟡
 
-> Adiciona lazy loading, clustering, vector tiles (MVT) e porta todos os controles do Leaflet.
-> Executada depois que o Layer Catalog está estável e o visual_config está em uso real.
+> Porta toda a funcionalidade do Leaflet para MapLibre e adiciona lazy loading, clustering e
+> vector tiles. O Leaflet permanece operacional via feature flag durante toda esta fase —
+> **não remover antes de 5.8 estar validado em produção**.
+>
+> **Inventário completo do Leaflet atual (obrigatório portar antes de remover):**
+> Filtro por data · Filtro por tamanho de propriedade · Troca de basemap (satélite/mapa) ·
+> LayerManager (toggle, grupos, toggle-all) · Heatmap de fauna (javali) · Medir linhas ·
+> Medir shapes (área) · Inspetor de coordenadas · Print/snapshot · Reload de dados ·
+> ShapefileUploader · Popups/tooltips por feature · Modal de detalhes · Modal de edição de ação ·
+> Renderização correta de geometria (fill=polígono, line=linha, circle=ponto).
 
-### 5.1 — Lazy loading de layers
+### 5.1 — Corrigir renderização de geometria (LineString → tipo `line`)
+
+> **Bloqueante visual.** O `resolveLayerType` atual pode classificar `LineString` como `fill`
+> dependendo do `visual_config`. Verificar que todas as camadas do tipo linha (estradas, rios)
+> usam `type: 'line'` no catalog e que `resolveLayerType` prioriza a geometria GeoJSON quando
+> o `visual_config` não especifica tipo explícito.
+
+- Auditar slugs no catalog: `estradas`, `rios`, `bacias` devem ter `type: 'line'` no `visual_config`
+- Adicionar teste unitário no `maplibre-layer.test.ts` cobrindo `MultiPolygon` → `fill`
+- Validar visualmente cada tipo de geometria no mapa com `MAP_ENGINE=maplibre`
+
+### 5.2 — Lazy loading de layers
 
 Atualizar `MapLibreMap.tsx` para carregar dados apenas quando a camada é ativada:
 
@@ -712,7 +731,7 @@ const toggleLayer = useCallback(async (slug: string) => {
 }, [activeLayers, loadedLayers]);
 ```
 
-### 5.2 — Endpoint de Vector Tiles (MVT) para datasets grandes
+### 5.3 — Endpoint de Vector Tiles (MVT) para datasets grandes
 
 **Arquivo a criar:** `app/api/tiles/[slug]/[z]/[x]/[y]/route.ts`
 
@@ -763,30 +782,93 @@ export async function GET(request, { params }) {
 }
 ```
 
-### 5.3 — Port dos controles
+### 5.4 — LayerManager + sistema de visibilidade
 
-| Controle Leaflet | Controle MapLibre | Estratégia |
-|---|---|---|
-| `DateFilterControl` | Manter, passa `onChange` para reload de layer | Compatível sem mudança |
-| `PropertyFilterControl` | Manter | Compatível sem mudança |
-| `MeasureControl` | `MaplibreMeasureControl` | `turf/length` + click handler no mapa |
-| `CoordinateInspector` | `MaplibreCoordinateInspector` | `onMouseMove` do `react-map-gl` |
-| `SnapshotControl` | `MaplibreSnapshotControl` | `map.getCanvas().toDataURL()` |
-| `FaunaHeatmapControl` | Layer nativa `heatmap` do MapLibre | Mais simples que Leaflet |
+Portar o `LayerManager` existente para funcionar com `MapLibreMap`:
 
-### 5.4 — Remover Leaflet
+| Item | Estratégia |
+|---|---|
+| Toggle individual de layer | `activeLayers: Set<string>` no estado do `MapLibreMap` |
+| Toggle de grupo (`slug__value`) | Manter lógica de `visibleDynamicLayers` do Leaflet — é React puro |
+| Toggle-all | Manter — independente do engine |
+| Sidebar com categorias | Componente `LayerManager` existente é reutilizável sem alteração |
 
-Após 2 semanas de validação em produção com MapLibre:
+O `LayerManager` recebe callbacks `onLayerToggle`, `onGroupToggle`, `onToggleAll` —
+esses callbacks são independentes de engine e já funcionam com estado React.
+
+### 5.5 — Basemap switcher (satélite / mapa base)
+
+O Leaflet usa `TileLayer` trocável. No MapLibre a troca é feita alterando o `mapStyle`:
+
+```typescript
+const BASEMAPS = {
+  streets: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+  satellite: 'https://api.maptiler.com/maps/hybrid/style.json?key=...',
+} as const;
+
+const [basemap, setBasemap] = useState<keyof typeof BASEMAPS>('streets');
+
+// No componente:
+<Map mapStyle={BASEMAPS[basemap]} ...>
+```
+
+Criar `BasemapControl` equivalente ao `CustomLayerControl` do Leaflet.
+A API key do MapTiler deve ir para variável de ambiente `NEXT_PUBLIC_MAPTILER_KEY`.
+
+### 5.6 — Controles de interação
+
+| Controle Leaflet | Arquivo atual | Controle MapLibre | Estratégia |
+|---|---|---|---|
+| `DateFilterControl` | `components/map/DateFilterControl.tsx` | Reutilizar sem alteração | Componente React puro, passa `onChange` |
+| `PropertyFilterControl` | `components/map/PropertyFilterControl.tsx` | Reutilizar sem alteração | Componente React puro |
+| `FaunaHeatmapControl` | `components/map/FaunaHeatmapControl.tsx` | Layer nativa `heatmap` MapLibre | Substituir plugin Leaflet por layer type `heatmap` |
+| `MeasureControl` (linhas) | `components/map/MeasureControl.tsx` | `MaplibreMeasureControl` | `turf/length` + `onClick` no mapa |
+| `MeasureControl` (área) | idem | idem | `turf/area` + polígono desenhado via clicks |
+| `CoordinateInspector` | `components/map/CoordinateInspector.tsx` | `MaplibreCoordinateInspector` | `onMouseMove` do `react-map-gl` |
+| `SnapshotControl` | `components/map/SnapshotControl.tsx` | `MaplibreSnapshotControl` | `map.getCanvas().toDataURL()` |
+| `CustomZoomControl` | `components/map/CustomZoomControl.tsx` | `NavigationControl` do react-map-gl | Já incluído na Fase 3 |
+| Reload button | inline em `map.tsx` | Inline em `MapLibreMap.tsx` | Reusar lógica `fetchLayers()` |
+| `ShapefileUploader` | `components/map/ShapefileUploader.tsx` | Reutilizar + adicionar Source/Layer preview | Troca `GeoJSON` Leaflet por `<Source>/<Layer>` |
+
+### 5.7 — Popups, tooltips e modais
+
+O sistema de modal (`Modal`, `EditAcaoModal`, `FeatureDetails`) é React puro e independente
+de engine. A diferença está em como capturar o click na feature:
+
+```typescript
+// Leaflet: onEachFeature → l.on('click', ...)
+// MapLibre: evento no mapa filtrado por layer id
+<Map
+  onClick={(e) => {
+    const features = e.features; // requer interactiveLayerIds
+    if (!features?.length) return;
+    const props = features[0].properties;
+    handleFeatureClick(props, features[0].layer.id);
+  }}
+  interactiveLayerIds={activeLayers.flatMap(slug => [`${slug}-fill`, `${slug}-circle`, `${slug}-line`])}
+>
+```
+
+Tooltips: substituir `bindTooltip` do Leaflet pelo componente `Popup` do `react-map-gl`
+com estado controlado (`hoveredFeature`).
+
+### 5.8 — Remover Leaflet
+
+Pré-requisito: todas as tasks 5.1–5.7 validadas em produção por pelo menos 1 semana.
+
 ```bash
 npm uninstall leaflet react-leaflet @types/leaflet
-# Remover components/map/map.tsx e imports Leaflet-específicos
+# Remover: components/map/map.tsx
+# Remover: imports Leaflet-específicos em CustomZoomControl, CustomLayerControl, etc.
+# Atualizar: components/map/index.tsx — remover branch leaflet do feature flag
 ```
 
 ---
 
-**Rollback Fase 5:** `NEXT_PUBLIC_MAP_ENGINE=leaflet` enquanto Leaflet não for removido.  
-**Critério de avanço:** Lazy loading validado (0 fetch no boot). MVT benchmark com dataset real.
-Todos os controles com paridade funcional. Performance >10k features sem lag.
+**Rollback Fase 5:** `NEXT_PUBLIC_MAP_ENGINE=leaflet` enquanto Leaflet não for removido (até 5.8).  
+**Critério de avanço para 5.8:** Lazy loading validado (0 fetch no boot). Todos os controles
+com paridade funcional e testados manualmente. Performance >10k features sem lag.
+MVT benchmark com dataset real de desmatamento.
 
 ---
 
@@ -858,12 +940,15 @@ Fase 4 — Layer Catalog Unificado
   [ ] Tenant isolation verificada
 
 Fase 5 — MapLibre Avançado
-  [ ] Lazy loading funcionando (0 fetch no boot)
-  [ ] Clustering ativo em layers de pontos (via visual_config)
-  [ ] Endpoint MVT funcionando
-  [ ] Todos os controles portados
-  [ ] Performance >10k features validada
-  [ ] Leaflet removido
+  [ ] 5.1 — Geometrias renderizando com tipo correto (line≠fill)
+  [ ] 5.2 — Lazy loading funcionando (0 fetch no boot)
+  [ ] 5.3 — Endpoint MVT funcionando
+  [ ] 5.4 — LayerManager + toggle/grupos/toggle-all
+  [ ] 5.5 — Basemap switcher (satélite / mapa base)
+  [ ] 5.6 — Controles portados: DateFilter, PropertyFilter, FaunaHeatmap,
+             Measure (linha+área), CoordinateInspector, Snapshot, Reload, ShapefileUploader
+  [ ] 5.7 — Popups, tooltips e modais (feature click + EditAção)
+  [ ] 5.8 — Leaflet removido (pré-req: 5.1–5.7 validados em produção ≥1 semana)
 
 Fase 6 — Produção
   [ ] Testes regressão passando
