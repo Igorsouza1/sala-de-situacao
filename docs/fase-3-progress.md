@@ -5,13 +5,13 @@
 ## Checklist
 
 - [X] **3.0** — Criar arquivo de progresso
-- [ ] **3.1** — Adicionar `react-map-gl` a `transpilePackages` no `next.config.ts`
-- [ ] **3.2** — Extrair helpers puros `maplibre-layer.ts` + testes (RED → GREEN)
-- [ ] **3.3** — Criar `MapLibreMap.tsx` consumindo `/api/map/layers`
-- [ ] **3.4** — Criar `components/map/index.tsx` com feature flag switch
-- [ ] **3.5** — Atualizar `app/protected/client-page.tsx` para importar do novo index
-- [ ] **3.6** — Validar paridade visual com `NEXT_PUBLIC_MAP_ENGINE=maplibre`
-- [ ] **3.7** — Verificar rollback com `NEXT_PUBLIC_MAP_ENGINE=leaflet`
+- [X] **3.1** — Adicionar `react-map-gl` a `transpilePackages` no `next.config.ts`
+- [X] **3.2** — Extrair helpers puros `maplibre-layer.ts` + testes (23/23 GREEN)
+- [X] **3.3** — Criar `MapLibreMap.tsx` consumindo `/api/map/layers`
+- [X] **3.4** — Criar `components/map/index.tsx` com feature flag switch
+- [X] **3.5** — Atualizar `app/protected/client-page.tsx` para importar do novo index
+- [X] **3.6** — Validar paridade visual com `NEXT_PUBLIC_MAP_ENGINE=maplibre`
+- [X] **3.7** — Verificar rollback com `NEXT_PUBLIC_MAP_ENGINE=leaflet`
 
 ---
 
