@@ -38,6 +38,7 @@ export default function MapLibreMap({
   }, []);
 
   return (
+    <div className="w-full h-screen relative z-10">
     <Map
       initialViewState={{
         longitude: center[1], // center é [lat, lng] — MapLibre usa longitude primeiro
@@ -116,5 +117,6 @@ export default function MapLibreMap({
         ];
       })}
     </Map>
+    </div>
   );
 }
