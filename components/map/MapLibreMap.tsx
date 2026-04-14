@@ -68,11 +68,13 @@ export default function MapLibreMap({
               <>
                 <Layer
                   id={`${layer.slug}-fill`}
+                  source={layer.slug}
                   type="fill"
                   paint={toFillPaint(style)}
                 />
                 <Layer
                   id={`${layer.slug}-outline`}
+                  source={layer.slug}
                   type="line"
                   paint={{
                     'line-color': style?.color ?? '#3b82f6',
@@ -85,6 +87,7 @@ export default function MapLibreMap({
             {layerType === 'circle' && (
               <Layer
                 id={`${layer.slug}-circle`}
+                source={layer.slug}
                 type="circle"
                 paint={toCirclePaint(style)}
               />
@@ -92,6 +95,7 @@ export default function MapLibreMap({
             {layerType === 'line' && (
               <Layer
                 id={`${layer.slug}-line`}
+                source={layer.slug}
                 type="line"
                 paint={toLinePaint(style)}
               />
