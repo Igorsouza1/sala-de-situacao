@@ -534,155 +534,389 @@ com `MAP_ENGINE=leaflet`. Dataset real de desmatamento renderiza sem travar.
 ## Fase 4 — Layer Catalog Unificado (Semana 8-9) 🟠
 
 > Refatora o sistema de camadas para ser data-driven, sem código hardcoded por entidade.
-> O `visual_config` usa formato MapLibre paint/layout JSON desde o início — sem retrabalho futuro.
+> Introduz hierarquia de escopo (tenant / region / global) e isola o código Leaflet do novo
+> resolver — os dois engines operam em paralelo até a remoção do Leaflet na Fase 5.8.
 
-### 4.1 — Seed dos slugs estáticos no catalog (com visual_config MapLibre-native)
+### 4.0 — Garantia de Compatibilidade Dual-Engine
 
-`visual_config` armazena diretamente os objetos `paint` e `layout` do MapLibre GL — sem
-tradução na hora de renderizar.
+**Invariante desta fase:** o mapa Leaflet deve funcionar identicamente antes e depois de cada
+passo. Qualquer quebra no Leaflet é um bug desta fase, não efeito colateral aceito.
 
-**Migration:**
-```sql
-INSERT INTO monitoramento.layer_catalog (slug, name, tenant_id, schema_config, visual_config, regiao_id)
-VALUES
-  ('acoes', 'Ações', '<seed_tenant_id>',
-   '{"sourceType":"table","tableName":"acoes","geometryColumn":"geom","filterColumns":["categoria","status","eixo_tematico"],"dateColumn":"time"}'::jsonb,
-   '{"type":"circle","paint":{"circle-color":"#f97316","circle-radius":6,"circle-opacity":0.8},"cluster":{"enabled":true,"radius":50}}'::jsonb,
-   1),
-  ('estradas', 'Estradas', '<seed_tenant_id>',
-   '{"sourceType":"table","tableName":"estradas","geometryColumn":"geom"}'::jsonb,
-   '{"type":"line","paint":{"line-color":"#6b7280","line-width":2,"line-opacity":0.7}}'::jsonb,
-   1),
-  ('desmatamento', 'Desmatamento', '<seed_tenant_id>',
-   '{"sourceType":"table","tableName":"desmatamento","geometryColumn":"geom","filterColumns":["ano"],"dateColumn":"data"}'::jsonb,
-   '{"type":"fill","paint":{"fill-color":"#dc2626","fill-opacity":0.5,"fill-outline-color":"#fca5a5"}}'::jsonb,
-   1),
-  ('raw_firms', 'Focos de Calor', '<seed_tenant_id>',
-   '{"sourceType":"table","tableName":"raw_firms","geometryColumn":"geom","filterColumns":["satellite"],"dateColumn":"acq_date"}'::jsonb,
-   '{"type":"circle","paint":{"circle-color":"#f59e0b","circle-radius":5,"circle-opacity":0.9},"cluster":{"enabled":true,"radius":40}}'::jsonb,
-   1),
-  ('propriedades', 'Propriedades', '<seed_tenant_id>',
-   '{"sourceType":"table","tableName":"propriedades","geometryColumn":"geom"}'::jsonb,
-   '{"type":"fill","paint":{"fill-color":"#16a34a","fill-opacity":0.4,"fill-outline-color":"#86efac"}}'::jsonb,
-   1)
-ON CONFLICT (slug) DO UPDATE SET
-  schema_config = EXCLUDED.schema_config,
-  visual_config = EXCLUDED.visual_config;
+**Separação de code paths:**
+
+| | Leaflet | MapLibre |
+|---|---|---|
+| Endpoint de dados | `/api/mapLayers` (congelado — não tocar) | `/api/map/layers` (novo, catalog-driven) |
+| Estilo visual | `STATIC_STRATEGIES` hardcoded (não tocar) | `visual_config.maplibre` do catalog |
+| Ativação | `NEXT_PUBLIC_MAP_ENGINE=leaflet` | `NEXT_PUBLIC_MAP_ENGINE=maplibre` |
+
+**Formato de `visual_config` — namespaced para suportar ambos os engines:**
+
+```json
+{
+  "maplibre": {
+    "type": "fill",
+    "paint": { "fill-color": "#dc2626", "fill-opacity": 0.5 }
+  },
+  "leaflet": {
+    "style": { "color": "#dc2626", "fillOpacity": 0.5, "weight": 1 }
+  }
+}
 ```
 
-### 4.2 — Criar resolver de camadas genérico
+- O `MapLibreMap.tsx` lê exclusivamente `visual_config.maplibre`
+- O Leaflet ignora `visual_config` por completo (usa `STATIC_STRATEGIES` até ser removido)
+- Quando o Leaflet for removido na Fase 5.8, `visual_config.leaflet` vira campo morto — limpar
+  em migração posterior sem urgência
+
+**Regra:** nenhum arquivo Leaflet (`map.tsx`, `STATIC_STRATEGIES`, `/api/mapLayers`) é tocado
+nesta fase. Se a mudança exige alterar esses arquivos, ela pertence à Fase 5.
+
+---
+
+### 4.1 — Adicionar coluna `scope` ao `layer_catalog`
+
+```sql
+ALTER TABLE monitoramento.layer_catalog
+  ADD COLUMN IF NOT EXISTS scope TEXT NOT NULL DEFAULT 'tenant'
+  CHECK (scope IN ('tenant', 'region', 'global'));
+
+COMMENT ON COLUMN monitoramento.layer_catalog.scope IS
+  'tenant: filtrado por tenant_id | region: ST_Intersects com geom da região | global: sem filtro';
+```
+
+**Hierarquia de escopos:**
+
+```
+global ── sem filtro ──── limites de estados, municípios, biomas, hidrografia
+  │
+region ── ST_Intersects ─ propriedades (CAR), desmatamento, raw_firms, estradas
+  │
+tenant ── tenant_id ───── acoes, trilhas, avistamentos, layer_data (uploads)
+```
+
+---
+
+### 4.2 — Seed dos slugs estáticos no catalog
+
+`visual_config` usa o formato namespaced definido em 4.0. `schema_config` inclui o `scope`
+correto para cada camada.
+
+```sql
+DO $$
+DECLARE seed_tenant_id UUID;
+BEGIN
+  SELECT id INTO seed_tenant_id FROM monitoramento.tenants LIMIT 1;
+
+  INSERT INTO monitoramento.layer_catalog
+    (slug, name, tenant_id, scope, schema_config, visual_config, regiao_id)
+  VALUES
+    ('acoes', 'Ações', seed_tenant_id, 'tenant',
+     '{"sourceType":"table","tableName":"acoes","geometryColumn":"geom","filterColumns":["categoria","status","eixo_tematico"],"dateColumn":"time"}'::jsonb,
+     '{"maplibre":{"type":"circle","paint":{"circle-color":"#f97316","circle-radius":6,"circle-opacity":0.8},"cluster":{"enabled":true,"radius":50}},"leaflet":{"style":{"color":"#f97316","fillOpacity":0.8,"radius":6}}}'::jsonb,
+     1),
+
+    ('estradas', 'Estradas', seed_tenant_id, 'region',
+     '{"sourceType":"table","tableName":"estradas","geometryColumn":"geom"}'::jsonb,
+     '{"maplibre":{"type":"line","paint":{"line-color":"#6b7280","line-width":2,"line-opacity":0.7}},"leaflet":{"style":{"color":"#6b7280","weight":2,"opacity":0.7}}}'::jsonb,
+     1),
+
+    ('desmatamento', 'Desmatamento', seed_tenant_id, 'region',
+     '{"sourceType":"table","tableName":"desmatamento","geometryColumn":"geom","filterColumns":["ano"],"dateColumn":"data"}'::jsonb,
+     '{"maplibre":{"type":"fill","paint":{"fill-color":"#dc2626","fill-opacity":0.5,"fill-outline-color":"#fca5a5"}},"leaflet":{"style":{"color":"#dc2626","fillOpacity":0.5,"weight":1}}}'::jsonb,
+     1),
+
+    ('raw_firms', 'Focos de Calor', seed_tenant_id, 'region',
+     '{"sourceType":"table","tableName":"raw_firms","geometryColumn":"geom","filterColumns":["satellite"],"dateColumn":"acq_date"}'::jsonb,
+     '{"maplibre":{"type":"circle","paint":{"circle-color":"#f59e0b","circle-radius":5,"circle-opacity":0.9},"cluster":{"enabled":true,"radius":40}},"leaflet":{"style":{"color":"#f59e0b","fillOpacity":0.9,"radius":5}}}'::jsonb,
+     1),
+
+    ('propriedades', 'Propriedades', seed_tenant_id, 'region',
+     '{"sourceType":"table","tableName":"propriedades","geometryColumn":"geom"}'::jsonb,
+     '{"maplibre":{"type":"fill","paint":{"fill-color":"#16a34a","fill-opacity":0.4,"fill-outline-color":"#86efac"}},"leaflet":{"style":{"color":"#16a34a","fillOpacity":0.4,"weight":1}}}'::jsonb,
+     1)
+
+  ON CONFLICT (slug) DO UPDATE SET
+    scope         = EXCLUDED.scope,
+    schema_config = EXCLUDED.schema_config,
+    visual_config = EXCLUDED.visual_config;
+END $$;
+```
+
+---
+
+### 4.3 — Criar resolver de camadas com tri-scope
 
 **Arquivo a criar:** `lib/service/layer-resolver.ts`
 
-**Atenção:** `tableName` vem do banco (catalog), não do usuário. Validar contra whitelist
-antes de qualquer interpolação para evitar SQL injection via dados corrompidos no catalog.
+O resolver aplica o filtro correto baseado no `scope` do catalog entry. `tableName` vem do
+banco — nunca do request — mas ainda é validado contra whitelist para defesa em profundidade.
 
 ```typescript
-import { SchemaConfig } from '@/types/layer-config';
 import { db } from '@/db';
 import { sql } from 'drizzle-orm';
 
-// Whitelist de tabelas válidas — tableName do catalog nunca vem do request do usuário
-const ALLOWED_TABLES = new Set([
-  'acoes', 'estradas', 'desmatamento', 'raw_firms',
-  'propriedades', 'layer_data',
-]);
+type LayerScope = 'tenant' | 'region' | 'global';
+
+interface SchemaConfig {
+  sourceType: 'table' | 'layer_features' | 'layer_data';
+  tableName?: string;
+  geometryColumn?: string;
+  dateColumn?: string;
+  filterColumns?: string[];
+}
 
 interface ResolveOptions {
   tenantId: string;
+  regiaoId?: number;
   startDate?: Date;
   endDate?: Date;
 }
 
+// Whitelist — tableName do catalog nunca vem do request, mas validamos em defesa
+const ALLOWED_TABLES = new Set([
+  'acoes', 'estradas', 'desmatamento', 'raw_firms',
+  'propriedades', 'layer_data', 'layer_features',
+]);
+
 export async function resolveLayerData(
   schemaConfig: SchemaConfig,
-  options: ResolveOptions
+  scope: LayerScope,
+  options: ResolveOptions,
 ): Promise<GeoJSON.FeatureCollection> {
   switch (schemaConfig.sourceType) {
-    case 'table':      return resolveTableLayer(schemaConfig, options);
-    case 'layer_data': return resolveLayerDataSource(schemaConfig, options);
-    case 'static_file': return fetchStaticFile(schemaConfig.url!);
-    default: throw new Error(`Unsupported sourceType: ${schemaConfig.sourceType}`);
+    case 'table':          return resolveTableLayer(schemaConfig, scope, options);
+    case 'layer_features': return resolveLayerFeatures(schemaConfig, scope, options);
+    case 'layer_data':     return resolveLayerDataSource(schemaConfig, options);
+    default: throw new Error(`Unsupported sourceType: ${(schemaConfig as any).sourceType}`);
   }
 }
 
-async function resolveTableLayer(config: SchemaConfig, options: ResolveOptions) {
+async function resolveTableLayer(
+  config: SchemaConfig,
+  scope: LayerScope,
+  options: ResolveOptions,
+) {
   const { tableName, geometryColumn = 'geom', dateColumn } = config;
-  const { tenantId, startDate, endDate } = options;
+  const { tenantId, regiaoId, startDate, endDate } = options;
 
-  if (!ALLOWED_TABLES.has(tableName)) {
+  if (!ALLOWED_TABLES.has(tableName!)) {
     throw new Error(`Table not allowed: ${tableName}`);
   }
+
+  const scopeFilter = buildScopeFilter(scope, tenantId, regiaoId, geometryColumn, tableName!);
+  const dateFilter = buildDateFilter(dateColumn, startDate, endDate);
 
   const result = await db.execute(sql`
     SELECT id, properties,
       ST_AsGeoJSON(${sql.identifier(geometryColumn)}) as geojson
-    FROM ${sql.identifier('monitoramento')}.${sql.identifier(tableName)}
-    WHERE tenant_id = ${tenantId}
-      ${startDate && dateColumn ? sql`AND ${sql.identifier(dateColumn)} >= ${startDate}` : sql``}
-      ${endDate && dateColumn ? sql`AND ${sql.identifier(dateColumn)} <= ${endDate}` : sql``}
+    FROM monitoramento.${sql.identifier(tableName!)}
+    WHERE ${scopeFilter} ${dateFilter}
+  `);
+
+  return toFeatureCollection(result.rows);
+}
+
+function buildScopeFilter(
+  scope: LayerScope,
+  tenantId: string,
+  regiaoId: number | undefined,
+  geometryColumn: string,
+  tableName: string,
+) {
+  switch (scope) {
+    case 'tenant':
+      return sql`tenant_id = ${tenantId}`;
+
+    case 'region':
+      if (!regiaoId) throw new Error('regiaoId required for scope=region');
+      // ST_Intersects usa o índice GiST — eficiente mesmo com datasets nacionais
+      return sql`ST_Intersects(
+        ${sql.identifier(geometryColumn)},
+        (SELECT geom FROM monitoramento.regioes WHERE id = ${regiaoId})
+      )`;
+
+    case 'global':
+      return sql`TRUE`; // sem filtro — dados de referência global
+  }
+}
+
+function buildDateFilter(
+  dateColumn: string | undefined,
+  startDate: Date | undefined,
+  endDate: Date | undefined,
+) {
+  if (!dateColumn) return sql``;
+  const parts = [];
+  if (startDate) parts.push(sql`AND ${sql.identifier(dateColumn)} >= ${startDate}`);
+  if (endDate)   parts.push(sql`AND ${sql.identifier(dateColumn)} <= ${endDate}`);
+  return parts.length ? sql.join(parts) : sql``;
+}
+```
+
+---
+
+### 4.4 — Nova API catalog-driven para MapLibre (isolada do Leaflet)
+
+**Arquivo a criar:** `app/api/map/layers/route.ts`
+
+Esta é uma **nova rota**, paralela à `/api/mapLayers` do Leaflet. O Leaflet continua usando
+a rota existente sem alteração. O `MapLibreMap.tsx` é atualizado para usar esta nova rota.
+
+```typescript
+// app/api/map/layers/route.ts
+export async function GET(request: NextRequest) {
+  const { user, tenantId, response } = await requireAuthWithTenant();
+  if (response) return response;
+
+  const { searchParams } = new URL(request.url);
+  const regiaoId = Number(searchParams.get('regiao_id') ?? 1);
+  const startDate = searchParams.get('start') ? new Date(searchParams.get('start')!) : undefined;
+  const endDate   = searchParams.get('end')   ? new Date(searchParams.get('end')!)   : undefined;
+
+  const catalog = await getLayerCatalog(tenantId); // inclui entradas global e region
+
+  const results = await Promise.allSettled(
+    catalog.map(async (entry) => {
+      const geoData = await resolveLayerData(
+        entry.schemaConfig as SchemaConfig,
+        entry.scope as LayerScope,
+        { tenantId, regiaoId, startDate, endDate },
+      );
+      return {
+        slug:         entry.slug,
+        name:         entry.name,
+        ordering:     entry.ordering,
+        scope:        entry.scope,
+        visualConfig: (entry.visualConfig as any)?.maplibre ?? entry.visualConfig,
+        data:         geoData,
+      };
+    })
+  );
+
+  const layers = results
+    .filter(r => r.status === 'fulfilled')
+    .map(r => (r as PromiseFulfilledResult<any>).value);
+
+  return NextResponse.json(layers);
+}
+```
+
+**Atualizar `MapLibreMap.tsx`** para consumir `/api/map/layers` ao invés de `/api/mapLayers`:
+```typescript
+// ANTES (Fase 3 — consumia endpoint Leaflet)
+fetch('/api/mapLayers').then(r => r.json()).then(setLayers);
+
+// DEPOIS (Fase 4 — endpoint catalog-driven)
+fetch(`/api/map/layers?regiao_id=${regiaoId}`).then(r => r.json()).then(setLayers);
+```
+
+A resposta já inclui `visualConfig` no formato MapLibre — `<Layer>` recebe diretamente sem
+tradução.
+
+---
+
+### 4.5 — Camadas globais via `layer_features`
+
+Camadas de referência geográfica (limites de estados, municípios, biomas) vivem em
+`layer_features` com uma entrada `scope: 'global'` no catalog. Isso permite que qualquer
+tenant ative a camada sem duplicar dados.
+
+**Estrutura:**
+```
+layer_catalog (scope='global', slug='estados') ──► layer_features (layer_id=X, geom=polígono MS)
+layer_catalog (scope='global', slug='estados') ──► layer_features (layer_id=X, geom=polígono SP)
+                                                        ↑ mesmos registros, todos os tenants
+```
+
+**Catalog entry para camada global (exemplo — executar quando importar o dado):**
+```sql
+INSERT INTO monitoramento.layer_catalog
+  (slug, name, tenant_id, scope, schema_config, visual_config, regiao_id)
+SELECT
+  'estados', 'Limites Estaduais',
+  id,  -- tenant que importou vira "dono" da configuração
+  'global',
+  '{"sourceType":"layer_features"}'::jsonb,
+  '{"maplibre":{"type":"fill","paint":{"fill-color":"transparent","fill-outline-color":"#374151","fill-opacity":0.8}},"leaflet":{"style":{"color":"#374151","fill":false,"weight":1.5}}}'::jsonb,
+  NULL  -- global não pertence a uma região específica
+FROM monitoramento.tenants LIMIT 1
+ON CONFLICT (slug) DO NOTHING;
+```
+
+**Importação:** manual via ShapefileUploader (já existente) — o upload popula `layer_features`
+e cria o entry no catalog. Nenhuma automação nesta fase; a UI de import é Fase 5.
+
+**Resolver para `layer_features`:**
+```typescript
+async function resolveLayerFeatures(
+  config: SchemaConfig,
+  scope: LayerScope,
+  options: ResolveOptions,
+) {
+  // scope='global': retorna todas as features do layer_id
+  // scope='region': filtra por ST_Intersects (p.ex. municípios dentro da região)
+  const layerIdFilter = sql`lf.layer_id = (
+    SELECT id FROM monitoramento.layer_catalog
+    WHERE slug = ${config.slug} LIMIT 1
+  )`;
+
+  const spatialFilter = scope === 'region' && options.regiaoId
+    ? sql`AND ST_Intersects(lf.geom, (SELECT geom FROM monitoramento.regioes WHERE id = ${options.regiaoId}))`
+    : sql``;
+
+  const result = await db.execute(sql`
+    SELECT lf.id, lf.properties, ST_AsGeoJSON(lf.geom) as geojson
+    FROM monitoramento.layer_features lf
+    WHERE ${layerIdFilter} ${spatialFilter}
   `);
 
   return toFeatureCollection(result.rows);
 }
 ```
 
-### 4.3 — Refatorar `layerService.ts` para usar o resolver
+---
 
-Substituir `STATIC_STRATEGIES` hardcoded pelo resolver genérico:
-
-```typescript
-export async function getAllLayers(
-  tenantId: string,
-  startDate?: Date,
-  endDate?: Date,
-): Promise<LayerResponseDTO[]> {
-  const catalog = await getLayerCatalog(tenantId);
-
-  const results = await Promise.allSettled(
-    catalog.map(async (entry) => {
-      const schemaConfig = entry.schemaConfig as SchemaConfig;
-      const geoData = await resolveLayerData(schemaConfig, { tenantId, startDate, endDate });
-      return buildLayerDTO(entry, geoData);
-    })
-  );
-
-  return results
-    .filter(r => r.status === 'fulfilled')
-    .map(r => (r as PromiseFulfilledResult<LayerResponseDTO>).value);
-}
-```
-
-O `MapLibreMap.tsx` (criado na Fase 3) lê o `visual_config` diretamente do catalog e passa o
-objeto `paint` para `<Layer>` sem tradução — o formato já está correto.
-
-### 4.4 — API CRUD para gerenciar layer catalog (admin)
+### 4.6 — API CRUD para gerenciar layer catalog (admin)
 
 **Arquivo a criar:** `app/api/admin/layer-catalog/route.ts`
+
 ```typescript
-// GET    /api/admin/layer-catalog          — lista camadas do tenant
+// GET    /api/admin/layer-catalog          — lista camadas do tenant (inclui global/region)
 // POST   /api/admin/layer-catalog          — cria nova camada
-// PUT    /api/admin/layer-catalog/[slug]   — atualiza camada
-// DELETE /api/admin/layer-catalog/[slug]   — remove camada
+// PUT    /api/admin/layer-catalog/[slug]   — atualiza visual_config, scope, ordering
+// DELETE /api/admin/layer-catalog/[slug]   — remove (não permite deletar scope=global de outro tenant)
 ```
 
-### 4.5 — Adicionar `properties JSONB` nas tabelas de entidade
+Validar no POST/PUT que `scope: 'global'` só pode ser criado por admin do tenant, e que o
+`visual_config` contém pelo menos a chave `maplibre`.
+
+---
+
+### 4.7 — Adicionar `properties JSONB` nas tabelas de entidade
 
 ```sql
 ALTER TABLE monitoramento.acoes        ADD COLUMN IF NOT EXISTS properties JSONB;
 ALTER TABLE monitoramento.propriedades ADD COLUMN IF NOT EXISTS properties JSONB;
 ALTER TABLE monitoramento.desmatamento ADD COLUMN IF NOT EXISTS properties JSONB;
 
-CREATE INDEX idx_acoes_properties        ON monitoramento.acoes        USING gin(properties);
-CREATE INDEX idx_propriedades_properties ON monitoramento.propriedades USING gin(properties);
+CREATE INDEX CONCURRENTLY idx_acoes_properties        ON monitoramento.acoes        USING gin(properties);
+CREATE INDEX CONCURRENTLY idx_propriedades_properties ON monitoramento.propriedades USING gin(properties);
 ```
 
 ---
 
-**Rollback Fase 4:** Restaurar `layerService.ts` da versão anterior. A API `/api/map/layers`
-mantém a mesma interface — rollback transparente para o frontend.  
-**Critério de avanço:** Admin pode adicionar nova camada via UI sem deploy. Layer nova aparece
-no mapa. Tenant isolation: layer de tenant A não aparece para tenant B.
+**Rollback Fase 4:**
+- Remover `scope` column: `ALTER TABLE layer_catalog DROP COLUMN scope`
+- Reverter `MapLibreMap.tsx` para consumir `/api/mapLayers` (commit anterior)
+- Deletar `/api/map/layers/route.ts`
+- O Leaflet nunca foi tocado → continua funcionando sem ação
+
+**Critério de avanço:**
+- `NEXT_PUBLIC_MAP_ENGINE=leaflet` → mapa Leaflet idêntico ao pré-Fase 4 (zero regressão)
+- `NEXT_PUBLIC_MAP_ENGINE=maplibre` → MapLibre consome catalog, propriedades e desmatamento aparecem filtrados pela região, não por todo o Brasil
+- Admin pode adicionar camada global via catalog sem deploy
+- Tenant isolation: scope=tenant de tenant A não aparece para tenant B
 
 ---
 
@@ -932,12 +1166,16 @@ Fase 3 — MapLibre Core (Engine Swap)
   [ ] Leaflet funciona com MAP_ENGINE=leaflet (rollback ok)
 
 Fase 4 — Layer Catalog Unificado
-  [ ] visual_config em formato MapLibre paint/layout JSON
-  [ ] Slugs estáticos seedados no catalog
-  [ ] layer-resolver.ts com whitelist de tabelas
-  [ ] layerService.ts refatorado (STATIC_STRATEGIES removido)
-  [ ] Nova camada adicionada via admin sem deploy
-  [ ] Tenant isolation verificada
+  [ ] 4.0 — Leaflet inalterado: /api/mapLayers e STATIC_STRATEGIES não tocados
+  [ ] 4.1 — Coluna scope adicionada ao layer_catalog (tenant|region|global)
+  [ ] 4.2 — Seed executado: acoes=tenant, estradas/desmatamento/raw_firms/propriedades=region
+  [ ] 4.3 — layer-resolver.ts com tri-scope e whitelist de tabelas
+  [ ] 4.4 — /api/map/layers criado; MapLibreMap atualizado para consumir nova rota
+  [ ] 4.4 — visual_config namespaced: { maplibre: {...}, leaflet: {...} }
+  [ ] 4.5 — layer_features como container de camadas globais documentado
+  [ ] 4.6 — API CRUD admin para layer catalog
+  [ ] 4.7 — properties JSONB adicionado nas tabelas de entidade
+  [ ] Validação dual-engine: MAP_ENGINE=leaflet sem regressão, MAP_ENGINE=maplibre com scope correto
 
 Fase 5 — MapLibre Avançado
   [ ] 5.1 — Geometrias renderizando com tipo correto (line≠fill)
