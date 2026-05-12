@@ -9,6 +9,7 @@ import { findAllEstradasDataWithGeometry } from "../repositories/estradasReposit
 import { findAllDesmatamentoDataWithGeometry } from "../repositories/desmatamentoReposiroty";
 import { findAllFirmsDataWithGeometry } from "../repositories/firmsRepository";
 import { findAllPropriedadesDataWithGeometry } from "../repositories/propriedadesRepository";
+import { resolveTableLayer, type ResolverSchemaConfig } from "./layer-resolver";
 
 
 // --- 1. CONFIGURAÇÃO DAS ESTRATÉGIAS ---
@@ -99,7 +100,7 @@ async function getLayerGroups(slug: string, column: string, schema: string = 'mo
  * THE MAESTRO: Combines Catalog Configuration + Database GeoJSON
  * Orchestrates the assembly of the final LayerResponseDTO.
  */
-export async function getLayer(slug: string, tenantId?: string | null, startDate?: Date, endDate?: Date, minArea?: number, maxArea?: number): Promise<LayerResponseDTO | null> {
+export async function getLayer(slug: string, tenantId?: string | null, startDate?: Date, endDate?: Date, minArea?: number, maxArea?: number, regiaoId?: number): Promise<LayerResponseDTO | null> {
     try {
         // 1. Busca Metadados no Catálogo
         const catalogEntry = await getLayerCatalog(slug);
@@ -112,9 +113,19 @@ export async function getLayer(slug: string, tenantId?: string | null, startDate
         let data: MapFeatureCollection;
 
         // 2. O Roteador de Decisão (The Router)
+        const sc = catalogEntry.schemaConfig as any;
 
-        // CAMINHO A: É uma camada VIP/Especial? (Hardcoded Strategy)
-        if (STATIC_STRATEGIES[slug]) {
+        // CAMINHO R: Camada com sourceType=table → usa resolver com tri-scope (Fase 4)
+        if (sc?.sourceType === 'table' && sc?.tableName && tenantId) {
+            data = await resolveTableLayer(
+                sc as ResolverSchemaConfig,
+                ((catalogEntry as any).scope ?? 'tenant') as 'tenant' | 'region' | 'global',
+                { tenantId, regiaoId, startDate, endDate, minArea, maxArea },
+            );
+        }
+
+        // CAMINHO A: É uma camada VIP/Especial sem sourceType ainda? (Hardcoded Strategy)
+        else if (STATIC_STRATEGIES[slug]) {
             data = await STATIC_STRATEGIES[slug](tenantId, startDate, endDate, minArea, maxArea);
         }
 
@@ -161,6 +172,7 @@ export async function getLayer(slug: string, tenantId?: string | null, startDate
             slug: catalogEntry.slug,
             name: catalogEntry.name,
             ordering: catalogEntry.ordering || catalogEntry.id,
+            scope: (catalogEntry.scope as any) ?? 'tenant',
             visualConfig: {
                 ...visualConfig,
                 dateFilter: dateFilter,
@@ -210,15 +222,15 @@ export async function getLayer(slug: string, tenantId?: string | null, startDate
  * Fetches ALL layers defined in the catalog.
  * Robust against individual layer failures.
  */
-export async function getAllLayers(tenantId?: string | null, startDate?: Date, endDate?: Date, minArea?: number, maxArea?: number): Promise<LayerResponseDTO[]> {
+export async function getAllLayers(tenantId?: string | null, startDate?: Date, endDate?: Date, minArea?: number, maxArea?: number, regiaoId?: number): Promise<LayerResponseDTO[]> {
     const catalogEntries = await db
         .select()
         .from(layerCatalogInMonitoramento)
-        .orderBy(desc(layerCatalogInMonitoramento.ordering)); // Ordena pelo campo correto se existir
+        .orderBy(desc(layerCatalogInMonitoramento.ordering));
 
     if (!catalogEntries.length) return [];
 
-    const layerPromises = catalogEntries.map(entry => getLayer(entry.slug, tenantId, startDate, endDate, minArea, maxArea));
+    const layerPromises = catalogEntries.map(entry => getLayer(entry.slug, tenantId, startDate, endDate, minArea, maxArea, regiaoId));
     const results = await Promise.allSettled(layerPromises);
 
     const validLayers: LayerResponseDTO[] = [];

@@ -171,15 +171,24 @@ export interface DesmatamentoProperties extends BaseLayerProperties {
  * Represents a full Layer definition sent to the frontend.
  * Combines the metadata (Catalog) with the data (GeoJSON).
  */
+export type LayerScope = 'tenant' | 'region' | 'global';
+
+export interface MaplibreVisualConfig {
+    type: 'fill' | 'line' | 'circle' | 'heatmap';
+    paint: Record<string, string | number>;
+    layout?: Record<string, string | number>;
+}
+
 export interface LayerResponseDTO<P = BaseLayerProperties> {
     // Metadata from layer_catalog
     id: number;
     slug: string;
     name: string;
     ordering: number; // Controls z-index/render order
+    scope?: LayerScope;
 
     // Configs
-    visualConfig?: LayerVisualConfig;
+    visualConfig?: LayerVisualConfig & { maplibre?: MaplibreVisualConfig };
     schemaConfig?: LayerSchemaConfig;
 
     // Data (GeoJSON) - Can be populated from distinct tables (acoes, properties) OR layer_data

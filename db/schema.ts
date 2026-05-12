@@ -257,6 +257,7 @@ export const layerCatalogInMonitoramento = monitoramento.table("layer_catalog", 
 	regiaoId:     integer("regiao_id"),
 	ordering:     integer().default(0),
 	tenantId:     uuid("tenant_id"),
+	scope:        text().notNull().default('tenant'),
 }, (table) => [
 	unique("layer_catalog_slug_unique").on(table.slug),
 ]);

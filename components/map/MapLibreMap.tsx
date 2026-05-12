@@ -4,7 +4,7 @@ import Map, { Source, Layer, NavigationControl } from 'react-map-gl/maplibre';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import { useEffect, useState } from 'react';
 import type { LayerResponseDTO } from '@/types/map-dto';
-import { resolveLayerType, toFillPaint, toCirclePaint, toLinePaint } from './helpers/maplibre-layer';
+import { resolveLayerType, toFillPaint, toCirclePaint, toLinePaint, type MapLibreLayerType } from './helpers/maplibre-layer';
 
 /**
  * MapLibreMap — Fase 3: Engine Swap.
@@ -54,9 +54,12 @@ export default function MapLibreMap({
         if (!layer.data?.features?.length) return [];
 
         const vc = layer.visualConfig;
+        // Fase 4: usar config MapLibre-nativo do catalog quando disponível
+        const mlConfig = vc?.maplibre;
+        // Fallback para helpers de tradução (camadas sem maplibre key ainda)
         const style = vc?.baseStyle ?? vc;
         const firstFeature = layer.data.features[0] as any;
-        const layerType = resolveLayerType(style, firstFeature);
+        const layerType: MapLibreLayerType = (mlConfig?.type as MapLibreLayerType) ?? resolveLayerType(style, firstFeature);
 
         const source = (
           <Source
@@ -68,6 +71,7 @@ export default function MapLibreMap({
         );
 
         if (layerType === 'fill') {
+          const paint = mlConfig?.paint ?? toFillPaint(style);
           return [
             source,
             <Layer
@@ -75,9 +79,10 @@ export default function MapLibreMap({
               id={`${layer.slug}-fill`}
               source={layer.slug}
               type="fill"
-              paint={toFillPaint(style)}
+              paint={paint as any}
             />,
-            <Layer
+            // Outline separado apenas quando não há fill-outline-color no paint nativo
+            ...(!mlConfig ? [<Layer
               key={`${layer.slug}-outline`}
               id={`${layer.slug}-outline`}
               source={layer.slug}
@@ -87,11 +92,12 @@ export default function MapLibreMap({
                 'line-width': style?.weight ?? 1,
                 'line-opacity': style?.opacity ?? 0.8,
               }}
-            />,
+            />] : []),
           ];
         }
 
         if (layerType === 'circle') {
+          const paint = mlConfig?.paint ?? toCirclePaint(style);
           return [
             source,
             <Layer
@@ -99,12 +105,13 @@ export default function MapLibreMap({
               id={`${layer.slug}-circle`}
               source={layer.slug}
               type="circle"
-              paint={toCirclePaint(style)}
+              paint={paint as any}
             />,
           ];
         }
 
         // line
+        const paint = mlConfig?.paint ?? toLinePaint(style);
         return [
           source,
           <Layer
@@ -112,7 +119,7 @@ export default function MapLibreMap({
             id={`${layer.slug}-line`}
             source={layer.slug}
             type="line"
-            paint={toLinePaint(style)}
+            paint={paint as any}
           />,
         ];
       })}
