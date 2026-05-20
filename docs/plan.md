@@ -817,8 +817,18 @@ Validar no PUT/POST que `visual_config` contém a chave `maplibre` com `type` e 
 > vector tiles. O Leaflet permanece operacional via feature flag durante toda esta fase —
 > **não remover antes de 5.8 estar validado em produção**.
 >
-> **Inventário completo do Leaflet atual (obrigatório portar antes de remover):**
-> Filtro por data · Filtro por tamanho de propriedade · Troca de basemap (satélite/mapa) ·
+> **Estado real ao iniciar (revisão 2026-05-20):**
+> - 5.1, 5.4, 5.5, 5.6, 5.7 **concluídos** em `MapLibreMap.tsx` (commit `0f8106f`)
+> - Padrão adotado para controles Leaflet-específicos: componentes UI puros (sem hooks Leaflet)
+>   + todo estado de interação gerenciado em `MapLibreMap.tsx`
+>   + visuais de mapa (Source/Layer/Marker/Popup) renderizados dentro do `<Map>`
+> - Satélite: não implementado (requer API key MapTiler `NEXT_PUBLIC_MAPTILER_KEY`)
+> - Bug corrigido: `schema_config.dateColumn` de `desmatamento` era `"data"`, corrigido para
+>   `"detectat"` no Supabase; resolver usa `::date` cast para suportar TEXT e DATE
+> - O que resta: **5.2** (lazy loading), **5.3** (MVT), **5.8** (remover Leaflet)
+>
+> **Inventário completo do Leaflet portado ✅:**
+> Filtro por data · Filtro por tamanho de propriedade · Troca de basemap (streets/dark) ·
 > LayerManager (toggle, grupos, toggle-all) · Heatmap de fauna (javali) · Medir linhas ·
 > Medir shapes (área) · Inspetor de coordenadas · Print/snapshot · Reload de dados ·
 > ShapefileUploader · Popups/tooltips por feature · Modal de detalhes · Modal de edição de ação ·
@@ -1068,16 +1078,27 @@ Fase 4 — Layer Catalog Unificado (revisado 2026-05-12)
   [x] 4.5 — API CRUD admin para layer catalog (GET/PUT/POST/DELETE)
   [x] Validação: MAP_ENGINE=leaflet sem regressão; MAP_ENGINE=maplibre com cores nativas (testes 1/3/4 ok)
 
-Fase 5 — MapLibre Avançado
-  [ ] 5.1 — Geometrias renderizando com tipo correto (line≠fill)
+Fase 5 — MapLibre Avançado (revisado 2026-05-20)
+  [x] 5.1 — resolveLayerType prioriza geometria GeoJSON (line≠fill corrigido)
   [ ] 5.2 — Lazy loading funcionando (0 fetch no boot)
   [ ] 5.3 — Endpoint MVT funcionando
-  [ ] 5.4 — LayerManager + toggle/grupos/toggle-all
-  [ ] 5.5 — Basemap switcher (satélite / mapa base)
-  [ ] 5.6 — Controles portados: DateFilter, PropertyFilter, FaunaHeatmap,
-             Measure (linha+área), CoordinateInspector, Snapshot, Reload, ShapefileUploader
-  [ ] 5.7 — Popups, tooltips e modais (feature click + EditAção)
+  [x] 5.4 — LayerManager integrado (toggle individual, grupos, toggle-all, visibilidade por grupo)
+  [x] 5.5 — Basemap switcher (streets=CartoCDN positron, dark=dark-matter)
+             Nota: satélite requer API key MapTiler (NEXT_PUBLIC_MAPTILER_KEY) — não implementado
+  [x] 5.6 — Controles portados:
+             DateFilter, PropertyFilter → reusados diretamente (React puros)
+             MaplibreCoordinateInspector → novo (UI puro + Marker/click no mapa)
+             MaplibreSnapshotControl → novo (mapRef.current.getCenter/getZoom)
+             MaplibreMeasureControl → novo (UI puro + Source/Layer para linha/polígono)
+             MaplibreFaunaHeatmapControl → novo (heatmap layer nativo MapLibre GL)
+             Reload button, ShapefileUploader (preview via Source/Layer)
+  [x] 5.7 — Popups hover (Popup react-map-gl + popupFields), modais de feature click
+             (FeatureDetails + Modal + EditAcaoModal — todos reusados)
   [ ] 5.8 — Leaflet removido (pré-req: 5.1–5.7 validados em produção ≥1 semana)
+
+  Correções de bugs incluídas:
+  [x] layer-resolver.ts: dateColumn usa ::date cast (suporta TEXT detectat e DATE acq_date)
+  [x] schema_config.dateColumn de 'desmatamento' corrigido: "data" → "detectat" no Supabase
 
 Fase 6 — Produção
   [ ] Testes regressão passando
