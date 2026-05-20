@@ -63,8 +63,15 @@ export async function resolveTableLayer(
   }
 
   if (dateColumn) {
-    if (options.startDate) whereParts.push(sql`${sql.identifier(dateColumn)} >= ${options.startDate}`);
-    if (options.endDate)   whereParts.push(sql`${sql.identifier(dateColumn)} <= ${options.endDate}`);
+    // Cast tanto coluna quanto parâmetro para ::date para suportar TEXT (detectat) e DATE (acq_date)
+    if (options.startDate) {
+      const d = options.startDate.toISOString().split('T')[0];
+      whereParts.push(sql`${sql.identifier(dateColumn)}::date >= ${d}::date`);
+    }
+    if (options.endDate) {
+      const d = options.endDate.toISOString().split('T')[0];
+      whereParts.push(sql`${sql.identifier(dateColumn)}::date <= ${d}::date`);
+    }
   }
 
   // Filtro de área (específico de propriedades — coluna area_ha)
