@@ -4,20 +4,21 @@ import type { Feature } from 'geojson';
 export type MapLibreLayerType = 'fill' | 'circle' | 'line';
 
 /**
- * Determines the MapLibre layer type from a VisualStyle and/or a GeoJSON feature.
- * Style type takes priority over geometry type inference.
+ * Determines the MapLibre layer type from a GeoJSON feature and/or VisualStyle.
+ * Geometry type is ground truth — style hint is only a fallback when geometry is unknown.
  */
 export function resolveLayerType(
   style?: VisualStyle | null,
   feature?: Feature | null
 ): MapLibreLayerType {
-  if (style?.type === 'line') return 'line';
-  if (style?.type === 'circle' || style?.type === 'point') return 'circle';
-  if (style?.type === 'polygon') return 'fill';
-
   const geomType = feature?.geometry?.type;
   if (geomType === 'Point' || geomType === 'MultiPoint') return 'circle';
   if (geomType === 'LineString' || geomType === 'MultiLineString') return 'line';
+  if (geomType === 'Polygon' || geomType === 'MultiPolygon') return 'fill';
+
+  // Geometry unknown — fall back to style hint
+  if (style?.type === 'line') return 'line';
+  if (style?.type === 'circle' || style?.type === 'point') return 'circle';
 
   return 'fill';
 }
