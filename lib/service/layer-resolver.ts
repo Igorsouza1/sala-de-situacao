@@ -74,9 +74,11 @@ export async function resolveTableLayer(
     }
   }
 
-  // Filtro de área (específico de propriedades — coluna area_ha)
-  if (options.minArea !== undefined) whereParts.push(sql`area_ha >= ${options.minArea}`);
-  if (options.maxArea !== undefined) whereParts.push(sql`area_ha <= ${options.maxArea}`);
+  // Filtro de área: só para tabela propriedades (coluna num_area)
+  if (tableName === 'propriedades') {
+    if (options.minArea !== undefined) whereParts.push(sql`num_area >= ${options.minArea}`);
+    if (options.maxArea !== undefined) whereParts.push(sql`num_area <= ${options.maxArea}`);
+  }
 
   const whereClause = whereParts.length
     ? sql.join(whereParts, sql` AND `)

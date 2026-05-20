@@ -20,6 +20,12 @@ export function resolveLayerType(
   if (style?.type === 'line') return 'line';
   if (style?.type === 'circle' || style?.type === 'point') return 'circle';
 
+  // Also check mapMarker.type (legacy DB field nested inside visual_config)
+  const markerType = (style as any)?.mapMarker?.type;
+  if (markerType === 'line') return 'line';
+  if (markerType === 'circle' || markerType === 'point') return 'circle';
+  if (markerType === 'polygon') return 'fill';
+
   return 'fill';
 }
 
@@ -45,9 +51,10 @@ export interface LinePaint {
  * Phase 4 will replace this with direct MapLibre paint JSON from the catalog.
  */
 export function toFillPaint(style?: VisualStyle | null): FillPaint {
+  const marker = (style as any)?.mapMarker;
   return {
-    'fill-color': style?.fillColor ?? style?.color ?? '#3b82f6',
-    'fill-opacity': style?.fillOpacity ?? style?.opacity ?? 0.5,
+    'fill-color': style?.fillColor ?? style?.color ?? marker?.fillColor ?? marker?.color ?? '#3b82f6',
+    'fill-opacity': style?.fillOpacity ?? style?.opacity ?? marker?.fillOpacity ?? marker?.opacity ?? 0.5,
   };
 }
 
@@ -55,10 +62,11 @@ export function toFillPaint(style?: VisualStyle | null): FillPaint {
  * Converts a Leaflet-style VisualStyle to MapLibre circle paint properties.
  */
 export function toCirclePaint(style?: VisualStyle | null): CirclePaint {
+  const marker = (style as any)?.mapMarker;
   return {
-    'circle-color': style?.color ?? '#3b82f6',
-    'circle-radius': style?.radius ?? 6,
-    'circle-opacity': style?.opacity ?? 0.8,
+    'circle-color': style?.color ?? marker?.color ?? '#3b82f6',
+    'circle-radius': style?.radius ?? marker?.radius ?? 6,
+    'circle-opacity': style?.opacity ?? marker?.opacity ?? 0.8,
   };
 }
 
@@ -66,9 +74,10 @@ export function toCirclePaint(style?: VisualStyle | null): CirclePaint {
  * Converts a Leaflet-style VisualStyle to MapLibre line paint properties.
  */
 export function toLinePaint(style?: VisualStyle | null): LinePaint {
+  const marker = (style as any)?.mapMarker;
   return {
-    'line-color': style?.color ?? '#3b82f6',
-    'line-width': style?.weight ?? 2,
-    'line-opacity': style?.opacity ?? 0.8,
+    'line-color': style?.color ?? marker?.color ?? '#3b82f6',
+    'line-width': style?.weight ?? marker?.weight ?? 2,
+    'line-opacity': style?.opacity ?? marker?.opacity ?? 0.8,
   };
 }

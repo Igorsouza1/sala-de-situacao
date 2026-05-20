@@ -41,12 +41,49 @@ import { getLayerLegendInfo } from './helpers/map-visuals'
 import { Button } from '@/components/ui/button'
 
 // ── Basemaps ────────────────────────────────────────────────────────────────
-const BASEMAPS = {
+const SATELLITE_STYLE = {
+  version: 8,
+  sources: {
+    'esri-satellite': {
+      type: 'raster',
+      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
+      tileSize: 256,
+      attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP',
+      maxzoom: 19,
+    },
+  },
+  layers: [{ id: 'esri-satellite-layer', type: 'raster', source: 'esri-satellite' }],
+}
+
+const OSM_STYLE = {
+  version: 8,
+  sources: {
+    'osm': {
+      type: 'raster',
+      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
+      tileSize: 256,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      maxzoom: 19,
+    },
+  },
+  layers: [{ id: 'osm-layer', type: 'raster', source: 'osm' }],
+}
+
+type BasemapKey = 'satellite' | 'streets' | 'dark' | 'osm'
+
+const BASEMAPS: Record<BasemapKey, string | object> = {
+  satellite: SATELLITE_STYLE,
   streets: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
   dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-} as const
+  osm: OSM_STYLE,
+}
 
-type BasemapKey = keyof typeof BASEMAPS
+const BASEMAP_LABELS: Record<BasemapKey, string> = {
+  satellite: 'Satélite',
+  streets: 'Ruas',
+  dark: 'Dark',
+  osm: 'StreetMap',
+}
 
 // ── Measure helpers ──────────────────────────────────────────────────────────
 type LngLat = [number, number] // [lng, lat]
@@ -146,7 +183,8 @@ export default function MapLibreMap({
   const [faunaFetched, setFaunaFetched] = useState(false)
 
   // ── Basemap ─────────────────────────────────────────────────────────────
-  const [basemap, setBasemap] = useState<BasemapKey>('streets')
+  const [basemap, setBasemap] = useState<BasemapKey>('satellite')
+  const [basemapOpen, setBasemapOpen] = useState(false)
 
   // ── Map ref ─────────────────────────────────────────────────────────────
   const mapRef = useRef<any>(null)
@@ -625,7 +663,7 @@ export default function MapLibreMap({
           zoom,
         }}
         style={{ width: '100%', height: '100%' }}
-        mapStyle={BASEMAPS[basemap]}
+        mapStyle={BASEMAPS[basemap] as any}
         cursor={cursor}
         onClick={handleMapClick}
         onMouseMove={handleMouseMove}
@@ -654,7 +692,17 @@ export default function MapLibreMap({
           )
 
           if (layerType === 'fill') {
-            const paint = mlConfig?.paint ?? toFillPaint(style)
+            const rawFillPaint: Record<string, any> = mlConfig?.paint ?? toFillPaint(style)
+            // Extrai fill-outline-color antes de passar ao MapLibre — será substituído
+            // por uma line layer separada (fill-outline-color é sempre 1px fixo)
+            const { 'fill-outline-color': extractedOutlineColor, ...fillPaint } = rawFillPaint
+            const outlineColor: string =
+              mlConfig?.outlinePaint?.['line-color'] ??
+              extractedOutlineColor ??
+              style?.color ??
+              '#3b82f6'
+            const outlineWidth: number = mlConfig?.outlinePaint?.['line-width'] ?? style?.weight ?? 1
+            const outlineOpacity: number = mlConfig?.outlinePaint?.['line-opacity'] ?? style?.opacity ?? 0.8
             return [
               source,
               <Layer
@@ -662,23 +710,19 @@ export default function MapLibreMap({
                 id={`${layer.slug}-fill`}
                 source={layer.slug}
                 type="fill"
-                paint={paint as any}
+                paint={fillPaint as any}
               />,
-              ...(!mlConfig
-                ? [
-                    <Layer
-                      key={`${layer.slug}-outline`}
-                      id={`${layer.slug}-outline`}
-                      source={layer.slug}
-                      type="line"
-                      paint={{
-                        'line-color': style?.color ?? '#3b82f6',
-                        'line-width': style?.weight ?? 1,
-                        'line-opacity': style?.opacity ?? 0.8,
-                      }}
-                    />,
-                  ]
-                : []),
+              <Layer
+                key={`${layer.slug}-outline`}
+                id={`${layer.slug}-outline`}
+                source={layer.slug}
+                type="line"
+                paint={{
+                  'line-color': outlineColor,
+                  'line-width': outlineWidth,
+                  'line-opacity': outlineOpacity,
+                }}
+              />,
             ]
           }
 
@@ -875,26 +919,42 @@ export default function MapLibreMap({
 
       {/* ── Controls overlay ─────────────────────────────────────────────── */}
 
-      {/* Basemap switcher */}
-      <div className="absolute top-4 right-14 z-[400] flex gap-1 bg-white/90 backdrop-blur-sm p-1 rounded-md shadow-md border border-gray-200">
-        <Button
-          variant={basemap === 'streets' ? 'default' : 'ghost'}
-          size="sm"
-          className={`h-7 px-2 text-xs ${basemap === 'streets' ? 'bg-brand-primary text-white' : 'text-slate-600'}`}
-          onClick={() => setBasemap('streets')}
-          title="Mapa de Ruas"
-        >
-          Ruas
-        </Button>
-        <Button
-          variant={basemap === 'dark' ? 'default' : 'ghost'}
-          size="sm"
-          className={`h-7 px-2 text-xs ${basemap === 'dark' ? 'bg-brand-primary text-white' : 'text-slate-600'}`}
-          onClick={() => setBasemap('dark')}
-          title="Tema Escuro"
-        >
-          Dark
-        </Button>
+      {/* Basemap dropdown */}
+      {basemapOpen && (
+        <div
+          className="fixed inset-0 z-[399]"
+          onClick={() => setBasemapOpen(false)}
+        />
+      )}
+      <div className="absolute top-4 right-14 z-[400]">
+        <div className="relative">
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs bg-white/90 backdrop-blur-sm shadow-md border-gray-200 text-slate-700 gap-1"
+            onClick={() => setBasemapOpen((v) => !v)}
+          >
+            <LucideIcons.Layers className="h-3 w-3" />
+            {BASEMAP_LABELS[basemap]}
+            <LucideIcons.ChevronDown className={`h-3 w-3 transition-transform ${basemapOpen ? 'rotate-180' : ''}`} />
+          </Button>
+          {basemapOpen && (
+            <div className="absolute right-0 mt-1 w-36 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-10">
+              {(Object.keys(BASEMAPS) as BasemapKey[]).map((key) => (
+                <button
+                  key={key}
+                  className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-gray-50 transition-colors ${
+                    basemap === key ? 'text-brand-primary font-semibold' : 'text-slate-700'
+                  }`}
+                  onClick={() => { setBasemap(key); setBasemapOpen(false) }}
+                >
+                  {BASEMAP_LABELS[key]}
+                  {basemap === key && <LucideIcons.Check className="h-3 w-3" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Left panel: filters */}
