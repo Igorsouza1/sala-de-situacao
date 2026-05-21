@@ -18,7 +18,7 @@ export async function getAdminOrganizationsData(): Promise<AdminOrganizationData
       r.id AS "regionId",
       r.nome AS "regionName",
       r.descricao AS "regionDescription"
-    FROM "monitoramento"."organizations" o
+    FROM "monitoramento"."tenants" o
     JOIN "monitoramento"."user_access" ua ON o.id = ua.organization_id
     JOIN "monitoramento"."regioes" r ON ua.regiao_id = r.id
     ORDER BY o.name ASC, r.nome ASC

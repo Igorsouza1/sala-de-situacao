@@ -4,7 +4,6 @@ import { requireAuth } from "@/lib/api/require-auth";
 import { apiError } from "@/lib/api/responses";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
-import { propriedadesInMonitoramento } from "@/db/schema";
 import { revalidateTag } from "next/cache";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -59,9 +58,18 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
                 try {
                     sendProgress();
 
+                    // Resolve tenant_id a partir da região
+                    const tenantRow = await db.execute(sql`
+                        SELECT metadata->>'organizationId' AS tenant_id
+                        FROM monitoramento.regioes WHERE id = ${regionId} LIMIT 1
+                    `);
+                    const tenantId: string | null = (tenantRow.rows[0] as any)?.tenant_id ?? null;
+                    if (!tenantId) throw new Error(`Região ${regionId} não possui organizationId no metadata.`);
+
                     for (let i = 0; i < totalFeatures; i++) {
                         const feature = features[i];
-                        if (!feature.geometry) {
+                        const coords = feature.geometry?.coordinates;
+                        if (!feature.geometry || !coords || coords.length === 0) {
                             skippedCount++;
                             if (i % 10 === 0) sendProgress();
                             continue;
@@ -91,21 +99,20 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
                             const municipio = props.municipio || null;
                             const nome = props.nome || null;
 
-                            await db.insert(propriedadesInMonitoramento).values({
-                                regiaoId: regionId,
-                                geom: geomSql,
-                                codTema,
-                                nomTema,
-                                codImovel,
-                                modFiscal: isNaN(modFiscal as number) ? null : modFiscal,
-                                numArea: isNaN(numArea as number) ? null : numArea,
-                                indStatus,
-                                indTipo,
-                                desCondic,
-                                municipio,
-                                nome,
-                                properties: props
-                            });
+                            const propsJson = JSON.stringify(props);
+                            await db.execute(sql`
+                                INSERT INTO monitoramento.propriedades
+                                  (cod_tema, nom_tema, cod_imovel, mod_fiscal, num_area,
+                                   ind_status, ind_tipo, des_condic, municipio,
+                                   geom, nome, regiao_id, properties, tenant_id)
+                                VALUES
+                                  (${codTema}, ${nomTema}, ${codImovel},
+                                   ${isNaN(modFiscal as number) ? null : modFiscal},
+                                   ${isNaN(numArea as number) ? null : numArea},
+                                   ${indStatus}, ${indTipo}, ${desCondic}, ${municipio},
+                                   ${geomSql}, ${nome}, ${regionId}, ${propsJson}::jsonb,
+                                   ${tenantId}::uuid)
+                            `);
 
                             insertedCount++;
                         }
@@ -127,9 +134,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
                 } catch (dbError) {
                     console.error("DB Error processing properties stream", dbError);
+                    const pgCode = (dbError as any)?.code ?? '';
+                    const pgDetail = (dbError as any)?.detail ?? '';
+                    const baseMsg = dbError instanceof Error ? dbError.message : "Erro desconhecido no processamento";
+                    const fullMsg = [baseMsg, pgCode && `code=${pgCode}`, pgDetail].filter(Boolean).join(' | ');
                     const errorPayload = JSON.stringify({
                         type: 'error',
-                        message: dbError instanceof Error ? dbError.message : "Erro desconhecido no processamento"
+                        message: fullMsg
                     }) + '\n';
                     try {
                         controller.enqueue(new TextEncoder().encode(errorPayload));

@@ -72,7 +72,7 @@ export async function listRegionsInDb() {
       ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
       r.created_at AS "createdAt"
     FROM monitoramento.regioes r
-    LEFT JOIN monitoramento.organizations o
+    LEFT JOIN monitoramento.tenants o
       ON o.id::text = r.metadata->>'organizationId'
     ORDER BY r.created_at DESC
   `);
@@ -91,7 +91,7 @@ export async function getRegionByIdInDb(id: number) {
       r.created_at AS "createdAt",
       ST_AsGeoJSON(r.geom) as "geojson"
     FROM monitoramento.regioes r
-    LEFT JOIN monitoramento.organizations o
+    LEFT JOIN monitoramento.tenants o
       ON o.id::text = r.metadata->>'organizationId'
     WHERE r.id = ${id}
   `);

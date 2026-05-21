@@ -6,6 +6,6 @@ export async function fetchAdminDashboardData(): Promise<AdminOrganizationData[]
         return data;
     } catch (error) {
         console.error("Error in fetchAdminDashboardData:", error);
-        throw new Error("Failed to fetch admin dashboard data");
+        return [];
     }
 }

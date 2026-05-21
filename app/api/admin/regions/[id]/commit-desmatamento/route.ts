@@ -4,7 +4,6 @@ import { requireAuth } from "@/lib/api/require-auth";
 import { apiError } from "@/lib/api/responses";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
-import { desmatamentoInMonitoramento } from "@/db/schema";
 import { findExistingDesmatamentoAlertids } from "@/lib/repositories/desmatamentoReposiroty";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -33,6 +32,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     } else {
       return apiError("Formato GeoJSON inválido. Esperado FeatureCollection ou Feature.", 400);
     }
+
+    // Resolve tenant_id a partir da região
+    const tenantRow = await db.execute(sql`
+        SELECT metadata->>'organizationId' AS tenant_id
+        FROM monitoramento.regioes WHERE id = ${regionId} LIMIT 1
+    `);
+    const tenantId: string | null = (tenantRow.rows[0] as any)?.tenant_id ?? null;
+    if (!tenantId) return apiError(`Região ${regionId} não possui organizationId no metadata.`, 400);
 
     // Coletar todos os alertids presentes no arquivo
     const alertidsNoArquivo = features
@@ -79,18 +86,20 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
       const geomJson = JSON.stringify(geometry);
 
-      await db.insert(desmatamentoInMonitoramento).values({
-        alertid,
-        alertcode,
-        alertha: isNaN(alertha as number) ? null : alertha,
-        source,
-        detectat,
-        detectyear: isNaN(detectyear as number) ? null : detectyear,
-        state,
-        stateha: isNaN(stateha as number) ? null : stateha,
-        geom: sql`ST_SetSRID(ST_GeomFromGeoJSON(${geomJson}), 4674)`,
-        regiaoId: regionId,
-      });
+      await db.execute(sql`
+        INSERT INTO monitoramento.desmatamento
+          (alertid, alertcode, alertha, source, detectat, detectyear,
+           state, stateha, geom, regiao_id, tenant_id)
+        VALUES
+          (${alertid}, ${alertcode},
+           ${isNaN(alertha as number) ? null : alertha},
+           ${source}, ${detectat},
+           ${isNaN(detectyear as number) ? null : detectyear},
+           ${state},
+           ${isNaN(stateha as number) ? null : stateha},
+           ST_SetSRID(ST_GeomFromGeoJSON(${geomJson}), 4674),
+           ${regionId}, ${tenantId}::uuid)
+      `);
 
       if (alertid) existingAlertids.add(alertid);
       insertedCount++;
