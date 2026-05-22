@@ -2,6 +2,9 @@ import Link from "next/link"
 import Image from "next/image"
 import { ContactModal } from "@/components/contact-modal"
 import PillarScrollSection from "@/components/landing/pillar-scroll-section"
+import TemperatureCard from "@/components/landing/temperature-card"
+import WindCard from "@/components/landing/wind-card"
+import WeatherDetailsCard from "@/components/landing/weather-details-card"
 
 export default function LandingPage() {
   return (
@@ -10,7 +13,18 @@ export default function LandingPage() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="fixed top-0 z-50 w-full h-11 border-b border-black/[0.06] bg-white/90 backdrop-blur-md">
         <div className="container flex h-full items-center justify-between px-6">
-          <Image src="/logo.png" alt="PRISMA" width={110} height={110} />
+          <Link href="/" className="flex items-center gap-2">
+            <Image
+              src="/logo-01.jpeg"
+              alt="PRISMA"
+              width={26}
+              height={26}
+              className="rounded-md object-cover"
+            />
+            <span className="text-sm font-semibold tracking-tight text-[#1d1d1f]">
+              Prisma
+            </span>
+          </Link>
           <div className="flex items-center gap-5">
             <Link
               href="/sign-in"
@@ -46,13 +60,28 @@ export default function LandingPage() {
             <div className="absolute inset-0 bg-gradient-to-r from-[#f5f5f7] via-transparent to-[#f5f5f7] opacity-60" />
           </div>
 
+          {/* Floating Weather Cards */}
+          <div className="absolute inset-0 w-full h-full pointer-events-none z-10 overflow-hidden">
+            {/* Left Top: Temperature */}
+            <TemperatureCard className="absolute left-4 xl:left-8 top-[24%] xl:top-[26%] pointer-events-auto flex opacity-20 blur-[1.5px] xl:opacity-100 xl:blur-none scale-75 sm:scale-100 origin-top-left transition-all duration-700" />
+
+            {/* Right Top: Wind */}
+            <WindCard className="absolute right-4 xl:right-8 top-[14%] xl:top-[16%] pointer-events-auto flex opacity-20 blur-[1.5px] xl:opacity-100 xl:blur-none scale-75 sm:scale-100 origin-top-right transition-all duration-700" />
+
+            {/* Right Bottom: Weather Details */}
+            <WeatherDetailsCard className="absolute right-4 xl:right-8 top-[36%] xl:top-[38%] pointer-events-auto flex opacity-15 blur-[2px] xl:opacity-100 xl:blur-none scale-[0.65] sm:scale-100 origin-top-right transition-all duration-700" />
+          </div>
+
           {/* Copy */}
-          <div className="relative z-10 text-center px-4 max-w-5xl mx-auto pt-16">
+          <div className="relative z-30 text-center px-4 max-w-2xl xl:max-w-3xl mx-auto pt-16">
+            {/* Ambient white glow behind text on smaller screens to ensure maximum legibility */}
+            <div className="absolute -inset-16 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.85)_0%,rgba(255,255,255,0.5)_50%,transparent_75%)] pointer-events-none -z-10 xl:hidden" />
+            
             <h1 className="text-5xl md:text-7xl lg:text-[82px] font-semibold tracking-[-0.03em] leading-[1.04] text-[#1d1d1f] mb-6 text-balance">
               A complexidade do seu território, traduzida em clareza visual.
             </h1>
-            <p className="text-base md:text-lg text-[#1d1d1f]/50 font-light max-w-2xl mx-auto mb-10 leading-relaxed">
-              O Prisma integra dados de satélite, registros ambientais e sensores de campo em uma única plataforma geoespacial. Feito para quem precisa analisar, gerenciar e auditar áreas com o máximo de precisão científica.
+            <p className="text-base md:text-lg text-[#1d1d1f]/70 xl:text-[#1d1d1f]/50 font-normal xl:font-light max-w-2xl mx-auto mb-10 leading-relaxed">
+              O Prisma integra dados de satélite, registros ambientais e sensores de campo em uma única plataforma geoespacial. Feito para quem precisa analisar, gerenciar e auditar áreas com o máximo de precisão.
             </p>
             <ContactModal>
               <button className="inline-flex items-center text-sm font-medium text-white bg-[#1d1d1f] hover:bg-black active:scale-95 transition-all px-8 py-3.5 rounded-full">
