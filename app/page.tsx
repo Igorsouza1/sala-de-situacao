@@ -49,15 +49,14 @@ export default function LandingPage() {
           {/* Copy */}
           <div className="relative z-10 text-center px-4 max-w-5xl mx-auto pt-16">
             <h1 className="text-5xl md:text-7xl lg:text-[82px] font-semibold tracking-[-0.03em] leading-[1.04] text-[#1d1d1f] mb-6 text-balance">
-              Antecipe o caos.<br />Governe com precisão.
+              A complexidade do seu território, traduzida em clareza visual.
             </h1>
-            <p className="text-base md:text-lg text-[#1d1d1f]/50 font-light max-w-xl mx-auto mb-10 leading-relaxed">
-              O Prisma transforma dados ambientais complexos em decisões soberanas.
-              Uma Sala de Situação unificada para governos e grandes corporações.
+            <p className="text-base md:text-lg text-[#1d1d1f]/50 font-light max-w-2xl mx-auto mb-10 leading-relaxed">
+              O Prisma integra dados de satélite, registros ambientais e sensores de campo em uma única plataforma geoespacial. Feito para quem precisa analisar, gerenciar e auditar áreas com o máximo de precisão científica.
             </p>
             <ContactModal>
               <button className="inline-flex items-center text-sm font-medium text-white bg-[#1d1d1f] hover:bg-black active:scale-95 transition-all px-8 py-3.5 rounded-full">
-                Agendar Demonstração Exclusiva
+                Solicitar Demonstração Técnica
               </button>
             </ContactModal>
           </div>
@@ -98,8 +97,11 @@ export default function LandingPage() {
         <section id="problema" className="w-full py-36 md:py-52 bg-white">
           <div className="container px-6">
             <div className="max-w-4xl mx-auto">
-              <p className="text-3xl md:text-5xl lg:text-[56px] font-semibold text-[#1d1d1f] tracking-[-0.02em] leading-[1.08] text-balance">
-                &ldquo;Se você descobriu o desmatamento pela imprensa, você já perdeu o controle.&rdquo;
+              <p className="text-3xl md:text-5xl lg:text-[56px] font-semibold text-[#1d1d1f] tracking-[-0.02em] leading-[1.08] text-balance mb-8">
+                &ldquo;Gerenciar uma área sem o cruzamento de dados geoespaciais é tentar ler uma história folheando páginas soltas.&rdquo;
+              </p>
+              <p className="text-base md:text-lg text-[#1d1d1f]/50 font-light max-w-3xl leading-relaxed">
+                O espaço físico é vivo, interconectado e dinâmico. O Prisma une o que antes estava disperso: a malha das propriedades rurais, o comportamento dos corpos d'água e as dinâmicas de satélite. Uma ferramenta desenvolvida no campo para transformar dados complexos em diagnósticos visuais imediatos, dando segurança para o planejamento e para a tomada de decisão.
               </p>
               <div className="mt-14 w-10 h-px bg-black/15" />
             </div>
@@ -112,12 +114,15 @@ export default function LandingPage() {
         {/* ── 5. Closing ──────────────────────────────────────────────────── */}
         <section className="w-full py-44 bg-[#f5f5f7] border-t border-black/[0.06]">
           <div className="container px-6 text-center">
-            <h2 className="text-4xl md:text-6xl font-semibold text-[#1d1d1f] tracking-[-0.025em] leading-[1.06] mb-14 text-balance">
-              Elimine o elemento surpresa<br className="hidden md:block" /> da sua gestão.
+            <h2 className="text-4xl md:text-6xl font-semibold text-[#1d1d1f] tracking-[-0.025em] leading-[1.06] mb-6 text-balance">
+              Elimine os pontos cegos da sua gestão geoespacial.
             </h2>
+            <p className="text-base md:text-lg text-[#1d1d1f]/50 font-light max-w-xl mx-auto mb-10 leading-relaxed">
+              Centralize seus mapas, análises e relatórios em uma plataforma robusta e escalável.
+            </p>
             <ContactModal>
               <button className="inline-flex items-center text-sm font-medium text-[#1d1d1f] border border-[#1d1d1f]/20 bg-white hover:bg-[#1d1d1f]/5 active:scale-95 transition-all px-10 py-4 rounded-full">
-                Solicitar Acesso ao Centro de Comando
+                Conhecer a Plataforma
               </button>
             </ContactModal>
           </div>

@@ -6,24 +6,24 @@ import Image from "next/image"
 const pillars = [
   {
     number: "01",
-    title: "Blindagem Territorial",
-    headline: "Detecção em tempo real.",
+    title: "Diagnóstico de Propriedades (O Dossiê)",
+    headline: "A radiografia completa da terra.",
     description:
-      "Incêndios e desmatamentos ilegais identificados antes que se tornem crises públicas.",
+      "Cruze instantaneamente a geometria de qualquer propriedade rural (CAR) com o histórico de satélites e dinâmicas de solo. Gere relatórios analíticos consolidados e automatize auditorias territoriais com poucos cliques.",
   },
   {
     number: "02",
-    title: "Ativos Hídricos",
-    headline: "A clareza da água.",
+    title: "Dinâmica Hídrica e Ambiental",
+    headline: "A leitura dos recursos naturais.",
     description:
-      "Monitore a turbidez e identifique a origem exata do dano ambiental a montante.",
+      "Monitore bacias hidrográficas, indicadores de turbidez e qualidade da água em tempo real. Compreenda o comportamento dos rios e identifique a origem exata de alterações ambientais a montante.",
   },
   {
     number: "03",
-    title: "Linha do Tempo",
-    headline: "Retrovisor Temporal.",
+    title: "Linha do Tempo e Alertas",
+    headline: "Memória e monitoramento contínuo.",
     description:
-      "O histórico inquestionável de qualquer propriedade na ponta dos dedos. A prova real.",
+      "Monitore focos de calor e supressão vegetal ativa através de dados de satélite integrados. Ao mesmo tempo, use o histórico temporal para avaliar a evolução do uso do solo de qualquer coordenada ao longo dos anos.",
   },
 ]
 
@@ -132,7 +132,7 @@ export default function PillarScrollSection() {
             O Produto em Ação
           </p>
           <h2 className="text-4xl md:text-5xl font-semibold text-[#1d1d1f] tracking-[-0.02em] leading-[1.08] mb-24">
-            Três pilares.<br />Um território blindado.
+            Os 3 Pilares Geoespaciais
           </h2>
 
           <div className="relative grid lg:grid-cols-2 gap-20 items-start">
@@ -155,7 +155,7 @@ export default function PillarScrollSection() {
                       <h3 className="text-2xl md:text-3xl font-semibold text-[#1d1d1f] mb-4 tracking-tight">
                         {pillar.headline}
                       </h3>
-                      <p className="text-[15px] text-[#1d1d1f]/50 leading-relaxed max-w-xs">
+                      <p className="text-[15px] text-[#1d1d1f]/50 leading-relaxed max-w-md">
                         {pillar.description}
                       </p>
                     </div>
