@@ -76,7 +76,7 @@ export default function LandingPage() {
           <div className="relative z-30 text-center px-4 max-w-2xl xl:max-w-3xl mx-auto pt-16">
             {/* Ambient white glow behind text on smaller screens to ensure maximum legibility */}
             <div className="absolute -inset-16 bg-[radial-gradient(circle_at_center,rgba(255,255,255,0.85)_0%,rgba(255,255,255,0.5)_50%,transparent_75%)] pointer-events-none -z-10 xl:hidden" />
-            
+
             <h1 className="text-5xl md:text-7xl lg:text-[82px] font-semibold tracking-[-0.03em] leading-[1.04] text-[#1d1d1f] mb-6 text-balance">
               A complexidade do seu território, traduzida em clareza visual.
             </h1>
@@ -88,38 +88,36 @@ export default function LandingPage() {
                 Solicitar Demonstração Técnica
               </button>
             </ContactModal>
+
+            {/* Social Proof Discreto */}
+            <div className="mt-20 flex flex-col items-center gap-4">
+              <span className="text-[9px] tracking-[0.2em] uppercase text-[#1d1d1f]/45 font-light">
+                A tecnologia geoespacial confiada por quem protege e gerencia os biomas mais críticos.
+              </span>
+              <div className="flex items-center justify-center gap-8 opacity-40 grayscale hover:opacity-100 hover:grayscale-0 transition-all duration-300">
+                <div className="relative h-6 w-28">
+                  <Image
+                    src="/ihp-logo.png"
+                    alt="Instituto Homem Pantaneiro"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+                <div className="w-px h-3 bg-black/10" />
+                <div className="relative h-6 w-28">
+                  <Image
+                    src="/logo_riodaprata.png"
+                    alt="Grupo Rio da Prata"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Fade para a próxima seção */}
           <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent pointer-events-none" />
-        </section>
-
-        {/* ── 2. Alliances ────────────────────────────────────────────────── */}
-        <section className="w-full py-14 bg-white border-b border-black/[0.06]">
-          <div className="container px-6 text-center">
-            <p className="text-[10px] tracking-[0.2em] uppercase text-[#1d1d1f]/30 mb-10">
-              Desenvolvido em campo com quem protege os biomas mais críticos do planeta.
-            </p>
-            <div className="flex items-center justify-center gap-12 md:gap-20 flex-wrap">
-              <div className="relative h-9 w-36 opacity-30 hover:opacity-50 transition-opacity duration-300">
-                <Image
-                  src="/Marca_IHP_-_JPG_-_03-removebg-preview.png"
-                  alt="Instituto Homem Pantaneiro"
-                  fill
-                  className="object-contain filter grayscale"
-                />
-              </div>
-              <div className="w-px h-6 bg-black/10 hidden md:block" />
-              <div className="relative h-9 w-36 opacity-30 hover:opacity-50 transition-opacity duration-300">
-                <Image
-                  src="/logo_riodaprata.png"
-                  alt="Grupo Rio da Prata"
-                  fill
-                  className="object-contain filter grayscale"
-                />
-              </div>
-            </div>
-          </div>
         </section>
 
         {/* ── 3. Pain — giant quote ────────────────────────────────────────── */}

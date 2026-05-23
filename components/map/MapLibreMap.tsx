@@ -35,6 +35,7 @@ import { MaplibreCoordinateInspector } from './MaplibreCoordinateInspector'
 import { MaplibreSnapshotControl } from './MaplibreSnapshotControl'
 import { MaplibreMeasureControl } from './MaplibreMeasureControl'
 import { MaplibreFaunaHeatmapControl } from './MaplibreFaunaHeatmapControl'
+import { PropertyInfoControl } from './PropertyInfoControl'
 import { useMapContext } from '@/context/GeoDataContext'
 import { useUserRole } from '@/hooks/useUserRole'
 import { getLayerLegendInfo } from './helpers/map-visuals'
@@ -182,6 +183,16 @@ export default function MapLibreMap({
   const [faunaLoading, setFaunaLoading] = useState(false)
   const [faunaFetched, setFaunaFetched] = useState(false)
 
+  // ── Property info mode ──────────────────────────────────────────────────
+  const [propertyInfoActive, setPropertyInfoActive] = useState(false)
+  const [hoveredPropertyId, setHoveredPropertyId] = useState<number | null>(null)
+  const [hoveredPropertyBasic, setHoveredPropertyBasic] = useState<{
+    nome?: string
+    cod_imovel?: string
+    municipio?: string
+    num_area?: number
+  } | null>(null)
+
   // ── Basemap ─────────────────────────────────────────────────────────────
   const [basemap, setBasemap] = useState<BasemapKey>('satellite')
   const [basemapOpen, setBasemapOpen] = useState(false)
@@ -266,6 +277,14 @@ export default function MapLibreMap({
         .finally(() => setFaunaLoading(false))
     }
   }, [faunaHeatmapActive, faunaLocationsActive, faunaFetched, faunaLoading])
+
+  // Clear property hover state when info mode is deactivated
+  useEffect(() => {
+    if (!propertyInfoActive) {
+      setHoveredPropertyId(null)
+      setHoveredPropertyBasic(null)
+    }
+  }, [propertyInfoActive])
 
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
@@ -413,17 +432,44 @@ export default function MapLibreMap({
         setMeasureCursorPos([e.lngLat.lng, e.lngLat.lat])
         setHoveredFeature(null)
         setHoverCoords(null)
+        setHoveredPropertyId(null)
+        setHoveredPropertyBasic(null)
         return
       }
 
       if (!e.features?.length) {
         setHoveredFeature(null)
         setHoverCoords(null)
+        if (propertyInfoActive) {
+          setHoveredPropertyId(null)
+          setHoveredPropertyBasic(null)
+        }
         return
       }
 
       const feature = e.features[0]
       const slug = feature.layer.id.replace(/-(fill|circle|line)$/, '')
+
+      // Property info mode: intercept propriedades hover before exclusion check
+      if (propertyInfoActive && slug === 'propriedades') {
+        const props = feature.properties ?? {}
+        setHoveredPropertyId(props.id ?? null)
+        setHoveredPropertyBasic({
+          nome: props.nome,
+          cod_imovel: props.cod_imovel,
+          municipio: props.municipio,
+          num_area: props.num_area,
+        })
+        setHoveredFeature(null)
+        setHoverCoords(null)
+        return
+      }
+
+      if (propertyInfoActive) {
+        setHoveredPropertyId(null)
+        setHoveredPropertyBasic(null)
+      }
+
       if (EXCLUDED_HOVER.some((ex) => slug.includes(ex))) {
         setHoveredFeature(null)
         setHoverCoords(null)
@@ -433,7 +479,7 @@ export default function MapLibreMap({
       setHoveredFeature({ ...feature.properties, _slug: slug })
       setHoverCoords([e.lngLat.lng, e.lngLat.lat])
     },
-    [measureMode, measureDrawing]
+    [measureMode, measureDrawing, propertyInfoActive]
   )
 
   const handleContextMenu = useCallback(() => {
@@ -447,9 +493,10 @@ export default function MapLibreMap({
   const cursor = useMemo(() => {
     if (coordInspectorActive) return 'crosshair'
     if (measureMode && measureDrawing) return 'crosshair'
+    if (propertyInfoActive && hoveredPropertyId) return 'pointer'
     if (hoveredFeature) return 'pointer'
     return 'grab'
-  }, [coordInspectorActive, measureMode, measureDrawing, hoveredFeature])
+  }, [coordInspectorActive, measureMode, measureDrawing, hoveredFeature, propertyInfoActive, hoveredPropertyId])
 
   // ── Measure calculations ──────────────────────────────────────────────────
   const measureDistance = useMemo(
@@ -969,6 +1016,12 @@ export default function MapLibreMap({
           dataCount={faunaData.length}
           onToggleHeatmap={setFaunaHeatmapActive}
           onToggleLocations={setFaunaLocationsActive}
+        />
+        <PropertyInfoControl
+          isActive={propertyInfoActive}
+          onToggle={() => setPropertyInfoActive((v) => !v)}
+          hoveredPropertyId={hoveredPropertyId}
+          hoveredPropertyBasic={hoveredPropertyBasic}
         />
       </div>
 
