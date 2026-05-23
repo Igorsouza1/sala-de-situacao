@@ -1,20 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef } from "react"
-import type { ReactNode } from "react"
-import {
-  Info,
-  Ruler,
-  Map as MapIcon,
-  Tag,
-  Flame,
-  AlertTriangle,
-  Loader2,
-  TrendingDown,
-  TrendingUp,
-  Home,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Info, Home, Loader2 } from "lucide-react"
 
 interface PropertyBasic {
   nome?: string
@@ -48,6 +35,7 @@ export function PropertyInfoControl({
 }: PropertyInfoControlProps) {
   const [dossie, setDossie] = useState<DossieData | null>(null)
   const [loading, setLoading] = useState(false)
+  const [contentKey, setContentKey] = useState(0)
   const currentIdRef = useRef<number | null>(null)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -63,6 +51,7 @@ export function PropertyInfoControl({
     debounceRef.current = setTimeout(async () => {
       currentIdRef.current = hoveredPropertyId
       setLoading(true)
+      setContentKey((k) => k + 1)
       try {
         const res = await fetch(`/api/propriedades/${hoveredPropertyId}/dossie`)
         const json = await res.json()
@@ -70,11 +59,11 @@ export function PropertyInfoControl({
           setDossie(json.data)
         }
       } catch {
-        // ignore fetch errors in hover mode
+        // silently ignore hover errors
       } finally {
         if (currentIdRef.current === hoveredPropertyId) setLoading(false)
       }
-    }, 350)
+    }, 320)
 
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current)
@@ -87,9 +76,7 @@ export function PropertyInfoControl({
   const car = dossie?.cod_imovel || hoveredPropertyBasic?.cod_imovel
   const acoesTotal = dossie?.acoes?.length ?? 0
   const acoesPassivas =
-    dossie?.acoes?.filter((a) =>
-      a.carater?.toLowerCase().includes("passiv")
-    ).length ?? 0
+    dossie?.acoes?.filter((a) => a.carater?.toLowerCase().includes("passiv")).length ?? 0
   const acoesAtivas =
     dossie?.acoes?.filter(
       (a) =>
@@ -97,194 +84,309 @@ export function PropertyInfoControl({
         !a.carater?.toLowerCase().includes("passiv")
     ).length ?? 0
 
-  return (
-    <div className="relative z-[1000]">
-      {/* Toggle button — same style as FilterPopover / CoordinateInspector */}
-      <Button
-        variant={isActive ? "default" : "outline"}
-        size="icon"
-        onClick={onToggle}
-        className={`shadow-md w-10 h-10 rounded-full transition-all duration-200 ${
-          isActive
-            ? "bg-slate-700 text-white border-slate-700 hover:bg-slate-800"
-            : "bg-white text-slate-700 hover:bg-gray-100 border-input"
-        }`}
-        title={
-          isActive
-            ? "Desativar modo informação"
-            : "Ativar modo informação de propriedade"
-        }
-      >
-        <Info className="h-5 w-5" />
-      </Button>
+  const hasBasic = !!hoveredPropertyBasic
 
-      {/* Info balloon — slides in from left, same origin as FilterPopover */}
-      <div
-        className={`absolute left-12 top-0 bg-white border border-slate-200 rounded-xl shadow-2xl w-72 transition-all duration-300 ease-out origin-left ${
-          isActive
-            ? "opacity-100 scale-100 translate-x-0"
-            : "opacity-0 scale-95 -translate-x-2 pointer-events-none"
-        }`}
+  return (
+    <div style={{ position: "relative", zIndex: 1000 }}>
+
+      {/* ── Toggle button ── */}
+      <button
+        onClick={onToggle}
+        title={isActive ? "Desativar informações" : "Informações da Propriedade"}
+        style={{
+          width: 40,
+          height: 40,
+          borderRadius: "50%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          border: isActive ? "none" : "1px solid rgba(0,0,0,0.12)",
+          background: isActive ? "#1d1d1f" : "#ffffff",
+          color: isActive ? "#ffffff" : "#1d1d1f",
+          boxShadow: isActive
+            ? "0 4px 14px rgba(0,0,0,0.28)"
+            : "0 2px 8px rgba(0,0,0,0.12)",
+          cursor: "pointer",
+          outline: "none",
+          transition: "background 200ms ease, box-shadow 200ms ease, transform 120ms ease",
+          flexShrink: 0,
+        }}
+        onMouseDown={(e) => { e.currentTarget.style.transform = "scale(0.93)" }}
+        onMouseUp={(e) => { e.currentTarget.style.transform = "scale(1)" }}
+        onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)" }}
       >
-        {/* Header */}
-        <div className="bg-slate-700 rounded-t-xl px-4 py-3">
-          <div className="flex items-center gap-2">
-            <Info className="h-4 w-4 text-white/60 flex-shrink-0" />
-            <span className="text-white text-xs font-bold uppercase tracking-wider">
-              Informações da Propriedade
-            </span>
-          </div>
+        <Info size={17} strokeWidth={1.8} />
+      </button>
+
+      {/* ── Info card ── */}
+      <div
+        style={{
+          position: "absolute",
+          left: 48,
+          top: 0,
+          width: 276,
+          background: "#ffffff",
+          borderRadius: 18,
+          border: "1px solid rgba(0,0,0,0.08)",
+          boxShadow: "0 12px 48px rgba(0,0,0,0.14), 0 2px 8px rgba(0,0,0,0.06)",
+          overflow: "hidden",
+          transition: "opacity 280ms cubic-bezier(0.4,0,0.2,1), transform 280ms cubic-bezier(0.4,0,0.2,1)",
+          opacity: isActive ? 1 : 0,
+          transform: isActive
+            ? "translateX(0) scale(1)"
+            : "translateX(-8px) scale(0.96)",
+          pointerEvents: isActive ? "auto" : "none",
+          transformOrigin: "left center",
+        }}
+      >
+
+        {/* ── Card header ── */}
+        <div
+          style={{
+            padding: "13px 18px 11px",
+            borderBottom: "1px solid rgba(0,0,0,0.06)",
+            display: "flex",
+            alignItems: "center",
+            gap: 7,
+          }}
+        >
+          <Info size={11} color="#7a7a7a" strokeWidth={2} />
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.07em",
+              color: "#7a7a7a",
+              textTransform: "uppercase",
+            }}
+          >
+            Informações do Imóvel
+          </span>
         </div>
 
-        {/* Body — fades between states */}
-        <div
-          className={`transition-opacity duration-200 ${
-            loading && !hoveredPropertyBasic ? "opacity-50" : "opacity-100"
-          }`}
-        >
-          {hoveredPropertyBasic ? (
-            <div className="p-4 space-y-3">
-              {/* Name */}
-              <div className="flex items-start gap-2">
-                <Home className="h-4 w-4 text-slate-400 mt-0.5 flex-shrink-0" />
-                <span className="text-sm font-bold text-slate-800 leading-snug">
-                  {nome || "Propriedade"}
+        {/* ── Card body ── */}
+        {hasBasic ? (
+          <div
+            key={contentKey}
+            style={{
+              padding: "16px 18px 18px",
+              animation: "fadeSlideIn 200ms ease forwards",
+            }}
+          >
+            <style>{`
+              @keyframes fadeSlideIn {
+                from { opacity: 0; transform: translateY(4px); }
+                to   { opacity: 1; transform: translateY(0); }
+              }
+            `}</style>
+
+            {/* Property name */}
+            <p
+              style={{
+                fontSize: 17,
+                fontWeight: 600,
+                letterSpacing: "-0.374px",
+                color: "#1d1d1f",
+                lineHeight: 1.24,
+                marginBottom: 13,
+              }}
+            >
+              {nome || "Propriedade"}
+            </p>
+
+            {/* Data rows */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 16 }}>
+              {area != null && (
+                <DataRow label="Área" value={`${Number(area).toFixed(2)} ha`} />
+              )}
+              {municipio && <DataRow label="Município" value={municipio} />}
+              {car && (
+                <DataRow
+                  label="CAR"
+                  value={car.length > 22 ? `…${car.slice(-20)}` : car}
+                  mono
+                />
+              )}
+            </div>
+
+            {/* Hairline divider */}
+            <div
+              style={{
+                height: 1,
+                background: "rgba(0,0,0,0.06)",
+                marginBottom: 16,
+              }}
+            />
+
+            {/* Stats */}
+            {loading ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  color: "#7a7a7a",
+                  padding: "4px 0",
+                }}
+              >
+                <Loader2 size={13} style={{ animation: "spin 1s linear infinite" }} />
+                <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+                <span style={{ fontSize: 13, letterSpacing: "-0.12px" }}>
+                  Carregando estatísticas…
                 </span>
               </div>
-
-              {/* Basic fields */}
-              <div className="space-y-2">
-                {area != null && (
-                  <InfoRow
-                    icon={Ruler}
-                    label="Área"
-                    value={`${Number(area).toFixed(2)} ha`}
+            ) : dossie ? (
+              <div>
+                {/* Three stat numbers */}
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr 1fr",
+                    marginBottom: acoesTotal > 0 ? 14 : 0,
+                  }}
+                >
+                  <StatNum value={dossie.focosCount} label="Focos" color="#ef4444" />
+                  <StatNum
+                    value={dossie.desmatamentoCount}
+                    label="Desmate"
+                    color="#f59e0b"
+                    bordered
                   />
-                )}
-                {municipio && (
-                  <InfoRow icon={MapIcon} label="Município" value={municipio} />
-                )}
-                {car && (
-                  <InfoRow
-                    icon={Tag}
-                    label="CAR"
-                    value={
-                      <span className="font-mono text-[10px] bg-slate-100 px-1.5 py-0.5 rounded border border-slate-200 break-all">
-                        {car.length > 24 ? `...${car.slice(-22)}` : car}
-                      </span>
-                    }
-                  />
-                )}
-              </div>
+                  <StatNum value={acoesTotal} label="Ações" color="#1d1d1f" />
+                </div>
 
-              {/* Stats section */}
-              <div className="border-t border-slate-100 pt-3">
-                {loading ? (
-                  <div className="flex items-center gap-2 text-xs text-slate-400 py-1">
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span>Carregando estatísticas...</span>
+                {/* Ações breakdown */}
+                {acoesTotal > 0 && (
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6 }}>
+                    <AcaoChip label="Passivo" value={acoesPassivas} positive={false} />
+                    <AcaoChip label="Ativo" value={acoesAtivas} positive={true} />
                   </div>
-                ) : dossie ? (
-                  <div className="space-y-2">
-                    <div className="grid grid-cols-3 gap-2">
-                      <StatBubble
-                        icon={Flame}
-                        label="Focos"
-                        value={dossie.focosCount}
-                        color="text-red-500"
-                        bg="bg-red-50 border-red-100"
-                      />
-                      <StatBubble
-                        icon={AlertTriangle}
-                        label="Desmate"
-                        value={dossie.desmatamentoCount}
-                        color="text-amber-600"
-                        bg="bg-amber-50 border-amber-100"
-                      />
-                      <StatBubble
-                        icon={Tag}
-                        label="Ações"
-                        value={acoesTotal}
-                        color="text-slate-600"
-                        bg="bg-slate-50 border-slate-200"
-                      />
-                    </div>
-                    {acoesTotal > 0 && (
-                      <div className="grid grid-cols-2 gap-2">
-                        <AcaoChip
-                          icon={TrendingDown}
-                          label="Passivo"
-                          value={acoesPassivas}
-                          color="text-red-600"
-                          bg="bg-red-50 border-red-100"
-                        />
-                        <AcaoChip
-                          icon={TrendingUp}
-                          label="Ativo"
-                          value={acoesAtivas}
-                          color="text-emerald-600"
-                          bg="bg-emerald-50 border-emerald-100"
-                        />
-                      </div>
-                    )}
-                  </div>
-                ) : null}
+                )}
               </div>
+            ) : null}
+          </div>
+        ) : (
+          /* Empty state */
+          <div
+            style={{
+              padding: "32px 20px",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                width: 40,
+                height: 40,
+                borderRadius: "50%",
+                background: "#f5f5f7",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 12px",
+              }}
+            >
+              <Home size={17} color="#7a7a7a" strokeWidth={1.6} />
             </div>
-          ) : (
-            /* Empty state */
-            <div className="px-4 py-8 text-center">
-              <div className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-100 mb-3">
-                <Home className="h-5 w-5 text-slate-400" />
-              </div>
-              <p className="text-xs text-slate-500 leading-relaxed">
-                Passe o mouse sobre uma propriedade no mapa para ver as
-                informações
-              </p>
-            </div>
-          )}
-        </div>
+            <p
+              style={{
+                fontSize: 13,
+                color: "#7a7a7a",
+                lineHeight: 1.5,
+                letterSpacing: "-0.12px",
+                maxWidth: 200,
+                margin: "0 auto",
+              }}
+            >
+              Passe o mouse sobre uma propriedade no mapa
+            </p>
+          </div>
+        )}
       </div>
     </div>
   )
 }
 
-function InfoRow({
-  icon: Icon,
+// ── Sub-components ────────────────────────────────────────────────────────────
+
+function DataRow({
   label,
   value,
+  mono,
 }: {
-  icon: React.ComponentType<{ className?: string }>
   label: string
-  value: ReactNode
+  value: string
+  mono?: boolean
 }) {
   return (
-    <div className="flex items-start gap-2 text-xs">
-      <Icon className="h-3.5 w-3.5 text-slate-400 mt-0.5 flex-shrink-0" />
-      <span className="text-slate-500 w-14 shrink-0">{label}:</span>
-      <span className="text-slate-800 font-medium flex-1 min-w-0">{value}</span>
+    <div style={{ display: "flex", alignItems: "baseline" }}>
+      <span
+        style={{
+          fontSize: 12,
+          color: "#7a7a7a",
+          letterSpacing: "-0.12px",
+          width: 72,
+          flexShrink: 0,
+        }}
+      >
+        {label}
+      </span>
+      <span
+        style={{
+          fontSize: mono ? 11 : 14,
+          fontWeight: 500,
+          color: "#1d1d1f",
+          letterSpacing: mono ? 0 : "-0.224px",
+          fontFamily: mono ? "ui-monospace, monospace" : "inherit",
+          wordBreak: "break-all",
+        }}
+      >
+        {value}
+      </span>
     </div>
   )
 }
 
-function StatBubble({
-  icon: Icon,
-  label,
+function StatNum({
   value,
+  label,
   color,
-  bg,
+  bordered,
 }: {
-  icon: React.ComponentType<{ className?: string }>
-  label: string
   value: number
+  label: string
   color: string
-  bg: string
+  bordered?: boolean
 }) {
   return (
-    <div className={`rounded-lg p-2.5 text-center border ${bg}`}>
-      <Icon className={`h-3.5 w-3.5 ${color} mx-auto mb-1`} />
-      <div className={`text-lg font-black ${color} leading-none`}>{value}</div>
-      <div className="text-[9px] text-slate-500 uppercase font-bold tracking-wide mt-0.5">
+    <div
+      style={{
+        textAlign: "center",
+        padding: "0 4px",
+        borderLeft: bordered ? "1px solid rgba(0,0,0,0.06)" : "none",
+        borderRight: bordered ? "1px solid rgba(0,0,0,0.06)" : "none",
+      }}
+    >
+      <div
+        style={{
+          fontSize: 30,
+          fontWeight: 700,
+          letterSpacing: "-0.5px",
+          color,
+          lineHeight: 1,
+          marginBottom: 5,
+        }}
+      >
+        {value}
+      </div>
+      <div
+        style={{
+          fontSize: 9,
+          fontWeight: 600,
+          letterSpacing: "0.06em",
+          color: "#7a7a7a",
+          textTransform: "uppercase",
+        }}
+      >
         {label}
       </div>
     </div>
@@ -292,25 +394,53 @@ function StatBubble({
 }
 
 function AcaoChip({
-  icon: Icon,
   label,
   value,
-  color,
-  bg,
+  positive,
 }: {
-  icon: React.ComponentType<{ className?: string }>
   label: string
   value: number
-  color: string
-  bg: string
+  positive: boolean
 }) {
+  const color = positive ? "#059669" : "#dc2626"
+  const bg = positive ? "rgba(16,185,129,0.06)" : "rgba(239,68,68,0.06)"
+  const border = positive ? "rgba(16,185,129,0.18)" : "rgba(239,68,68,0.18)"
+
   return (
-    <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${bg}`}>
-      <Icon className={`h-3.5 w-3.5 ${color} flex-shrink-0`} />
-      <div>
-        <div className="text-[9px] uppercase font-bold text-slate-500">{label}</div>
-        <div className={`text-sm font-black leading-none ${color}`}>{value}</div>
-      </div>
+    <div
+      style={{
+        padding: "9px 12px",
+        borderRadius: 10,
+        background: bg,
+        border: `1px solid ${border}`,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 3,
+      }}
+    >
+      <span
+        style={{
+          fontSize: 22,
+          fontWeight: 700,
+          letterSpacing: "-0.3px",
+          color,
+          lineHeight: 1,
+        }}
+      >
+        {value}
+      </span>
+      <span
+        style={{
+          fontSize: 9,
+          fontWeight: 600,
+          letterSpacing: "0.06em",
+          color: "#7a7a7a",
+          textTransform: "uppercase",
+        }}
+      >
+        {label}
+      </span>
     </div>
   )
 }

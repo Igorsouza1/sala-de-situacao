@@ -1,8 +1,7 @@
 "use client"
 
 import type React from "react"
-import { X } from 'lucide-react'
-import { Button } from "@/components/ui/button"
+import { X, Pencil } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 interface ModalProps {
@@ -14,47 +13,105 @@ interface ModalProps {
   onEdit?: () => void
 }
 
-export function Modal({ isOpen, onClose, children, title = "Detalhes da Camada", showEdit = false, onEdit }: ModalProps) {
+export function Modal({
+  isOpen,
+  onClose,
+  children,
+  showEdit = false,
+  onEdit,
+}: ModalProps) {
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[2000] flex justify-center items-center p-4">
+    /* Backdrop — blur saturate à la Apple sub-nav-frosted */
+    <div
+      className="fixed inset-0 z-[2000] flex justify-center items-center p-4"
+      style={{ background: "rgba(0,0,0,0.36)", backdropFilter: "blur(20px) saturate(180%)" }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+    >
       <div
-  className="
-    bg-white rounded-lg shadow-2xl
-    w-full
-    max-w-[75vw]       /* celular: quase tela toda */
-    sm:max-w-[60vw]    /* sm: um pouco de margem */
-    md:max-w-[80vw]    /* tablet/medio: bem largo */
-    lg:max-w-[50vw]    /* desktop: ainda grande */
-    xl:max-w-[50vw]    /* monitorzão: não vira TV */
-    border border-gray-200
-    transform transition-all duration-200
-    animate-in fade-in-0 zoom-in-95
-  "
->
-        {/* Header */}
-        <div className="flex justify-between items-center py-3 px-4 bg-brand-dark-blue border-b border-white/10 rounded-t-lg">
-          <h2 className="text-base font-semibold text-white tracking-wide">{title}</h2>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="rounded-full text-white/70 hover:bg-white/10 hover:text-white h-7 w-7"
-            >
-              <X className="h-4 w-4" />
-              <span className="sr-only">Fechar</span>
-            </Button>
-          </div>
+        className="
+          w-full
+          max-w-[92vw]
+          sm:max-w-[72vw]
+          md:max-w-[60vw]
+          lg:max-w-[52vw]
+          xl:max-w-[46vw]
+          animate-in fade-in-0 zoom-in-95 duration-200
+        "
+        style={{
+          background: "#ffffff",
+          borderRadius: 20,
+          border: "1px solid rgba(0,0,0,0.08)",
+          boxShadow: "0 24px 80px rgba(0,0,0,0.22), 0 4px 16px rgba(0,0,0,0.08)",
+          position: "relative",
+          overflow: "hidden",
+        }}
+      >
+        {/* ── Floating action buttons ── */}
+        <div
+          style={{
+            position: "absolute",
+            top: 14,
+            right: 14,
+            zIndex: 20,
+            display: "flex",
+            alignItems: "center",
+            gap: 6,
+          }}
+        >
+          {showEdit && onEdit && (
+            <IconButton onClick={onEdit} title="Editar">
+              <Pencil size={13} strokeWidth={2} />
+            </IconButton>
+          )}
+          <IconButton onClick={onClose} title="Fechar">
+            <X size={14} strokeWidth={2} />
+          </IconButton>
         </div>
-        
-        {/* Content */}
-        <ScrollArea className="p-6 h-[75vh]">
 
+        {/* ── Content ── */}
+        <ScrollArea className="h-[78vh] p-6">
           {children}
         </ScrollArea>
       </div>
     </div>
+  )
+}
+
+function IconButton({
+  onClick,
+  title,
+  children,
+}: {
+  onClick: () => void
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      style={{
+        width: 28,
+        height: 28,
+        borderRadius: "50%",
+        border: "none",
+        background: "rgba(0,0,0,0.07)",
+        color: "#1d1d1f",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        transition: "background 140ms ease, transform 100ms ease",
+        flexShrink: 0,
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(0,0,0,0.13)" }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(0,0,0,0.07)" }}
+      onMouseDown={(e)  => { e.currentTarget.style.transform = "scale(0.92)" }}
+      onMouseUp={(e)    => { e.currentTarget.style.transform = "scale(1)" }}
+    >
+      {children}
+    </button>
   )
 }

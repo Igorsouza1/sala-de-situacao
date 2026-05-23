@@ -104,7 +104,7 @@ export async function findPropriedadeDossieData(id: number, tenantId?: string | 
         FROM "monitoramento"."acoes" a
         WHERE ST_Intersects(a.geom, p.geom)
       ) as "acoes",
-      (SELECT COUNT(*)::int FROM "monitoramento"."raw_firms" f WHERE ST_Intersects(f.geom, p.geom)) as "focosCount",
+      (SELECT COUNT(*)::int FROM "monitoramento"."raw_firms" f WHERE ST_DWithin(f.geom::geography, p.geom::geography, 187.5)) as "focosCount",
       (SELECT COUNT(*)::int FROM "monitoramento"."desmatamento" d WHERE ST_Intersects(d.geom, p.geom)) as "desmatamentoCount",
       (SELECT COALESCE(SUM(alertha), 0)::float FROM "monitoramento"."desmatamento" d WHERE ST_Intersects(d.geom, p.geom)) as "desmatamentoArea",
       (
@@ -137,7 +137,7 @@ export async function findPropriedadeDossieData(id: number, tenantId?: string | 
   FROM (
     SELECT *
     FROM "monitoramento"."raw_firms"
-    WHERE ST_Intersects(geom, p.geom)
+    WHERE ST_DWithin(geom::geography, p.geom::geography, 187.5)
     ORDER BY acq_date DESC
     LIMIT 5
   ) f
