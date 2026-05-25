@@ -16,7 +16,7 @@ import {
   useMemo,
 } from 'react'
 import * as LucideIcons from 'lucide-react'
-import type { LayerResponseDTO } from '@/types/map-dto'
+import type { LayerResponseDTO, MapFeatureCollection } from '@/types/map-dto'
 import {
   resolveLayerType,
   toFillPaint,
@@ -40,6 +40,14 @@ import { useMapContext } from '@/context/GeoDataContext'
 import { useUserRole } from '@/hooks/useUserRole'
 import { getLayerLegendInfo } from './helpers/map-visuals'
 import { Button } from '@/components/ui/button'
+
+// ── Module-level cache — persists across SPA navigation within the same tab ──
+// Cleared only on hard reload. Shared by all MapLibreMap mounts.
+const _cache: {
+  layers: LayerResponseDTO[]
+  data: Record<string, MapFeatureCollection>
+  filterKey: string
+} = { layers: [], data: {}, filterKey: '' }
 
 // ── Basemaps ────────────────────────────────────────────────────────────────
 const SATELLITE_STYLE = {
@@ -131,17 +139,37 @@ export default function MapLibreMap({
   center = [-21.327773, -56.694734],
   zoom = 11,
 }: MapLibreMapProps) {
-  // ── Core layer state ────────────────────────────────────────────────────
-  const [layers, setLayers] = useState<LayerResponseDTO[]>([])
+  // ── Core layer state (initialized from module cache for instant return nav) ──
+  const [layers, setLayers] = useState<LayerResponseDTO[]>(() => _cache.layers)
+  const [layerData, setLayerData] = useState<Record<string, MapFeatureCollection>>(() => ({ ..._cache.data }))
   const [visibleLayers, setVisibleLayers] = useState<string[]>([])
-  const [loadingLayers, setLoadingLayers] = useState(false)
+  const [loadingLayers, setLoadingLayers] = useState(_cache.layers.length === 0)
   const [error, setError] = useState<string | null>(null)
   const [areaFilter, setAreaFilter] = useState<{
     minArea?: number
     maxArea?: number
   }>({})
-  const [dataVersion, setDataVersion] = useState(0)
+  const fetchingRef = useRef<Set<string>>(new Set())
   const initializedRef = useRef(false)
+
+  // ── Debounced batch flush for layer data (groups parallel fetches into 1 render) ─
+  const pendingBatch = useRef<Record<string, MapFeatureCollection>>({})
+  const batchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const flushBatch = useCallback(() => {
+    const updates = pendingBatch.current
+    if (!Object.keys(updates).length) return
+    pendingBatch.current = {}
+    batchTimer.current = null
+    setLayerData((prev) => ({ ...prev, ...updates }))
+  }, [])
+
+  const enqueueLayerData = useCallback((slug: string, data: MapFeatureCollection) => {
+    pendingBatch.current[slug] = data
+    _cache.data[slug] = data
+    if (batchTimer.current) clearTimeout(batchTimer.current)
+    batchTimer.current = setTimeout(flushBatch, 80)
+  }, [flushBatch])
 
   // ── Context / auth ──────────────────────────────────────────────────────
   const { modalData, openModal, closeModal, dateFilter, setDateFilter } =
@@ -200,10 +228,31 @@ export default function MapLibreMap({
   // ── Map ref ─────────────────────────────────────────────────────────────
   const mapRef = useRef<any>(null)
 
-  // ── Fetch layers ─────────────────────────────────────────────────────────
-  const fetchLayers = useCallback(async () => {
-    setLoadingLayers(true)
+  // ── Fetch catalog metadata (lightweight, no GeoJSON) ────────────────────
+  const fetchCatalog = useCallback(async () => {
+    if (_cache.layers.length === 0) setLoadingLayers(true)
     setError(null)
+    try {
+      const response = await fetch('/api/map/layers?metadataOnly=true')
+      if (response.ok) {
+        const data: LayerResponseDTO[] = await response.json()
+        const sorted = data.sort((a, b) => (a.ordering || 0) - (b.ordering || 0))
+        _cache.layers = sorted
+        setLayers(sorted)
+      } else {
+        setError('Falha ao carregar catálogo de camadas')
+      }
+    } catch {
+      setError('Erro ao conectar com servidor')
+    } finally {
+      setLoadingLayers(false)
+    }
+  }, [])
+
+  // ── Fetch single layer GeoJSON (called lazily on toggle) ─────────────────
+  const fetchLayerData = useCallback(async (slug: string) => {
+    if (fetchingRef.current.has(slug)) return
+    fetchingRef.current.add(slug)
     try {
       const params = new URLSearchParams()
       if (dateFilter.startDate)
@@ -214,22 +263,19 @@ export default function MapLibreMap({
         params.append('minArea', String(areaFilter.minArea))
       if (areaFilter.maxArea !== undefined)
         params.append('maxArea', String(areaFilter.maxArea))
-      params.append('_t', String(Date.now()))
 
-      const response = await fetch(`/api/map/layers?${params.toString()}`)
+      const response = await fetch(`/api/map/layers/${slug}?${params.toString()}`)
       if (response.ok) {
-        const data: LayerResponseDTO[] = await response.json()
-        setLayers(data.sort((a, b) => (a.ordering || 0) - (b.ordering || 0)))
-        setDataVersion((prev) => prev + 1)
-      } else {
-        setError('Falha ao carregar camadas')
+        const dto: LayerResponseDTO = await response.json()
+        enqueueLayerData(slug, dto.data)
       }
-    } catch {
-      setError('Erro ao conectar com servidor')
+    } catch (e) {
+      console.error(`Failed to load layer data for ${slug}:`, e)
     } finally {
-      setLoadingLayers(false)
+      fetchingRef.current.delete(slug)
     }
   }, [
+    enqueueLayerData,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     dateFilter.startDate?.toISOString(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -238,7 +284,12 @@ export default function MapLibreMap({
     areaFilter.maxArea,
   ])
 
-  // Initialize visibility once when layers first arrive
+  // Boot: fetch catalog once
+  useEffect(() => {
+    fetchCatalog()
+  }, [fetchCatalog])
+
+  // Initialize all layers as visible once catalog arrives
   useEffect(() => {
     if (!initializedRef.current && layers.length > 0) {
       const slugs: string[] = []
@@ -253,9 +304,48 @@ export default function MapLibreMap({
     }
   }, [layers])
 
+  // Filter change: invalidate data cache only when filter params actually changed.
+  // useEffect always runs on mount — without the key check, every navigation back
+  // would clear the cache even though the filter is unchanged.
   useEffect(() => {
-    fetchLayers()
-  }, [fetchLayers])
+    const newKey = [
+      dateFilter.startDate?.toISOString() ?? '',
+      dateFilter.endDate?.toISOString() ?? '',
+      String(areaFilter.minArea ?? ''),
+      String(areaFilter.maxArea ?? ''),
+    ].join('|')
+    if (_cache.filterKey === newKey) return
+    _cache.filterKey = newKey
+    _cache.data = {}
+    pendingBatch.current = {}
+    if (batchTimer.current) { clearTimeout(batchTimer.current); batchTimer.current = null }
+    setLayerData({})
+    fetchingRef.current.clear()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    dateFilter.startDate?.toISOString(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    dateFilter.endDate?.toISOString(),
+    areaFilter.minArea,
+    areaFilter.maxArea,
+  ])
+
+  // Lazy load: fetch data for visible parent slugs not yet in cache
+  useEffect(() => {
+    const parentSlugs = new Set<string>()
+    visibleLayers.forEach((sv) => {
+      const slug = sv.includes('__') ? sv.split('__')[0] : sv
+      parentSlugs.add(slug)
+    })
+    parentSlugs.forEach((slug) => {
+      if (!layerData[slug] && !fetchingRef.current.has(slug)) {
+        fetchLayerData(slug)
+      }
+    })
+  // layerData intentionally in deps: after cache clear, re-fetches visible slugs
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visibleLayers, layerData, fetchLayerData])
 
   // ── Fauna data fetch ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -341,47 +431,49 @@ export default function MapLibreMap({
     [layers]
   )
 
-  // ── Processed layers (visibility + group filter) ──────────────────────────
+  const EMPTY_FC: MapFeatureCollection = useMemo(
+    () => ({ type: 'FeatureCollection', features: [] }),
+    []
+  )
+
+  // ── Processed layers (ordering-stable: all visible layers, data or empty) ──
+  // Iterates `layers` in catalog order — Source/Layer components are registered in
+  // the correct MapLibre stack position from the first render, so late-arriving
+  // data (e.g. propriedades at 10s) does not push layers to the top of the stack.
   const processedLayers = useMemo(() => {
-    return layers
-      .map((layer) => {
-        const vc = layer.visualConfig
-        const ruleField = vc?.rules?.[0]?.field
-        const groupByColumn = vc?.groupByColumn || ruleField
-        let isVisible = false
-        let activeValues: string[] = []
+    return layers.map((layer) => {
+      const data = layerData[layer.slug]
+      const vc = layer.visualConfig
+      const ruleField = vc?.rules?.[0]?.field
+      const groupByColumn = vc?.groupByColumn || ruleField
+      let isVisible = false
+      let activeValues: string[] = []
 
-        if (groupByColumn) {
-          activeValues = visibleLayers
-            .filter((s) => s.startsWith(`${layer.slug}__`))
-            .map((s) => s.replace(`${layer.slug}__`, ''))
-          if (activeValues.length > 0) isVisible = true
-        } else {
-          isVisible = visibleLayers.includes(layer.slug)
+      if (groupByColumn) {
+        activeValues = visibleLayers
+          .filter((s) => s.startsWith(`${layer.slug}__`))
+          .map((s) => s.replace(`${layer.slug}__`, ''))
+        if (activeValues.length > 0) isVisible = true
+      } else {
+        isVisible = visibleLayers.includes(layer.slug)
+      }
+
+      if (!isVisible) return null
+
+      // Use loaded data or empty collection — either way Source is registered in order
+      let displayData: MapFeatureCollection = data ?? EMPTY_FC
+      if (groupByColumn && activeValues.length > 0 && data) {
+        displayData = {
+          ...data,
+          features: data.features.filter((f) =>
+            activeValues.includes(f.properties?.[groupByColumn] as string)
+          ),
         }
+      }
 
-        if (!isVisible || !layer.data?.features?.length) return null
-
-        let displayData = layer.data
-        if (groupByColumn && activeValues.length > 0) {
-          displayData = {
-            ...displayData,
-            features: displayData.features.filter((f) =>
-              activeValues.includes(f.properties?.[groupByColumn] as string)
-            ),
-          }
-        }
-
-        return {
-          layer,
-          displayData,
-          componentKey: `${layer.slug}-${displayData.features.length}-${dataVersion}`,
-        }
-      })
-      .filter(
-        (item): item is NonNullable<typeof item> => item !== null
-      )
-  }, [layers, visibleLayers, dataVersion])
+      return { layer, displayData }
+    }).filter((item): item is NonNullable<typeof item> => item !== null)
+  }, [layers, visibleLayers, layerData, EMPTY_FC])
 
   // ── interactiveLayerIds for click/hover ───────────────────────────────────
   const interactiveLayerIds = useMemo(
@@ -701,7 +793,7 @@ export default function MapLibreMap({
 
   // ── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="w-full h-screen relative z-10">
+    <div className="w-full h-full relative">
       <Map
         ref={mapRef}
         initialViewState={{
@@ -1030,7 +1122,14 @@ export default function MapLibreMap({
         <Button
           variant="outline"
           size="icon"
-          onClick={fetchLayers}
+          onClick={() => {
+            _cache.data = {}
+            pendingBatch.current = {}
+            if (batchTimer.current) { clearTimeout(batchTimer.current); batchTimer.current = null }
+            setLayerData({})
+            fetchingRef.current.clear()
+            fetchCatalog()
+          }}
           className="bg-white hover:bg-gray-100 shadow-md text-black border-input"
           title="Atualizar dados"
         >
@@ -1071,7 +1170,15 @@ export default function MapLibreMap({
       <ShapefileUploader
         onPreview={(data, color) => setPreviewGeoJSON({ data, color })}
         onClearPreview={() => setPreviewGeoJSON(null)}
-        onSaveSuccess={fetchLayers}
+        onSaveSuccess={() => {
+          _cache.data = {}
+          _cache.layers = []
+          pendingBatch.current = {}
+          if (batchTimer.current) { clearTimeout(batchTimer.current); batchTimer.current = null }
+          setLayerData({})
+          fetchingRef.current.clear()
+          fetchCatalog()
+        }}
       />
 
       {/* Bottom-left: LayerManager */}
@@ -1117,7 +1224,10 @@ export default function MapLibreMap({
           Object.entries(data).forEach(([k, v]) => form.append(k, String(v)))
           files.forEach((f) => form.append('files', f))
           await fetch(`/api/acoes/${data.id}`, { method: 'PUT', body: form })
-          await fetchLayers()
+          // Invalidate 'acoes' cache so it re-fetches with updated data
+          delete _cache.data['acoes']
+          setLayerData((prev) => { const next = { ...prev }; delete next['acoes']; return next })
+          fetchingRef.current.delete('acoes')
           setIsEditOpen(false)
           closeModal()
         }}

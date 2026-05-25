@@ -20,11 +20,11 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex h-screen overflow-hidden bg-gray-50">
       <Navbar />
       <MapProvider>
         <AcoesProvider>
-          <main className="flex-1">{children}</main>
+          <main className="flex-1 min-w-0 overflow-hidden">{children}</main>
         </AcoesProvider>
       </MapProvider>
     </div>

@@ -24,7 +24,8 @@ export async function GET(request: NextRequest) {
             regiaoId = fromAccess ?? undefined;
         }
 
-        const layers = await getAllLayers(tenantId, startDate, endDate, minArea, maxArea, regiaoId);
+        const metadataOnly = searchParams.get('metadataOnly') === 'true';
+        const layers = await getAllLayers(tenantId, startDate, endDate, minArea, maxArea, regiaoId, metadataOnly);
         return NextResponse.json(layers);
     } catch (error) {
         console.error("Error fetching layers:", error);

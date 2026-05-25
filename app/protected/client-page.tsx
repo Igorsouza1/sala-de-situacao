@@ -28,8 +28,8 @@ export default function ProtectedPage() {
   // }
 
   return (
-    <div className="flex-1 w-full flex flex-col ">
-     <DynamicMap  />
+    <div className="h-full w-full">
+      <DynamicMap />
     </div>
   );
 }

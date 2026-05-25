@@ -96,11 +96,15 @@ async function getLayerGroups(slug: string, column: string, schema: string = 'mo
     }
 }
 
+const EMPTY_COLLECTION: MapFeatureCollection = { type: 'FeatureCollection', features: [] };
+
 /**
  * THE MAESTRO: Combines Catalog Configuration + Database GeoJSON
  * Orchestrates the assembly of the final LayerResponseDTO.
+ *
+ * @param metadataOnly - When true, skips GeoJSON data fetching (for lazy loading boot)
  */
-export async function getLayer(slug: string, tenantId?: string | null, startDate?: Date, endDate?: Date, minArea?: number, maxArea?: number, regiaoId?: number): Promise<LayerResponseDTO | null> {
+export async function getLayer(slug: string, tenantId?: string | null, startDate?: Date, endDate?: Date, minArea?: number, maxArea?: number, regiaoId?: number, metadataOnly = false): Promise<LayerResponseDTO | null> {
     try {
         // 1. Busca Metadados no Catálogo
         const catalogEntry = await getLayerCatalog(slug);
@@ -112,6 +116,10 @@ export async function getLayer(slug: string, tenantId?: string | null, startDate
 
         let data: MapFeatureCollection;
 
+        if (metadataOnly) {
+            // Lazy loading: retorna catálogo sem dados GeoJSON
+            data = EMPTY_COLLECTION;
+        } else {
         // 2. O Roteador de Decisão (The Router)
         const sc = catalogEntry.schemaConfig as any;
 
@@ -151,6 +159,7 @@ export async function getLayer(slug: string, tenantId?: string | null, startDate
                 tenantId,
             });
         }
+        } // end if (!metadataOnly)
 
         // 3. Montagem do DTO (Mantém igual)
         const visualConfig = catalogEntry.visualConfig as LayerVisualConfig;
@@ -221,8 +230,10 @@ export async function getLayer(slug: string, tenantId?: string | null, startDate
 /**
  * Fetches ALL layers defined in the catalog.
  * Robust against individual layer failures.
+ *
+ * @param metadataOnly - When true, skips GeoJSON data fetching (for lazy loading boot)
  */
-export async function getAllLayers(tenantId?: string | null, startDate?: Date, endDate?: Date, minArea?: number, maxArea?: number, regiaoId?: number): Promise<LayerResponseDTO[]> {
+export async function getAllLayers(tenantId?: string | null, startDate?: Date, endDate?: Date, minArea?: number, maxArea?: number, regiaoId?: number, metadataOnly = false): Promise<LayerResponseDTO[]> {
     const catalogEntries = await db
         .select()
         .from(layerCatalogInMonitoramento)
@@ -230,7 +241,7 @@ export async function getAllLayers(tenantId?: string | null, startDate?: Date, e
 
     if (!catalogEntries.length) return [];
 
-    const layerPromises = catalogEntries.map(entry => getLayer(entry.slug, tenantId, startDate, endDate, minArea, maxArea, regiaoId));
+    const layerPromises = catalogEntries.map(entry => getLayer(entry.slug, tenantId, startDate, endDate, minArea, maxArea, regiaoId, metadataOnly));
     const results = await Promise.allSettled(layerPromises);
 
     const validLayers: LayerResponseDTO[] = [];
