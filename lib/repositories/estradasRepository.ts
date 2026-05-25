@@ -11,7 +11,7 @@ export async function findAllEstradasDataWithGeometry(tenantId?: string | null) 
     : sql``;
 
   const result = await db.execute(sql`
-    SELECT id, nome, tipo, codigo, ST_AsGeoJSON(geom) as geojson
+    SELECT id, nome, tipo, codigo, ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, 0.0001), 5) as geojson
     FROM "monitoramento"."estradas"
     ${whereSql}
   `);

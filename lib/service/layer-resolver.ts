@@ -23,6 +23,15 @@ const ALLOWED_TABLES = new Set([
   'acoes', 'estradas', 'desmatamento', 'raw_firms', 'propriedades',
 ]);
 
+// Colunas de propriedades por tabela — exclui geom binário para não dobrar egress
+const TABLE_DISPLAY_COLUMNS: Record<string, string> = {
+  acoes: 'id, tenant_id, acao, name, descricao, mes, atuacao, status, categoria, tipo, eixo_tematico, tipo_tecnico, carater, time',
+  estradas: 'id, tenant_id, nome, tipo, codigo',
+  desmatamento: 'id, tenant_id, alertid, alertcode, alertha, source, detectat, detectyear, state, stateha',
+  raw_firms: 'id, tenant_id, acq_date, acq_time, frp, satellite, cod_imovel',
+  propriedades: 'id, tenant_id, cod_tema, nom_tema, cod_imovel, mod_fiscal, num_area, ind_status, ind_tipo, des_condic, municipio',
+};
+
 /**
  * Resolve dados GeoJSON para uma camada com sourceType='table'.
  * Aplica filtro de scope (tenant/region/global), data e área.
@@ -84,8 +93,18 @@ export async function resolveTableLayer(
     ? sql.join(whereParts, sql` AND `)
     : sql`TRUE`;
 
+  const displayCols = sql.raw(TABLE_DISPLAY_COLUMNS[tableName] ?? 'id, tenant_id');
+
+  // Points (ST_Dimension=0) não precisam de simplificação; polígonos e linhas sim.
+  // ST_SimplifyPreserveTopology mantém topologia válida; 0.0001° ≈ 11m de tolerância.
   const result = await db.execute(sql`
-    SELECT t.*, ST_AsGeoJSON(t.${sql.identifier(geometryColumn)}) AS geojson
+    SELECT ${displayCols},
+      ST_AsGeoJSON(
+        CASE WHEN ST_Dimension(t.${sql.identifier(geometryColumn)}) = 0
+          THEN t.${sql.identifier(geometryColumn)}
+          ELSE ST_SimplifyPreserveTopology(t.${sql.identifier(geometryColumn)}, 0.0001)
+        END, 5
+      ) AS geojson
     FROM monitoramento.${sql.identifier(tableName)} t
     WHERE ${whereClause}
   `);

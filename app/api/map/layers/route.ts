@@ -26,7 +26,12 @@ export async function GET(request: NextRequest) {
 
         const metadataOnly = searchParams.get('metadataOnly') === 'true';
         const layers = await getAllLayers(tenantId, startDate, endDate, minArea, maxArea, regiaoId, metadataOnly);
-        return NextResponse.json(layers);
+        const cacheHeader = metadataOnly
+            ? 'private, max-age=120, stale-while-revalidate=60'
+            : 'private, max-age=600, stale-while-revalidate=300';
+        return NextResponse.json(layers, {
+            headers: { 'Cache-Control': cacheHeader },
+        });
     } catch (error) {
         console.error("Error fetching layers:", error);
         return NextResponse.json({ error: "Failed to fetch layers" }, { status: 500 });

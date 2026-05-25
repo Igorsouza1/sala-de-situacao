@@ -43,7 +43,8 @@ export async function findAllPropriedadesDataWithGeometry(tenantId?: string | nu
   const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
 
   let query = sql`
-    SELECT id, cod_tema, nom_tema, cod_imovel, mod_fiscal, num_area, ind_status, ind_tipo, des_condic, municipio, ST_AsGeoJSON(geom) as geojson
+    SELECT id, cod_tema, nom_tema, cod_imovel, mod_fiscal, num_area, ind_status, ind_tipo, des_condic, municipio,
+           ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, 0.0001), 5) as geojson
     FROM "monitoramento"."propriedades"
     WHERE 1=1
   `;

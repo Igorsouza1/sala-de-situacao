@@ -32,7 +32,7 @@ export async function findAllFirmsDataWithGeometry(tenantId?: string | null, sta
     : sql``;
 
   const result = await db.execute(sql`
-      SELECT id, acq_date, acq_time, frp, satellite, cod_imovel, ST_AsGeoJSON(geom) as geojson
+      SELECT id, acq_date, acq_time, frp, satellite, cod_imovel, ST_AsGeoJSON(geom, 5) as geojson
       FROM "monitoramento"."raw_firms"
       ${whereSql}
     `);

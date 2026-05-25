@@ -34,7 +34,9 @@ export async function GET(
             return NextResponse.json({ error: "Layer not found" }, { status: 404 });
         }
 
-        return NextResponse.json(layer);
+        return NextResponse.json(layer, {
+            headers: { 'Cache-Control': 'private, max-age=600, stale-while-revalidate=300' },
+        });
     } catch (error) {
         console.error(`Error fetching layer ${slug}:`, error);
         return NextResponse.json({ error: "Failed to fetch layer" }, { status: 500 });

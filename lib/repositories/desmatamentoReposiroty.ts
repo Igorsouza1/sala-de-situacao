@@ -23,7 +23,8 @@ export async function findAllDesmatamentoDataWithGeometry(tenantId?: string | nu
     : sql``;
 
   const result = await db.execute(sql`
-      SELECT id, alertid, alertcode, alertha, source, detectat, detectyear, state, stateha, ST_AsGeoJSON(geom) as geojson
+      SELECT id, alertid, alertcode, alertha, source, detectat, detectyear, state, stateha,
+             ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, 0.0001), 5) as geojson
       FROM "monitoramento"."desmatamento"
       ${whereSql}
     `);

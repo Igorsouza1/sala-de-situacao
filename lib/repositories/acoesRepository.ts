@@ -72,7 +72,7 @@ export async function findAllAcoesDataWithGeometry(tenantId?: string | null, sta
     SELECT a.id, a.acao, a.name, a.descricao, a.mes, a.atuacao, a.time,
     TO_CHAR(a.time, 'DD/MM/YYYY HH24:MI') as time_formatado,
     a.status, a.categoria, a.tipo, a.eixo_tematico, a.tipo_tecnico, a.carater,
-    ST_AsGeoJSON(a.geom) as geojson,
+    ST_AsGeoJSON(a.geom, 5) as geojson,
     MAX(f.created_at) as ultima_foto_em
     FROM "monitoramento"."acoes" a
     LEFT JOIN "monitoramento"."fotos_acoes" f ON a.id = f.acao_id
