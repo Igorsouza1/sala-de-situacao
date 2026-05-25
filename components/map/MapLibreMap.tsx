@@ -36,6 +36,7 @@ import { MaplibreSnapshotControl } from './MaplibreSnapshotControl'
 import { MaplibreMeasureControl } from './MaplibreMeasureControl'
 import { MaplibreFaunaHeatmapControl } from './MaplibreFaunaHeatmapControl'
 import { MaplibreIconMarkers } from './MaplibreIconMarkers'
+import { AcaoHoverCard } from './AcaoHoverCard'
 import { PropertyInfoControl } from './PropertyInfoControl'
 import { useMapContext } from '@/context/GeoDataContext'
 import { useUserRole } from '@/hooks/useUserRole'
@@ -205,7 +206,7 @@ export default function MapLibreMap({
     string,
     any
   > | null>(null)
-  const [hoverCoords, setHoverCoords] = useState<LngLat | null>(null)
+  const [hoverCoords, setHoverCoords] = useState<[number, number] | null>(null)
 
   // ── Coordinate inspector ────────────────────────────────────────────────
   const [coordInspectorActive, setCoordInspectorActive] = useState(false)
@@ -521,13 +522,11 @@ export default function MapLibreMap({
   // ── interactiveLayerIds for click/hover ───────────────────────────────────
   const interactiveLayerIds = useMemo(
     () =>
-      processedLayers
-        .filter(({ isIcon }) => !isIcon)
-        .flatMap(({ layer }) => [
-          `${layer.slug}-fill`,
-          `${layer.slug}-circle`,
-          `${layer.slug}-line`,
-        ]),
+      processedLayers.flatMap(({ layer, isIcon }) =>
+        isIcon
+          ? [`${layer.slug}-hover-circle`]
+          : [`${layer.slug}-fill`, `${layer.slug}-circle`, `${layer.slug}-line`]
+      ),
     [processedLayers]
   )
 
@@ -571,7 +570,7 @@ export default function MapLibreMap({
       // Feature click → modal (apenas layers Source+Layer, não icon markers)
       if (!e.features?.length) return
       const feature = e.features[0]
-      const slug = feature.layer.id.replace(/-(fill|circle|line)$/, '')
+      const slug = feature.layer.id.replace(/-(fill|circle|line|hover-circle)$/, '')
       openFeatureModal(slug, feature.properties ?? {})
     },
     [coordInspectorActive, measureMode, measureDrawing, openFeatureModal]
@@ -599,7 +598,7 @@ export default function MapLibreMap({
       }
 
       const feature = e.features[0]
-      const slug = feature.layer.id.replace(/-(fill|circle|line)$/, '')
+      const slug = feature.layer.id.replace(/-(fill|circle|line|hover-circle)$/, '')
 
       // Property info mode: intercept propriedades hover before exclusion check
       if (propertyInfoActive && slug === 'propriedades') {
@@ -870,9 +869,24 @@ export default function MapLibreMap({
       >
         <NavigationControl position="top-right" />
 
-        {/* ── Data layers (Source+Layer — exclui icon layers que usam HTML Markers) ── */}
+        {/* ── Data layers (Source+Layer) ── */}
         {processedLayers.flatMap(({ layer, displayData, isIcon }) => {
-          if (isIcon) return []
+          // Icon layers: Source invisível apenas para hover detection via MapLibre
+          if (isIcon) return [
+            <Source
+              key={`src-${layer.slug}`}
+              id={layer.slug}
+              type="geojson"
+              data={displayData as any}
+            />,
+            <Layer
+              key={`${layer.slug}-hover-circle`}
+              id={`${layer.slug}-hover-circle`}
+              source={layer.slug}
+              type="circle"
+              paint={{ 'circle-radius': 18, 'circle-opacity': 0, 'circle-stroke-width': 0 }}
+            />,
+          ]
           const vc = layer.visualConfig
           const mlConfig = (vc as any)?.maplibre
           const style = vc?.baseStyle ?? vc
@@ -1101,8 +1115,20 @@ export default function MapLibreMap({
           </Marker>
         )}
 
-        {/* ── Hover tooltip ── */}
-        {hoveredFeature && hoverCoords && hoverPopupFields?.length ? (
+        {/* ── Hover: card de ação (dark, Apple-style) ── */}
+        {hoveredFeature?._slug === 'acoes' && hoverCoords ? (
+          <Popup
+            longitude={hoverCoords[0]}
+            latitude={hoverCoords[1]}
+            closeButton={false}
+            offset={[0, -20] as any}
+            anchor="bottom"
+            className="acao-hover-popup"
+          >
+            <AcaoHoverCard properties={hoveredFeature} />
+          </Popup>
+        ) : hoveredFeature && hoverCoords && hoverPopupFields?.length ? (
+          /* ── Hover: tooltip genérico para outras camadas ── */
           <Popup
             longitude={hoverCoords[0]}
             latitude={hoverCoords[1]}

@@ -127,3 +127,17 @@ body {
 .cursor-crosshair {
   cursor: crosshair !important;
 }
+
+/* ── AcaoHoverCard popup — remove chrome padrão do MapLibre ── */
+.acao-hover-popup .maplibregl-popup-content {
+  background: transparent !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.acao-hover-popup .maplibregl-popup-tip {
+  display: none !important;
+}
+.acao-hover-popup {
+  pointer-events: none;
+}
