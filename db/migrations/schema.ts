@@ -1,6 +1,11 @@
 import { pgTable, pgSchema, index, foreignKey, serial, varchar, numeric, timestamp, geometry, integer, text, uuid, date, boolean, jsonb, unique, check, doublePrecision, uniqueIndex, time } from "drizzle-orm/pg-core"
 import { sql } from "drizzle-orm"
 
+export const auth = pgSchema("auth");
+export const usersInAuth = auth.table("users", {
+	id: uuid().primaryKey().notNull(),
+});
+
 export const monitoramento = pgSchema("monitoramento");
 export const categoriaAcaoInMonitoramento = monitoramento.enum("categoria_acao", ['Fiscalização', 'Recuperação', 'Incidente', 'Monitoramento', 'Infraestrutura'])
 export const statusAcaoInMonitoramento = monitoramento.enum("status_acao", ['Ativo', 'Monitorando', 'Resolvido', 'Crítico'])
@@ -84,7 +89,7 @@ export const userAccessInMonitoramento = monitoramento.table("user_access", {
 		}),
 	foreignKey({
 			columns: [table.userId],
-			foreignColumns: [users.id],
+			foreignColumns: [usersInAuth.id],
 			name: "user_access_user_id_fkey"
 		}),
 ]);
