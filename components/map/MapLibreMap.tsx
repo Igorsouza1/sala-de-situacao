@@ -46,8 +46,14 @@ import { Button } from '@/components/ui/button'
 const _cache: {
   layers: LayerResponseDTO[]
   data: Record<string, MapFeatureCollection>
-  filterKey: string
-} = { layers: [], data: {}, filterKey: '' }
+  dateFilterKey: string
+  areaFilterKey: string
+} = { layers: [], data: {}, dateFilterKey: '', areaFilterKey: '' }
+
+// Slugs que dependem do filtro de datas — camadas estáticas (propriedades, rio, banhado, etc.) não são invalidadas
+const DATE_SENSITIVE_SLUGS = new Set(['acoes', 'raw_firms', 'desmatamento'])
+// Slugs que dependem do filtro de área — só propriedades
+const AREA_SENSITIVE_SLUGS = new Set(['propriedades'])
 
 // ── Basemaps ────────────────────────────────────────────────────────────────
 const SATELLITE_STYLE = {
@@ -304,32 +310,59 @@ export default function MapLibreMap({
     }
   }, [layers])
 
-  // Filter change: invalidate data cache only when filter params actually changed.
-  // useEffect always runs on mount — without the key check, every navigation back
-  // would clear the cache even though the filter is unchanged.
+  // Date filter: invalida apenas camadas date-sensitive (acoes, raw_firms, desmatamento).
+  // Camadas estáticas (propriedades, rio, banhado, estradas…) permanecem em cache.
   useEffect(() => {
     const newKey = [
       dateFilter.startDate?.toISOString() ?? '',
       dateFilter.endDate?.toISOString() ?? '',
-      String(areaFilter.minArea ?? ''),
-      String(areaFilter.maxArea ?? ''),
     ].join('|')
-    if (_cache.filterKey === newKey) return
-    _cache.filterKey = newKey
-    _cache.data = {}
-    pendingBatch.current = {}
+    if (_cache.dateFilterKey === newKey) return
+    _cache.dateFilterKey = newKey
+
+    const slugsToClear = layers
+      .filter(l => l.visualConfig?.dateFilter === true || DATE_SENSITIVE_SLUGS.has(l.slug))
+      .map(l => l.slug)
+
+    slugsToClear.forEach(s => {
+      delete _cache.data[s]
+      delete pendingBatch.current[s]
+      fetchingRef.current.delete(s)
+    })
     if (batchTimer.current) { clearTimeout(batchTimer.current); batchTimer.current = null }
-    setLayerData({})
-    fetchingRef.current.clear()
+    if (slugsToClear.length > 0) {
+      setLayerData(prev => {
+        const next = { ...prev }
+        slugsToClear.forEach(s => delete next[s])
+        return next
+      })
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
+  }, [dateFilter.startDate?.toISOString(), dateFilter.endDate?.toISOString()])
+
+  // Area filter: invalida apenas camadas area-sensitive (propriedades).
+  useEffect(() => {
+    const newKey = [String(areaFilter.minArea ?? ''), String(areaFilter.maxArea ?? '')].join('|')
+    if (_cache.areaFilterKey === newKey) return
+    _cache.areaFilterKey = newKey
+
+    const slugsToClear = layers.filter(l => AREA_SENSITIVE_SLUGS.has(l.slug)).map(l => l.slug)
+
+    slugsToClear.forEach(s => {
+      delete _cache.data[s]
+      delete pendingBatch.current[s]
+      fetchingRef.current.delete(s)
+    })
+    if (batchTimer.current) { clearTimeout(batchTimer.current); batchTimer.current = null }
+    if (slugsToClear.length > 0) {
+      setLayerData(prev => {
+        const next = { ...prev }
+        slugsToClear.forEach(s => delete next[s])
+        return next
+      })
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    dateFilter.startDate?.toISOString(),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    dateFilter.endDate?.toISOString(),
-    areaFilter.minArea,
-    areaFilter.maxArea,
-  ])
+  }, [areaFilter.minArea, areaFilter.maxArea])
 
   // Lazy load: fetch data for visible parent slugs not yet in cache
   useEffect(() => {
