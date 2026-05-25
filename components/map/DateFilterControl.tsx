@@ -32,8 +32,8 @@ export function DateFilterControl({ onDateChange }: DateFilterControlProps) {
   useEffect(() => {
     if (!didInitialize.current) {
       const now = new Date()
-      const start = startOfMonth(now)
-      const end = endOfMonth(now)
+      const start = startOfYear(now)
+      const end = endOfYear(now)
 
       setStartDate(start)
       setEndDate(end)

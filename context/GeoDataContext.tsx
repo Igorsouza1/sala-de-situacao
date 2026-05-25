@@ -32,9 +32,9 @@ export function MapProvider({ children }: { children: React.ReactNode }) {
     content: null,
   })
   const [dateFilter, setDateFilter] = useState<{ startDate: Date | null; endDate: Date | null }>(() => {
-    const end = new Date();
-    const start = new Date();
-    start.setDate(end.getDate() - 30);
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 1, 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), 11, 31, 23, 59, 59, 999);
     return { startDate: start, endDate: end };
   })
 
