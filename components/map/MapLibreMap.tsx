@@ -35,6 +35,7 @@ import { MaplibreCoordinateInspector } from './MaplibreCoordinateInspector'
 import { MaplibreSnapshotControl } from './MaplibreSnapshotControl'
 import { MaplibreMeasureControl } from './MaplibreMeasureControl'
 import { MaplibreFaunaHeatmapControl } from './MaplibreFaunaHeatmapControl'
+import { MaplibreIconMarkers } from './MaplibreIconMarkers'
 import { PropertyInfoControl } from './PropertyInfoControl'
 import { useMapContext } from '@/context/GeoDataContext'
 import { useUserRole } from '@/hooks/useUserRole'
@@ -54,6 +55,15 @@ const _cache: {
 const DATE_SENSITIVE_SLUGS = new Set(['acoes', 'raw_firms', 'desmatamento'])
 // Slugs que dependem do filtro de área — só propriedades
 const AREA_SENSITIVE_SLUGS = new Set(['propriedades'])
+
+// Detecta se um layer deve ser renderizado como HTML markers com ícones Lucide.
+// Condição 1: visual_config.maplibre.type === 'icon-marker'  (flag explícita MapLibre)
+// Condição 2: visual_config.baseStyle.type === 'icon'         (compat com config Leaflet existente)
+const isIconLayer = (vc: LayerResponseDTO['visualConfig']): boolean => {
+  if ((vc as any)?.maplibre?.type === 'icon-marker') return true
+  const base = (vc?.baseStyle || vc) as any
+  return base?.type === 'icon'
+}
 
 // ── Basemaps ────────────────────────────────────────────────────────────────
 const SATELLITE_STYLE = {
@@ -504,19 +514,40 @@ export default function MapLibreMap({
         }
       }
 
-      return { layer, displayData }
+      return { layer, displayData, isIcon: isIconLayer(layer.visualConfig) }
     }).filter((item): item is NonNullable<typeof item> => item !== null)
   }, [layers, visibleLayers, layerData, EMPTY_FC])
 
   // ── interactiveLayerIds for click/hover ───────────────────────────────────
   const interactiveLayerIds = useMemo(
     () =>
-      processedLayers.flatMap(({ layer }) => [
-        `${layer.slug}-fill`,
-        `${layer.slug}-circle`,
-        `${layer.slug}-line`,
-      ]),
+      processedLayers
+        .filter(({ isIcon }) => !isIcon)
+        .flatMap(({ layer }) => [
+          `${layer.slug}-fill`,
+          `${layer.slug}-circle`,
+          `${layer.slug}-line`,
+        ]),
     [processedLayers]
+  )
+
+  // ── Shared feature-click handler (usado por layers MapLibre E por icon markers) ──
+  const openFeatureModal = useCallback(
+    (slug: string, props: Record<string, any>) => {
+      if (slug === 'acoes') setSelectedAcao(props)
+      else setSelectedAcao(null)
+      openModal('', <FeatureDetails layerType={slug} properties={props} />)
+    },
+    [openModal]
+  )
+
+  // ── Hover handler para icon markers (HTML Markers não disparam onMouseMove do Map) ──
+  const handleMarkerHover = useCallback(
+    (props: Record<string, any> | null, coords: [number, number] | null) => {
+      setHoveredFeature(props)
+      setHoverCoords(coords)
+    },
+    []
   )
 
   // ── Map event handlers ────────────────────────────────────────────────────
@@ -537,18 +568,13 @@ export default function MapLibreMap({
         return
       }
 
-      // Feature click → modal
+      // Feature click → modal (apenas layers Source+Layer, não icon markers)
       if (!e.features?.length) return
       const feature = e.features[0]
       const slug = feature.layer.id.replace(/-(fill|circle|line)$/, '')
-      const props = feature.properties ?? {}
-
-      if (slug === 'acoes') setSelectedAcao(props)
-      else setSelectedAcao(null)
-
-      openModal('', <FeatureDetails layerType={slug} properties={props} />)
+      openFeatureModal(slug, feature.properties ?? {})
     },
-    [coordInspectorActive, measureMode, measureDrawing, openModal]
+    [coordInspectorActive, measureMode, measureDrawing, openFeatureModal]
   )
 
   const handleMouseMove = useCallback(
@@ -844,8 +870,9 @@ export default function MapLibreMap({
       >
         <NavigationControl position="top-right" />
 
-        {/* ── Data layers ── */}
-        {processedLayers.flatMap(({ layer, displayData }) => {
+        {/* ── Data layers (Source+Layer — exclui icon layers que usam HTML Markers) ── */}
+        {processedLayers.flatMap(({ layer, displayData, isIcon }) => {
+          if (isIcon) return []
           const vc = layer.visualConfig
           const mlConfig = (vc as any)?.maplibre
           const style = vc?.baseStyle ?? vc
@@ -924,6 +951,19 @@ export default function MapLibreMap({
             />,
           ]
         })}
+
+        {/* ── Icon layers (HTML Markers com ícones Lucide por feature) ── */}
+        {processedLayers
+          .filter(({ isIcon, displayData }) => isIcon && displayData.features.length > 0)
+          .map(({ layer, displayData }) => (
+            <MaplibreIconMarkers
+              key={layer.slug}
+              layer={layer}
+              data={displayData}
+              onFeatureClick={openFeatureModal}
+              onFeatureHover={handleMarkerHover}
+            />
+          ))}
 
         {/* ── Shapefile preview ── */}
         {previewGeoJSON && (
