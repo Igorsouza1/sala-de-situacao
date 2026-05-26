@@ -11,20 +11,21 @@ export function useUserRole() {
   useEffect(() => {
     async function checkUserRole() {
       try {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser()
+        const { data: { user } } = await supabase.auth.getUser()
 
-        if (user) {
-          const { data } = await supabase.schema("public").from("profiles").select("role").eq("id", user.id).single()
-
-          if (data) {
-            setIsAdmin(data.role === "Admin")
-          } else {
-            setIsAdmin(false)
-          }
+        if (!user) {
+          setIsAdmin(false)
+          return
         }
-      } catch (error) {
+
+        const res = await fetch("/api/auth/role")
+        if (!res.ok) {
+          setIsAdmin(false)
+          return
+        }
+        const { isAdmin: adminResult } = await res.json()
+        setIsAdmin(!!adminResult)
+      } catch {
         setIsAdmin(false)
       } finally {
         setIsLoading(false)
@@ -33,9 +34,7 @@ export function useUserRole() {
 
     checkUserRole()
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(() => {
       checkUserRole()
     })
 
@@ -46,4 +45,3 @@ export function useUserRole() {
 
   return { isAdmin, isLoading }
 }
-

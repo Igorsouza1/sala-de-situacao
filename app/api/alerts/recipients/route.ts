@@ -2,33 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { destinatariosAlertasInMonitoramento } from "@/db/schema";
 import { eq } from "drizzle-orm";
-import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/api/require-auth";
 
 const REGION_ID = 1;
 
-async function checkAdmin() {
-  const supabase = await createClient();
-  const { data: { user }, error } = await supabase.auth.getUser();
-
-  if (error || !user) {
-    return false;
-  }
-
-  const { data: profile } = await supabase
-    .schema("public")
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  return profile?.role === "Admin";
-}
-
 export async function GET(req: NextRequest) {
-  const isAdmin = await checkAdmin();
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { response } = await requireAdmin();
+  if (response) return response;
 
   try {
     const recipients = await db
@@ -44,10 +24,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  const isAdmin = await checkAdmin();
-  if (!isAdmin) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const { response } = await requireAdmin();
+  if (response) return response;
 
   try {
     const body = await req.json();

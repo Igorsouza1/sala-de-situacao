@@ -3,6 +3,9 @@ import { apiError } from "@/lib/api/responses";
 import { extractTenantId } from "@/lib/api/tenant-context";
 import { FEATURES } from "@/lib/feature-flags";
 import type { User } from "@supabase/supabase-js";
+import { db } from "@/db";
+import { rolesInMonitoramento } from "@/db/schema";
+import { and, eq, inArray } from "drizzle-orm";
 
 interface AuthResult {
   user: User | null;
@@ -67,6 +70,33 @@ export async function requireAuthWithTenant(): Promise<AuthWithTenantResult> {
       tenantId: null,
       response: apiError("Usuário sem tenant associado.", 403),
     };
+  }
+
+  return { user, tenantId, response: null };
+}
+
+/**
+ * Verifica autenticação, resolve tenant e confere se o usuário tem role admin/owner
+ * em `monitoramento.roles`. Retorna 403 se não tiver permissão.
+ */
+export async function requireAdmin(): Promise<AuthWithTenantResult> {
+  const { user, tenantId, response } = await requireAuthWithTenant();
+  if (response || !user || !tenantId) {
+    return { user: null, tenantId: null, response: response ?? apiError("Não autorizado.", 401) };
+  }
+
+  const adminRole = await db
+    .select({ id: rolesInMonitoramento.id })
+    .from(rolesInMonitoramento)
+    .where(and(
+      eq(rolesInMonitoramento.userId, user.id),
+      eq(rolesInMonitoramento.tenantId, tenantId),
+      inArray(rolesInMonitoramento.role, ["owner", "admin"]),
+    ))
+    .limit(1);
+
+  if (!adminRole.length) {
+    return { user, tenantId, response: apiError("Acesso negado. Role insuficiente.", 403) };
   }
 
   return { user, tenantId, response: null };
