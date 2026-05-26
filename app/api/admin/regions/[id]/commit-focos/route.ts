@@ -1,4 +1,4 @@
-export const maxDuration = 300; // 5 minutos — loop N+1 em focos FIRMS
+export const maxDuration = 60;
 
 import { requireAuth } from "@/lib/api/require-auth";
 import { apiError } from "@/lib/api/responses";
