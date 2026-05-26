@@ -1,11 +1,11 @@
-import { requireAuth } from "@/lib/api/require-auth";
+import { requireAdmin } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { createRegion, listRegions } from "@/lib/service/adminService";
 import { regionPayloadSchema } from "@/lib/validations/admin";
 
 export async function GET() {
   try {
-    const { response: authResponse } = await requireAuth();
+    const { response: authResponse } = await requireAdmin();
     if (authResponse) return authResponse;
 
     const data = await listRegions();
@@ -18,7 +18,7 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { response: authResponse } = await requireAuth();
+    const { response: authResponse } = await requireAdmin();
     if (authResponse) return authResponse;
 
     const json = await request.json().catch(() => null);
@@ -29,6 +29,10 @@ export async function POST(request: Request) {
     const parsed = regionPayloadSchema.safeParse(json);
     if (!parsed.success) {
       return apiError("Body inválido.", 400);
+    }
+
+    if (!parsed.data.geometry) {
+      return apiError("Geometria é obrigatória para criar uma região.", 400);
     }
 
     const created = await createRegion(parsed.data);

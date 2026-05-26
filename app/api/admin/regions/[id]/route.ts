@@ -1,11 +1,11 @@
-import { requireAuth } from "@/lib/api/require-auth";
+import { requireAdmin } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { deleteRegion, updateRegion } from "@/lib/service/adminService";
 import { regionIdSchema, regionPayloadSchema } from "@/lib/validations/admin";
 
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { response: authResponse } = await requireAuth();
+    const { response: authResponse } = await requireAdmin();
     if (authResponse) return authResponse;
 
     const params = await context.params;
@@ -38,7 +38,7 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
 
 export async function DELETE(_: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { response: authResponse } = await requireAuth();
+    const { response: authResponse } = await requireAdmin();
     if (authResponse) return authResponse;
 
     const params = await context.params;

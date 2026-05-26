@@ -1,6 +1,5 @@
 import { db } from "@/db";
-import { organizationsInMonitoramento, userAccessInMonitoramento, regioesInMonitoramento } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
 export interface AdminOrganizationData {
     organizationId: string;
@@ -12,15 +11,15 @@ export interface AdminOrganizationData {
 
 export async function getAdminOrganizationsData(): Promise<AdminOrganizationData[]> {
     const query = sql`
-    SELECT DISTINCT
-      o.id AS "organizationId",
+    SELECT
+      o.id   AS "organizationId",
       o.name AS "organizationName",
-      r.id AS "regionId",
+      r.id   AS "regionId",
       r.nome AS "regionName",
       r.descricao AS "regionDescription"
-    FROM "monitoramento"."tenants" o
-    JOIN "monitoramento"."user_access" ua ON o.id = ua.organization_id
-    JOIN "monitoramento"."regioes" r ON ua.regiao_id = r.id
+    FROM monitoramento.regioes r
+    JOIN monitoramento.tenants o
+      ON o.id::text = r.metadata->>'organizationId'
     ORDER BY o.name ASC, r.nome ASC
   `;
 

@@ -7,6 +7,7 @@ export async function listOrganizationsInDb() {
     .select({
       id: organizationsInMonitoramento.id,
       name: organizationsInMonitoramento.name,
+      slug: organizationsInMonitoramento.slug,
       maxRegions: organizationsInMonitoramento.maxRegions,
       createdAt: organizationsInMonitoramento.createdAt,
     })
@@ -14,13 +15,14 @@ export async function listOrganizationsInDb() {
     .orderBy(asc(organizationsInMonitoramento.createdAt));
 }
 
-export async function createOrganizationInDb(input: { name: string; maxRegions: number }) {
+export async function createOrganizationInDb(input: { name: string; maxRegions: number; slug?: string | null }) {
   const [created] = await db
     .insert(organizationsInMonitoramento)
-    .values({ name: input.name, maxRegions: input.maxRegions })
+    .values({ name: input.name, maxRegions: input.maxRegions, slug: input.slug ?? null })
     .returning({
       id: organizationsInMonitoramento.id,
       name: organizationsInMonitoramento.name,
+      slug: organizationsInMonitoramento.slug,
       maxRegions: organizationsInMonitoramento.maxRegions,
       createdAt: organizationsInMonitoramento.createdAt,
     });
@@ -28,14 +30,15 @@ export async function createOrganizationInDb(input: { name: string; maxRegions: 
   return created;
 }
 
-export async function updateOrganizationInDb(id: string, input: { name: string; maxRegions: number }) {
+export async function updateOrganizationInDb(id: string, input: { name: string; maxRegions: number; slug?: string | null }) {
   const [updated] = await db
     .update(organizationsInMonitoramento)
-    .set({ name: input.name, maxRegions: input.maxRegions })
+    .set({ name: input.name, maxRegions: input.maxRegions, slug: input.slug ?? null })
     .where(eq(organizationsInMonitoramento.id, id))
     .returning({
       id: organizationsInMonitoramento.id,
       name: organizationsInMonitoramento.name,
+      slug: organizationsInMonitoramento.slug,
       maxRegions: organizationsInMonitoramento.maxRegions,
       createdAt: organizationsInMonitoramento.createdAt,
     });
@@ -55,6 +58,7 @@ export async function deleteOrganizationInDb(id: string) {
 export type RegionListItem = {
   id: number;
   nome: string;
+  descricao: string | null;
   organizationId: string | null;
   organizationName: string | null;
   sizeKm2: number;
@@ -67,6 +71,7 @@ export async function listRegionsInDb() {
     SELECT
       r.id,
       r.nome,
+      r.descricao,
       r.metadata->>'organizationId' AS "organizationId",
       o.name AS "organizationName",
       ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
@@ -85,6 +90,7 @@ export async function getRegionByIdInDb(id: number) {
     SELECT
       r.id,
       r.nome,
+      r.descricao,
       r.metadata->>'organizationId' AS "organizationId",
       o.name AS "organizationName",
       ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
@@ -148,19 +154,22 @@ export async function getBaseLayersByRegionInDb(regionId: number) {
 
 export async function createRegionInDb(input: {
   nome: string;
+  descricao?: string | null;
   organizationId: string;
   geojson: string;
 }) {
   const result = await db.execute(sql<RegionListItem>`
-    INSERT INTO monitoramento.regioes (nome, geom, metadata)
+    INSERT INTO monitoramento.regioes (nome, descricao, geom, metadata)
     VALUES (
       ${input.nome},
-      ST_Multi(ST_SetSRID(ST_GeomFromGeoJSON(${input.geojson}), 4674)),
-      jsonb_build_object('organizationId', ${input.organizationId})
+      ${input.descricao ?? null},
+      ST_Multi(ST_SimplifyPreserveTopology(ST_Force2D(ST_SetSRID(ST_GeomFromGeoJSON(${input.geojson}), 4674)), 0.0001)),
+      jsonb_build_object('organizationId', ${input.organizationId}::text)
     )
     RETURNING
       id,
       nome,
+      descricao,
       metadata->>'organizationId' AS "organizationId",
       null::text AS "organizationName",
       ROUND(COALESCE(ST_Area(geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
@@ -172,19 +181,46 @@ export async function createRegionInDb(input: {
 
 export async function updateRegionInDb(
   id: number,
-  input: { nome: string; organizationId: string; geojson: string }
+  input: { nome: string; descricao?: string | null; organizationId: string; geojson: string }
 ) {
   const result = await db.execute(sql<RegionListItem>`
     UPDATE monitoramento.regioes
     SET
       nome = ${input.nome},
-      geom = ST_Multi(ST_SetSRID(ST_GeomFromGeoJSON(${input.geojson}), 4674)),
-      metadata = jsonb_build_object('organizationId', ${input.organizationId}),
+      descricao = ${input.descricao ?? null},
+      geom = ST_Multi(ST_SimplifyPreserveTopology(ST_Force2D(ST_SetSRID(ST_GeomFromGeoJSON(${input.geojson}), 4674)), 0.0001)),
+      metadata = jsonb_build_object('organizationId', ${input.organizationId}::text),
       updated_at = now()
     WHERE id = ${id}
     RETURNING
       id,
       nome,
+      descricao,
+      metadata->>'organizationId' AS "organizationId",
+      null::text AS "organizationName",
+      ROUND(COALESCE(ST_Area(geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
+      created_at AS "createdAt"
+  `);
+
+  return (result.rows[0] as RegionListItem) ?? null;
+}
+
+export async function updateRegionInfoInDb(
+  id: number,
+  input: { nome: string; descricao?: string | null; organizationId: string }
+) {
+  const result = await db.execute(sql<RegionListItem>`
+    UPDATE monitoramento.regioes
+    SET
+      nome = ${input.nome},
+      descricao = ${input.descricao ?? null},
+      metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('organizationId', ${input.organizationId}::text),
+      updated_at = now()
+    WHERE id = ${id}
+    RETURNING
+      id,
+      nome,
+      descricao,
       metadata->>'organizationId' AS "organizationId",
       null::text AS "organizationName",
       ROUND(COALESCE(ST_Area(geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",

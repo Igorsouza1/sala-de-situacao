@@ -7,6 +7,7 @@ import {
   listRegionsInDb,
   updateOrganizationInDb,
   updateRegionInDb,
+  updateRegionInfoInDb,
   updateRegionMetadataInDb,
 } from "@/lib/repositories/adminRepository";
 import { OrganizationPayload, RegionPayload } from "@/lib/validations/admin";
@@ -16,11 +17,11 @@ export async function listOrganizations() {
 }
 
 export async function createOrganization(payload: OrganizationPayload) {
-  return createOrganizationInDb(payload);
+  return createOrganizationInDb({ name: payload.name, maxRegions: payload.maxRegions, slug: payload.slug });
 }
 
 export async function updateOrganization(id: string, payload: OrganizationPayload) {
-  return updateOrganizationInDb(id, payload);
+  return updateOrganizationInDb(id, { name: payload.name, maxRegions: payload.maxRegions, slug: payload.slug });
 }
 
 export async function deleteOrganization(id: string) {
@@ -61,18 +62,28 @@ export async function getAcoesByRegion(id: number) {
 }
 
 export async function createRegion(payload: RegionPayload) {
+  if (!payload.geometry) throw new Error("geometry is required to create a region");
   return createRegionInDb({
     nome: payload.nome,
+    descricao: payload.descricao,
     organizationId: payload.organizationId,
     geojson: JSON.stringify(payload.geometry),
   });
 }
 
 export async function updateRegion(id: number, payload: RegionPayload) {
-  return updateRegionInDb(id, {
+  if (payload.geometry) {
+    return updateRegionInDb(id, {
+      nome: payload.nome,
+      descricao: payload.descricao,
+      organizationId: payload.organizationId,
+      geojson: JSON.stringify(payload.geometry),
+    });
+  }
+  return updateRegionInfoInDb(id, {
     nome: payload.nome,
+    descricao: payload.descricao,
     organizationId: payload.organizationId,
-    geojson: JSON.stringify(payload.geometry),
   });
 }
 

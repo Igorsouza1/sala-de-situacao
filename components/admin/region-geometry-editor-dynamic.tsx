@@ -2,18 +2,17 @@
 
 import dynamic from "next/dynamic";
 import { Skeleton } from "@/components/ui/skeleton";
+import type { GeoJSONGeometry } from "./region-geometry-editor";
 
-type Position = [number, number];
 type Props = {
-  value: Position[];
-  onChange: (coords: Position[]) => void;
+  value: GeoJSONGeometry | null;
+  onChange: (geom: GeoJSONGeometry | null) => void;
 };
 
-// O react-leaflet precisa do "window" pra funcionar, não pode rodar no SSR do next.
-export const RegionGeometryEditor = dynamic(
+export const RegionGeometryEditor = dynamic<Props>(
   () => import("./region-geometry-editor").then((mod) => mod.RegionGeometryEditor),
-  { 
+  {
     ssr: false,
-    loading: () => <Skeleton className="h-[256px] w-full rounded-xl" /> // alt para 64px (h-64 no tailwind)
+    loading: () => <Skeleton className="h-72 w-full rounded-xl" />,
   }
 );
