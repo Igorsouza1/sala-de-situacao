@@ -3,33 +3,11 @@
 import dynamic from 'next/dynamic';
 
 const DynamicMap = dynamic(() => import('../../components/map'), { ssr: false });
-// import tipagem do schema
-type GeoJSONFeatureCollection = {
-    type: "FeatureCollection"
-    features: GeoJSONFeature[]
-  }
 
-  type GeoJSONFeature = {
-    type: "Feature"
-    properties: { [key: string]: any }
-    geometry: { type: string; coordinates: number[] | number[][] | number[][][] }
-  }
-
-
-export default function ProtectedPage() {
-  // const supabase = await createClient();
-
-  // const {
-  //   data: { user },
-  // } = await supabase.auth.getUser();
-
-  // if (!user) {
-  //   return redirect("/sign-in");
-  // }
-
+export default function ProtectedPage({ regiaoId }: { regiaoId?: number }) {
   return (
     <div className="h-full w-full">
-      <DynamicMap />
+      <DynamicMap regiaoId={regiaoId} />
     </div>
   );
 }

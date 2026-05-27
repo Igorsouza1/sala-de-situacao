@@ -7,7 +7,15 @@ import { and, eq, inArray } from "drizzle-orm";
 export async function GET() {
   const { user, tenantId } = await requireAuthWithTenant();
 
-  if (!user || !tenantId) {
+  if (!user) {
+    return NextResponse.json({ isAdmin: false });
+  }
+
+  if (user.app_metadata?.is_superadmin === true) {
+    return NextResponse.json({ isAdmin: true });
+  }
+
+  if (!tenantId) {
     return NextResponse.json({ isAdmin: false });
   }
 

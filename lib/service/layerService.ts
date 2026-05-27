@@ -2,7 +2,7 @@ import { LayerResponseDTO, LayerSchemaConfig, LayerVisualConfig, MapFeatureColle
 import { getLayerCatalog, getGenericLayerData } from "../repositories/layerRepository";
 import { layerCatalogInMonitoramento } from "@/db/schema";
 import { db } from "@/db";
-import { desc, sql } from "drizzle-orm";
+import { desc, eq, isNull, or, sql } from "drizzle-orm";
 import { findAllAcoesDataWithGeometry } from "../repositories/acoesRepository";
 import { toFeatureCollection } from "../helpers/geo-utils";
 import { findAllEstradasDataWithGeometry } from "../repositories/estradasRepository";
@@ -234,9 +234,19 @@ export async function getLayer(slug: string, tenantId?: string | null, startDate
  * @param metadataOnly - When true, skips GeoJSON data fetching (for lazy loading boot)
  */
 export async function getAllLayers(tenantId?: string | null, startDate?: Date, endDate?: Date, minArea?: number, maxArea?: number, regiaoId?: number, metadataOnly = false): Promise<LayerResponseDTO[]> {
+    // Filter catalog: tenant-owned layers + global layers (tenantId IS NULL).
+    // When no tenantId is provided (superadmin without explicit region), return all.
+    const catalogWhere = tenantId
+        ? or(
+            eq(layerCatalogInMonitoramento.tenantId, tenantId),
+            isNull(layerCatalogInMonitoramento.tenantId),
+          )
+        : undefined;
+
     const catalogEntries = await db
         .select()
         .from(layerCatalogInMonitoramento)
+        .where(catalogWhere)
         .orderBy(desc(layerCatalogInMonitoramento.ordering));
 
     if (!catalogEntries.length) return [];

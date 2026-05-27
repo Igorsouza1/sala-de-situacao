@@ -9,6 +9,7 @@ const MapLibreMap = dynamic(() => import('./MapLibreMap'), { ssr: false });
 interface MapProps {
   center?: [number, number];
   zoom?: number;
+  regiaoId?: number;
 }
 
 /**

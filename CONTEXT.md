@@ -73,7 +73,7 @@ Papel de escopo global — vê e opera todas as Organizações e todos os dados 
 _Avoid_: Admin (ambíguo), root
 
 **Owner**:
-Papel de escopo de Organização com controle total sobre ela: cria e gerencia usuários da própria Org (incluindo outros Owners, Editors, Viewers e Auditores), faz Importações e gerencia Regiões.
+Papel de escopo de Organização com controle total sobre ela. Pode fazer qualquer operação dentro das Regiões do tenant — criar e gerenciar Camadas de Organização, registrar Ações, adicionar Anotações a dados de base — com duas exceções: não altera a geometria de uma Região (responsabilidade do Superadmin) e não edita dados de tabelas de base imutáveis (Propriedades, Detecções de Desmatamento, Focos de Calor). Gerencia todos os usuários da Org, incluindo criar outros Owners.
 _Avoid_: Admin (quando se refere ao dono da Org)
 
 **Editor**:
@@ -91,8 +91,12 @@ _Avoid_: Fiscal (conflita com Fiscalização)
 ### Administração
 
 **Importação**:
-Ato pelo qual um administrador vincula dados ambientais externos (alertas de desmatamento, focos de calor, propriedades, camadas) a uma Região, tornando-os disponíveis no mapa do Gestor Ambiental. Envolve refinamento dos dados brutos na interface antes da inserção no banco.
+Ato exclusivo do Superadmin que vincula dados de base a uma Região: geometria da Região, Propriedades, Focos de Calor e Detecções de Desmatamento. Esses dados chegam de fontes externas (FIRMS, MapBiomas, SIGEF/CAR) e são processados antes da inserção. Owner não faz Importação de dados de base — apenas adiciona Camadas de Organização e anotações.
 _Avoid_: Commit (termo de implementação), upload, sincronização
+
+**Anotação**:
+Informação complementar adicionada por um Owner ou Editor a um item existente (Foco de Calor, Detecção de Desmatamento ou Propriedade) — como fotos ou texto descritivo. Não altera os dados primários do item, apenas enriquece sua visualização.
+_Avoid_: Edição, atualização do dado
 
 ### Monitoramento ambiental
 

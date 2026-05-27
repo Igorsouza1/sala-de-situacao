@@ -147,6 +147,8 @@ interface MapLibreMapProps {
   /** [lat, lng] — mesma convenção do Leaflet */
   center?: [number, number]
   zoom?: number
+  /** Override de região — passado via ?regiao_id= na URL (admin/superadmin) */
+  regiaoId?: number
 }
 
 // Layers excluded from hover tooltip
@@ -155,6 +157,7 @@ const EXCLUDED_HOVER = ['propriedades', 'banhado']
 export default function MapLibreMap({
   center = [-21.327773, -56.694734],
   zoom = 11,
+  regiaoId,
 }: MapLibreMapProps) {
   // ── Core layer state (initialized from module cache for instant return nav) ──
   const [layers, setLayers] = useState<LayerResponseDTO[]>(() => _cache.layers)
@@ -242,15 +245,24 @@ export default function MapLibreMap({
   const [basemap, setBasemap] = useState<BasemapKey>('satellite')
   const [basemapOpen, setBasemapOpen] = useState(false)
 
-  // ── Map ref ─────────────────────────────────────────────────────────────
+  // ── Map ref & region bounds ─────────────────────────────────────────────
   const mapRef = useRef<any>(null)
+  const [mapLoaded, setMapLoaded] = useState(false)
+  const fitBoundsDone = useRef(false)
+  const [regionBounds, setRegionBounds] = useState<{
+    center: [number, number]
+    bbox: [number, number, number, number]
+  } | null>(null)
 
   // ── Fetch catalog metadata (lightweight, no GeoJSON) ────────────────────
   const fetchCatalog = useCallback(async () => {
     if (_cache.layers.length === 0) setLoadingLayers(true)
     setError(null)
     try {
-      const response = await fetch('/api/map/layers?metadataOnly=true')
+      const catalogUrl = regiaoId
+        ? `/api/map/layers?metadataOnly=true&regiao_id=${regiaoId}`
+        : '/api/map/layers?metadataOnly=true'
+      const response = await fetch(catalogUrl)
       if (response.ok) {
         const data: LayerResponseDTO[] = await response.json()
         const sorted = data.sort((a, b) => (a.ordering || 0) - (b.ordering || 0))
@@ -264,7 +276,8 @@ export default function MapLibreMap({
     } finally {
       setLoadingLayers(false)
     }
-  }, [])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regiaoId])
 
   // ── Fetch single layer GeoJSON (called lazily on toggle) ─────────────────
   const fetchLayerData = useCallback(async (slug: string) => {
@@ -281,6 +294,7 @@ export default function MapLibreMap({
       if (areaFilter.maxArea !== undefined)
         params.append('maxArea', String(areaFilter.maxArea))
 
+      if (regiaoId) params.append('regiao_id', String(regiaoId))
       const response = await fetch(`/api/map/layers/${slug}?${params.toString()}`)
       if (response.ok) {
         const dto: LayerResponseDTO = await response.json()
@@ -293,6 +307,7 @@ export default function MapLibreMap({
     }
   }, [
     enqueueLayerData,
+    regiaoId,
     // eslint-disable-next-line react-hooks/exhaustive-deps
     dateFilter.startDate?.toISOString(),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -301,10 +316,44 @@ export default function MapLibreMap({
     areaFilter.maxArea,
   ])
 
-  // Boot: fetch catalog once
+  // Limpa cache do módulo quando região muda (navegação entre regiões no admin)
+  useEffect(() => {
+    _cache.layers = []
+    _cache.data = {}
+    _cache.dateFilterKey = ''
+    _cache.areaFilterKey = ''
+    fitBoundsDone.current = false
+    initializedRef.current = false
+    setLayers([])
+    setLayerData({})
+    setVisibleLayers([])
+    setLoadingLayers(true)
+  }, [regiaoId])
+
+  // Boot: fetch catalog once (após limpeza de cache acima)
   useEffect(() => {
     fetchCatalog()
   }, [fetchCatalog])
+
+  // ── Fetch region bounds for initial map positioning ──────────────────────
+  useEffect(() => {
+    const url = regiaoId ? `/api/map/region?regiao_id=${regiaoId}` : '/api/map/region'
+    fetch(url)
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => { if (data) setRegionBounds(data) })
+      .catch(() => { /* silent: falls back to default center */ })
+  }, [regiaoId])
+
+  // Fit map to region once both map and region data are ready (fires once)
+  useEffect(() => {
+    if (fitBoundsDone.current || !mapLoaded || !regionBounds || !mapRef.current) return
+    fitBoundsDone.current = true
+    const [minLng, minLat, maxLng, maxLat] = regionBounds.bbox
+    mapRef.current.fitBounds(
+      [[minLng, minLat], [maxLng, maxLat]],
+      { padding: 60, duration: 1000 },
+    )
+  }, [mapLoaded, regionBounds])
 
   // Initialize all layers as visible once catalog arrives
   useEffect(() => {
@@ -862,6 +911,7 @@ export default function MapLibreMap({
         style={{ width: '100%', height: '100%' }}
         mapStyle={BASEMAPS[basemap] as any}
         cursor={cursor}
+        onLoad={() => setMapLoaded(true)}
         onClick={handleMapClick}
         onMouseMove={handleMouseMove}
         onContextMenu={handleContextMenu}

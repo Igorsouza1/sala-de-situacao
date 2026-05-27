@@ -5,7 +5,7 @@ import { FEATURES } from "@/lib/feature-flags";
 import type { User } from "@supabase/supabase-js";
 import { db } from "@/db";
 import { rolesInMonitoramento } from "@/db/schema";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 
 interface AuthResult {
   user: User | null;
@@ -63,7 +63,33 @@ export async function requireAuthWithTenant(): Promise<AuthWithTenantResult> {
     return { user, tenantId: seedTenantId, response: null };
   }
 
-  const tenantId = extractTenantId(user);
+  // 1st: JWT app_metadata (set during invite for new users)
+  let tenantId = extractTenantId(user);
+
+  // 2nd: user_access table (fallback for existing users not yet re-invited)
+  if (!tenantId) {
+    const row = await db.execute<{ organization_id: string }>(sql`
+      SELECT organization_id
+      FROM monitoramento.user_access
+      WHERE user_id = ${user.id}::uuid
+      LIMIT 1
+    `);
+    tenantId = row.rows[0]?.organization_id ?? null;
+  }
+
+  // 3rd: seed fallback (dev / single-tenant mode)
+  if (!tenantId) {
+    tenantId = process.env.SEED_TENANT_ID ?? null;
+  }
+
+  // 4th: superadmin sem tenant explícito → usa primeiro tenant disponível
+  if (!tenantId && user.app_metadata?.is_superadmin === true) {
+    const firstTenant = await db.execute<{ id: string }>(sql`
+      SELECT id FROM monitoramento.tenants ORDER BY created_at ASC LIMIT 1
+    `);
+    tenantId = firstTenant.rows[0]?.id ?? null;
+  }
+
   if (!tenantId) {
     return {
       user,
@@ -83,6 +109,11 @@ export async function requireAdmin(): Promise<AuthWithTenantResult> {
   const { user, tenantId, response } = await requireAuthWithTenant();
   if (response || !user || !tenantId) {
     return { user: null, tenantId: null, response: response ?? apiError("Não autorizado.", 401) };
+  }
+
+  // Superadmin global — bypassa verificação de role
+  if (user.app_metadata?.is_superadmin === true) {
+    return { user, tenantId, response: null };
   }
 
   const adminRole = await db

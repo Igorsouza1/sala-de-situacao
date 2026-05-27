@@ -1,6 +1,6 @@
 export const maxDuration = 60;
 
-import { requireAuth } from "@/lib/api/require-auth";
+import { requireAdmin } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
@@ -10,7 +10,7 @@ import slugify from "slugify";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { response: authResponse } = await requireAuth();
+    const { response: authResponse } = await requireAdmin();
     if (authResponse) return authResponse;
 
     const params = await context.params;
@@ -26,6 +26,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (!file || !layerConfigStr) return apiError("Arquivo e configuração são obrigatórios.", 400);
 
     const layerConfig = JSON.parse(layerConfigStr.toString());
+
+    // Resolve tenant_id a partir da região (consistente com os outros commits)
+    const tenantRow = await db.execute(sql`
+      SELECT metadata->>'organizationId' AS tenant_id
+      FROM monitoramento.regioes WHERE id = ${regionId} LIMIT 1
+    `);
+    const tenantId: string | null = (tenantRow.rows[0] as any)?.tenant_id ?? null;
+    if (!tenantId) return apiError(`Região ${regionId} não possui organizationId no metadata.`, 400);
 
     // Leitura do arquivo massivo no backend
     const fileContent = await file.text();
@@ -61,7 +69,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
              regiaoId: regionId,
              visualConfig: visualConfig,
              schemaConfig: { source: "upload" },
-             ordering: 0
+             ordering: 0,
+             tenantId,
+             scope: 'tenant',
            })
            .returning({ id: layerCatalogInMonitoramento.id });
 
@@ -75,9 +85,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
                 const insertData = batch.filter((f: any) => f.geometry).map((feature: any) => ({
                     layerId: newLayerId,
-                    geom: sql`ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(feature.geometry)}), 4674)`,
+                    geom: sql`ST_Force2D(ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(feature.geometry)}), 4674))`,
                     properties: feature.properties || {},
-                    dataRegistro: new Date().toISOString()
+                    dataRegistro: new Date().toISOString(),
+                    tenantId,
                 }));
 
                 if (insertData.length > 0) {
@@ -91,9 +102,10 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
             await tx.insert(layerDataInMonitoramento).values({
                layerId: newLayerId,
-               geom: sql`ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geomToInsert)}), 4674)`,
+               geom: sql`ST_Force2D(ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geomToInsert)}), 4674))`,
                properties: props || {},
-               dataRegistro: new Date().toISOString()
+               dataRegistro: new Date().toISOString(),
+               tenantId,
             });
          }
     });

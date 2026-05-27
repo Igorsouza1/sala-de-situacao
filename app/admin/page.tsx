@@ -98,7 +98,7 @@ export default async function AdminDashboardPage() {
                            Editar
                         </Button>
                      </Link>
-                     <Link href={`/?region=${item.regionId}`} passHref>
+                     <Link href={`/protected?regiao_id=${item.regionId}`} passHref>
                         <Button size="sm" className="h-8 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white shadow-sm transition-all font-medium gap-1.5 text-xs">
                            <Map className="h-3.5 w-3.5" />
                            Acessar
