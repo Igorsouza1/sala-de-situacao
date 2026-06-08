@@ -1316,7 +1316,7 @@ export default function MapLibreMap({
       />
 
       {/* Shapefile uploader */}
-      <ShapefileUploader
+      {/* <ShapefileUploader
         onPreview={(data, color) => setPreviewGeoJSON({ data, color })}
         onClearPreview={() => setPreviewGeoJSON(null)}
         onSaveSuccess={() => {
@@ -1328,7 +1328,7 @@ export default function MapLibreMap({
           fetchingRef.current.clear()
           fetchCatalog()
         }}
-      />
+      /> */}
 
       {/* Bottom-left: LayerManager */}
       <div className="absolute bottom-4 left-4 z-[1000]">
