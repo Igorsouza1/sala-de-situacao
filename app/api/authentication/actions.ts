@@ -4,6 +4,8 @@ import { encodedRedirect } from "@/lib/utils";
 import { createClient } from "@/lib/supabase/server";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { db } from "@/db";
+import { sql } from "drizzle-orm";
 
 export const signUpAction = async (formData: FormData) => {
   const email = formData.get("email")?.toString();
@@ -44,16 +46,26 @@ export const signInAction = async (formData: FormData) => {
   const password = formData.get("password") as string;
   const supabase = await createClient();
 
-  const { error } = await supabase.auth.signInWithPassword({
-    email,
-    password,
-  });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
 
   if (error) {
     return encodedRedirect("error", "/sign-in", error.message);
   }
 
-  return redirect("/protected");
+  const user = data.user;
+
+  if (user?.app_metadata?.is_superadmin === true) {
+    return redirect("/admin");
+  }
+
+  const regionRow = await db.execute<{ region_id: number }>(sql`
+    SELECT region_id FROM monitoramento.roles
+    WHERE user_id = ${user.id}::uuid AND region_id IS NOT NULL
+    ORDER BY id ASC LIMIT 1
+  `);
+  const regionId = regionRow.rows[0]?.region_id;
+
+  return redirect(regionId ? `/protected?regiao_id=${regionId}` : "/protected");
 };
 
 export const forgotPasswordAction = async (formData: FormData) => {

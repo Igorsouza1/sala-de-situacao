@@ -7,7 +7,7 @@
  */
 
 jest.mock("@/lib/supabase/server", () => ({ createClient: jest.fn() }));
-jest.mock("@/lib/feature-flags", () => ({ FEATURES: { MULTI_TENANT: false } }));
+jest.mock("@/db", () => ({ db: { execute: jest.fn().mockResolvedValue({ rows: [] }), select: jest.fn() } }));
 jest.mock("@/lib/service/acoesService", () => ({
   getAcaoDossie: jest.fn(),
   updateAcaoFieldsById: jest.fn(),

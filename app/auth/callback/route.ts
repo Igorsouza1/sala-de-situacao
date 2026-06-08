@@ -1,11 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
 import type { Session } from "@supabase/supabase-js";
+import { db } from "@/db";
+import { sql } from "drizzle-orm";
 
 export async function GET(request: Request) {
-  // The `/auth/callback` route is required for the server-side auth flow implemented
-  // by the SSR package. It exchanges an auth code for the user's session.
-  // https://supabase.com/docs/guides/auth/server-side/nextjs
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
   const origin = requestUrl.origin;
@@ -13,14 +12,30 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+    const { data } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (redirectTo) {
+      return NextResponse.redirect(`${origin}${redirectTo}`);
+    }
+
+    const user = data?.user;
+
+    if (user?.app_metadata?.is_superadmin === true) {
+      return NextResponse.redirect(`${origin}/admin`);
+    }
+
+    const regionRow = await db.execute<{ region_id: number }>(sql`
+      SELECT region_id FROM monitoramento.roles
+      WHERE user_id = ${user?.id}::uuid AND region_id IS NOT NULL
+      ORDER BY id ASC LIMIT 1
+    `);
+    const regionId = regionRow.rows[0]?.region_id;
+
+    return NextResponse.redirect(
+      `${origin}${regionId ? `/protected?regiao_id=${regionId}` : "/protected"}`
+    );
   }
 
-  if (redirectTo) {
-    return NextResponse.redirect(`${origin}${redirectTo}`);
-  }
-
-  // URL to redirect to after sign up process completes
   return NextResponse.redirect(`${origin}/protected`);
 }
 

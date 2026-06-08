@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
-import { checkIsAdmin } from "@/lib/api/check-admin";
+import { checkIsSuperadmin } from "@/lib/api/check-admin";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const admin = await checkIsAdmin();
-  if (!admin) redirect("/protected");
+  const superadmin = await checkIsSuperadmin();
+  if (!superadmin) redirect("/protected");
   return <>{children}</>;
 }

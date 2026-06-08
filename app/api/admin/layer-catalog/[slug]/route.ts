@@ -38,7 +38,6 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
       .limit(1);
 
     if (!entry) return apiError("Camada não encontrada.", 404);
-    // tenantId null = modo seed (MULTI_TENANT=false) — skip ownership check
     if (tenantId && entry.tenantId !== tenantId) return apiError("Sem permissão para editar esta camada.", 403);
 
     const json = await request.json().catch(() => null);

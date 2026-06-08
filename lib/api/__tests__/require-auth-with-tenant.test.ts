@@ -3,16 +3,16 @@
  *
  * Cenários:
  * - Não autenticado → 401
- * - Autenticado, MULTI_TENANT=false → usa SEED_TENANT_ID do env
- * - Autenticado, MULTI_TENANT=true, sem tenant_id no JWT → 403
- * - Autenticado, MULTI_TENANT=true, com tenant_id no JWT → retorna tenantId real
+ * - Autenticado com tenant_id no JWT → retorna tenantId real
+ * - Autenticado sem tenant_id no JWT, com SEED_TENANT_ID → retorna seed (via fallback)
+ * - Autenticado sem tenant_id, sem SEED → 403
  */
 
 jest.mock("@/lib/supabase/server", () => ({ createClient: jest.fn() }));
-jest.mock("@/lib/feature-flags", () => ({ FEATURES: { MULTI_TENANT: false } }));
+jest.mock("@/db", () => ({ db: { execute: jest.fn().mockResolvedValue({ rows: [] }) } }));
 
 import { createClient } from "@/lib/supabase/server";
-import { FEATURES } from "@/lib/feature-flags";
+import { db } from "@/db";
 import { requireAuthWithTenant } from "../require-auth";
 
 const SEED = "seed-tenant-0000-0000-000000000000";
@@ -20,6 +20,7 @@ const SEED = "seed-tenant-0000-0000-000000000000";
 beforeEach(() => {
   jest.clearAllMocks();
   process.env.SEED_TENANT_ID = SEED;
+  (db.execute as jest.Mock).mockResolvedValue({ rows: [] });
 });
 
 afterEach(() => {
@@ -32,61 +33,31 @@ function mockSupabaseUser(user: any) {
   });
 }
 
-describe("requireAuthWithTenant — MULTI_TENANT=false (feature flag off)", () => {
-  beforeEach(() => {
-    (FEATURES as any).MULTI_TENANT = false;
-  });
-
-  it("retorna SEED_TENANT_ID quando autenticado (sem tenant no JWT)", async () => {
-    mockSupabaseUser({ id: "u1", email: "a@b.com", app_metadata: {} });
-
-    const result = await requireAuthWithTenant();
-
-    expect(result.response).toBeNull();
-    expect(result.tenantId).toBe(SEED);
-    expect(result.user).not.toBeNull();
-  });
-
-  it("retorna 401 quando não autenticado, mesmo com flag off", async () => {
-    mockSupabaseUser(null);
-
-    const result = await requireAuthWithTenant();
-
-    expect(result.response?.status).toBe(401);
-    expect(result.tenantId).toBeNull();
-  });
+it("retorna 401 quando não autenticado", async () => {
+  mockSupabaseUser(null);
+  const result = await requireAuthWithTenant();
+  expect(result.response?.status).toBe(401);
+  expect(result.tenantId).toBeNull();
 });
 
-describe("requireAuthWithTenant — MULTI_TENANT=true (feature flag on)", () => {
-  beforeEach(() => {
-    (FEATURES as any).MULTI_TENANT = true;
-  });
+it("retorna tenantId real do JWT quando presente", async () => {
+  mockSupabaseUser({ id: "u1", email: "a@b.com", app_metadata: { tenant_id: "real-tenant-uuid" } });
+  const result = await requireAuthWithTenant();
+  expect(result.response).toBeNull();
+  expect(result.tenantId).toBe("real-tenant-uuid");
+});
 
-  it("retorna tenantId real do JWT quando presente", async () => {
-    mockSupabaseUser({ id: "u2", email: "b@b.com", app_metadata: { tenant_id: "real-tenant-uuid" } });
+it("retorna SEED_TENANT_ID quando JWT sem tenant e user_access vazio", async () => {
+  mockSupabaseUser({ id: "u2", email: "b@b.com", app_metadata: {} });
+  const result = await requireAuthWithTenant();
+  expect(result.response).toBeNull();
+  expect(result.tenantId).toBe(SEED);
+});
 
-    const result = await requireAuthWithTenant();
-
-    expect(result.response).toBeNull();
-    expect(result.tenantId).toBe("real-tenant-uuid");
-  });
-
-  it("retorna 403 quando usuário autenticado mas sem tenant_id no JWT", async () => {
-    mockSupabaseUser({ id: "u3", email: "c@b.com", app_metadata: {} });
-
-    const result = await requireAuthWithTenant();
-
-    expect(result.response?.status).toBe(403);
-    expect(result.tenantId).toBeNull();
-    const body = await result.response!.json();
-    expect(body.error.message).toBe("Usuário sem tenant associado.");
-  });
-
-  it("retorna 401 quando não autenticado", async () => {
-    mockSupabaseUser(null);
-
-    const result = await requireAuthWithTenant();
-
-    expect(result.response?.status).toBe(401);
-  });
+it("retorna 403 quando sem tenant no JWT, sem user_access e sem SEED", async () => {
+  delete process.env.SEED_TENANT_ID;
+  mockSupabaseUser({ id: "u3", email: "c@b.com", app_metadata: {} });
+  const result = await requireAuthWithTenant();
+  expect(result.response?.status).toBe(403);
+  expect(result.tenantId).toBeNull();
 });

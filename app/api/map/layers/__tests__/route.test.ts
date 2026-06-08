@@ -8,7 +8,7 @@
  */
 
 jest.mock("@/lib/supabase/server", () => ({ createClient: jest.fn() }));
-jest.mock("@/lib/feature-flags", () => ({ FEATURES: { MULTI_TENANT: false } }));
+jest.mock("@/db", () => ({ db: { execute: jest.fn().mockResolvedValue({ rows: [] }), select: jest.fn() } }));
 jest.mock("@/lib/service/layerService", () => ({
   getAllLayers: jest.fn().mockResolvedValue([]),
 }));
@@ -53,7 +53,7 @@ describe("GET /api/map/layers", () => {
     expect(layerService.getAllLayers).not.toHaveBeenCalled();
   });
 
-  it("chama getAllLayers com SEED_TENANT_ID quando MULTI_TENANT=false", async () => {
+  it("chama getAllLayers com SEED_TENANT_ID quando usuário sem tenant no JWT", async () => {
     mockUser({ id: "u1", email: "a@b.com", app_metadata: {} });
 
     await GET(makeRequest());
