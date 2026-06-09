@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -62,7 +62,10 @@ import {
   Activity,
   MapPin,
   PawPrint,
+  RefreshCw,
 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1016,10 +1019,52 @@ function TabFormoso() {
   const secchi = useFetch<SecchiIndicador>(
     "/api/balneario-municipal/indicadores/secchi"
   );
+  const { toast } = useToast();
+  const [syncing, setSyncing] = useState(false);
+
+  const handleSync = useCallback(async () => {
+    setSyncing(true);
+    try {
+      const res = await fetch("/api/balneario-municipal/sync", { method: "POST" });
+      const json = await res.json();
+      if (json?.success) {
+        const { inserted, updated } = json.data;
+        toast({
+          title: "Sincronização concluída",
+          description: `${inserted} novo(s) registro(s) inserido(s), ${updated} atualizado(s).`,
+        });
+      } else {
+        const msg = json?.error?.message ?? json?.error ?? "Tente novamente.";
+        toast({ title: "Erro na sincronização", description: String(msg), variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Erro na sincronização", description: "Não foi possível conectar ao servidor.", variant: "destructive" });
+    } finally {
+      setSyncing(false);
+    }
+  }, [toast]);
 
   return (
     <div className="h-full overflow-auto">
       <div className="p-4 space-y-6">
+        {/* Header com botão de sync */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Rio Formoso · Balneário Municipal</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Dados de monitoramento hídrico</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSync}
+            disabled={syncing}
+            className="gap-2 text-xs"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${syncing ? "animate-spin" : ""}`} />
+            {syncing ? "Sincronizando…" : "Sincronizar Planilha"}
+          </Button>
+        </div>
+
         {/* KPIs */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <KpiCard

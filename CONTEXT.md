@@ -108,6 +108,10 @@ _Avoid_: Sensor, medidor, estação meteorológica (quando não é especificamen
 Registro individual de uma medição em uma Estação de Monitoramento em um dado momento. Contém os valores das métricas configuradas para aquela estação e o timestamp de coleta.
 _Avoid_: Medição, amostra, dado
 
+**Sincronização de Planilha**:
+Operação que busca Leituras de uma fonte externa (Google Sheets) e as insere na base via upsert, usando a data como chave de deduplicação. A planilha é a fonte de verdade — se um valor foi corrigido na planilha, a sincronização o atualiza no banco. Distinto de Importação (que é exclusiva do Superadmin para dados de base como Propriedades e Detecções). A Sincronização de Planilha é executada por Editor ou acima.
+_Avoid_: Importação (quando se refere a Leituras de planilha), sync, pull
+
 ### Fauna
 
 **Avistamento**:

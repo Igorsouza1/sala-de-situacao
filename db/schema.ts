@@ -311,7 +311,9 @@ export const balnearioMunicipalInMonitoramento = monitoramento.table("balneario_
 	pluviometria:   numeric({ precision: 5, scale: 2 }),
 	observacao:     text(),
 	tenantId:       uuid("tenant_id"),
-});
+}, (table) => [
+	unique("balneario_municipal_data_unique").on(table.data),
+]);
 
 export const ponteDoCureInMonitoramento = monitoramento.table("ponte_do_cure", {
 	id:           serial().primaryKey().notNull(),

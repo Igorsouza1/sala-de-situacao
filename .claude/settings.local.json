@@ -3,7 +3,8 @@
     "allow": [
       "Bash(find:*)",
       "Bash(cd:*)",
-      "Bash(npm view *)"
+      "Bash(npm view *)",
+      "Bash(gh issue create --title 'Ativar crons FIRMS \\(sync + notify\\) no Vercel' --label ready-for-agent,feat --body ' *)"
     ]
   },
   "enabledPlugins": {
