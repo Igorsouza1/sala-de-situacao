@@ -114,7 +114,7 @@ export const resetPasswordAction = async (formData: FormData) => {
     return encodedRedirect(
       "error",
       "/reset-password",
-      "Password and confirm password are required",
+      "Senha e confirmação são obrigatórias",
     );
   }
 
@@ -122,23 +122,29 @@ export const resetPasswordAction = async (formData: FormData) => {
     return encodedRedirect(
       "error",
       "/reset-password",
-      "Passwords do not match",
+      "As senhas não coincidem",
     );
   }
 
-  const { error } = await supabase.auth.updateUser({
-    password: password,
-  });
+  if (password.length < 6) {
+    return encodedRedirect(
+      "error",
+      "/reset-password",
+      "A senha deve ter pelo menos 6 caracteres",
+    );
+  }
+
+  const { error } = await supabase.auth.updateUser({ password });
 
   if (error) {
     return encodedRedirect(
       "error",
       "/reset-password",
-      "Password update failed",
+      error.message,
     );
   }
 
-  return encodedRedirect("success", "/reset-password", "Password updated");
+  return encodedRedirect("success", "/reset-password", "Senha atualizada com sucesso");
 };
 
 export const completeInviteAction = async (formData: FormData) => {
