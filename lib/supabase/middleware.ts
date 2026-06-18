@@ -48,7 +48,8 @@ export const updateSession = async (request: NextRequest) => {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
 
-    if (request.nextUrl.pathname === "/" && !authError) {
+    const authOnlyPaths = ["/sign-in", "/forgot-password", "/invite"];
+    if (authOnlyPaths.includes(request.nextUrl.pathname) && !authError) {
       const dest = user?.app_metadata?.is_superadmin === true ? "/admin" : "/protected";
       return NextResponse.redirect(new URL(dest, request.url));
     }
