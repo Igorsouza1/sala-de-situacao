@@ -2,8 +2,7 @@
 
 import * as React from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
-import DatePicker from "react-datepicker"
-import "react-datepicker/dist/react-datepicker.css"
+import { DayPicker } from "react-day-picker"
 
 import { cn } from "@/lib/utils"
 import { buttonVariants } from "@/components/ui/button"
@@ -16,55 +15,51 @@ export interface CalendarProps {
 
 function Calendar({ selected, onChange, className }: CalendarProps) {
   return (
-    <div className={cn("p-3", className)}>
-      <DatePicker
-        selected={selected}
-        onChange={onChange}
-        inline
-        calendarClassName="bg-white rounded-lg shadow-md p-2"
-        dayClassName={() =>
-          cn(
-            buttonVariants({ variant: "ghost" }),
-            "h-9 w-9 p-0 font-normal aria-selected:opacity-100"
-          )
-        }
-        renderCustomHeader={({
-          monthDate,
-          customHeaderCount,
-          decreaseMonth,
-          increaseMonth,
-        }) => (
-          <div className="flex justify-between items-center mb-2 px-2">
-            <button
-              onClick={decreaseMonth}
-              type="button"
-              className={cn(
-                buttonVariants({ variant: "outline" }),
-                "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
-              )}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <span className="text-sm font-medium">
-              {monthDate.toLocaleString("default", {
-                month: "long",
-                year: "numeric",
-              })}
-            </span>
-            <button
-              onClick={increaseMonth}
-              type="button"
-              className={cn(
-                buttonVariants({ variant: "outline" }),
-                "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100"
-              )}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-      />
-    </div>
+    <DayPicker
+      mode="single"
+      selected={selected ?? undefined}
+      onSelect={(date) => onChange(date ?? null)}
+      showOutsideDays
+      className={cn("p-3", className)}
+      classNames={{
+        months: "flex flex-col",
+        month: "flex flex-col gap-3",
+        month_caption: "flex justify-center pt-1 relative items-center w-full",
+        caption_label: "text-sm font-medium text-slate-700",
+        nav: "flex items-center",
+        button_previous: cn(
+          buttonVariants({ variant: "outline" }),
+          "size-7 bg-transparent p-0 opacity-50 hover:opacity-100 absolute left-1"
+        ),
+        button_next: cn(
+          buttonVariants({ variant: "outline" }),
+          "size-7 bg-transparent p-0 opacity-50 hover:opacity-100 absolute right-1"
+        ),
+        month_grid: "w-full border-collapse",
+        weekdays: "flex",
+        weekday: "text-slate-400 w-9 font-normal text-[0.8rem] text-center pb-1",
+        week: "flex w-full",
+        day: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
+        day_button: cn(
+          buttonVariants({ variant: "ghost" }),
+          "size-9 p-0 font-normal aria-selected:opacity-100"
+        ),
+        selected:
+          "bg-brand-primary text-white rounded-md hover:bg-blue-600 hover:text-white focus:bg-brand-primary focus:text-white",
+        today: "bg-slate-100 text-slate-900 rounded-md",
+        outside: "text-slate-300 opacity-50",
+        disabled: "text-slate-300 opacity-50",
+        hidden: "invisible",
+      }}
+      components={{
+        Chevron: ({ orientation }) =>
+          orientation === "left" ? (
+            <ChevronLeft className="size-4" />
+          ) : (
+            <ChevronRight className="size-4" />
+          ),
+      }}
+    />
   )
 }
 Calendar.displayName = "Calendar"

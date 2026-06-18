@@ -1,9 +1,7 @@
-import { useState, useCallback, useEffect, useRef  } from "react"
-import { Card, CardContent } from "@/components/ui/card"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { CalendarIcon, ChevronDownIcon } from "lucide-react"
+import { CalendarIcon } from "lucide-react"
 import {
   format,
   startOfDay,
@@ -16,7 +14,7 @@ import {
   endOfYear,
 } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { cn } from "@/lib/utils"
+import { FilterPopover } from "./FilterPopover"
 
 interface DateFilterControlProps {
   onDateChange: (startDate: Date | null, endDate: Date | null) => void
@@ -25,173 +23,159 @@ interface DateFilterControlProps {
 export function DateFilterControl({ onDateChange }: DateFilterControlProps) {
   const [startDate, setStartDate] = useState<Date | null>(null)
   const [endDate, setEndDate] = useState<Date | null>(null)
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [openCalendar, setOpenCalendar] = useState<"start" | "end" | null>(null)
 
-  const didInitialize = useRef(false) // ← 🔑 controle de inicialização
+  const didInitialize = useRef(false)
 
   useEffect(() => {
     if (!didInitialize.current) {
       const now = new Date()
       const start = startOfYear(now)
       const end = endOfYear(now)
-
       setStartDate(start)
       setEndDate(end)
       onDateChange(start, end)
       didInitialize.current = true
     }
   }, [onDateChange])
-  const handleApplyFilter = useCallback(() => {
-    onDateChange(startDate, endDate)
-    setIsExpanded(false)
-  }, [startDate, endDate, onDateChange])
 
-  const handleClearFilter = useCallback(() => {
-    setStartDate(null)
-    setEndDate(null)
-    onDateChange(null, null)
-    setIsExpanded(false)
-  }, [onDateChange])
+  const isFilterActive = startDate !== null || endDate !== null
 
-  const toggleExpand = () => setIsExpanded(!isExpanded)
-
-  const applyPresetFilter = (preset: "today" | "week" | "month" | "year") => {
+  const applyPreset = (preset: "today" | "week" | "month" | "year") => {
     const now = new Date()
     let start: Date
     let end: Date
-
     switch (preset) {
       case "today":
-        start = startOfDay(now)
-        end = endOfDay(now)
-        break
+        start = startOfDay(now); end = endOfDay(now); break
       case "week":
-        start = startOfWeek(now, { locale: ptBR })
-        end = endOfWeek(now, { locale: ptBR })
-        break
+        start = startOfWeek(now, { locale: ptBR }); end = endOfWeek(now, { locale: ptBR }); break
       case "month":
-        start = startOfMonth(now)
-        end = endOfMonth(now)
-        break
+        start = startOfMonth(now); end = endOfMonth(now); break
       case "year":
-        start = startOfYear(now)
-        end = endOfYear(now)
-        break
+        start = startOfYear(now); end = endOfYear(now); break
     }
-
     setStartDate(start)
     setEndDate(end)
     onDateChange(start, end)
-    setIsExpanded(false)
   }
 
-  const applySpecificYearFilter = (year: number) => {
+  const applyYear = (year: number) => {
     const start = new Date(year, 0, 1)
     const end = new Date(year, 11, 31, 23, 59, 59, 999)
-
     setStartDate(start)
     setEndDate(end)
     onDateChange(start, end)
-    setIsExpanded(false)
+  }
+
+  const handleApply = (close: () => void) => {
+    onDateChange(startDate, endDate)
+    close()
+  }
+
+  const handleClear = (close: () => void) => {
+    setStartDate(null)
+    setEndDate(null)
+    setOpenCalendar(null)
+    onDateChange(null, null)
+    close()
   }
 
   return (
-    <Card className="bg-brand-dark/95 border border-white/10 text-slate-200 shadow-xl w-auto max-w-[300px] rounded-xl overflow-hidden backdrop-blur-sm">
-      <CardContent className="p-0">
-        <Button
-          variant="ghost"
-          onClick={toggleExpand}
-          className="w-full h-12 px-4 py-2 flex items-center justify-between text-slate-200 hover:bg-brand-primary/10 hover:text-brand-primary transition-colors duration-200"
-        >
-          <div className="flex items-center">
-            <CalendarIcon className="h-5 w-5 mr-2" />
-            <span className="font-semibold">
-              {startDate && endDate
-                ? `${format(startDate, "dd/MM/yyyy")} - ${format(endDate, "dd/MM/yyyy")}`
-                : "Filtrar por data"}
-            </span>
+    <FilterPopover
+      icon={CalendarIcon}
+      title="Filtro de Datas"
+      isActive={isFilterActive}
+      panelClassName="w-72"
+    >
+      {(close) => (
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-1.5">
+            {(["today", "week", "month", "year"] as const).map((preset) => (
+              <Button
+                key={preset}
+                size="sm"
+                variant="outline"
+                className="text-xs h-8 text-slate-700"
+                onClick={() => { applyPreset(preset); close() }}
+              >
+                {{ today: "Hoje", week: "Essa Semana", month: "Esse Mês", year: "Esse Ano" }[preset]}
+              </Button>
+            ))}
           </div>
-          <ChevronDownIcon
-            className={`h-4 w-4 transition-transform duration-200 ${isExpanded ? "transform rotate-180" : ""}`}
-          />
-        </Button>
-        {isExpanded && (
-          <div className="p-4 bg-brand-dark  border-t border-white/5">
-            <div className="grid grid-cols-2 gap-2 mb-4">
-              <Button size="sm" variant="outline" onClick={() => applyPresetFilter("today")} className="text-xs border-white/10 bg-transparent text-slate-300 hover:bg-brand-primary/20 hover:text-white hover:border-brand-primary/50">
-                Hoje
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => applyPresetFilter("week")} className="text-xs border-white/10 bg-transparent text-slate-300 hover:bg-brand-primary/20 hover:text-white hover:border-brand-primary/50">
-                Essa Semana
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => applyPresetFilter("month")} className="text-xs border-white/10 bg-transparent text-slate-300 hover:bg-brand-primary/20 hover:text-white hover:border-brand-primary/50">
-                Esse Mês
-              </Button>
-              <Button size="sm" variant="outline" onClick={() => applyPresetFilter("year")} className="text-xs border-white/10 bg-transparent text-slate-300 hover:bg-brand-primary/20 hover:text-white hover:border-brand-primary/50">
-                Esse Ano
-              </Button>
-            </div>
 
-            <div className="text-[10px] text-slate-400 mb-2 mt-1 font-medium uppercase tracking-wider">Histórico por Ano</div>
-            <div className="grid grid-cols-5 gap-1 mb-4">
+          <div>
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider font-medium mb-1.5">Histórico</p>
+            <div className="grid grid-cols-5 gap-1">
               {[2026, 2025, 2024, 2023, 2022].map((year) => (
-                <Button 
+                <Button
                   key={year}
-                  size="sm" 
-                  variant="outline" 
-                  onClick={() => applySpecificYearFilter(year)} 
-                  className="text-xs px-1 h-8 border-white/10 bg-transparent text-slate-300 hover:bg-brand-primary/20 hover:text-white hover:border-brand-primary/50"
+                  size="sm"
+                  variant="outline"
+                  className="text-xs px-1 h-8 text-slate-700"
+                  onClick={() => { applyYear(year); close() }}
                 >
                   {year}
                 </Button>
               ))}
             </div>
+          </div>
 
-            <div className="space-y-2">
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn("w-full justify-start text-left font-normal border-white/10 bg-transparent text-slate-200 hover:bg-white/5 hover:text-white", !startDate && "text-slate-400")}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {startDate ? format(startDate, "PPP", { locale: ptBR }) : <span>Data inicial</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-brand-dark border-white/10 text-slate-200" align="start">
-                  <Calendar selected={startDate} onChange={setStartDate} className="bg-brand-dark text-slate-200" />
-                </PopoverContent>
-              </Popover>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant={"outline"}
-                    className={cn("w-full justify-start text-left font-normal border-white/10 bg-transparent text-slate-200 hover:bg-white/5 hover:text-white", !endDate && "text-slate-400")}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {endDate ? format(endDate, "PPP", { locale: ptBR }) : <span>Data final</span>}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0 bg-brand-dark border-white/10 text-slate-200" align="start">
-                  <Calendar selected={endDate} onChange={setEndDate} className="bg-brand-dark text-slate-200" />
-                </PopoverContent>
-              </Popover>
-            </div>
-            <div className="flex space-x-2 mt-4">
+          <div>
+            <p className="text-[10px] text-slate-400 uppercase tracking-wider font-medium mb-1.5">Período Customizado</p>
+            <div className="space-y-1">
               <Button
-                onClick={handleApplyFilter}
-                className="flex-1 bg-brand-primary hover:bg-blue-600 text-white border-0"
+                variant="outline"
+                size="sm"
+                className="w-full justify-start text-left font-normal text-slate-700"
+                onClick={() => setOpenCalendar(openCalendar === "start" ? null : "start")}
               >
-                Aplicar
+                <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0" />
+                {startDate ? format(startDate, "dd/MM/yyyy") : <span className="text-slate-400">Data inicial</span>}
               </Button>
-              <Button onClick={handleClearFilter} variant="outline" className="flex-1 border-white/10 bg-transparent text-slate-300 hover:bg-white/5 hover:text-white">
-                Limpar
+              {openCalendar === "start" && (
+                <Calendar
+                  selected={startDate}
+                  onChange={(date) => { setStartDate(date); setOpenCalendar(null) }}
+                />
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="w-full justify-start text-left font-normal text-slate-700"
+                onClick={() => setOpenCalendar(openCalendar === "end" ? null : "end")}
+              >
+                <CalendarIcon className="mr-2 h-3.5 w-3.5 shrink-0" />
+                {endDate ? format(endDate, "dd/MM/yyyy") : <span className="text-slate-400">Data final</span>}
               </Button>
+              {openCalendar === "end" && (
+                <Calendar
+                  selected={endDate}
+                  onChange={(date) => { setEndDate(date); setOpenCalendar(null) }}
+                />
+              )}
             </div>
           </div>
-        )}
-      </CardContent>
-    </Card>
+
+          <div className="flex gap-2 pt-1 border-t border-slate-100">
+            <Button
+              size="sm"
+              className="flex-1 bg-brand-primary hover:bg-blue-600 text-white"
+              onClick={() => handleApply(close)}
+            >
+              Aplicar
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="flex-1 text-slate-600"
+              onClick={() => handleClear(close)}
+            >
+              Limpar
+            </Button>
+          </div>
+        </div>
+      )}
+    </FilterPopover>
   )
 }
-

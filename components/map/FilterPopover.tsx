@@ -8,10 +8,12 @@ interface FilterPopoverProps {
   icon: LucideIcon
   title: string
   count?: number | null
+  isActive?: boolean
+  panelClassName?: string
   children: (close: () => void) => ReactNode
 }
 
-export function FilterPopover({ icon: Icon, title, count, children }: FilterPopoverProps) {
+export function FilterPopover({ icon: Icon, title, count, isActive, panelClassName, children }: FilterPopoverProps) {
   const [isOpen, setIsOpen] = useState(false)
 
   const close = () => setIsOpen(false)
@@ -36,11 +38,14 @@ export function FilterPopover({ icon: Icon, title, count, children }: FilterPopo
             {count}
           </span>
         )}
+        {isActive && count == null && (
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-brand-primary shadow" />
+        )}
       </div>
 
       {/* Painel de Filtro com Animação */}
       <div
-        className={`absolute left-12 top-0 bg-white border border-slate-200 rounded-lg shadow-xl p-4 w-64 transition-all duration-300 ease-out origin-left ${
+        className={`absolute left-12 top-0 bg-white border border-slate-200 rounded-lg shadow-xl p-4 transition-all duration-300 ease-out origin-left ${panelClassName ?? "w-64"} ${
           isOpen
             ? "opacity-100 scale-100 translate-x-0"
             : "opacity-0 scale-95 -translate-x-2 pointer-events-none"
