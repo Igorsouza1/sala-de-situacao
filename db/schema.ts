@@ -330,7 +330,7 @@ export const fotosAcoesInMonitoramento = monitoramento.table("fotos_acoes", {
 	id:          serial().primaryKey().notNull(),
 	acaoId:      integer("acao_id").notNull(),
 	url:         varchar({ length: 1000 }).notNull(),
-	descricao:   varchar({ length: 255 }),
+	descricao:   text(),
 	createdAt:   timestamp("created_at", { mode: 'string' }).defaultNow(),
 	atualizacao: date(),
 }, (table) => [

@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogDescription } from "@/components/ui/dialog";
 import { Camera, ImagePlus, Loader2, MapPin, Calendar } from "lucide-react";
+import { CreateAcaoDialog } from "./create-acao-dialog";
 
 export interface AcaoDto {
   id: number;
@@ -124,6 +125,7 @@ export function AcoesManager({ regionId, acoes: initialAcoes }: AcoesManagerProp
             </p>
           </div>
         </div>
+        <CreateAcaoDialog regionId={regionId} onCreated={refetchAcoes} />
       </div>
 
       {/* Tabela */}

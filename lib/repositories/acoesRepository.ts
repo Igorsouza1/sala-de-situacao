@@ -170,5 +170,59 @@ export async function insertAcaoData(data: NewAcoesData) {
   return newRecord
 }
 
+export interface SingleAcaoData {
+  name: string
+  descricao?: string | null
+  time?: string | null
+  acao?: string | null
+  categoria?: string | null
+  status?: string | null
+  tipoTecnico?: string | null
+  carater?: string | null
+  eixoTematico?: string | null
+  latitude?: string | null
+  longitude?: string | null
+  elevation?: string | null
+  regiaoId: number
+  tenantId: string
+}
+
+export async function insertSingleAcaoData(data: SingleAcaoData) {
+  const hasCoords = data.latitude && data.longitude
+  const geomWkt = hasCoords
+    ? `POINTZ(${data.longitude} ${data.latitude} ${data.elevation ?? 0})`
+    : null
+
+  const mes = data.time
+    ? new Date(data.time).toLocaleString("pt-BR", { month: "long" })
+    : new Date().toLocaleString("pt-BR", { month: "long" })
+
+  const [newRecord] = await db
+    .insert(acoesInMonitoramento)
+    .values({
+      name: data.name,
+      descricao: data.descricao ?? null,
+      time: data.time ?? null,
+      acao: data.acao ?? null,
+      categoria: (data.categoria as any) ?? null,
+      status: (data.status as any) ?? null,
+      tipoTecnico: data.tipoTecnico ?? null,
+      carater: data.carater ?? null,
+      eixoTematico: data.eixoTematico ?? null,
+      latitude: data.latitude ?? null,
+      longitude: data.longitude ?? null,
+      elevation: data.elevation ?? null,
+      mes,
+      atuacao: "Manual",
+      regiaoId: data.regiaoId,
+      tenantId: data.tenantId,
+      ...(geomWkt
+        ? { geom: sql`ST_SetSRID(ST_GeomFromText(${geomWkt}), 4674)` }
+        : {}),
+    })
+    .returning({ id: acoesInMonitoramento.id })
+
+  return newRecord
+}
 
 
