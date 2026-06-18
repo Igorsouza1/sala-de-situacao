@@ -12,7 +12,11 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = await createClient();
-    const { data } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (error) {
+      return NextResponse.redirect(`${origin}/sign-in?error=${encodeURIComponent("Link inválido ou expirado. Solicite um novo.")}`);
+    }
 
     if (redirectTo) {
       return NextResponse.redirect(`${origin}${redirectTo}`);
