@@ -17,11 +17,11 @@ _Avoid_: Operador, analista, usuário
 ### Território
 
 **Região**:
-Limite geográfico de qualquer forma, definido pela Organização, que delimita a área de inserção e gestão de dados. Não precisa corresponder a um limite cadastral ou municipal.
+Limite geográfico de qualquer forma, definido pela Organização, que delimita a área de inserção e gestão de dados. Não precisa corresponder a um limite cadastral ou municipal. Pertence a exatamente uma Organização (relação N:1). Duas Organizações podem monitorar a mesma área geográfica, mas cada uma define e gerencia sua própria Região — não existe compartilhamento de Região entre Organizações.
 _Avoid_: Município, área, território, zona
 
 **Propriedade**:
-Imóvel rural com cadastro obrigatório no CAR (Cadastro Ambiental Rural). Uma Propriedade pode estar contida em uma ou mais Regiões (relação muitos-para-muitos). É a unidade de análise cruzada com alertas ambientais.
+Imóvel rural com cadastro obrigatório no CAR (Cadastro Ambiental Rural). É um Dado de Base — existe uma única vez no sistema por `codImovel`, independente de quantas Regiões a contêm. Uma Propriedade pode estar contida em uma ou mais Regiões (relação muitos-para-muitos). Não pertence a nenhuma Organização; é a unidade de análise cruzada com alertas ambientais.
 _Avoid_: Imóvel, parcela, lote, fazenda
 
 **Dossiê**:
@@ -59,11 +59,11 @@ _Avoid_: Contato, usuário notificado, assinante
 ### Alertas ambientais
 
 **Foco de Calor**:
-Detecção de calor via satélite (fonte: FIRMS/NASA). Ponto com coordenadas, brilho, confiança e timestamp de aquisição. Associado a uma Propriedade via `codImovel`.
+Detecção de calor via satélite (fonte: FIRMS/NASA). Ponto com coordenadas, brilho, confiança e timestamp de aquisição. Associado a uma Propriedade via `codImovel`. É um Dado de Base — existe uma única vez no sistema por ponto/data/hora, independente de quantas Regiões o contêm. Não pertence a nenhuma Organização; a associação com Regiões (e indiretamente com Organizações) é feita via junction table.
 _Avoid_: Incêndio, foco de incêndio, hotspot
 
 **Detecção de Desmatamento**:
-Polígono de supressão vegetal detectado via satélite (fonte: MapBiomas). Contém área em hectares, fonte e ano de detecção. Quando identificada dentro de uma Região, dispara uma Notificação para os Destinatários.
+Polígono de supressão vegetal detectado via satélite (fonte: MapBiomas). Contém área em hectares, fonte e ano de detecção. Quando identificada dentro de uma Região, dispara uma Notificação para os Destinatários. É um Dado de Base — existe uma única vez no sistema por alertid, independente de quantas Regiões o contêm.
 _Avoid_: Alerta de desmatamento (ambíguo com Notificação), desmate, corte raso, supressão
 
 ### Papéis de acesso
@@ -90,8 +90,12 @@ _Avoid_: Fiscal (conflita com Fiscalização)
 
 ### Administração
 
+**Dado de Base**:
+Entidade que representa um fato físico do mundo real — Propriedade, Foco de Calor, Detecção de Desmatamento. Existe uma única vez no sistema por sua chave natural (codImovel, lat/lon/data/hora, alertid), independente de quantas Regiões ou Organizações a referenciam. Não tem `tenant_id`. A associação com Regiões é feita via junction tables.
+_Avoid_: Dado global (ambíguo com Camada Global), dado compartilhado
+
 **Importação**:
-Ato exclusivo do Superadmin que vincula dados de base a uma Região: geometria da Região, Propriedades, Focos de Calor e Detecções de Desmatamento. Esses dados chegam de fontes externas (FIRMS, MapBiomas, SIGEF/CAR) e são processados antes da inserção. Owner não faz Importação de dados de base — apenas adiciona Camadas de Organização e anotações.
+Ato exclusivo do Superadmin que vincula Dados de Base a uma Região: geometria da Região, Propriedades, Focos de Calor e Detecções de Desmatamento. Esses dados chegam de fontes externas (FIRMS, MapBiomas, SIGEF/CAR) e são processados antes da inserção. Owner não faz Importação de Dados de Base — apenas adiciona Camadas de Organização e Anotações.
 _Avoid_: Commit (termo de implementação), upload, sincronização
 
 **Anotação**:
@@ -101,8 +105,12 @@ _Avoid_: Edição, atualização do dado
 ### Monitoramento ambiental
 
 **Estação de Monitoramento**:
-Ponto geográfico fixo que coleta séries temporais de leituras ambientais (nível d'água, turbidez, temperatura, pluviometria, etc.). Cada Organização configura suas próprias estações com schema de medições customizável. Leituras podem ser inseridas manualmente ou integradas de fontes externas (ex: Wunderground).
+Ponto geográfico fixo instalado e gerenciado por uma Organização, que coleta séries temporais de Leituras ambientais (nível d'água, turbidez, temperatura, pluviometria, etc.) com schema de métricas customizável. É um Dado de Organização — pertence a um único tenant, não é compartilhada. Leituras podem ser inseridas manualmente ou sincronizadas via Planilha.
 _Avoid_: Sensor, medidor, estação meteorológica (quando não é especificamente meteorológica)
+
+**Estação Meteorológica Pública**:
+Ponto geográfico fixo de redes meteorológicas públicas (ex: Wunderground, INMET). É um Dado de Base — existe independente de qualquer Organização e pode ser visível em múltiplas Regiões. Escopo futuro: ainda não implementado como entidade separada no sistema.
+_Avoid_: Estação de Monitoramento (quando se trata de rede pública)
 
 **Leitura**:
 Registro individual de uma medição em uma Estação de Monitoramento em um dado momento. Contém os valores das métricas configuradas para aquela estação e o timestamp de coleta.
