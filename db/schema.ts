@@ -77,9 +77,18 @@ export const regioesInMonitoramento = monitoramento.table("regioes", {
 	cor:       text(),
 	slug:      text(),
 	metadata:  jsonb(),
+	// Fonte de verdade tenant→região (ADR 0007, migration 0008).
+	// metadata->>'organizationId' segue existindo até a limpeza final.
+	organizationId: uuid("organization_id").notNull(),
 }, (table) => [
 	index("idx_regioes_geom").using("gist", table.geom.asc().nullsLast().op("gist_geometry_ops_2d")),
 	unique("regioes_slug_unique").on(table.slug),
+	foreignKey({
+		columns: [table.organizationId],
+		foreignColumns: [tenantsInMonitoramento.id],
+		name: "regioes_organization_id_fkey"
+	}),
+	index("idx_regioes_organization").on(table.organizationId),
 ]);
 
 // ─────────────────────────────────────────────────────────────
@@ -215,6 +224,10 @@ export const propriedadesInMonitoramento = monitoramento.table("propriedades", {
 	}),
 ]);
 
+// raw_firms é Dado de Base (ADR 0008): o vínculo foco↔região vive em
+// firms_regioes. As colunas regiaoId/alertaEnviado/tenantId abaixo estão
+// DEPRECADAS — mantidas no banco (expand-only) até a migration de contract;
+// código novo não deve lê-las nem escrevê-las como fonte de verdade.
 export const rawFirmsInMonitoramento = monitoramento.table("raw_firms", {
 	latitude:      doublePrecision(),
 	longitude:     doublePrecision(),
@@ -246,6 +259,25 @@ export const rawFirmsInMonitoramento = monitoramento.table("raw_firms", {
 		name: "raw_firms_regiao_id_regioes_id_fk"
 	}),
 	unique("raw_firms_id_key").on(table.id),
+]);
+
+// ─────────────────────────────────────────────────────────────
+// FIRMS_REGIOES — junction foco↔região (migration 0007, ADR 0008)
+// Estado de notificação é POR REGIÃO (cada região afetada recebe
+// seu próprio alerta), por isso alerta_enviado vive aqui.
+// ─────────────────────────────────────────────────────────────
+export const firmsRegioesInMonitoramento = monitoramento.table("firms_regioes", {
+	id:            uuid().defaultRandom().primaryKey().notNull(),
+	firmId:        uuid("firm_id").notNull().references(() => rawFirmsInMonitoramento.id, { onDelete: "cascade" }),
+	regiaoId:      integer("regiao_id").notNull().references(() => regioesInMonitoramento.id, { onDelete: "cascade" }),
+	alertaEnviado: boolean("alerta_enviado").notNull().default(false),
+	notifiedAt:    timestamp("notified_at", { withTimezone: true, mode: 'string' }),
+	createdAt:     timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	unique("firms_regioes_firm_regiao_unique").on(table.firmId, table.regiaoId),
+	// No banco este índice é parcial (WHERE alerta_enviado = false) — criado via SQL na migration 0007
+	index("idx_firms_regioes_pendentes").on(table.regiaoId, table.firmId),
+	index("idx_firms_regioes_firm").on(table.firmId),
 ]);
 
 export const layerCatalogInMonitoramento = monitoramento.table("layer_catalog", {

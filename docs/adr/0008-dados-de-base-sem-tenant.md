@@ -14,8 +14,22 @@ Queries de exibição filtram por `regiao_id` (Opção A), não por `tenant_id`.
 
 ## Escopo
 
-Entidades cobertas por esta decisão: `raw_firms`, `propriedades`, `desmatamento`.
+**(Ampliado em 2026-07-04 — sessão de planejamento multi-tenant completo.)**
 
-Entidades fora deste escopo (têm `tenant_id` legitimamente): `acoes`, `camadas de organização`, `avistamentos`, `estações de monitoramento`, `trilhas`.
+Entidades cobertas por esta decisão: `raw_firms`, `propriedades`, `desmatamento`, `estradas`, `javali_avistamentos`.
+
+- `estradas`: fato físico do território — a estrada existe independente de quem monitora. Junction `estradas_regioes`. Se duas Organizações com Regiões sobrepostas importam o mesmo shapefile, existe uma cópia.
+- `javali_avistamentos`: fato físico registrado por um membro de uma Organização (híbrido). Decisão: espécie invasora é problema coletivo — o avistamento é compartilhado entre Organizações com Regiões que contenham o ponto. Junction `javali_regioes`. Quem registrou fica como metadado (`created_by`), não como dono.
+
+Entidades fora deste escopo (têm `tenant_id` legitimamente — dados operacionais privados da Organização): `acoes`, `fotos_acoes`, `trilhas`, `waypoints`, camadas customizadas/upload do `layer_catalog`.
+
+- `acoes`: registro operacional (quem fez, quando, fotos) — potencialmente sensível (fiscalização). Org B nunca vê ações da Org A, mesmo em área sobreposta.
+- `trilhas`/`waypoints`: rastros GPS de expedições da equipe — registro de atividade, não fato do território.
+
+Fora de escopo por congelamento (legado single-tenant até o modelo genérico do ADR 0004 ser implementado): `deque_de_pedras`, `balneario_municipal`, `ponte_do_cure`.
 
 Estações Meteorológicas Públicas (ex: Wunderground) serão Dados de Base quando implementadas, mas estão fora do escopo atual.
+
+## Nota sobre alertas
+
+Ser Dado de Base não implica ter pipeline de alertas. Hoje só FIRMS tem alertas automatizados (ADR 0009); desmatamento terá no futuro (mesmo padrão, após o pipeline FIRMS estar provado em produção); estradas e javali são apenas camadas de exibição multi-região, sem alertas.

@@ -7,7 +7,6 @@ import { findAllAcoesDataWithGeometry } from "../repositories/acoesRepository";
 import { toFeatureCollection } from "../helpers/geo-utils";
 import { findAllEstradasDataWithGeometry } from "../repositories/estradasRepository";
 import { findAllDesmatamentoDataWithGeometry } from "../repositories/desmatamentoReposiroty";
-import { findAllFirmsDataWithGeometry } from "../repositories/firmsRepository";
 import { findAllPropriedadesDataWithGeometry } from "../repositories/propriedadesRepository";
 import { resolveTableLayer, type ResolverSchemaConfig } from "./layer-resolver";
 
@@ -28,10 +27,8 @@ const STATIC_STRATEGIES: Record<string, StaticStrategy> = {
         const data = await findAllDesmatamentoDataWithGeometry(tenantId, start, end);
         return toFeatureCollection(data.rows || data);
     },
-    "raw_firms": async (tenantId, start, end) => {
-        const data = await findAllFirmsDataWithGeometry(tenantId, start, end);
-        return toFeatureCollection(data.rows || data);
-    },
+    // raw_firms: removido — sempre resolvido pelo Caminho R (resolveTableLayer),
+    // pois seu schema_config.sourceType === 'table' (ver plano FIRMS, seção 2.7)
     "propriedades": async (tenantId, _start, _end, minArea, maxArea) => {
         const data = await findAllPropriedadesDataWithGeometry(tenantId, minArea, maxArea);
         return toFeatureCollection(data.rows || data);

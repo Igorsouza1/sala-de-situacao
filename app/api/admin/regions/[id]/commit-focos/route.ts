@@ -59,13 +59,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
                 try {
                     sendProgress();
 
-                    // Resolve tenant_id a partir da região
+                    // Resolve tenant_id a partir da região (coluna organization_id — Fase 1)
                     const tenantRow = await db.execute(sql`
-                        SELECT metadata->>'organizationId' AS tenant_id
+                        SELECT organization_id::text AS tenant_id
                         FROM monitoramento.regioes WHERE id = ${regionId} LIMIT 1
                     `);
                     const tenantId: string | null = (tenantRow.rows[0] as any)?.tenant_id ?? null;
-                    if (!tenantId) throw new Error(`Região ${regionId} não possui organizationId no metadata.`);
+                    if (!tenantId) throw new Error(`Região ${regionId} não possui organization_id.`);
 
                     for (let i = 0; i < totalFeatures; i++) {
                         const feature = features[i];
@@ -102,6 +102,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
                         `);
 
                         if (duplicateCheck.rowCount && duplicateCheck.rowCount > 0) {
+                            // Foco já existe (importado por outra região/ingestão):
+                            // garante o vínculo com ESTA região na junction.
+                            const existingId = (duplicateCheck.rows[0] as any).id;
+                            await db.execute(sql`
+                                INSERT INTO monitoramento.firms_regioes (firm_id, regiao_id)
+                                VALUES (${existingId}::uuid, ${regionId})
+                                ON CONFLICT (firm_id, regiao_id) DO NOTHING
+                            `);
                             skippedCount++;
                         } else {
                             const acqTime: string | null = props.acq_time ? String(props.acq_time) : null;
@@ -119,7 +127,9 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
                             const geomSql = sql`ST_SetSRID(ST_MakePoint(${longitude}, ${latitude}), 4674)`;
 
-                            await db.insert(rawFirmsInMonitoramento).values({
+                            // Colunas regiaoId/alertaEnviado/tenantId ainda são escritas
+                            // (expand-only) — a fonte de verdade nova é firms_regioes.
+                            const [inserted] = await db.insert(rawFirmsInMonitoramento).values({
                                 latitude,
                                 longitude,
                                 acqDate,
@@ -139,7 +149,13 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
                                 regiaoId: regionId,
                                 alertaEnviado: false,
                                 tenantId,
-                            });
+                            }).returning({ id: rawFirmsInMonitoramento.id });
+
+                            await db.execute(sql`
+                                INSERT INTO monitoramento.firms_regioes (firm_id, regiao_id)
+                                VALUES (${inserted.id}::uuid, ${regionId})
+                                ON CONFLICT (firm_id, regiao_id) DO NOTHING
+                            `);
 
                             insertedCount++;
                         }

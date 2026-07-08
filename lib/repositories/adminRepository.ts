@@ -72,13 +72,13 @@ export async function listRegionsInDb() {
       r.id,
       r.nome,
       r.descricao,
-      r.metadata->>'organizationId' AS "organizationId",
+      r.organization_id::text AS "organizationId",
       o.name AS "organizationName",
       ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
       r.created_at AS "createdAt"
     FROM monitoramento.regioes r
     LEFT JOIN monitoramento.tenants o
-      ON o.id::text = r.metadata->>'organizationId'
+      ON o.id = r.organization_id
     ORDER BY r.created_at DESC
   `);
 
@@ -91,14 +91,14 @@ export async function getRegionByIdInDb(id: number) {
       r.id,
       r.nome,
       r.descricao,
-      r.metadata->>'organizationId' AS "organizationId",
+      r.organization_id::text AS "organizationId",
       o.name AS "organizationName",
       ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
       r.created_at AS "createdAt",
       ST_AsGeoJSON(r.geom) as "geojson"
     FROM monitoramento.regioes r
     LEFT JOIN monitoramento.tenants o
-      ON o.id::text = r.metadata->>'organizationId'
+      ON o.id = r.organization_id
     WHERE r.id = ${id}
   `);
 
@@ -159,18 +159,20 @@ export async function createRegionInDb(input: {
   geojson: string;
 }) {
   const result = await db.execute(sql<RegionListItem>`
-    INSERT INTO monitoramento.regioes (nome, descricao, geom, metadata)
+    INSERT INTO monitoramento.regioes (nome, descricao, geom, organization_id, metadata)
     VALUES (
       ${input.nome},
       ${input.descricao ?? null},
       ST_Multi(ST_SimplifyPreserveTopology(ST_Force2D(ST_SetSRID(ST_GeomFromGeoJSON(${input.geojson}), 4674)), 0.0001)),
+      ${input.organizationId}::uuid,
+      -- metadata mantido em dupla escrita até a limpeza final (outros consumidores ainda leem)
       jsonb_build_object('organizationId', ${input.organizationId}::text)
     )
     RETURNING
       id,
       nome,
       descricao,
-      metadata->>'organizationId' AS "organizationId",
+      organization_id::text AS "organizationId",
       null::text AS "organizationName",
       ROUND(COALESCE(ST_Area(geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
       created_at AS "createdAt"
@@ -189,6 +191,7 @@ export async function updateRegionInDb(
       nome = ${input.nome},
       descricao = ${input.descricao ?? null},
       geom = ST_Multi(ST_SimplifyPreserveTopology(ST_Force2D(ST_SetSRID(ST_GeomFromGeoJSON(${input.geojson}), 4674)), 0.0001)),
+      organization_id = ${input.organizationId}::uuid,
       metadata = jsonb_build_object('organizationId', ${input.organizationId}::text),
       updated_at = now()
     WHERE id = ${id}
@@ -196,7 +199,7 @@ export async function updateRegionInDb(
       id,
       nome,
       descricao,
-      metadata->>'organizationId' AS "organizationId",
+      organization_id::text AS "organizationId",
       null::text AS "organizationName",
       ROUND(COALESCE(ST_Area(geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
       created_at AS "createdAt"
@@ -214,6 +217,7 @@ export async function updateRegionInfoInDb(
     SET
       nome = ${input.nome},
       descricao = ${input.descricao ?? null},
+      organization_id = ${input.organizationId}::uuid,
       metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('organizationId', ${input.organizationId}::text),
       updated_at = now()
     WHERE id = ${id}
@@ -221,7 +225,7 @@ export async function updateRegionInfoInDb(
       id,
       nome,
       descricao,
-      metadata->>'organizationId' AS "organizationId",
+      organization_id::text AS "organizationId",
       null::text AS "organizationName",
       ROUND(COALESCE(ST_Area(geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
       created_at AS "createdAt"
@@ -238,13 +242,14 @@ export async function updateRegionMetadataInDb(
     UPDATE monitoramento.regioes
     SET
       nome = ${input.nome},
+      organization_id = ${input.organizationId}::uuid,
       metadata = COALESCE(metadata, '{}'::jsonb) || jsonb_build_object('organizationId', ${input.organizationId}::text),
       updated_at = now()
     WHERE id = ${id}
     RETURNING
       id,
       nome,
-      metadata->>'organizationId' AS "organizationId",
+      organization_id::text AS "organizationId",
       null::text AS "organizationName",
       ROUND(COALESCE(ST_Area(geom::geography) / 1000000.0, 0)::numeric, 2)::float8 AS "sizeKm2",
       created_at AS "createdAt"

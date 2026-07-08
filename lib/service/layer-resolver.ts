@@ -28,7 +28,8 @@ const TABLE_DISPLAY_COLUMNS: Record<string, string> = {
   acoes: 'id, tenant_id, acao, name, descricao, mes, atuacao, status, categoria, tipo, eixo_tematico, tipo_tecnico, carater, time',
   estradas: 'id, tenant_id, nome, tipo, codigo',
   desmatamento: 'id, tenant_id, alertid, alertcode, alertha, source, detectat, detectyear, state, stateha',
-  raw_firms: 'id, tenant_id, acq_date, acq_time, frp, satellite, cod_imovel',
+  // raw_firms é Dado de Base (ADR 0008): sem tenant_id — o vínculo é via firms_regioes/região
+  raw_firms: 'id, acq_date, acq_time, frp, satellite, cod_imovel',
   propriedades: 'id, tenant_id, cod_tema, nom_tema, cod_imovel, mod_fiscal, num_area, ind_status, ind_tipo, des_condic, municipio',
 };
 
@@ -62,8 +63,14 @@ export async function resolveTableLayer(
           (SELECT geom FROM monitoramento.regioes WHERE id = ${options.regiaoId})
         )`);
       } else {
-        // Sem regiaoId: fallback para tenant_id para não retornar dataset nacional inteiro
-        whereParts.push(sql`tenant_id = ${options.tenantId}::uuid`);
+        // Sem regiaoId: intersecta com as regiões da organização (regioes.organization_id,
+        // migration 0008) para não retornar o dataset inteiro. Não usa tenant_id da própria
+        // tabela — Dados de Base (ADR 0008) não têm mais essa coluna como fonte de verdade.
+        whereParts.push(sql`EXISTS (
+          SELECT 1 FROM monitoramento.regioes reg
+          WHERE reg.organization_id = ${options.tenantId}::uuid
+            AND ST_Intersects(t.${sql.identifier(geometryColumn)}, reg.geom)
+        )`);
       }
       break;
     case 'global':

@@ -27,7 +27,7 @@ export async function GET(request: NextRequest) {
             if (!Number.isNaN(parsed)) {
                 regiaoId = parsed;
                 const meta = await db.execute<{ tenant_id: string }>(sql`
-                    SELECT metadata->>'organizationId' AS tenant_id
+                    SELECT organization_id::text AS tenant_id
                     FROM monitoramento.regioes WHERE id = ${regiaoId}
                 `);
                 if (meta.rows[0]?.tenant_id) effectiveTenantId = meta.rows[0].tenant_id;
