@@ -31,10 +31,10 @@ SELECT cron.schedule(
   '0 6 * * *',
   $$
   SELECT net.http_post(
-    url     := 'https://efklyvxlcuhjdfqdtqut.supabase.co/functions/v1/firms-sync',
+    url     := 'https://[LINK]/functions/v1/firms-sync',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer 4d5cd9bb765952ded78f03bc70382c4b5484a87926e159f172fa2ce6df3fcd966d9129856d413a889642e0748c369a16520892ef5a2cf456954ad4205fa962db809d5a65534d218513feaed184b65fb3'
+      'Authorization', 'Bearer '
     ),
     body    := '{}'::jsonb,
     timeout_milliseconds := 300000
@@ -47,10 +47,10 @@ SELECT cron.schedule(
   '30 6 * * *',
   $$
   SELECT net.http_post(
-    url     := 'https://efklyvxlcuhjdfqdtqut.supabase.co/functions/v1/firms-notify',
+    url     := 'https://[LINK]/functions/v1/firms-notify',
     headers := jsonb_build_object(
       'Content-Type', 'application/json',
-      'Authorization', 'Bearer 4d5cd9bb765952ded78f03bc70382c4b5484a87926e159f172fa2ce6df3fcd966d9129856d413a889642e0748c369a16520892ef5a2cf456954ad4205fa962db809d5a65534d218513feaed184b65fb3'
+      'Authorization', 'Bearer '
     ),
     body    := '{}'::jsonb,
     timeout_milliseconds := 300000
