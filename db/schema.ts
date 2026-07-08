@@ -184,6 +184,20 @@ export const desmatamentoInMonitoramento = monitoramento.table("desmatamento", {
 	}),
 ]);
 
+export const desmatamentoRegioesInMonitoramento = monitoramento.table("desmatamento_regioes", {
+	id:             uuid().defaultRandom().primaryKey().notNull(),
+	desmatamentoId: integer("desmatamento_id").notNull().references(() => desmatamentoInMonitoramento.id, { onDelete: "cascade" }),
+	regiaoId:       integer("regiao_id").notNull().references(() => regioesInMonitoramento.id, { onDelete: "cascade" }),
+	alertaEnviado:  boolean("alerta_enviado").notNull().default(false),
+	notifiedAt:     timestamp("notified_at", { withTimezone: true, mode: 'string' }),
+	createdAt:      timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
+}, (table) => [
+	unique("desmatamento_regioes_desmatamento_id_regiao_id_key").on(table.desmatamentoId, table.regiaoId),
+	// No banco este índice é parcial (WHERE alerta_enviado = false) — criado via SQL na migration 0011
+	index("idx_desmatamento_regioes_pendentes").on(table.regiaoId, table.desmatamentoId),
+	index("idx_desmatamento_regioes_desmatamento").on(table.desmatamentoId),
+]);
+
 export const estradasInMonitoramento = monitoramento.table("estradas", {
 	id:       serial().primaryKey().notNull(),
 	nome:     varchar({ length: 255 }),
@@ -379,7 +393,7 @@ export const destinatariosAlertasInMonitoramento = monitoramento.table("destinat
 	email:        varchar({ length: 255 }).notNull(),
 	nome:         varchar({ length: 255 }),
 	ativo:        boolean().default(true).notNull(),
-	preferencias: jsonb().default({ "fogo": true, "nivel_rio": true, "relatorio_semanal": true }),
+	preferencias: jsonb().default({ "fogo": true, "desmatamento": true, "nivel_rio": true, "relatorio_semanal": true }),
 	createdAt:    timestamp("created_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 	updatedAt:    timestamp("updated_at", { withTimezone: true, mode: 'string' }).defaultNow().notNull(),
 });
