@@ -7,6 +7,8 @@ export interface AdminOrganizationData {
     regionId: number;
     regionName: string;
     regionDescription: string | null;
+    regionGeojson: string | null;
+    sizeKm2: number;
 }
 
 export async function getAdminOrganizationsData(): Promise<AdminOrganizationData[]> {
@@ -16,7 +18,9 @@ export async function getAdminOrganizationsData(): Promise<AdminOrganizationData
       o.name AS "organizationName",
       r.id   AS "regionId",
       r.nome AS "regionName",
-      r.descricao AS "regionDescription"
+      r.descricao AS "regionDescription",
+      ST_AsGeoJSON(ST_SimplifyPreserveTopology(r.geom, 0.001), 4) AS "regionGeojson",
+      ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 0)::float8 AS "sizeKm2"
     FROM monitoramento.regioes r
     JOIN monitoramento.tenants o
       ON o.id::text = r.metadata->>'organizationId'

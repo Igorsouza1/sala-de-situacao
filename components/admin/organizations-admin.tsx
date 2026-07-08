@@ -164,12 +164,16 @@ export function OrganizationsAdmin() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold">Tenants / Organizações</h1>
-        <Button onClick={openCreate}>Novo tenant</Button>
+      <div className="flex items-center justify-end">
+        <Button
+          onClick={openCreate}
+          className="rounded-full bg-[#0066cc] px-[22px] text-white hover:bg-[#0066cc]/90 active:scale-95"
+        >
+          Novo tenant
+        </Button>
       </div>
 
-      <div className="rounded-lg border bg-white">
+      <div className="overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-white">
         <Table>
           <TableHeader>
             <TableRow>
@@ -194,13 +198,28 @@ export function OrganizationsAdmin() {
                 <TableCell>{row.maxRegions ?? 1}</TableCell>
                 <TableCell>{new Date(row.createdAt).toLocaleDateString("pt-BR")}</TableCell>
                 <TableCell className="text-right space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => openInvite(row)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full border-[#0066cc] text-[#0066cc] hover:bg-[#0066cc]/5 hover:text-[#0066cc] active:scale-95"
+                    onClick={() => openInvite(row)}
+                  >
                     Convidar
                   </Button>
-                  <Button variant="outline" size="sm" onClick={() => openEdit(row)}>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="rounded-full active:scale-95"
+                    onClick={() => openEdit(row)}
+                  >
                     Editar
                   </Button>
-                  <Button variant="destructive" size="sm" onClick={() => onDelete(row.id)}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="rounded-full text-red-600 hover:bg-red-50 hover:text-red-700 active:scale-95"
+                    onClick={() => onDelete(row.id)}
+                  >
                     Excluir
                   </Button>
                 </TableCell>
