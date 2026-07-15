@@ -35,7 +35,7 @@ async function tenantRegionsBBox(tenantId: string): Promise<BBoxRow | null> {
   const r = await db.execute<BBoxRow>(sql`
     SELECT ${BBOX_COLS}
     FROM monitoramento.regioes
-    WHERE metadata->>'organizationId' = ${tenantId}
+    WHERE organization_id::text = ${tenantId}
   `);
   return r.rows[0] ?? null;
 }
@@ -56,7 +56,7 @@ async function firstTenantRegionBBox(tenantId: string): Promise<BBoxRow | null> 
     SELECT ${BBOX_COLS}
     FROM (
       SELECT * FROM monitoramento.regioes
-      WHERE metadata->>'organizationId' = ${tenantId}
+      WHERE organization_id::text = ${tenantId}
       ORDER BY created_at DESC
       LIMIT 1
     ) sub
@@ -97,7 +97,7 @@ export async function GET(request: Request) {
         SELECT 1 FROM monitoramento.roles
         WHERE user_id  = ${user!.id}::uuid
           AND tenant_id = ${tenantId}::uuid
-          AND role IN ('owner', 'admin')
+          AND role = 'owner'
       ) AS ok
     `);
 

@@ -18,7 +18,7 @@ import * as layerService from "@/lib/service/layerService";
 import { GET } from "../route";
 import { NextRequest } from "next/server";
 
-const SEED = "seed-0000-0000-0000-000000000000";
+const TENANT = "real-1111-1111-1111-111111111111";
 
 function makeRequest(params: Record<string, string> = {}) {
   const url = new URL("http://localhost/api/map/layers");
@@ -36,11 +36,6 @@ function mockUser(user: any) {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  process.env.SEED_TENANT_ID = SEED;
-});
-
-afterEach(() => {
-  delete process.env.SEED_TENANT_ID;
 });
 
 describe("GET /api/map/layers", () => {
@@ -53,18 +48,27 @@ describe("GET /api/map/layers", () => {
     expect(layerService.getAllLayers).not.toHaveBeenCalled();
   });
 
-  it("chama getAllLayers com SEED_TENANT_ID quando usuário sem tenant no JWT", async () => {
-    mockUser({ id: "u1", email: "a@b.com", app_metadata: {} });
+  it("chama getAllLayers com o tenant do JWT", async () => {
+    mockUser({ id: "u1", email: "a@b.com", app_metadata: { tenant_id: TENANT } });
 
     await GET(makeRequest());
 
     expect(layerService.getAllLayers).toHaveBeenCalled();
     const [tenantId] = (layerService.getAllLayers as jest.Mock).mock.calls[0];
-    expect(tenantId).toBe(SEED);
+    expect(tenantId).toBe(TENANT);
+  });
+
+  it("retorna 403 quando usuário sem tenant resolvível (ADR 0010: sem fallback SEED)", async () => {
+    mockUser({ id: "u1", email: "a@b.com", app_metadata: {} });
+
+    const res = await GET(makeRequest());
+
+    expect(res.status).toBe(403);
+    expect(layerService.getAllLayers).not.toHaveBeenCalled();
   });
 
   it("passa startDate e endDate para getAllLayers", async () => {
-    mockUser({ id: "u1", email: "a@b.com", app_metadata: {} });
+    mockUser({ id: "u1", email: "a@b.com", app_metadata: { tenant_id: TENANT } });
 
     await GET(makeRequest({ startDate: "2024-01-01", endDate: "2024-12-31" }));
 

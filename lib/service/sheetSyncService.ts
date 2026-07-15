@@ -98,8 +98,11 @@ async function fetchAndParseYear(year: number, tenantId: string) {
 }
 
 export async function syncBalnearioFromSheet(): Promise<UpsertResult & { error?: string }> {
-  const tenantId = process.env.SEED_TENANT_ID
-  if (!tenantId) return { inserted: 0, updated: 0, error: "SEED_TENANT_ID não configurado no ambiente." }
+  // Tabela legada congelada (balneario_municipal) pertence a uma única
+  // Organização por definição — o tenant vem de config dedicada, não do
+  // fallback global SEED_TENANT_ID (removido pelo ADR 0010).
+  const tenantId = process.env.BALNEARIO_TENANT_ID
+  if (!tenantId) return { inserted: 0, updated: 0, error: "BALNEARIO_TENANT_ID não configurado no ambiente." }
 
   const currentYear = new Date().getFullYear()
   const previousYear = currentYear - 1

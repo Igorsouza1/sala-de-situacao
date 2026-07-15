@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/api/require-auth";
+import { requireRole } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";
 import { layerCatalogInMonitoramento, layerDataInMonitoramento } from "@/db/schema";
@@ -7,7 +7,7 @@ import { revalidateTag } from "next/cache";
 
 export async function DELETE(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { response: authResponse } = await requireAuth();
+    const { response: authResponse } = await requireRole("superadmin");
     if (authResponse) return authResponse;
 
     const params = await context.params;

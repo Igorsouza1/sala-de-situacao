@@ -28,14 +28,29 @@ export async function requireAuth(): Promise<AuthResult> {
   return { user, response: null };
 }
 
-export async function requireAuthWithTenant(): Promise<AuthWithTenantResult> {
-  const { user, response } = await requireAuth();
-  if (response || !user) return { user: null, tenantId: null, response };
-
-  // 1st: JWT app_metadata
+/**
+ * Resolve o tenant de um usuário sem exigir contexto de request (ADR 0010).
+ * Cadeia: JWT app_metadata → roles (primária) → user_access (legada) →
+ * superadmin sem tenant explícito usa o primeiro tenant. Sem fallback SEED:
+ * usuário sem tenant resolvível retorna null (a rota responde 403).
+ */
+export async function resolveTenantIdForUser(user: User): Promise<string | null> {
+  // 1º: JWT app_metadata
   let tenantId = extractTenantId(user);
 
-  // 2nd: user_access table (fallback for existing users not yet re-invited)
+  // 2º: tabela roles (RBAC — fonte primária)
+  if (!tenantId) {
+    const row = await db.execute<{ tenant_id: string }>(sql`
+      SELECT tenant_id::text AS tenant_id
+      FROM monitoramento.roles
+      WHERE user_id = ${user.id}::uuid
+      ORDER BY id ASC
+      LIMIT 1
+    `);
+    tenantId = row.rows[0]?.tenant_id ?? null;
+  }
+
+  // 3º: tabela legada user_access (usuários ainda não re-convidados)
   if (!tenantId) {
     const row = await db.execute<{ organization_id: string }>(sql`
       SELECT organization_id
@@ -46,18 +61,22 @@ export async function requireAuthWithTenant(): Promise<AuthWithTenantResult> {
     tenantId = row.rows[0]?.organization_id ?? null;
   }
 
-  // 3rd: seed fallback (dev / single-tenant mode)
-  if (!tenantId) {
-    tenantId = process.env.SEED_TENANT_ID ?? null;
-  }
-
-  // 4th: superadmin sem tenant explícito → usa primeiro tenant disponível
+  // 4º: superadmin sem tenant explícito → usa primeiro tenant disponível
   if (!tenantId && user.app_metadata?.is_superadmin === true) {
     const firstTenant = await db.execute<{ id: string }>(sql`
       SELECT id FROM monitoramento.tenants ORDER BY created_at ASC LIMIT 1
     `);
     tenantId = firstTenant.rows[0]?.id ?? null;
   }
+
+  return tenantId;
+}
+
+export async function requireAuthWithTenant(): Promise<AuthWithTenantResult> {
+  const { user, response } = await requireAuth();
+  if (response || !user) return { user: null, tenantId: null, response };
+
+  const tenantId = await resolveTenantIdForUser(user);
 
   if (!tenantId) {
     return { user, tenantId: null, response: apiError("Usuário sem tenant associado.", 403) };
@@ -66,7 +85,26 @@ export async function requireAuthWithTenant(): Promise<AuthWithTenantResult> {
   return { user, tenantId, response: null };
 }
 
-export async function requireAdmin(): Promise<AuthWithTenantResult> {
+export type AppRole = "superadmin" | "owner" | "editor" | "auditor" | "viewer";
+
+// Hierarquia do ADR 0003. Auditor e Viewer têm o mesmo nível de leitura;
+// o que os distingue (acesso a logs) é checado pontualmente, não aqui.
+const ROLE_LEVEL: Record<Exclude<AppRole, "superadmin">, number> = {
+  owner: 3,
+  editor: 2,
+  auditor: 1,
+  viewer: 1,
+};
+
+/**
+ * Guarda única de autorização por papel (ADR 0003 / ADR 0005).
+ *
+ * - `requireRole("superadmin")`: só passa Superadmin global — nenhum papel de
+ *   tenant é suficiente. Use nas rotas de Importação e gestão de Regiões.
+ * - Demais papéis: Superadmin sempre passa; senão exige papel do usuário no
+ *   tenant com nível >= ao mínimo pedido.
+ */
+export async function requireRole(minRole: AppRole): Promise<AuthWithTenantResult> {
   const { user, tenantId, response } = await requireAuthWithTenant();
   if (response || !user || !tenantId) {
     return { user: null, tenantId: null, response: response ?? apiError("Não autorizado.", 401) };
@@ -76,19 +114,30 @@ export async function requireAdmin(): Promise<AuthWithTenantResult> {
     return { user, tenantId, response: null };
   }
 
-  const adminRole = await db
+  if (minRole === "superadmin") {
+    return { user, tenantId, response: apiError("Acesso restrito ao Superadmin.", 403) };
+  }
+
+  const allowed = (Object.keys(ROLE_LEVEL) as Array<keyof typeof ROLE_LEVEL>)
+    .filter((role) => ROLE_LEVEL[role] >= ROLE_LEVEL[minRole]);
+
+  const match = await db
     .select({ id: rolesInMonitoramento.id })
     .from(rolesInMonitoramento)
     .where(and(
       eq(rolesInMonitoramento.userId, user.id),
       eq(rolesInMonitoramento.tenantId, tenantId),
-      inArray(rolesInMonitoramento.role, ["owner"]),
+      inArray(rolesInMonitoramento.role, allowed),
     ))
     .limit(1);
 
-  if (!adminRole.length) {
+  if (!match.length) {
     return { user, tenantId, response: apiError("Acesso negado. Role insuficiente.", 403) };
   }
 
   return { user, tenantId, response: null };
+}
+
+export async function requireAdmin(): Promise<AuthWithTenantResult> {
+  return requireRole("owner");
 }

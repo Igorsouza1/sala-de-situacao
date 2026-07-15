@@ -1,6 +1,7 @@
 export const maxDuration = 60;
 
-import { requireAuth } from "@/lib/api/require-auth";
+import { getTenantIdForRegion } from "@/lib/api/scope";
+import { requireRole } from "@/lib/api/require-auth";
 import { apiError } from "@/lib/api/responses";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
@@ -8,7 +9,7 @@ import { findExistingDesmatamentoAlertids } from "@/lib/repositories/desmatament
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { response: authResponse } = await requireAuth();
+    const { response: authResponse } = await requireRole("superadmin");
     if (authResponse) return authResponse;
 
     const params = await context.params;
@@ -33,13 +34,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       return apiError("Formato GeoJSON inválido. Esperado FeatureCollection ou Feature.", 400);
     }
 
-    // Resolve tenant_id a partir da região
-    const tenantRow = await db.execute(sql`
-        SELECT metadata->>'organizationId' AS tenant_id
-        FROM monitoramento.regioes WHERE id = ${regionId} LIMIT 1
-    `);
-    const tenantId: string | null = (tenantRow.rows[0] as any)?.tenant_id ?? null;
-    if (!tenantId) return apiError(`Região ${regionId} não possui organizationId no metadata.`, 400);
+    const tenantId = await getTenantIdForRegion(regionId);
+    if (!tenantId) return apiError(`Região ${regionId} não possui Organização associada.`, 400);
 
     // Coletar todos os alertids presentes no arquivo
     const alertidsNoArquivo = features

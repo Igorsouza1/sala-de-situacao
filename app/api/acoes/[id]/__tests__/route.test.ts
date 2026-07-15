@@ -17,7 +17,7 @@ import { createClient } from "@/lib/supabase/server";
 import * as acoesService from "@/lib/service/acoesService";
 import { GET, PUT } from "../route";
 
-const SEED = "seed-0000-0000-0000-000000000000";
+const TENANT = "real-1111-1111-1111-111111111111";
 
 function mockUser(user: any) {
   (createClient as jest.Mock).mockResolvedValue({
@@ -33,11 +33,6 @@ function makeContext(id: string) {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  process.env.SEED_TENANT_ID = SEED;
-});
-
-afterEach(() => {
-  delete process.env.SEED_TENANT_ID;
 });
 
 describe("GET /api/acoes/[id]", () => {
@@ -51,16 +46,16 @@ describe("GET /api/acoes/[id]", () => {
   });
 
   it("passa tenantId para getAcaoDossie quando autenticado", async () => {
-    mockUser({ id: "u1", email: "a@b.com", app_metadata: {} });
+    mockUser({ id: "u1", email: "a@b.com", app_metadata: { tenant_id: TENANT } });
     (acoesService.getAcaoDossie as jest.Mock).mockResolvedValue({ id: 1, name: "Ação 1" });
 
     await GET(new Request("http://localhost/api/acoes/1"), makeContext("1"));
 
-    expect(acoesService.getAcaoDossie).toHaveBeenCalledWith(1, SEED);
+    expect(acoesService.getAcaoDossie).toHaveBeenCalledWith(1, TENANT);
   });
 
   it("retorna 404 quando getAcaoDossie lança 'Ação não encontrada'", async () => {
-    mockUser({ id: "u1", email: "a@b.com", app_metadata: {} });
+    mockUser({ id: "u1", email: "a@b.com", app_metadata: { tenant_id: TENANT } });
     (acoesService.getAcaoDossie as jest.Mock).mockRejectedValue(
       new Error("Ação não encontrada")
     );

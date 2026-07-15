@@ -1,6 +1,7 @@
 export const maxDuration = 60;
 
-import { requireAuth } from "@/lib/api/require-auth";
+import { getTenantIdForRegion } from "@/lib/api/scope";
+import { requireRole } from "@/lib/api/require-auth";
 import { apiError } from "@/lib/api/responses";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
@@ -9,7 +10,7 @@ import { revalidateTag } from "next/cache";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
     try {
-        const { response: authResponse } = await requireAuth();
+        const { response: authResponse } = await requireRole("superadmin");
         if (authResponse) return authResponse;
 
         const params = await context.params;
@@ -59,13 +60,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
                 try {
                     sendProgress();
 
-                    // Resolve tenant_id a partir da região (coluna organization_id — Fase 1)
-                    const tenantRow = await db.execute(sql`
-                        SELECT organization_id::text AS tenant_id
-                        FROM monitoramento.regioes WHERE id = ${regionId} LIMIT 1
-                    `);
-                    const tenantId: string | null = (tenantRow.rows[0] as any)?.tenant_id ?? null;
-                    if (!tenantId) throw new Error(`Região ${regionId} não possui organization_id.`);
+                    const tenantId = await getTenantIdForRegion(regionId);
+                    if (!tenantId) throw new Error(`Região ${regionId} não possui Organização associada.`);
 
                     for (let i = 0; i < totalFeatures; i++) {
                         const feature = features[i];

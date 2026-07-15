@@ -1,44 +1,20 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getAllLayers } from "@/lib/service/layerService";
-import { requireAuthWithTenant } from "@/lib/api/require-auth";
-import { getRegionIdForUser } from "@/lib/api/require-region";
-import { db } from "@/db";
-import { sql } from "drizzle-orm";
+import { resolveScope, parseRegiaoIdParam } from "@/lib/api/scope";
 
 export async function GET(request: NextRequest) {
-    const { user, tenantId, response: authResponse } = await requireAuthWithTenant();
-    if (authResponse) return authResponse;
+    const searchParams = request.nextUrl.searchParams;
+    const scope = await resolveScope({ regiaoId: parseRegiaoIdParam(searchParams) });
+    if (scope.response) return scope.response;
 
     try {
-        const searchParams = request.nextUrl.searchParams;
         const startDate  = searchParams.get('startDate') ? new Date(searchParams.get('startDate')!) : undefined;
         const endDate    = searchParams.get('endDate')   ? new Date(searchParams.get('endDate')!)   : undefined;
         const minArea    = searchParams.get('minArea')   ? parseFloat(searchParams.get('minArea')!) : undefined;
         const maxArea    = searchParams.get('maxArea')   ? parseFloat(searchParams.get('maxArea')!) : undefined;
 
-        // regiaoId: query param > user_access da tabela > null (resolver usa fallback tenant)
-        // When regiao_id is explicit, derive tenantId from the region itself so the catalog
-        // is scoped to the correct org (admin navigating cross-tenant regions).
-        let regiaoId: number | undefined;
-        let effectiveTenantId = tenantId;
-        const regiaoParam = searchParams.get('regiao_id');
-        if (regiaoParam) {
-            const parsed = parseInt(regiaoParam, 10);
-            if (!Number.isNaN(parsed)) {
-                regiaoId = parsed;
-                const meta = await db.execute<{ tenant_id: string }>(sql`
-                    SELECT organization_id::text AS tenant_id
-                    FROM monitoramento.regioes WHERE id = ${regiaoId}
-                `);
-                if (meta.rows[0]?.tenant_id) effectiveTenantId = meta.rows[0].tenant_id;
-            }
-        } else if (user && tenantId) {
-            const fromAccess = await getRegionIdForUser(user.id, tenantId);
-            regiaoId = fromAccess ?? undefined;
-        }
-
         const metadataOnly = searchParams.get('metadataOnly') === 'true';
-        const layers = await getAllLayers(effectiveTenantId, startDate, endDate, minArea, maxArea, regiaoId, metadataOnly);
+        const layers = await getAllLayers(scope.tenantId, startDate, endDate, minArea, maxArea, scope.regiaoId ?? undefined, metadataOnly);
         const cacheHeader = metadataOnly
             ? 'private, max-age=120, stale-while-revalidate=60'
             : 'private, max-age=600, stale-while-revalidate=300';

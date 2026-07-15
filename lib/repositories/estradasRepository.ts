@@ -1,10 +1,18 @@
 import { db, sql } from "@/db"
 import { estradasInMonitoramento, type NewEstradaData } from "@/db/schema";
 
+// ADR 0010: isolamento na aplicação — escopo de tenant é obrigatório e explícito.
+// Falha alto em vez de cair silenciosamente num tenant padrão ou retornar dados
+// de todas as Organizações.
+function requireExplicitTenant(tenantId?: string | null): string {
+  if (!tenantId) throw new Error("tenantId é obrigatório (ADR 0010): a rota deve resolver o escopo via resolveScope/requireAuthWithTenant.");
+  return tenantId;
+}
+
 
 
 export async function findAllEstradasDataWithGeometry(tenantId?: string | null) {
-  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+  const effectiveTenantId = requireExplicitTenant(tenantId);
 
   const whereSql = effectiveTenantId
     ? sql`WHERE tenant_id = ${effectiveTenantId}::uuid`

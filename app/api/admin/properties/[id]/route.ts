@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/api/require-auth";
+import { requireRole } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";
 import { propriedadesInMonitoramento } from "@/db/schema";
@@ -10,7 +10,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { response: authResponse } = await requireAuth();
+    const { response: authResponse } = await requireRole("superadmin");
     if (authResponse) return authResponse;
 
     const params = await context.params;

@@ -1,13 +1,13 @@
 export const maxDuration = 60;
 
-import { requireAuth } from "@/lib/api/require-auth";
+import { requireRole } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
 
 export async function POST(request: Request) {
   try {
-    const { response: authResponse } = await requireAuth();
+    const { response: authResponse } = await requireRole("superadmin");
     if (authResponse) return authResponse;
 
     const formData = await request.formData().catch(() => null);

@@ -23,7 +23,7 @@ export async function getAdminOrganizationsData(): Promise<AdminOrganizationData
       ROUND(COALESCE(ST_Area(r.geom::geography) / 1000000.0, 0)::numeric, 0)::float8 AS "sizeKm2"
     FROM monitoramento.regioes r
     JOIN monitoramento.tenants o
-      ON o.id::text = r.metadata->>'organizationId'
+      ON o.id = r.organization_id
     ORDER BY o.name ASC, r.nome ASC
   `;
 

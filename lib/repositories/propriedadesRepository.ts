@@ -1,9 +1,17 @@
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
 
+// ADR 0010: isolamento na aplicação — escopo de tenant é obrigatório e explícito.
+// Falha alto em vez de cair silenciosamente num tenant padrão ou retornar dados
+// de todas as Organizações.
+function requireExplicitTenant(tenantId?: string | null): string {
+  if (!tenantId) throw new Error("tenantId é obrigatório (ADR 0010): a rota deve resolver o escopo via resolveScope/requireAuthWithTenant.");
+  return tenantId;
+}
+
 
 export async function updatePropriedadeName(id: number, nome: string, tenantId?: string | null) {
-  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+  const effectiveTenantId = requireExplicitTenant(tenantId);
   const tenantFilter = effectiveTenantId
     ? sql`AND tenant_id = ${effectiveTenantId}::uuid`
     : sql``;
@@ -17,7 +25,7 @@ export async function updatePropriedadeName(id: number, nome: string, tenantId?:
 }
 
 export async function countPropriedades(tenantId?: string | null, minArea?: number, maxArea?: number) {
-  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+  const effectiveTenantId = requireExplicitTenant(tenantId);
 
   let query = sql`
     SELECT COUNT(*)::int as count
@@ -40,7 +48,7 @@ export async function countPropriedades(tenantId?: string | null, minArea?: numb
 }
 
 export async function findAllPropriedadesDataWithGeometry(tenantId?: string | null, minArea?: number, maxArea?: number) {
-  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+  const effectiveTenantId = requireExplicitTenant(tenantId);
 
   let query = sql`
     SELECT id, cod_tema, nom_tema, cod_imovel, mod_fiscal, num_area, ind_status, ind_tipo, des_condic, municipio,
@@ -64,7 +72,7 @@ export async function findAllPropriedadesDataWithGeometry(tenantId?: string | nu
 }
 
 export async function findPropriedadeDossieData(id: number, tenantId?: string | null) {
-  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+  const effectiveTenantId = requireExplicitTenant(tenantId);
   const tenantFilter = effectiveTenantId
     ? sql`AND tenant_id = ${effectiveTenantId}::uuid`
     : sql``;

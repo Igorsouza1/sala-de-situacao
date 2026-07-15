@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/api/require-auth";
+import { requireRole } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { z } from "zod";
 import { db } from "@/db";
@@ -13,7 +13,7 @@ const visualPayloadSchema = z.object({
 
 export async function PUT(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { response: authResponse } = await requireAuth();
+    const { response: authResponse } = await requireRole("superadmin");
     if (authResponse) return authResponse;
 
     const params = await context.params;

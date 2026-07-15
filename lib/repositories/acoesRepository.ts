@@ -4,9 +4,17 @@ import { db } from "@/db"
 import { acoesInMonitoramento, fotosAcoesInMonitoramento, NewAcoesData } from "@/db/schema"
 import { eq, desc, sql } from "drizzle-orm";
 
+// ADR 0010: isolamento na aplicação — escopo de tenant é obrigatório e explícito.
+// Falha alto em vez de cair silenciosamente num tenant padrão ou retornar dados
+// de todas as Organizações.
+function requireExplicitTenant(tenantId?: string | null): string {
+  if (!tenantId) throw new Error("tenantId é obrigatório (ADR 0010): a rota deve resolver o escopo via resolveScope/requireAuthWithTenant.");
+  return tenantId;
+}
+
 
 export async function findAcaoById(id: number, tenantId?: string | null) {
-  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+  const effectiveTenantId = requireExplicitTenant(tenantId);
   const tenantFilter = effectiveTenantId
     ? sql`AND a.tenant_id = ${effectiveTenantId}::uuid`
     : sql``;
@@ -33,7 +41,7 @@ export async function findAcaoById(id: number, tenantId?: string | null) {
 }
 
 export async function findAllAcoesData(tenantId?: string | null) {
-  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+  const effectiveTenantId = requireExplicitTenant(tenantId);
 
   return db
     .select({
@@ -50,7 +58,7 @@ export async function findAllAcoesData(tenantId?: string | null) {
 }
 
 export async function findAllAcoesDataWithGeometry(tenantId?: string | null, startDate?: Date, endDate?: Date) {
-  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+  const effectiveTenantId = requireExplicitTenant(tenantId);
 
   const conditions: ReturnType<typeof sql>[] = [];
 
@@ -120,7 +128,7 @@ export async function deleteAcaoById(id: number) {
 }
 
 export async function updateAcaoById(id: number, data: any, tenantId?: string | null) {
-  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+  const effectiveTenantId = requireExplicitTenant(tenantId);
 
   const whereClause = effectiveTenantId
     ? sql`id = ${id} AND tenant_id = ${effectiveTenantId}::uuid`

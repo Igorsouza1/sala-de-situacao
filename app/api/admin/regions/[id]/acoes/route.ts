@@ -1,4 +1,4 @@
-import { requireAuth } from "@/lib/api/require-auth";
+import { requireRole } from "@/lib/api/require-auth";
 import { NextResponse } from "next/server";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { getAcoesByRegion, getRegionById } from "@/lib/service/adminService";
@@ -7,7 +7,7 @@ import { revalidatePath } from "next/cache";
 
 export async function GET(request: Request, context: any) {
   try {
-    const { response: authResponse } = await requireAuth();
+    const { response: authResponse } = await requireRole("superadmin");
     if (authResponse) return authResponse;
 
     const { id } = await context.params as { id: string };
@@ -33,7 +33,7 @@ export async function GET(request: Request, context: any) {
 
 export async function POST(request: Request, context: any) {
   try {
-    const { response: authResponse } = await requireAuth();
+    const { response: authResponse } = await requireRole("superadmin");
     if (authResponse) return authResponse;
 
     const { id } = await context.params as { id: string };

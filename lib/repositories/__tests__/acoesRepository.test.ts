@@ -1,8 +1,8 @@
 /**
  * Testes para acoesRepository — task 2.3
  *
- * Verifica que as funções de leitura aceitam tenantId como primeiro parâmetro
- * e filtram os dados por tenant. Quando tenantId não é fornecido, usa SEED_TENANT_ID.
+ * Verifica que as funções de leitura exigem tenantId explícito (ADR 0010)
+ * e filtram os dados por tenant. Sem tenantId → erro, nunca fallback silencioso.
  */
 
 jest.mock("@/db", () => ({
@@ -15,16 +15,10 @@ jest.mock("@/db", () => ({
 import { findAllAcoesData, findAllAcoesDataWithGeometry } from "../acoesRepository";
 import { db } from "@/db";
 
-const SEED_TENANT = "seed-0000-0000-0000-000000000000";
 const REAL_TENANT = "real-1111-1111-1111-111111111111";
 
 beforeEach(() => {
   jest.clearAllMocks();
-  process.env.SEED_TENANT_ID = SEED_TENANT;
-});
-
-afterEach(() => {
-  delete process.env.SEED_TENANT_ID;
 });
 
 // ─────────────────────────────────────────────────────────────
@@ -50,15 +44,11 @@ describe("findAllAcoesData — filtro de tenant", () => {
     expect(whereFn).toHaveBeenCalled();
   });
 
-  it("usa SEED_TENANT_ID como fallback quando tenantId não fornecido", async () => {
+  it("lança erro quando tenantId não fornecido (ADR 0010: sem fallback)", async () => {
     setupSelectMock([]);
 
-    await findAllAcoesData();
-
-    const fromFn = (db.select as jest.Mock).mock.results[0].value.from;
-    const whereFn = fromFn.mock.results[0].value.where;
-    // Mesmo sem tenantId explícito, .where() deve ser chamado com SEED
-    expect(whereFn).toHaveBeenCalled();
+    await expect(findAllAcoesData()).rejects.toThrow(/tenantId é obrigatório/);
+    expect(db.select).not.toHaveBeenCalled();
   });
 
   it("retorna lista vazia quando banco retorna vazio", async () => {
@@ -85,13 +75,9 @@ describe("findAllAcoesDataWithGeometry — filtro de tenant", () => {
     expect(db.execute).toHaveBeenCalled();
   });
 
-  it("funciona sem tenantId (fallback para SEED_TENANT_ID)", async () => {
-    (db.execute as jest.Mock).mockResolvedValue({ rows: [] });
-
-    const result = await findAllAcoesDataWithGeometry();
-
-    expect(result).toEqual([]);
-    expect(db.execute).toHaveBeenCalled();
+  it("lança erro quando tenantId não fornecido (ADR 0010: sem fallback)", async () => {
+    await expect(findAllAcoesDataWithGeometry()).rejects.toThrow(/tenantId é obrigatório/);
+    expect(db.execute).not.toHaveBeenCalled();
   });
 
   it("aceita tenantId + datas: (tenantId, startDate, endDate)", async () => {
@@ -108,11 +94,9 @@ describe("findAllAcoesDataWithGeometry — filtro de tenant", () => {
     expect(result).toHaveLength(1);
   });
 
-  it("assinatura nova: tenantId=undefined usa SEED como fallback", async () => {
-    (db.execute as jest.Mock).mockResolvedValue({ rows: [{ id: 3 }] });
-
-    const result = await findAllAcoesDataWithGeometry(undefined, new Date("2024-06-01"));
-
-    expect(result).toHaveLength(1);
+  it("tenantId=undefined com datas também lança erro", async () => {
+    await expect(
+      findAllAcoesDataWithGeometry(undefined, new Date("2024-06-01"))
+    ).rejects.toThrow(/tenantId é obrigatório/);
   });
 });

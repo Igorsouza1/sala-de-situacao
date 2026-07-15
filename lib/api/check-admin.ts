@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
-import { extractTenantId } from "@/lib/api/tenant-context";
+import { resolveTenantIdForUser } from "@/lib/api/require-auth";
 import { db } from "@/db";
 import { rolesInMonitoramento } from "@/db/schema";
-import { and, eq, inArray, sql } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 /**
  * Verifica se o usuário é Superadmin global (app_metadata.is_superadmin).
@@ -27,17 +27,7 @@ export async function checkIsAdmin(): Promise<boolean> {
 
   if (user.app_metadata?.is_superadmin === true) return true;
 
-  let tenantId = extractTenantId(user);
-
-  if (!tenantId) {
-    const row = await db.execute<{ organization_id: string }>(sql`
-      SELECT organization_id FROM monitoramento.user_access
-      WHERE user_id = ${user.id}::uuid LIMIT 1
-    `);
-    tenantId = row.rows[0]?.organization_id ?? null;
-  }
-
-  if (!tenantId) tenantId = process.env.SEED_TENANT_ID ?? null;
+  const tenantId = await resolveTenantIdForUser(user);
   if (!tenantId) return false;
 
   const match = await db

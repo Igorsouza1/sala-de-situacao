@@ -1,45 +1,24 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getLayer } from "@/lib/service/layerService";
-import { requireAuthWithTenant } from "@/lib/api/require-auth";
-import { getRegionIdForUser } from "@/lib/api/require-region";
-import { db } from "@/db";
-import { sql } from "drizzle-orm";
+import { resolveScope, parseRegiaoIdParam } from "@/lib/api/scope";
 
 export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ slug: string }> }
 ) {
-    const { user, tenantId, response: authResponse } = await requireAuthWithTenant();
-    if (authResponse) return authResponse;
+    const searchParams = request.nextUrl.searchParams;
+    const scope = await resolveScope({ regiaoId: parseRegiaoIdParam(searchParams) });
+    if (scope.response) return scope.response;
 
     const { slug } = await params;
 
     try {
-        const searchParams = request.nextUrl.searchParams;
         const startDate = searchParams.get('startDate') ? new Date(searchParams.get('startDate')!) : undefined;
         const endDate   = searchParams.get('endDate')   ? new Date(searchParams.get('endDate')!)   : undefined;
         const minArea   = searchParams.get('minArea')   ? parseFloat(searchParams.get('minArea')!) : undefined;
         const maxArea   = searchParams.get('maxArea')   ? parseFloat(searchParams.get('maxArea')!) : undefined;
 
-        let regiaoId: number | undefined;
-        let effectiveTenantId = tenantId;
-        const regiaoParam = searchParams.get('regiao_id');
-        if (regiaoParam) {
-            const parsed = parseInt(regiaoParam, 10);
-            if (!Number.isNaN(parsed)) {
-                regiaoId = parsed;
-                const meta = await db.execute<{ tenant_id: string }>(sql`
-                    SELECT metadata->>'organizationId' AS tenant_id
-                    FROM monitoramento.regioes WHERE id = ${regiaoId}
-                `);
-                if (meta.rows[0]?.tenant_id) effectiveTenantId = meta.rows[0].tenant_id;
-            }
-        } else if (user && tenantId) {
-            const fromAccess = await getRegionIdForUser(user.id, tenantId);
-            regiaoId = fromAccess ?? undefined;
-        }
-
-        const layer = await getLayer(slug, effectiveTenantId, startDate, endDate, minArea, maxArea, regiaoId);
+        const layer = await getLayer(slug, scope.tenantId, startDate, endDate, minArea, maxArea, scope.regiaoId ?? undefined);
 
         if (!layer) {
             return NextResponse.json({ error: "Layer not found" }, { status: 404 });

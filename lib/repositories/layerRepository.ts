@@ -24,19 +24,20 @@ export async function getGenericLayerData(layerId: number, schema: string = 'mon
     // Se houver limite, usamos subquery para filtrar ANTES de agregar
     const limitClause = options?.limit ? sql`ORDER BY data_registro DESC LIMIT ${options.limit}` : sql``;
 
-    const effectiveTenantId = options?.tenantId ?? process.env.SEED_TENANT_ID;
-
-    // Filtros adicionais (data + tenant)
-    const dateClause = sql``;
-    if (effectiveTenantId) {
-        dateClause.append(sql` AND tenant_id = ${effectiveTenantId}::uuid`);
+    // Filtros adicionais (data + tenant). ADR 0010: sem fallback de tenant —
+    // quando a rota não resolve tenant, nenhum filtro implícito é aplicado aqui
+    // porque o isolamento primário é feito no catálogo (getAllLayers).
+    const extraFilters = [];
+    if (options?.tenantId) {
+        extraFilters.push(sql` AND tenant_id = ${options.tenantId}::uuid`);
     }
     if (options?.startDate) {
-        dateClause.append(sql` AND data_registro >= ${options.startDate.toISOString()}::timestamp`);
+        extraFilters.push(sql` AND data_registro >= ${options.startDate.toISOString()}::timestamp`);
     }
     if (options?.endDate) {
-        dateClause.append(sql` AND data_registro <= ${options.endDate.toISOString()}::timestamp`);
+        extraFilters.push(sql` AND data_registro <= ${options.endDate.toISOString()}::timestamp`);
     }
+    const dateClause = extraFilters.length ? sql.join(extraFilters, sql``) : sql``;
 
     const query = sql`
         WITH filtered_data AS (

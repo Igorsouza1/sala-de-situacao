@@ -1,5 +1,6 @@
 export const maxDuration = 60;
 
+import { getTenantIdForRegion } from "@/lib/api/scope";
 import { requireAdmin } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";
@@ -27,13 +28,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
     const layerConfig = JSON.parse(layerConfigStr.toString());
 
-    // Resolve tenant_id a partir da região (consistente com os outros commits)
-    const tenantRow = await db.execute(sql`
-      SELECT metadata->>'organizationId' AS tenant_id
-      FROM monitoramento.regioes WHERE id = ${regionId} LIMIT 1
-    `);
-    const tenantId: string | null = (tenantRow.rows[0] as any)?.tenant_id ?? null;
-    if (!tenantId) return apiError(`Região ${regionId} não possui organizationId no metadata.`, 400);
+    const tenantId = await getTenantIdForRegion(regionId);
+    if (!tenantId) return apiError(`Região ${regionId} não possui Organização associada.`, 400);
 
     // Leitura do arquivo massivo no backend
     const fileContent = await file.text();

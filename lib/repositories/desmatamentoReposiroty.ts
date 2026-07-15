@@ -3,8 +3,16 @@ import { desmatamentoInMonitoramento } from "@/db/schema"
 
 import { sql, and, eq, inArray } from "drizzle-orm"
 
+// ADR 0010: isolamento na aplicação — escopo de tenant é obrigatório e explícito.
+// Falha alto em vez de cair silenciosamente num tenant padrão ou retornar dados
+// de todas as Organizações.
+function requireExplicitTenant(tenantId?: string | null): string {
+  if (!tenantId) throw new Error("tenantId é obrigatório (ADR 0010): a rota deve resolver o escopo via resolveScope/requireAuthWithTenant.");
+  return tenantId;
+}
+
 export async function findAllDesmatamentoDataWithGeometry(tenantId?: string | null, startDate?: Date, endDate?: Date) {
-  const effectiveTenantId = tenantId ?? process.env.SEED_TENANT_ID;
+  const effectiveTenantId = requireExplicitTenant(tenantId);
 
   const whereClauses = [];
 
