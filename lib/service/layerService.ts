@@ -3,38 +3,7 @@ import { getLayerCatalog, getGenericLayerData } from "../repositories/layerRepos
 import { layerCatalogInMonitoramento } from "@/db/schema";
 import { db } from "@/db";
 import { desc, eq, isNull, or, sql } from "drizzle-orm";
-import { findAllAcoesDataWithGeometry } from "../repositories/acoesRepository";
-import { toFeatureCollection } from "../helpers/geo-utils";
-import { findAllEstradasDataWithGeometry } from "../repositories/estradasRepository";
-import { findAllDesmatamentoDataWithGeometry } from "../repositories/desmatamentoReposiroty";
-import { findAllPropriedadesDataWithGeometry } from "../repositories/propriedadesRepository";
 import { resolveTableLayer, type ResolverSchemaConfig } from "./layer-resolver";
-
-
-// --- 1. CONFIGURAÇÃO DAS ESTRATÉGIAS ---
-type StaticStrategy = (tenantId: string | null | undefined, start?: Date, end?: Date, minArea?: number, maxArea?: number) => Promise<MapFeatureCollection>;
-
-const STATIC_STRATEGIES: Record<string, StaticStrategy> = {
-    "acoes": async (tenantId, start, end) => {
-        const data = await findAllAcoesDataWithGeometry(tenantId, start, end);
-        return toFeatureCollection(data);
-    },
-    "estradas": async (tenantId) => {
-        const data = await findAllEstradasDataWithGeometry(tenantId);
-        return toFeatureCollection(data.rows || data);
-    },
-    "desmatamento": async (tenantId, start, end) => {
-        const data = await findAllDesmatamentoDataWithGeometry(tenantId, start, end);
-        return toFeatureCollection(data.rows || data);
-    },
-    // raw_firms: removido — sempre resolvido pelo Caminho R (resolveTableLayer),
-    // pois seu schema_config.sourceType === 'table' (ver plano FIRMS, seção 2.7)
-    "propriedades": async (tenantId, _start, _end, minArea, maxArea) => {
-        const data = await findAllPropriedadesDataWithGeometry(tenantId, minArea, maxArea);
-        return toFeatureCollection(data.rows || data);
-    },
-    // Adicione outras camadas que precisam de tratamento especial
-};
 
 // --- HELPER: BUSCAR GRUPOS DISTINTOS ---
 async function getLayerGroups(slug: string, column: string, schema: string = 'monitoramento'): Promise<{ id: string, label: string, icon?: string }[]> {
@@ -129,11 +98,6 @@ export async function getLayer(slug: string, tenantId?: string | null, startDate
             );
         }
 
-        // CAMINHO A: É uma camada VIP/Especial sem sourceType ainda? (Hardcoded Strategy)
-        else if (STATIC_STRATEGIES[slug]) {
-            data = await STATIC_STRATEGIES[slug](tenantId, startDate, endDate, minArea, maxArea);
-        }
-
         // CAMINHO B: É uma camada Padrão do Usuário? (Generic Data)
         else {
             // console.log(`🎻 Maestro: Buscando dados genéricos para ${slug} (ID: ${catalogEntry.id})`);
@@ -163,9 +127,8 @@ export async function getLayer(slug: string, tenantId?: string | null, startDate
         const schemaConfig = catalogEntry.schemaConfig as LayerSchemaConfig;
         const dateFilter = visualConfig?.dateFilter ?? (visualConfig?.mapDisplay === 'date_filter');
 
-        // Resolve Group By Column
-        // Force 'actions' to use 'categoria', otherwise respect config
-        const groupByColumn = catalogEntry.slug === 'acoes' ? 'eixo_tematico' : visualConfig?.groupByColumn;
+        // Group By vem do catálogo (visual_config.groupByColumn)
+        const groupByColumn = visualConfig?.groupByColumn;
 
         let groups: { id: string, label: string }[] | undefined;
         if (groupByColumn) {
@@ -189,31 +152,13 @@ export async function getLayer(slug: string, tenantId?: string | null, startDate
             groups: groups
         };
 
-        // --- BACKEND VISUAL INJECTION (LEGACY SUPPORT) ---
-        // Ensure visualConfig exists
+        // Defaults visuais vivem em layer_catalog.visual_config (por camada, no banco).
+        // Aqui só o mínimo estrutural para o frontend não quebrar.
         if (!finalLayer.visualConfig) {
-            finalLayer.visualConfig = { category: 'Monitoramento' }; // Default minimal config
+            finalLayer.visualConfig = { category: 'Monitoramento' };
         }
-
-        // Ensure legacy layers have their icons defined here effectively acting as "DB Defaults"
         if (!finalLayer.visualConfig.mapMarker) {
             finalLayer.visualConfig.mapMarker = { type: 'point' };
-        }
-
-        // Firms
-        if (slug === 'raw_firms' || slug === 'firms') {
-            if (!finalLayer.visualConfig.mapMarker.icon) finalLayer.visualConfig.mapMarker.icon = 'flame';
-            if (!finalLayer.visualConfig.mapMarker.color) finalLayer.visualConfig.mapMarker.color = '#ef4444';
-        }
-        // Deque / Ponte
-        if (slug === 'deque-de-pedras' || slug === 'ponte-do-cure') {
-            if (!finalLayer.visualConfig.mapMarker.icon) finalLayer.visualConfig.mapMarker.icon = 'waves';
-            if (!finalLayer.visualConfig.mapMarker.color) finalLayer.visualConfig.mapMarker.color = '#0ea5e9';
-        }
-        // Acoes
-        if (slug === 'acoes') {
-            if (!finalLayer.visualConfig.mapMarker.icon) finalLayer.visualConfig.mapMarker.icon = 'activity';
-            if (!finalLayer.visualConfig.mapMarker.color) finalLayer.visualConfig.mapMarker.color = '#22c55e';
         }
 
         return finalLayer;

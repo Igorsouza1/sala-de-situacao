@@ -3,43 +3,6 @@ import { desmatamentoInMonitoramento } from "@/db/schema"
 
 import { sql, and, eq, inArray } from "drizzle-orm"
 
-// ADR 0010: isolamento na aplicação — escopo de tenant é obrigatório e explícito.
-// Falha alto em vez de cair silenciosamente num tenant padrão ou retornar dados
-// de todas as Organizações.
-function requireExplicitTenant(tenantId?: string | null): string {
-  if (!tenantId) throw new Error("tenantId é obrigatório (ADR 0010): a rota deve resolver o escopo via resolveScope/requireAuthWithTenant.");
-  return tenantId;
-}
-
-export async function findAllDesmatamentoDataWithGeometry(tenantId?: string | null, startDate?: Date, endDate?: Date) {
-  const effectiveTenantId = requireExplicitTenant(tenantId);
-
-  const whereClauses = [];
-
-  if (effectiveTenantId) {
-    whereClauses.push(sql`tenant_id = ${effectiveTenantId}::uuid`);
-  }
-  if (startDate) {
-    whereClauses.push(sql`detectat::date >= ${startDate.toISOString().split('T')[0]}::date`);
-  }
-  if (endDate) {
-    whereClauses.push(sql`detectat::date <= ${endDate.toISOString().split('T')[0]}::date`);
-  }
-
-  const whereSql = whereClauses.length > 0
-    ? sql`WHERE ${sql.join(whereClauses, sql` AND `)}`
-    : sql``;
-
-  const result = await db.execute(sql`
-      SELECT id, alertid, alertcode, alertha, source, detectat, detectyear, state, stateha,
-             ST_AsGeoJSON(ST_SimplifyPreserveTopology(geom, 0.0001), 5) as geojson
-      FROM "monitoramento"."desmatamento"
-      ${whereSql}
-    `);
-
-  return result;
-}
-
 /**
  * Busca os alertids já existentes no banco para uma região, a partir de uma lista.
  * Usa `inArray` (parametrizado) — NUNCA sql.raw() — para evitar SQL Injection.

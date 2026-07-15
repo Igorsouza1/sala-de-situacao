@@ -25,7 +25,7 @@ const ALLOWED_TABLES = new Set([
 
 // Colunas de propriedades por tabela — exclui geom binário para não dobrar egress
 const TABLE_DISPLAY_COLUMNS: Record<string, string> = {
-  acoes: 'id, tenant_id, acao, name, descricao, mes, atuacao, status, categoria, tipo, eixo_tematico, tipo_tecnico, carater, time',
+  acoes: "id, tenant_id, acao, name, descricao, mes, atuacao, status, categoria, tipo, eixo_tematico, tipo_tecnico, carater, time, TO_CHAR(time, 'DD/MM/YYYY HH24:MI') AS time_formatado",
   estradas: 'id, tenant_id, nome, tipo, codigo',
   desmatamento: 'id, tenant_id, alertid, alertcode, alertha, source, detectat, detectyear, state, stateha',
   // raw_firms é Dado de Base (ADR 0008): sem tenant_id — o vínculo é via firms_regioes/região

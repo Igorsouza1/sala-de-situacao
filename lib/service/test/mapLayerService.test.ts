@@ -1,26 +1,27 @@
-
+/**
+ * Testes do Maestro (layerService.getLayer) — roteamento pós-colapso dos
+ * STATIC_STRATEGIES (Candidato 2):
+ * - Caminho R: sourceType='table' → resolveTableLayer (Dados de Base tri-scope)
+ * - Caminho B: demais camadas → getGenericLayerData (layer_data JSONB)
+ * - Camada inexistente no catálogo → null
+ */
 
 import { getLayer } from "@/lib/service/layerService";
-
-// 1. IMPORTAMOS AS FUNÇÕES QUE VAMOS "MOCKAR" (Fingir)
-// É importante importar como * para poder espionar/substituir as funções
 import * as layerRepo from "@/lib/repositories/layerRepository";
-import * as acoesRepo from "@/lib/repositories/acoesRepository";
+import * as resolver from "@/lib/service/layer-resolver";
 
-// 2. DIZEMOS AO JEST PARA "MOCKAR" OS ARQUIVOS
-// Isso impede que o teste tente conectar no banco de dados real!
 jest.mock("@/lib/repositories/layerRepository", () => ({
     getLayerCatalog: jest.fn(),
     getGenericLayerData: jest.fn(),
 }));
 
-jest.mock("@/lib/repositories/acoesRepository", () => ({
-    findAllAcoesDataWithGeometry: jest.fn(),
+jest.mock("@/lib/service/layer-resolver", () => ({
+    resolveTableLayer: jest.fn(),
 }));
 
 jest.mock("@/db", () => ({
     db: {
-        execute: jest.fn(),
+        execute: jest.fn().mockResolvedValue({ rows: [] }),
         select: jest.fn().mockReturnValue({
             from: jest.fn().mockReturnValue({
                 where: jest.fn().mockReturnValue({
@@ -31,14 +32,16 @@ jest.mock("@/db", () => ({
     }
 }));
 
-// DADOS FALSOS PARA O TESTE (FIXTURES)
+const TENANT = "real-1111-1111-1111-111111111111";
+
 const mockCatalogAcoes = {
     id: 1,
     slug: "acoes",
     name: "Ações de Fiscalização",
     ordering: 1,
-    visualConfig: { mapDisplay: "date_filter", color: "red" },
-    schemaConfig: {},
+    scope: "region",
+    visualConfig: { mapDisplay: "date_filter", groupByColumn: undefined },
+    schemaConfig: { sourceType: "table", tableName: "acoes", geometryColumn: "geom", dateColumn: "time" },
 };
 
 const mockCatalogBacia = {
@@ -46,87 +49,57 @@ const mockCatalogBacia = {
     slug: "bacia_rio",
     name: "Bacia Rio",
     ordering: 2,
-    visualConfig: { mapDisplay: "all", color: "blue" },
+    scope: "tenant",
+    visualConfig: { mapDisplay: "all" },
     schemaConfig: {},
 };
 
-describe("MapLayerService - O Maestro", () => {
+const EMPTY = { type: "FeatureCollection", features: [] };
 
-    // Antes de cada teste, limpamos os mocks para não sobrar lixo de um teste no outro
+describe("MapLayerService - O Maestro", () => {
     beforeEach(() => {
         jest.clearAllMocks();
     });
 
-    // --- CENÁRIO 1: CAMADA VIP (ESTÁTICA) ---
-    it("deve usar a Estratégia VIP quando o slug for 'acoes'", async () => {
-        // A. PREPARAÇÃO (ARRANGE)
-        // Ensinamos o Mock do Catálogo a retornar a configuração de 'acoes'
+    it("usa o Caminho R (resolveTableLayer) quando sourceType='table'", async () => {
         (layerRepo.getLayerCatalog as jest.Mock).mockResolvedValue(mockCatalogAcoes);
+        (resolver.resolveTableLayer as jest.Mock).mockResolvedValue({
+            type: "FeatureCollection",
+            features: [{ type: "Feature", id: 99, geometry: { type: "Point", coordinates: [0, 0] }, properties: {} }],
+        });
 
-        // Ensinamos o Mock do Repositório de Ações a retornar dados falsos
-        (acoesRepo.findAllAcoesDataWithGeometry as jest.Mock).mockResolvedValue([
-            { id: 99, geom: { type: "Point", coordinates: [0, 0] }, categoria: "Teste" }
-        ]);
+        const resultado = await getLayer("acoes", TENANT);
 
-        // B. AÇÃO (ACT)
-        // Chamamos a função real do Service
-        const resultado = await getLayer("acoes");
-
-        // C. VERIFICAÇÃO (ASSERT)
-
-        // Verificamos se ele chamou o catálogo
         expect(layerRepo.getLayerCatalog).toHaveBeenCalledWith("acoes");
-
-        // O PULO DO GATO: Verificamos se ele chamou o REPOSITÓRIO ESPECÍFICO DE AÇÕES
-        expect(acoesRepo.findAllAcoesDataWithGeometry).toHaveBeenCalled();
-
-        // Verificamos se ele NÃO chamou o genérico
+        expect(resolver.resolveTableLayer).toHaveBeenCalledWith(
+            mockCatalogAcoes.schemaConfig,
+            "region",
+            expect.objectContaining({ tenantId: TENANT }),
+        );
         expect(layerRepo.getGenericLayerData).not.toHaveBeenCalled();
-
-        // Verificamos se o resultado final está montado corretamente (DTO)
-        expect(resultado).not.toBeNull();
         expect(resultado?.name).toBe("Ações de Fiscalização");
-        expect(resultado?.visualConfig?.dateFilter).toBe(true); // Regra do date_filter
+        expect(resultado?.visualConfig?.dateFilter).toBe(true);
         expect(resultado?.data.features).toHaveLength(1);
     });
 
-    // --- CENÁRIO 2: CAMADA GENÉRICA ---
-    it("deve usar o Repositório Genérico quando o slug for desconhecido (ex: 'bacia_rio')", async () => {
-        // A. PREPARAÇÃO
+    it("usa o Caminho B (getGenericLayerData) para camadas de Organização", async () => {
         (layerRepo.getLayerCatalog as jest.Mock).mockResolvedValue(mockCatalogBacia);
+        (layerRepo.getGenericLayerData as jest.Mock).mockResolvedValue(EMPTY);
 
-        // Ensinamos o genérico a retornar um GeoJSON
-        (layerRepo.getGenericLayerData as jest.Mock).mockResolvedValue({
-            type: "FeatureCollection",
-            features: []
-        });
+        const resultado = await getLayer("bacia_rio", TENANT);
 
-        // B. AÇÃO
-        const resultado = await getLayer("bacia_rio");
-
-        // C. VERIFICAÇÃO
-        expect(layerRepo.getLayerCatalog).toHaveBeenCalledWith("bacia_rio");
-
-        // Verifica se chamou o GENÉRICO
         expect(layerRepo.getGenericLayerData).toHaveBeenCalled();
-
-        // Garante que NÃO chamou o de ações
-        expect(acoesRepo.findAllAcoesDataWithGeometry).not.toHaveBeenCalled();
-
+        expect(resolver.resolveTableLayer).not.toHaveBeenCalled();
         expect(resultado?.slug).toBe("bacia_rio");
     });
 
-    // --- CENÁRIO 3: ERRO / NÃO ENCONTRADO ---
-    it("deve retornar null se a camada não existir no catálogo", async () => {
-        // A. PREPARAÇÃO
+    it("retorna null se a camada não existir no catálogo", async () => {
         (layerRepo.getLayerCatalog as jest.Mock).mockResolvedValue(null);
 
-        // B. AÇÃO
-        const resultado = await getLayer("fantasma");
+        const resultado = await getLayer("fantasma", TENANT);
 
-        // C. VERIFICAÇÃO
         expect(resultado).toBeNull();
-        // Garante que não tentou buscar dados se nem existe no catálogo
         expect(layerRepo.getGenericLayerData).not.toHaveBeenCalled();
+        expect(resolver.resolveTableLayer).not.toHaveBeenCalled();
     });
 });

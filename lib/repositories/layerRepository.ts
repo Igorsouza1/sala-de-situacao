@@ -1,7 +1,7 @@
 import { db } from "@/db";
 import { MapFeatureCollection } from "@/types/map-dto";
 import { sql, eq, desc } from "drizzle-orm";
-import { layerCatalogInMonitoramento, propriedadesInMonitoramento } from "@/db/schema";
+import { layerCatalogInMonitoramento } from "@/db/schema";
 
 /**
  * Validates that a table slug contains only safe characters.
@@ -88,11 +88,6 @@ export async function getLayerCatalog(slug: string) {
         .limit(1);
 
     return result[0];
-}
-
-
-export async function findAllPropriedadesDataWithGeometry() {
-    return await db.select().from(propriedadesInMonitoramento).orderBy(desc(propriedadesInMonitoramento.id));
 }
 
 export async function findAllLayersCatalog() {
