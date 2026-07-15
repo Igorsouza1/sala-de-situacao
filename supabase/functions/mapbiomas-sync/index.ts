@@ -19,7 +19,7 @@
 //   MAPBIOMAS_PASSWORD   — senha da conta
 //   CRON_SECRET          — bearer token exigido no request (pg_cron envia)
 
-import postgres from "npm:postgres@3.4.5";
+import { serveCron, fetchRegionsBbox, inBbox } from "../_shared/edge.ts";
 
 const MAPBIOMAS_GRAPHQL_URL = "https://plataforma.alerta.mapbiomas.org/api/v2/graphql";
 
@@ -123,27 +123,9 @@ async function fetchGeometries(token: string, alertCodes: number[]): Promise<Map
   return geoms;
 }
 
-Deno.serve(async (req) => {
-  const cronSecret = Deno.env.get("CRON_SECRET");
-  if (cronSecret && req.headers.get("authorization") !== `Bearer ${cronSecret}`) {
-    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
-  }
-
-  const email = Deno.env.get("MAPBIOMAS_EMAIL");
-  const password = Deno.env.get("MAPBIOMAS_PASSWORD");
-  const dbUrl = Deno.env.get("SUPABASE_DB_URL");
-  if (!email || !password || !dbUrl) {
-    return new Response(
-      JSON.stringify({ error: "missing MAPBIOMAS_EMAIL, MAPBIOMAS_PASSWORD or SUPABASE_DB_URL" }),
-      { status: 500 },
-    );
-  }
-
-  const sql = postgres(dbUrl, { prepare: false });
-
-  try {
+serveCron("mapbiomas-sync", ["MAPBIOMAS_EMAIL", "MAPBIOMAS_PASSWORD"], async ({ sql, env }) => {
     // 1. Login por execução (token efêmero)
-    const token = await signIn(email, password);
+    const token = await signIn(env.MAPBIOMAS_EMAIL, env.MAPBIOMAS_PASSWORD);
 
     // 2. Lista leve da janela de publicação
     const endDate = new Date().toISOString().split("T")[0];
@@ -152,18 +134,9 @@ Deno.serve(async (req) => {
     const allAlerts = await fetchPublishedAlerts(token, startDate, endDate);
 
     // 3. Pré-filtro por bbox agregado das regiões (com padding)
-    const [bbox] = await sql`
-      SELECT ST_XMin(e) AS min_lon, ST_YMin(e) AS min_lat,
-             ST_XMax(e) AS max_lon, ST_YMax(e) AS max_lat
-      FROM (SELECT ST_Extent(geom) AS e FROM monitoramento.regioes) t
-    `;
-    const candidates = bbox?.min_lon == null ? [] : allAlerts.filter((a) => {
-      const lat = a.coordenates?.latitude;
-      const lon = a.coordenates?.longitude;
-      return lat != null && lon != null &&
-        lon >= bbox.min_lon - BBOX_PADDING_DEG && lon <= bbox.max_lon + BBOX_PADDING_DEG &&
-        lat >= bbox.min_lat - BBOX_PADDING_DEG && lat <= bbox.max_lat + BBOX_PADDING_DEG;
-    });
+    const bbox = await fetchRegionsBbox(sql);
+    const candidates = bbox == null ? [] : allAlerts.filter((a) =>
+      inBbox(bbox, a.coordenates?.latitude, a.coordenates?.longitude, BBOX_PADDING_DEG));
 
     let inserted = 0;
     let linked = 0;
@@ -242,13 +215,5 @@ Deno.serve(async (req) => {
       }
     }
 
-    const body = { status: "success", fetched: allAlerts.length, candidates: candidates.length, inserted, linked };
-    console.log("mapbiomas-sync done", body);
-    return new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json" } });
-  } catch (err) {
-    console.error("mapbiomas-sync error", err);
-    return new Response(JSON.stringify({ status: "error", message: String(err) }), { status: 500 });
-  } finally {
-    await sql.end();
-  }
+    return { status: "success", fetched: allAlerts.length, candidates: candidates.length, inserted, linked };
 });

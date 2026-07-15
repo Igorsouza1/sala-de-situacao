@@ -16,7 +16,7 @@
 //   NASA_FIRMS_MAP_KEY   — chave da API FIRMS
 //   CRON_SECRET          — bearer token exigido no request (pg_cron envia)
 
-import postgres from "npm:postgres@3.4.5";
+import { serveCron, fetchRegionsBbox, inBbox } from "../_shared/edge.ts";
 
 const FIRMS_BASE_URL = "https://firms.modaps.eosdis.nasa.gov/api/area/csv";
 
@@ -79,39 +79,18 @@ function parseCsv(text: string): FirmsRow[] {
   return rows;
 }
 
-Deno.serve(async (req) => {
-  const cronSecret = Deno.env.get("CRON_SECRET");
-  if (cronSecret && req.headers.get("authorization") !== `Bearer ${cronSecret}`) {
-    return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401 });
-  }
-
-  const mapKey = Deno.env.get("NASA_FIRMS_MAP_KEY");
-  const dbUrl = Deno.env.get("SUPABASE_DB_URL");
-  if (!mapKey || !dbUrl) {
-    return new Response(JSON.stringify({ error: "missing NASA_FIRMS_MAP_KEY or SUPABASE_DB_URL" }), { status: 500 });
-  }
-
-  const sql = postgres(dbUrl, { prepare: false });
-
-  try {
+serveCron("firms-sync", ["NASA_FIRMS_MAP_KEY"], async ({ sql, env }) => {
     // 1. Fetch CSV do dia
     const today = new Date().toISOString().split("T")[0];
-    const url = `${FIRMS_BASE_URL}/${mapKey}/VIIRS_NOAA20_NRT/world/1/${today}`;
+    const url = `${FIRMS_BASE_URL}/${env.NASA_FIRMS_MAP_KEY}/VIIRS_NOAA20_NRT/world/1/${today}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error(`FIRMS fetch failed: ${res.status} ${res.statusText}`);
     const allRows = parseCsv(await res.text());
 
     // 2. Pré-filtro por bbox agregado das regiões (reduz o dataset mundial
     //    antes de tocar o banco; o match preciso é do PostGIS no passo 4)
-    const [bbox] = await sql`
-      SELECT ST_XMin(e) AS min_lon, ST_YMin(e) AS min_lat,
-             ST_XMax(e) AS max_lon, ST_YMax(e) AS max_lat
-      FROM (SELECT ST_Extent(geom) AS e FROM monitoramento.regioes) t
-    `;
-    const candidates = bbox?.min_lon == null ? [] : allRows.filter((r) =>
-      r.longitude >= bbox.min_lon && r.longitude <= bbox.max_lon &&
-      r.latitude >= bbox.min_lat && r.latitude <= bbox.max_lat
-    );
+    const bbox = await fetchRegionsBbox(sql);
+    const candidates = bbox == null ? [] : allRows.filter((r) => inBbox(bbox, r.latitude, r.longitude));
 
     let inserted = 0;
     let linked = 0;
@@ -187,13 +166,5 @@ Deno.serve(async (req) => {
       `;
     }
 
-    const body = { status: "success", fetched: allRows.length, candidates: candidates.length, inserted, linked };
-    console.log("firms-sync done", body);
-    return new Response(JSON.stringify(body), { headers: { "Content-Type": "application/json" } });
-  } catch (err) {
-    console.error("firms-sync error", err);
-    return new Response(JSON.stringify({ status: "error", message: String(err) }), { status: 500 });
-  } finally {
-    await sql.end();
-  }
+    return { status: "success", fetched: allRows.length, candidates: candidates.length, inserted, linked };
 });
