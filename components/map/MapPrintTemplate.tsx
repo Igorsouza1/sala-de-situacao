@@ -1,5 +1,7 @@
 "use client"
 
+import { useRegion, regionSubtitle } from "@/context/RegionContext"
+
 import { useEffect, useState } from "react"
 import dynamic from "next/dynamic"
 import { formatDate } from "@/lib/helpers/formatter/formatDate"
@@ -19,6 +21,7 @@ interface MapPrintTemplateProps {
 }
 
 export function MapPrintTemplate({ lat, lng, zoom, layers, activeSlugs }: MapPrintTemplateProps) {
+  const { region } = useRegion()
   // ... (useEffect remains same) ...
 
   const currentDate = new Date()
@@ -94,12 +97,16 @@ export function MapPrintTemplate({ lat, lng, zoom, layers, activeSlugs }: MapPri
            <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-start pointer-events-none">
                {/* Left: Logos */}
                <div className="bg-white/90 backdrop-blur-md p-3 rounded-lg shadow-lg border border-slate-200 flex items-center gap-4">
-                   <img 
-                     src="/brasao-bonito.jpeg"
-                     alt="Brasão Bonito" 
-                     className="h-12 w-auto object-contain"
-                   />
-                   <div className="h-8 w-[1px] bg-slate-300"></div>
+                   {region?.brasaoUrl && (
+                     <>
+                       <img
+                         src={region.brasaoUrl}
+                         alt="Brasão"
+                         className="h-12 w-auto object-contain"
+                       />
+                       <div className="h-8 w-[1px] bg-slate-300"></div>
+                     </>
+                   )}
                    <img 
                      src="/prisma_logo_revert.png" 
                      alt="PRISMA" 
@@ -107,7 +114,7 @@ export function MapPrintTemplate({ lat, lng, zoom, layers, activeSlugs }: MapPri
                    />
                    <div className="ml-2">
                        <h1 className="text-sm font-black text-slate-900 leading-tight uppercase print-text-dark">Sala de Situação</h1>
-                       <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase print-text-dark">Município de Bonito/MS</p>
+                       <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase print-text-dark">{regionSubtitle(region)}</p>
                    </div>
                </div>
 

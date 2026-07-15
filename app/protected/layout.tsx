@@ -4,6 +4,7 @@ import { Inter } from "next/font/google";
 import { MapProvider } from "@/context/GeoDataContext";
 import { AcoesProvider } from "@/context/AcoesContext";
 import { DequePedrasProvider } from "@/context/DequePedrasContext";
+import { RegionProvider } from "@/context/RegionContext";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -20,13 +21,15 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50">
-      <Navbar />
-      <MapProvider>
-        <AcoesProvider>
-          <main className="flex-1 min-w-0 overflow-hidden">{children}</main>
-        </AcoesProvider>
-      </MapProvider>
-    </div>
+    <RegionProvider>
+      <div className="flex h-screen overflow-hidden bg-gray-50">
+        <Navbar />
+        <MapProvider>
+          <AcoesProvider>
+            <main className="flex-1 min-w-0 overflow-hidden">{children}</main>
+          </AcoesProvider>
+        </MapProvider>
+      </div>
+    </RegionProvider>
   );
 }

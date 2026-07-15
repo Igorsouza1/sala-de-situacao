@@ -6,6 +6,9 @@ import { sql } from "drizzle-orm";
 
 type BBoxRow = {
   nome: string | null;
+  municipio: string | null;
+  uf: string | null;
+  brasao_url: string | null;
   centroid_lng: number;
   centroid_lat: number;
   bbox_min_lng: number;
@@ -17,6 +20,9 @@ type BBoxRow = {
 
 const BBOX_COLS = sql`
   MIN(nome)                                                 AS nome,
+  MIN(metadata->'identity'->>'municipio')                   AS municipio,
+  MIN(metadata->'identity'->>'uf')                          AS uf,
+  MIN(metadata->'identity'->>'brasaoUrl')                   AS brasao_url,
   ST_X(ST_Centroid(ST_Union(geom::geometry)))               AS centroid_lng,
   ST_Y(ST_Centroid(ST_Union(geom::geometry)))               AS centroid_lat,
   ST_XMin(ST_Extent(geom::geometry))                        AS bbox_min_lng,
@@ -78,6 +84,9 @@ export async function GET(request: Request) {
       if (!row || row.count === 0) return NextResponse.json(null)
       return NextResponse.json({
         nome: row.nome,
+        municipio: row.municipio,
+        uf: row.uf,
+        brasaoUrl: row.brasao_url,
         center: [row.centroid_lng, row.centroid_lat] as [number, number],
         bbox: [row.bbox_min_lng, row.bbox_min_lat, row.bbox_max_lng, row.bbox_max_lat] as [number, number, number, number],
       }, { headers: { 'Cache-Control': 'private, no-store' } })
@@ -117,6 +126,9 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     nome: row.nome,
+    municipio: row.municipio,
+    uf: row.uf,
+    brasaoUrl: row.brasao_url,
     center: [row.centroid_lng, row.centroid_lat] as [number, number],
     bbox: [row.bbox_min_lng, row.bbox_min_lat, row.bbox_max_lng, row.bbox_max_lat] as [number, number, number, number],
   }, {

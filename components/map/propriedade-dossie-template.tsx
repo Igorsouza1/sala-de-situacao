@@ -1,5 +1,7 @@
 "use client"
 
+import { useRegion, regionSubtitle } from "@/context/RegionContext"
+
 import { useEffect } from "react"
 import dynamic from "next/dynamic"
 import { Map, Tag, Flame, AlertTriangle, Ruler, MapPin } from "lucide-react"
@@ -35,6 +37,7 @@ interface PropriedadeDossieTemplateProps {
 }
 
 export function PropriedadeDossieTemplate({ data, isPrintMode = false }: PropriedadeDossieTemplateProps) {
+    const { region } = useRegion()
 
     // Auto-print logic
     useEffect(() => {
@@ -72,15 +75,17 @@ export function PropriedadeDossieTemplate({ data, isPrintMode = false }: Proprie
                 {/* --- HEADER --- */}
                 <header className="px-10 py-8 border-b-4 border-slate-900 flex items-center justify-between bg-slate-50 print:bg-white">
                     <div className="w-24 h-24 flex items-center justify-center">
-                        <img src="/brasao-bonito.jpeg" 
-                             alt="Brasão" className="max-h-full max-w-full object-contain opacity-90" />
+                        {region?.brasaoUrl && (
+                          <img src={region.brasaoUrl}
+                               alt="Brasão" className="max-h-full max-w-full object-contain opacity-90" />
+                        )}
                     </div>
                     <div className="text-center space-y-1 flex-1 px-4">
                         <h1 className="text-xl font-black tracking-widest text-slate-900 uppercase font-serif">
                             Relatório de Propriedade<br/>e Monitoramento
                         </h1>
                         <p className="text-xs font-bold text-slate-500 tracking-widest uppercase mt-1">
-                            Sala de Situação • Município de Bonito/MS
+                            Sala de Situação • {regionSubtitle(region)}
                         </p>
                     </div>
                     <div className="w-24 h-24 flex items-center justify-center">

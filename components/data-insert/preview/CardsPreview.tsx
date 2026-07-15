@@ -23,7 +23,7 @@ type AcaoDraft = {
   elevation?: number | null
   time?: string | null
   mes: string
-  atuacao: "Rio da Prata"
+  atuacao: string
   geom: string
   fotos?: Foto[]
 }

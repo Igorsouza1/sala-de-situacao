@@ -1,5 +1,7 @@
 "use client"
 
+import { useRegion, regionSubtitle } from "@/context/RegionContext"
+
 import { useEffect, useState, useMemo } from "react"
 import dynamic from "next/dynamic"
 import { formatDate } from "@/lib/helpers/formatter/formatDate"
@@ -74,6 +76,7 @@ export function DossieTemplate({
   onDeleteHistory,
   onAddHistory
 }: DossieTemplateProps) {
+  const { region } = useRegion()
   // Image Modal state
   const [isImageModalOpen, setIsImageModalOpen] = useState(false)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -216,11 +219,13 @@ export function DossieTemplate({
         <header className="px-10 py-8 border-b-4 border-slate-900 flex items-center justify-between bg-slate-50 print:bg-white">
            {/* Esquerda: Brasão Bonito */}
            <div className="w-24 h-24 flex items-center justify-center">
-              <img 
-                src="/brasao-bonito.jpeg" 
-                alt="Brasão Bonito" 
-                className="max-h-full max-w-full object-contain opacity-90"
-              />
+              {region?.brasaoUrl && (
+                <img
+                  src={region.brasaoUrl}
+                  alt="Brasão"
+                  className="max-h-full max-w-full object-contain opacity-90"
+                />
+              )}
            </div>
 
            {/* Centro: Título Oficial */}
@@ -229,7 +234,7 @@ export function DossieTemplate({
                 Relatório de Ação e<br/>Prevenção Ambiental
               </h1>
               <p className="text-xs font-bold text-slate-500 tracking-widest uppercase mt-1">
-                Sala de Situação • Município de Bonito/MS
+                Sala de Situação • {regionSubtitle(region)}
               </p>
            </div>
 

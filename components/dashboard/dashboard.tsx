@@ -1,5 +1,7 @@
 "use client";
 
+import { useRegion, regionSubtitle } from "@/context/RegionContext";
+
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -258,6 +260,7 @@ const MINI_AXIS = {
 // ─── Compact Header ────────────────────────────────────────────────────────────
 
 function DashboardHeader() {
+  const { region } = useRegion();
   const now = new Date();
   const dateLabel = format(now, "EEE, dd MMM yyyy", { locale: ptBR });
   const timeLabel = format(now, "HH:mm");
@@ -278,7 +281,7 @@ function DashboardHeader() {
               Sala de Situação
             </span>
             <span className="text-border">·</span>
-            <span className="text-xs text-muted-foreground">Bonito / MS</span>
+            <span className="text-xs text-muted-foreground">{regionSubtitle(region)}</span>
           </div>
         </div>
 

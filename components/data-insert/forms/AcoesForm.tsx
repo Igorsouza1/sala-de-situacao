@@ -1,5 +1,7 @@
 "use client"
 
+import { useRegion, regionSubtitle } from "@/context/RegionContext"
+
 import type React from "react"
 
 import { useEffect, useState } from "react"
@@ -31,7 +33,7 @@ type AcaoDraft = {
   elevation?: number | null
   time?: string | null
   mes: string
-  atuacao: "Rio da Prata"
+  atuacao: string
   geom: string
   fotos?: { url: string; descricao?: string | null }[]
 }
@@ -47,6 +49,8 @@ interface AcoesFormProps {
 }
 
 export function AcoesForm({ onValidate, onPreview }: AcoesFormProps) {
+  const { region } = useRegion()
+  const regionNome = region?.nome ?? ""
   const [gpxFile, setGpxFile] = useState<File | null>(null)
   const [formState, setFormState] = useState<AcoesFormState>({
     trilhaPreview: null,
@@ -129,7 +133,7 @@ export function AcoesForm({ onValidate, onPreview }: AcoesFormProps) {
           elevation: wp.ele || null,
           time: wp.horario || null,
           mes: wp.mes || "Janeiro", // Derived from time
-          atuacao: "Rio da Prata",
+          atuacao: regionNome,
           geom: `POINTZ(${wp.longitude} ${wp.latitude} ${wp.elevation || 0})`,
           fotos: [],
         })),
