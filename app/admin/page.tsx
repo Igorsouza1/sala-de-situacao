@@ -28,6 +28,9 @@ export default async function AdminDashboardPage() {
             <a href="/admin/regions" className="rounded-md border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100">
               Gerir Regiões
             </a>
+            <a href="/admin/users" className="rounded-md border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100">
+              Gerir Usuários
+            </a>
           </div>
         </header>
 
