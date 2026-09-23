@@ -32,6 +32,12 @@ export default async function AdminDashboardPage() {
             >
               Gerir Regiões
             </Link>
+            <Link
+              href="/admin/users"
+              className="rounded-full border border-[#0066cc] px-[22px] py-[11px] text-[15px] font-normal text-[#0066cc] transition-transform active:scale-95"
+            >
+              Gerir Usuários
+            </Link>
           </div>
         </header>
 

@@ -85,6 +85,22 @@ export async function requireAuthWithTenant(): Promise<AuthWithTenantResult> {
   return { user, tenantId, response: null };
 }
 
+/**
+ * Exige Superadmin global (app_metadata.is_superadmin). Uso em route handlers
+ * que operam entre múltiplos tenants (ex: gerenciador de usuários em /admin).
+ * Para checagem em Server Component layouts use `checkIsSuperadmin()`.
+ */
+export async function requireSuperadmin(): Promise<AuthResult> {
+  const { user, response } = await requireAuth();
+  if (response || !user) return { user: null, response };
+
+  if (user.app_metadata?.is_superadmin !== true) {
+    return { user: null, response: apiError("Acesso restrito a superadministradores.", 403) };
+  }
+
+  return { user, response: null };
+}
+
 export type AppRole = "superadmin" | "owner" | "editor" | "auditor" | "viewer";
 
 // Hierarquia do ADR 0003. Auditor e Viewer têm o mesmo nível de leitura;
