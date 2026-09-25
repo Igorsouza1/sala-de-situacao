@@ -26,6 +26,8 @@ export interface LayerManagerOption {
 }
 
 interface LayerManagerProps {
+  expanded?: boolean
+  onExpandedChange?: (expanded: boolean) => void
   title?: string
   options: LayerManagerOption[]
   activeLayers: string[]
@@ -171,9 +173,12 @@ export function LayerManager({
   activeLayers, 
   onLayerToggle,
   onToggleAll,
-  onGroupToggle
+  onGroupToggle,
+  expanded,
+  onExpandedChange
 }: LayerManagerProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [internalExpanded, setInternalExpanded] = useState(false)
+  const isExpanded = expanded ?? internalExpanded
   const [expandedCategories, setExpandedCategories] = useState<string[]>(DEFAULT_EXPANDED)
   const [expandedItems, setExpandedItems] = useState<string[]>([])
   
@@ -185,7 +190,7 @@ export function LayerManager({
     )
   }
 
-  const toggleExpand = () => setIsExpanded(!isExpanded)
+  const toggleExpand = () => { setInternalExpanded(!isExpanded); onExpandedChange?.(!isExpanded) }
 
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => 

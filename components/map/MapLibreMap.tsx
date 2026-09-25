@@ -42,6 +42,9 @@ import { useMapContext } from '@/context/GeoDataContext'
 import { useUserRole } from '@/hooks/useUserRole'
 import { getLayerLegendInfo } from './helpers/map-visuals'
 import { Button } from '@/components/ui/button'
+import { MapConsultaPanel } from './MapConsultaPanel'
+import type { ConsultaBounds, ConsultaItem, ConsultaSelection } from '@/types/map-consulta'
+import bbox from '@turf/bbox'
 
 // ── Module-level cache — persists across SPA navigation within the same tab ──
 // Cleared only on hard reload. Shared by all MapLibreMap mounts.
@@ -247,9 +250,47 @@ export default function MapLibreMap({
 
   // ── Map ref & region bounds ─────────────────────────────────────────────
   const mapRef = useRef<any>(null)
+  const [consultaOpen, setConsultaOpen] = useState(false)
+  const [consultaSelection, setConsultaSelection] = useState<ConsultaSelection | null>(null)
+  const [consultaFeature, setConsultaFeature] = useState<ConsultaItem | null>(null)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [layersExpanded, setLayersExpanded] = useState(false)
+  const selectConsulta = useCallback((selection: ConsultaSelection | null) => {
+    setConsultaSelection(selection)
+    setConsultaFeature(null)
+    setConsultaOpen(true)
+    setFiltersOpen(false)
+    setLayersExpanded(false)
+  }, [])
+  const focusConsulta = useCallback((item: ConsultaItem) => {
+    setConsultaFeature(item)
+    const map = mapRef.current
+    if (!map || !item.geometry) return
+    const [w, s, e, n] = bbox(item.geometry)
+    if (![w, s, e, n].every(Number.isFinite)) return
+    const width = map.getContainer().clientWidth
+    const height = map.getContainer().clientHeight
+    const small = width < 640
+    map.fitBounds([[w, s], [e, n]], {
+      padding: small ? { top: Math.round(height * .66), bottom: 35, left: 25, right: 25 }
+        : { left: 405, right: 85, top: 65, bottom: 90 },
+      maxZoom: item.geometry.type === 'Point' ? Math.min(16, map.getZoom() + 1.25) : 15,
+      duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1600,
+      easing: (t: number) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+    })
+  }, [])
+  const getConsultaBounds = useCallback((): ConsultaBounds | null => {
+    const bounds = mapRef.current?.getBounds()
+    return bounds ? [Math.max(-180, bounds.getWest()), Math.max(-90, bounds.getSouth()), Math.min(180, bounds.getEast()), Math.min(90, bounds.getNorth())] : null
+  }, [])
+  useEffect(() => {
+    setConsultaSelection(null)
+    setConsultaFeature(null)
+  }, [regiaoId])
   const [mapLoaded, setMapLoaded] = useState(false)
   const fitBoundsDone = useRef(false)
   const [regionBounds, setRegionBounds] = useState<{
+    nome?: string
     center: [number, number]
     bbox: [number, number, number, number]
   } | null>(null)
@@ -582,11 +623,15 @@ export default function MapLibreMap({
   // ── Shared feature-click handler (usado por layers MapLibre E por icon markers) ──
   const openFeatureModal = useCallback(
     (slug: string, props: Record<string, any>) => {
+      if ((slug === 'acoes' || slug === 'propriedades') && props.id) {
+        selectConsulta({ kind: slug, id: Number(props.id) })
+        return
+      }
       if (slug === 'acoes') setSelectedAcao(props)
       else setSelectedAcao(null)
       openModal('', <FeatureDetails layerType={slug} properties={props} />)
     },
-    [openModal]
+    [openModal, selectConsulta]
   )
 
   // ── Hover handler para icon markers (HTML Markers não disparam onMouseMove do Map) ──
@@ -1016,6 +1061,12 @@ export default function MapLibreMap({
           ]
         })}
 
+        {consultaFeature?.geometry && <Source id="consulta-selection" type="geojson" data={{ type: 'Feature', properties: {}, geometry: consultaFeature.geometry }}>
+          <Layer id="consulta-selection-fill" type="fill" filter={['==', '$type', 'Polygon']} paint={{ 'fill-color': '#3b82f6', 'fill-opacity': 0.14 }} />
+          <Layer id="consulta-selection-line" type="line" filter={['==', '$type', 'Polygon']} paint={{ 'line-color': '#60a5fa', 'line-width': 3 }} />
+          <Layer id="consulta-selection-point" type="circle" filter={['==', '$type', 'Point']} paint={{ 'circle-radius': 14, 'circle-color': '#2563eb', 'circle-opacity': .6, 'circle-stroke-color': '#fff', 'circle-stroke-width': 3 }} />
+        </Source>}
+
         {/* ── Icon layers (HTML Markers com ícones Lucide por feature) ── */}
         {processedLayers
           .filter(({ isIcon, displayData }) => isIcon && displayData.features.length > 0)
@@ -1245,8 +1296,18 @@ export default function MapLibreMap({
         </div>
       </div>
 
-      {/* Left panel: filters */}
-      <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-4">
+      <MapConsultaPanel key={regiaoId ?? 'default'} regiaoId={regiaoId} regionName={regionBounds?.nome}
+        actionVisualConfig={layers.find(layer => layer.slug === 'acoes')?.visualConfig}
+        open={consultaOpen} onOpenChange={open => { setConsultaOpen(open); if (open) { setFiltersOpen(false); setLayersExpanded(false) } }}
+        selection={consultaSelection} onSelect={selectConsulta} onFocus={focusConsulta} getBounds={getConsultaBounds}
+        onDossie={selection => { setSelectedAcao(selection.kind === 'acoes' ? { id: selection.id } : null); openModal('', <FeatureDetails layerType={selection.kind} properties={{ id: selection.id }} />) }} />
+
+      {/* Ferramentas secundárias recolhidas para dar espaço à consulta. */}
+      <div className={`absolute z-[1001] ${consultaOpen ? 'top-4 left-[392px] max-sm:top-auto max-sm:bottom-24 max-sm:left-4' : 'top-20 left-4'}`}>
+        <Button variant="outline" size="icon" className="rounded-full bg-white text-slate-700 shadow-md" title="Filtros do mapa" aria-label="Filtros do mapa" aria-expanded={filtersOpen}
+          onClick={() => { setFiltersOpen(value => !value); setConsultaOpen(false) }}><LucideIcons.SlidersHorizontal size={18} /></Button>
+      </div>
+      <div className={`absolute top-36 left-4 z-[1000] flex flex-col gap-4 ${filtersOpen ? '' : 'hidden'}`}>
         <DateFilterControl onDateChange={setDateFilter} />
         <PropertyFilterControl onFilterChange={setAreaFilter} />
         <MaplibreFaunaHeatmapControl
@@ -1333,6 +1394,8 @@ export default function MapLibreMap({
       {/* Bottom-left: LayerManager */}
       <div className="absolute bottom-4 left-4 z-[1000]">
         <LayerManager
+          expanded={layersExpanded}
+          onExpandedChange={expanded => { setLayersExpanded(expanded); if (expanded) { setConsultaOpen(false); setFiltersOpen(false) } }}
           title="Camadas"
           options={layerManagerOptions}
           activeLayers={visibleLayers}

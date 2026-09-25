@@ -1,0 +1,59 @@
+/* docs/DESIGN.md: superfícies claras, hierarquia Inter, azul para interação. */
+.panel {
+  --consulta-ink: #1d1d1f;
+  --consulta-muted: #626267;
+  --consulta-primary: #0066cc;
+  --consulta-focus: #0071e3;
+  --consulta-surface: #f5f5f7;
+  --consulta-hairline: #e0e0e0;
+  color: var(--consulta-ink);
+}
+.panel button { transition: background-color 180ms ease, color 180ms ease, transform 180ms ease; }
+.panel button:active { transform: scale(.98); }
+.panel button:focus-visible { outline: 2px solid var(--consulta-focus); outline-offset: -2px; }
+.header { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 20px 20px 16px; }
+.heading { font-size: 21px; line-height: 1.2; font-weight: 600; letter-spacing: -.35px; }
+.region { margin-top: 6px; font-size: 13px; line-height: 1.45; color: var(--consulta-muted); }
+.collapse { display: grid; place-items: center; flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%; color: var(--consulta-ink); background: var(--consulta-surface); }
+.tabs { display: flex; gap: 4px; padding: 4px; border: 1px solid var(--consulta-hairline); border-radius: 999px; background: var(--consulta-surface); }
+.tab { display: flex; align-items: center; justify-content: center; gap: 8px; flex: 1; min-height: 44px; padding: 8px; border-radius: 999px; font-size: 14px; font-weight: 600; color: var(--consulta-muted); }
+.tab[aria-pressed='true'] { color: white; background: var(--consulta-primary); }
+.search { margin-top: 18px; }
+.searchLabel { display: block; margin-bottom: 8px; font-size: 14px; font-weight: 600; }
+.searchField { display: flex; align-items: center; gap: 8px; min-height: 46px; padding-left: 14px; border: 1px solid var(--consulta-hairline); border-radius: 999px; background: white; }
+.searchField:focus-within { outline: 2px solid var(--consulta-focus); outline-offset: 2px; }
+.searchField > svg { flex-shrink: 0; color: var(--consulta-muted); }
+.searchField input { min-width: 0; width: 100%; background: transparent; outline: none; font-size: 14px; color: var(--consulta-ink); }
+.searchField input::placeholder { color: var(--consulta-muted); }
+.searchSubmit { min-height: 44px; padding: 10px 14px; border-radius: 999px; color: white; background: var(--consulta-primary); font-size: 13px; font-weight: 600; }
+.scopeButton { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; color: var(--consulta-primary); font-size: 12px; }
+.resultsHeading { padding: 13px 20px; background: var(--consulta-surface); border-block: 1px solid rgba(0,0,0,.05); }
+.resultsHeading h3 { font-size: 14px; font-weight: 600; }
+.resultsHeading p { margin-top: 3px; font-size: 12px; color: var(--consulta-muted); }
+.result { display: block; width: 100%; padding: 20px; text-align: left; border-bottom: 1px solid rgba(0,0,0,.07); }
+.result:hover, .result:focus-visible { background: var(--consulta-surface); }
+.resultTop { display: flex; align-items: flex-start; gap: 12px; }
+.symbol { display: grid; place-items: center; flex-shrink: 0; width: 40px; height: 40px; border-radius: 8px; background: var(--consulta-surface); color: var(--consulta-muted); }
+.symbolAction { position: relative; isolation: isolate; }
+.symbolAction::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: currentColor; opacity: .09; }
+.category { display: block; font-size: 12px; font-weight: 600; color: var(--consulta-muted); line-height: 1.4; }
+.resultName { display: block; margin-top: 4px; font-size: 17px; line-height: 1.3; letter-spacing: -.25px; font-weight: 600; overflow-wrap: anywhere; }
+.chevron { flex-shrink: 0; margin-top: 13px; color: var(--consulta-primary); }
+.location { display: grid; gap: 9px; margin: 14px 0 0 52px; font-size: 13px; line-height: 1.45; }
+.locationLine { display: flex; align-items: flex-start; gap: 7px; }
+.locationLine svg { flex-shrink: 0; margin-top: 2px; color: var(--consulta-muted); }
+.locationLabel { display: block; font-size: 11px; color: var(--consulta-muted); line-height: 1.4; }
+.locationValue { display: block; color: var(--consulta-ink); overflow-wrap: anywhere; }
+.date { display: flex; align-items: center; gap: 6px; margin: 12px 0 0 52px; font-size: 12px; color: var(--consulta-muted); }
+.detailTitle { display: flex; align-items: flex-start; gap: 12px; }
+.detailName { margin-top: 5px; font-size: 24px; font-weight: 600; line-height: 1.2; letter-spacing: -.4px; overflow-wrap: anywhere; }
+.detailSection { background: var(--consulta-surface); border-radius: 18px; padding: 16px; }
+.detailSection > h4 { font-size: 14px; font-weight: 600; }
+.detailSection p { font-size: 15px; line-height: 1.5; }
+.detailSection p > span, .detailSection div > span { margin-bottom: 4px; font-size: 12px; color: var(--consulta-muted); }
+.detailSection button { color: var(--consulta-primary); }
+.detailSection button:disabled { color: var(--consulta-muted); }
+@media (prefers-reduced-motion: reduce) {
+  .panel button { transition: none; }
+  .panel button:active { transform: none; }
+}

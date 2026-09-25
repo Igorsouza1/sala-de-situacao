@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { apiError } from "@/lib/api/responses";
 import { extractTenantId } from "@/lib/api/tenant-context";
+import { readActiveRegionId } from "@/lib/api/active-region-server";
+import { getTenantIdForRegion } from "@/lib/api/region-tenant";
 import type { User } from "@supabase/supabase-js";
 import { db } from "@/db";
 import { rolesInMonitoramento } from "@/db/schema";
@@ -72,11 +74,24 @@ export async function resolveTenantIdForUser(user: User): Promise<string | null>
   return tenantId;
 }
 
+/**
+ * Superadmin não tem tenant fixo: o tenant efetivo é o da Região que ele está
+ * visualizando (cookie de Região ativa, mantido pelo middleware). Sem Região
+ * ativa — ou com uma Região sem Organização — cai na cadeia padrão.
+ */
+async function resolveSuperadminTenantId(user: User): Promise<string | null> {
+  const activeRegionId = await readActiveRegionId();
+  const activeRegionTenant = activeRegionId != null ? await getTenantIdForRegion(activeRegionId) : null;
+  return activeRegionTenant ?? resolveTenantIdForUser(user);
+}
+
 export async function requireAuthWithTenant(): Promise<AuthWithTenantResult> {
   const { user, response } = await requireAuth();
   if (response || !user) return { user: null, tenantId: null, response };
 
-  const tenantId = await resolveTenantIdForUser(user);
+  const tenantId = user.app_metadata?.is_superadmin === true
+    ? await resolveSuperadminTenantId(user)
+    : await resolveTenantIdForUser(user);
 
   if (!tenantId) {
     return { user, tenantId: null, response: apiError("Usuário sem tenant associado.", 403) };

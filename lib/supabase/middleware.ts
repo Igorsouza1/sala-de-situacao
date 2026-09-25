@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
+import { syncActiveRegionCookie } from "@/lib/api/active-region";
 
 export const updateSession = async (request: NextRequest) => {
   // This `try/catch` block is only here for the interactive tutorial.
@@ -53,6 +54,8 @@ export const updateSession = async (request: NextRequest) => {
       const dest = user?.app_metadata?.is_superadmin === true ? "/admin" : "/protected";
       return NextResponse.redirect(new URL(dest, request.url));
     }
+
+    syncActiveRegionCookie(request, response);
 
     return response;
   } catch (e) {
