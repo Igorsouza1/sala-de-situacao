@@ -53,7 +53,7 @@ export function MaplibreMeasureControl({
 
   return (
     <div className="absolute top-60 right-4 z-[400] flex flex-col gap-2">
-      <div className="flex items-center gap-1 bg-white/90 backdrop-blur-sm p-1 rounded-md shadow-md border border-gray-200">
+      <div className="flex items-center gap-1 bg-white/90 backdrop-blur-xs p-1 rounded-md shadow-md border border-gray-200">
         <Button
           variant={mode === "distance" ? "default" : "ghost"}
           size="icon"
@@ -99,7 +99,7 @@ export function MaplibreMeasureControl({
       </div>
 
       {hasPoints && (
-        <div className="bg-white/90 backdrop-blur-sm p-2 rounded shadow-md border border-gray-200 text-sm font-medium text-slate-700 min-w-[100px] text-center">
+        <div className="bg-white/90 backdrop-blur-xs p-2 rounded shadow-md border border-gray-200 text-sm font-medium text-slate-700 min-w-[100px] text-center">
           {mode === "distance" ? (
             <span>Distância: {formatDistance(distance)}</span>
           ) : (

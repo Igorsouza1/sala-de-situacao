@@ -248,7 +248,7 @@ export default function AvistamentoJavali() {
     const wasQueued = successState === 'queued'
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-sm text-center">
+        <div className="max-w-md w-full bg-white p-8 rounded-lg shadow-xs text-center">
           <div
             className={`mx-auto flex items-center justify-center h-12 w-12 rounded-full mb-4 ${
               wasQueued ? 'bg-yellow-100' : 'bg-green-100'
@@ -284,7 +284,7 @@ export default function AvistamentoJavali() {
   // ─── Formulário principal ──────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gray-50 flex py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8 mx-auto bg-white p-6 rounded-lg shadow-sm">
+      <div className="max-w-md w-full space-y-8 mx-auto bg-white p-6 rounded-lg shadow-xs">
 
         {/* Banner offline */}
         {!isOnline && (

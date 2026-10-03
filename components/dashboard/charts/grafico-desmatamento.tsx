@@ -31,7 +31,7 @@ function CustomTooltip({ active, payload }: any) {
   const value: number = d?.desmatamento ?? 0
   const color = desmatColor(value)
   return (
-    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-xl px-4 py-3 min-w-[160px]">
+    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-xs shadow-xl px-4 py-3 min-w-[160px]">
       <p className="text-[11px] font-medium text-muted-foreground mb-1">{d?.mes}</p>
       <div className="flex items-baseline gap-1.5 mb-1">
         <span
@@ -78,7 +78,7 @@ export function GraficoDesmatamento() {
 
   if (isLoading) {
     return (
-      <Card className="border-border bg-card shadow-sm w-full">
+      <Card className="border-border bg-card shadow-xs w-full">
         <CardContent className="h-[340px] flex items-center justify-center">
           <div className="flex items-center gap-2 text-muted-foreground text-sm">
             <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
@@ -91,7 +91,7 @@ export function GraficoDesmatamento() {
 
   if (error) {
     return (
-      <Card className="border-border bg-card shadow-sm w-full">
+      <Card className="border-border bg-card shadow-xs w-full">
         <CardContent className="h-[340px] flex items-center justify-center">
           <p className="text-sm text-destructive">{error}</p>
         </CardContent>
@@ -100,7 +100,7 @@ export function GraficoDesmatamento() {
   }
 
   return (
-    <Card className="border-border bg-card shadow-sm w-full">
+    <Card className="border-border bg-card shadow-xs w-full">
       <CardHeader className="pb-2 px-6 pt-6">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
 

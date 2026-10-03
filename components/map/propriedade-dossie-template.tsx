@@ -245,7 +245,7 @@ export function PropriedadeDossieTemplate({ data, isPrintMode = false }: Proprie
                                     <AlertTriangle className="w-3 h-3" /> Alertas de Desmatamento
                                 </h3>
                                 {data.desmatamentos.map((item: any, idx: number) => (
-                                    <div key={idx} className="break-inside-avoid border-l-4 border-yellow-400 bg-white rounded shadow-sm p-3 text-xs">
+                                    <div key={idx} className="break-inside-avoid border-l-4 border-yellow-400 bg-white rounded shadow-xs p-3 text-xs">
                                          <div className="flex justify-between font-bold text-slate-700 mb-2">
                                             <span>ALERTA DE DESMATAMENTO</span>
                                             <span className="font-mono">{new Date(item.date).toLocaleDateString()}</span>
@@ -266,7 +266,7 @@ export function PropriedadeDossieTemplate({ data, isPrintMode = false }: Proprie
                                     <Flame className="w-3 h-3" /> Focos de Calor
                                 </h3>
                                 {data.focos.map((item: any, idx: number) => (
-                                    <div key={idx} className="break-inside-avoid border-l-4 border-red-500 bg-white rounded shadow-sm p-3 text-xs">
+                                    <div key={idx} className="break-inside-avoid border-l-4 border-red-500 bg-white rounded shadow-xs p-3 text-xs">
                                          <div className="flex justify-between font-bold text-slate-700 mb-2">
                                             <span>FOCO DE CALOR (Satélite)</span>
                                             <span className="font-mono">{new Date(item.date).toLocaleDateString()}</span>

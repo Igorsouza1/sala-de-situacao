@@ -53,14 +53,14 @@ export default function DossieMap({ lat, lng, propriedadeGeoJson, banhadoGeoJson
       </MapContainer>
       
       {/* Overlay de Coordenadas */}
-      <div className="absolute bottom-2 left-2 right-2 bg-white/90 backdrop-blur-sm border border-slate-200 px-3 py-2 text-xs font-mono text-slate-700 z-[1000] flex justify-between rounded shadow-sm">
+      <div className="absolute bottom-2 left-2 right-2 bg-white/90 backdrop-blur-xs border border-slate-200 px-3 py-2 text-xs font-mono text-slate-700 z-[1000] flex justify-between rounded shadow-xs">
          <span><strong>LAT:</strong> {lat.toFixed(6)}</span>
          <span><strong>LNG:</strong> {lng.toFixed(6)}</span>
          <span className="hidden sm:inline text-slate-400">DATUM: SIRGAS 2000</span>
       </div>
 
       {/* Legenda */}
-      <div className="absolute top-2 right-2 bg-white/90 p-2 rounded text-[10px] space-y-1 z-[1000] shadow-sm border border-slate-200">
+      <div className="absolute top-2 right-2 bg-white/90 p-2 rounded text-[10px] space-y-1 z-[1000] shadow-xs border border-slate-200">
          <div className="flex items-center gap-2">
              <span className="w-3 h-3 bg-amber-500/20 border border-amber-500 border-dashed block rounded-sm"></span>
              <span className="font-semibold text-slate-700">Propriedade</span>

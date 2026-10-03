@@ -153,7 +153,7 @@ export function Step2TrailData({ geojson, metadata, nomeImportacao, onNext, onBa
 
       {/* Info Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 shadow-sm">
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 shadow-xs">
           <div className="flex items-center gap-2 mb-2">
             <MapPin className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase">
@@ -165,7 +165,7 @@ export function Step2TrailData({ geojson, metadata, nomeImportacao, onNext, onBa
           </p>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 shadow-sm">
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 shadow-xs">
           <div className="flex items-center gap-2 mb-2">
             <Ruler className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
             <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase">
@@ -177,7 +177,7 @@ export function Step2TrailData({ geojson, metadata, nomeImportacao, onNext, onBa
           </p>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 shadow-sm">
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 shadow-xs">
           <div className="flex items-center gap-2 mb-2">
             <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
             <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase">
@@ -189,7 +189,7 @@ export function Step2TrailData({ geojson, metadata, nomeImportacao, onNext, onBa
           </p>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 shadow-sm">
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 shadow-xs">
           <div className="flex items-center gap-2 mb-2">
             <MapPin className="w-4 h-4 text-purple-600 dark:text-purple-400" />
             <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase">
@@ -218,7 +218,7 @@ export function Step2TrailData({ geojson, metadata, nomeImportacao, onNext, onBa
       </div>
 
       {/* Form Fields */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 shadow-sm space-y-5">
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 shadow-xs space-y-5">
         <h4 className="font-semibold text-neutral-900 dark:text-neutral-50">
           Informações da Trilha
         </h4>

@@ -351,7 +351,7 @@ export function DossieTemplate({
                         02. Localização Geográfica
                      </h2>
                      
-                     <div className="border border-slate-300 bg-slate-100 p-1 rounded-sm shadow-sm print:shadow-none">
+                     <div className="border border-slate-300 bg-slate-100 p-1 rounded-sm shadow-xs print:shadow-none">
                         <DossieMap 
                            lat={lat} 
                            lng={lng} 

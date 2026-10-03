@@ -34,12 +34,12 @@ export function FilterPopover({ icon: Icon, title, count, isActive, panelClassNa
           <Icon className="h-5 w-5" />
         </Button>
         {count != null && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-brand-primary text-white text-[10px] font-bold leading-none shadow">
+          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-brand-primary text-white text-[10px] font-bold leading-none shadow-sm">
             {count}
           </span>
         )}
         {isActive && count == null && (
-          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-brand-primary shadow" />
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-brand-primary shadow-sm" />
         )}
       </div>
 

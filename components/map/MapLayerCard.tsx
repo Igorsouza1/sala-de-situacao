@@ -49,7 +49,7 @@ export function MapLayersCard({ title, options, onLayerToggle }: MapLayersCardPr
       <CardHeader className="p-3 border-b border-white/10">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="h-8 w-8 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center flex-shrink-0">
+            <div className="h-8 w-8 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center shrink-0">
               <Layers className="w-4 h-4 text-brand-primary" />
             </div>
 
@@ -116,12 +116,12 @@ export function MapLayersCard({ title, options, onLayerToggle }: MapLayersCardPr
                           id={option.id}
                           checked={isChecked}
                           onCheckedChange={(checked) => handleCheckboxChange(option.id, checked as boolean)}
-                          className="w-4 h-4 border-slate-600 data-[state=checked]:bg-brand-primary data-[state=checked]:border-brand-primary data-[state=checked]:text-white flex-shrink-0"
+                          className="w-4 h-4 border-slate-600 data-[state=checked]:bg-brand-primary data-[state=checked]:border-brand-primary data-[state=checked]:text-white shrink-0"
                         />
 
                         {/* dot da cor da camada */}
                         <span
-                          className="h-3 w-3 rounded-full flex-shrink-0 ring-1 ring-white/10"
+                          className="h-3 w-3 rounded-full shrink-0 ring-1 ring-white/10"
                           style={{ backgroundColor: option.color }}
                         />
 
@@ -133,7 +133,7 @@ export function MapLayersCard({ title, options, onLayerToggle }: MapLayersCardPr
                         </Label>
                       </div>
 
-                      <div className="flex items-center gap-2 ml-2 flex-shrink-0">
+                      <div className="flex items-center gap-2 ml-2 shrink-0">
                         <Badge className="bg-brand-dark-blue text-brand-primary border border-brand-primary/20 text-xs h-5 px-1.5">
                           {option.count}
                         </Badge>

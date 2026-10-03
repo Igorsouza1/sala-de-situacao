@@ -81,7 +81,7 @@ export function WaypointBulkActions({ totalWaypoints, onApply }: WaypointBulkAct
   };
 
   return (
-    <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 space-y-4">
+    <div className="bg-linear-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Zap className="w-5 h-5 text-amber-600 dark:text-amber-400" />

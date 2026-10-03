@@ -124,7 +124,7 @@ function TooltipMensal({ active, payload }: any) {
   const qc = secchi === null ? "hsl(var(--muted-foreground))"
     : secchi < 0.5 ? "#ef4444" : secchi < 1.5 ? "#f97316" : secchi < 3 ? "#22c55e" : "#06b6d4"
   return (
-    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-xl px-4 py-3 min-w-[180px] space-y-2">
+    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-xs shadow-xl px-4 py-3 min-w-[180px] space-y-2">
       <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
       <div className="flex items-baseline gap-1.5">
         <Droplets className="w-3 h-3 text-blue-400 flex-none" />
@@ -156,7 +156,7 @@ function TooltipDiario({ active, payload }: any) {
   const qc = secchi === null ? "hsl(var(--muted-foreground))"
     : secchi < 0.5 ? "#ef4444" : secchi < 1.5 ? "#f97316" : secchi < 3 ? "#22c55e" : "#06b6d4"
   return (
-    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-xl px-4 py-3 min-w-[190px] space-y-2">
+    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-xs shadow-xl px-4 py-3 min-w-[190px] space-y-2">
       <p className="text-[11px] font-medium text-muted-foreground">{label}</p>
       <div className="flex items-baseline gap-1.5">
         <Droplets className="w-3 h-3 text-blue-400 flex-none" />
@@ -203,7 +203,7 @@ function TooltipScatter({ active, payload }: any) {
     ? format(parseISO(d.dateStr), "dd/MM/yy")
     : ""
   return (
-    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-xl px-3 py-2 min-w-[150px]">
+    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-xs shadow-xl px-3 py-2 min-w-[150px]">
       <p className="text-[11px] font-semibold text-muted-foreground mb-1">{dateLabel}</p>
       <p className="text-xs"><span className="text-blue-400 font-semibold">{d.x.toFixed(1)} mm</span> de chuva</p>
       <p className="text-xs"><span className="text-cyan-400 font-semibold">{d.y.toFixed(2)} m</span> Secchi</p>
@@ -229,7 +229,7 @@ function ViewToggle({ value, onChange }: { value: ViewMode; onChange: (v: ViewMo
           onClick={() => onChange(v)}
           className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
             value === v
-              ? "bg-primary text-primary-foreground shadow-sm"
+              ? "bg-primary text-primary-foreground shadow-xs"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           }`}
         >
@@ -608,7 +608,7 @@ export function GraficoSaudeRio() {
   }
 
   return (
-    <Card className="border-border bg-card shadow-sm w-full">
+    <Card className="border-border bg-card shadow-xs w-full">
       <CardHeader className="pb-3 px-6 pt-6">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
 

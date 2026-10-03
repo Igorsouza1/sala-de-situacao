@@ -269,7 +269,7 @@ export function CardsPreview({ items, onUpdateItem }: CardsPreviewProps) {
                 <button
                   type="button"
                   onClick={() => setPreview(null)}
-                  className="absolute top-2 right-2 bg-white text-black rounded-full p-2 shadow"
+                  className="absolute top-2 right-2 bg-white text-black rounded-full p-2 shadow-sm"
                   aria-label="Fechar"
                   title="Fechar"
                 >

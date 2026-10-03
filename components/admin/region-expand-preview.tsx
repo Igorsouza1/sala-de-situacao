@@ -168,7 +168,7 @@ export function RegionExpandPreview({ regionId, initialGeoJson }: RegionExpandPr
               variant="destructive"
               onClick={handleCancelPreview}
               disabled={isSaving}
-              className="h-12 rounded-xl font-medium gap-2 px-6 shadow-sm"
+              className="h-12 rounded-xl font-medium gap-2 px-6 shadow-xs"
             >
               <Trash2 className="w-4 h-4" /> Cancelar Preview
             </Button>
@@ -183,10 +183,10 @@ export function RegionExpandPreview({ regionId, initialGeoJson }: RegionExpandPr
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className={`col-span-1 ${isPreviewing ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
-          <div className="h-[500px] w-full rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-sm relative z-0">
+          <div className="h-[500px] w-full rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-xs relative z-0">
 
             {isLoading && (
-              <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-sm">
+              <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-xs">
                 <div className="flex flex-col items-center gap-3">
                   <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
                   <span className="font-medium text-neutral-800 dark:text-neutral-200">Calculando união geográfica...</span>
@@ -226,7 +226,7 @@ export function RegionExpandPreview({ regionId, initialGeoJson }: RegionExpandPr
         </div>
 
         {isPreviewing && (
-          <div className="col-span-1 space-y-6 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+          <div className="col-span-1 space-y-6 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
             <div>
               <h3 className="font-semibold text-lg border-b pb-4 dark:border-neutral-800 flex items-center gap-2">
                 <Maximize className="w-5 h-5 text-blue-500" /> Confirmar Expansão

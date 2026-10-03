@@ -269,7 +269,7 @@ function DashboardHeader() {
     <header className="flex-none border-b border-border/60 bg-background/90 backdrop-blur-md">
       <div className="flex items-center justify-between px-5 h-14">
         <div className="flex items-center gap-3">
-          <div className="w-7 h-7 bg-emerald-600 rounded-lg flex items-center justify-center flex-none shadow-sm">
+          <div className="w-7 h-7 bg-emerald-600 rounded-lg flex items-center justify-center flex-none shadow-xs">
             <Leaf className="w-3.5 h-3.5 text-white" strokeWidth={2} />
           </div>
           <div className="flex items-center gap-2">
@@ -727,7 +727,7 @@ function UltimosRegistrosFormoso() {
           </div>
         ) : (
           <table className="w-full text-xs border-collapse">
-            <thead className="sticky top-0 bg-card/95 backdrop-blur-sm z-10">
+            <thead className="sticky top-0 bg-card/95 backdrop-blur-xs z-10">
               <tr className="border-b border-border/40">
                 <th className="px-4 py-2 text-left text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Data</th>
                 <th className="px-4 py-2 text-right text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Nível</th>
@@ -1233,7 +1233,7 @@ function DashboardContent() {
         className="flex-1 flex flex-col min-h-0 relative z-10"
       >
         {/* ── Tab bar ─────────────────────────────────────────── */}
-        <div className="flex items-center justify-between px-4 border-b border-border/60 bg-background/70 backdrop-blur-sm flex-none">
+        <div className="flex items-center justify-between px-4 border-b border-border/60 bg-background/70 backdrop-blur-xs flex-none">
           <TabsList className="h-11 bg-transparent border-none rounded-none gap-0 p-0">
             {TAB_CONFIG.map(({ value, label, icon: Icon }) => (
               <TabsTrigger

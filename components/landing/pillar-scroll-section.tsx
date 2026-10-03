@@ -59,8 +59,8 @@ function MapVisual({ active }: { active: number }) {
           <div className="absolute inset-0 bg-red-500/8 rounded-md" />
         </div>
         <div className="absolute top-[38%] right-[34%] w-5 h-5 bg-orange-500 rounded-full blur-md animate-pulse" />
-        <div className="absolute top-[50%] left-[36%] w-3 h-3 bg-red-500 rounded-full blur-sm animate-pulse [animation-delay:400ms]" />
-        <div className="absolute top-[34%] left-[45%] w-2 h-2 bg-amber-400 rounded-full blur-sm animate-pulse [animation-delay:800ms]" />
+        <div className="absolute top-[50%] left-[36%] w-3 h-3 bg-red-500 rounded-full blur-xs animate-pulse [animation-delay:400ms]" />
+        <div className="absolute top-[34%] left-[45%] w-2 h-2 bg-amber-400 rounded-full blur-xs animate-pulse [animation-delay:800ms]" />
       </div>
 
       {/* Pillar 02 – Water: thermal plume */}
@@ -68,10 +68,10 @@ function MapVisual({ active }: { active: number }) {
         className="absolute inset-0 transition-opacity duration-700 ease-in-out"
         style={{ opacity: active === 1 ? 1 : 0 }}
       >
-        <div className="absolute bottom-[28%] left-[22%] w-[60%] h-[30%] bg-gradient-to-r from-cyan-500/25 via-blue-500/15 to-transparent rounded-full blur-2xl" />
+        <div className="absolute bottom-[28%] left-[22%] w-[60%] h-[30%] bg-linear-to-r from-cyan-500/25 via-blue-500/15 to-transparent rounded-full blur-2xl" />
         <div className="absolute bottom-[35%] left-[30%] w-[35%] h-[20%] bg-teal-400/15 rounded-full blur-xl" />
         <div className="absolute bottom-[32%] left-[22%] right-[30%] h-px bg-cyan-400/40" />
-        <div className="absolute bottom-[28%] left-[22%] w-2 h-2 bg-cyan-400 rounded-full blur-sm" />
+        <div className="absolute bottom-[28%] left-[22%] w-2 h-2 bg-cyan-400 rounded-full blur-xs" />
       </div>
 
       {/* Pillar 03 – Timeline: scrubber UI */}
@@ -145,7 +145,7 @@ export default function PillarScrollSection() {
                   className="py-14 border-b border-black/[0.06] last:border-0"
                 >
                   <div className="flex items-start gap-6">
-                    <span className="text-[10px] font-mono text-[#1d1d1f]/20 mt-2 flex-shrink-0 tracking-widest">
+                    <span className="text-[10px] font-mono text-[#1d1d1f]/20 mt-2 shrink-0 tracking-widest">
                       {pillar.number}
                     </span>
                     <div>

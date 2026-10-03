@@ -291,7 +291,7 @@ export function EditAcaoModal({ isOpen, onClose, acao, onSave }: EditAcaoModalPr
               <button
                 type="button"
                 onClick={() => setPreview(null)}
-                className="absolute top-4 right-4 bg-white text-black rounded-full p-2 shadow"
+                className="absolute top-4 right-4 bg-white text-black rounded-full p-2 shadow-sm"
                 aria-label="Fechar"
                 title="Fechar"
               >

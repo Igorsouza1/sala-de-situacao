@@ -1219,7 +1219,7 @@ export default function MapLibreMap({
           <Button
             variant="outline"
             size="sm"
-            className="h-8 px-3 text-xs bg-white/90 backdrop-blur-sm shadow-md border-gray-200 text-slate-700 gap-1"
+            className="h-8 px-3 text-xs bg-white/90 backdrop-blur-xs shadow-md border-gray-200 text-slate-700 gap-1"
             onClick={() => setBasemapOpen((v) => !v)}
           >
             <LucideIcons.Layers className="h-3 w-3" />
@@ -1344,7 +1344,7 @@ export default function MapLibreMap({
 
       {/* Loading overlay */}
       {loadingLayers && (
-        <div className="absolute inset-0 z-[2000] bg-black/40 backdrop-blur-sm flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 z-[2000] bg-black/40 backdrop-blur-xs flex items-center justify-center pointer-events-none">
           <div className="bg-brand-dark border border-white/10 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary" />
             <span className="text-slate-200 text-sm font-medium">

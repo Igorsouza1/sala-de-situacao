@@ -225,7 +225,7 @@ export function ShapefileUploader({ onPreview, onClearPreview, onSaveSuccess }: 
         </Button>
        ) : (
         <div style={{ transform: `translate(${position.x}px, ${position.y}px)`, position: 'absolute', right: 0, top: 0 }}>
-        <Card className="w-80 shadow-2xl bg-white/95 backdrop-blur-sm border-slate-200" style={{ touchAction: 'none' }}>
+        <Card className="w-80 shadow-2xl bg-white/95 backdrop-blur-xs border-slate-200" style={{ touchAction: 'none' }}>
             <CardHeader 
                 className={`pb-3 border-b border-slate-100 relative ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
                 onPointerDown={handlePointerDown}

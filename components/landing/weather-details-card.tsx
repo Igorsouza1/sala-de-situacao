@@ -12,7 +12,7 @@ interface WeatherStatProps {
 function WeatherStatItem({ label, value, icon: Icon }: WeatherStatProps) {
   return (
     <div className="flex items-center gap-3.5">
-      <div className="w-10 h-10 rounded-[12px] bg-black/[0.03] border border-black/[0.01] flex items-center justify-center text-[#1d1d1f]/75 flex-shrink-0">
+      <div className="w-10 h-10 rounded-[12px] bg-black/[0.03] border border-black/[0.01] flex items-center justify-center text-[#1d1d1f]/75 shrink-0">
         <Icon className="w-5 h-5 stroke-[1.75]" />
       </div>
       <div className="flex flex-col min-w-0">

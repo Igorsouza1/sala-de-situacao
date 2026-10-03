@@ -32,7 +32,7 @@ export function RegionSimpleEdit({
   };
 
   return (
-    <Card className="rounded-[24px] overflow-hidden shadow-sm border-neutral-200 dark:border-white/10 dark:bg-neutral-900/40 backdrop-blur-xl">
+    <Card className="rounded-[24px] overflow-hidden shadow-xs border-neutral-200 dark:border-white/10 dark:bg-neutral-900/40 backdrop-blur-xl">
       <CardContent className="p-8 space-y-8">
         <div className="space-y-3">
           <Label className="text-sm font-semibold text-neutral-700 dark:text-neutral-300 flex items-center gap-2">
@@ -80,7 +80,7 @@ export function RegionSimpleEdit({
         </div>
         
         <Link href={`/admin/regions/${region.id}/expand`} className="w-full md:w-auto">
-          <Button variant="secondary" className="w-full h-12 px-6 rounded-xl font-medium gap-2 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 shadow-sm transition-all text-neutral-700 dark:text-neutral-300">
+          <Button variant="secondary" className="w-full h-12 px-6 rounded-xl font-medium gap-2 border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-neutral-100 dark:hover:bg-neutral-700 shadow-xs transition-all text-neutral-700 dark:text-neutral-300">
             <Map className="h-4 w-4 text-emerald-600 dark:text-emerald-400" /> Expandir Fronteira
           </Button>
         </Link>

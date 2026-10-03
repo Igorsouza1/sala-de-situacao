@@ -206,7 +206,7 @@ export function Step1GeneralInfo({ regionId, regioes, onNext, onCancel }: Step1P
       )}
 
       {/* Upload Section */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 shadow-sm space-y-4">
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 shadow-xs space-y-4">
         <div className="flex items-center gap-2 mb-4">
           <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
           <h4 className="font-semibold text-neutral-900 dark:text-neutral-50">
@@ -247,7 +247,7 @@ export function Step1GeneralInfo({ regionId, regioes, onNext, onCancel }: Step1P
 
       {/* Metadata Display */}
       {metadata && (
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 shadow-sm space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 shadow-xs space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
           <h4 className="font-semibold text-neutral-900 dark:text-neutral-50 flex items-center gap-2">
             <MapPin className="w-4 h-4 text-blue-600 dark:text-blue-400" />
             Metadados Extraídos
@@ -327,7 +327,7 @@ export function Step1GeneralInfo({ regionId, regioes, onNext, onCancel }: Step1P
       )}
 
       {/* Form Fields */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 shadow-sm space-y-5">
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 shadow-xs space-y-5">
         <h4 className="font-semibold text-neutral-900 dark:text-neutral-50">
           Informações da Importação
         </h4>

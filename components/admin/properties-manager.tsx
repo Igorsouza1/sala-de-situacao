@@ -127,7 +127,7 @@ export function PropertiesManager({
   };
 
   return (
-    <div className="w-full h-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm overflow-hidden flex flex-col relative animate-in zoom-in-95 duration-300">
+    <div className="w-full h-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xs overflow-hidden flex flex-col relative animate-in zoom-in-95 duration-300">
       <div className="px-5 py-4 border-b border-neutral-100 dark:border-neutral-800 flex justify-between items-center bg-white dark:bg-neutral-900 shrink-0 z-10 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
         <div>
           <h3 className="text-base font-semibold text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
@@ -219,7 +219,7 @@ export function PropertiesManager({
                    <div 
                      key={prop.id} 
                      onClick={() => onPropertySelect && onPropertySelect(selectedPropertyId === prop.id ? null : prop.id)}
-                     className={`text-xs p-3 rounded-lg border flex justify-between items-center shadow-sm cursor-pointer transition-colors ${
+                     className={`text-xs p-3 rounded-lg border flex justify-between items-center shadow-xs cursor-pointer transition-colors ${
                        selectedPropertyId === prop.id 
                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-700' 
                          : 'border-neutral-100 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-blue-300 dark:hover:border-blue-700'

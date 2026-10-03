@@ -54,7 +54,7 @@ function CustomTooltip({ active, payload }: any) {
     : ""
   const capitalized = date.charAt(0).toUpperCase() + date.slice(1)
   return (
-    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-xl px-4 py-3 min-w-[180px]">
+    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-xs shadow-xl px-4 py-3 min-w-[180px]">
       <p className="text-[11px] font-medium text-muted-foreground mb-2">{capitalized}</p>
       {value !== null ? (
         <>
@@ -179,7 +179,7 @@ export function GraficoTurbidezDeque() {
   const lastQ = qualityFor(stats?.last?.turbidez ?? null)
 
   return (
-    <Card className="border-border bg-card shadow-sm w-full">
+    <Card className="border-border bg-card shadow-xs w-full">
       <CardHeader className="pb-2 px-6 pt-6">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="flex items-start gap-3">

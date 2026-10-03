@@ -165,7 +165,7 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
         <DialogTitle className="sr-only">Perfil</DialogTitle>
 
         {/* HEADER */}
-        <div className="relative bg-gradient-to-br from-slate-700 via-slate-600 to-slate-700 h-32 rounded-t-lg">
+        <div className="relative bg-linear-to-br from-slate-700 via-slate-600 to-slate-700 h-32 rounded-t-lg">
           <Button
             size="icon"
             variant="ghost"

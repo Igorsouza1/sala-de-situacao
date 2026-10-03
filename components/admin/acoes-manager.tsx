@@ -111,9 +111,9 @@ export function AcoesManager({ regionId, acoes: initialAcoes }: AcoesManagerProp
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex gap-4 items-center flex-1">
-          <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-blue-100 dark:border-blue-900/50">
+          <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center shrink-0 shadow-xs border border-blue-100 dark:border-blue-900/50">
             <MapPin className="w-6 h-6" />
           </div>
           <div>
@@ -130,7 +130,7 @@ export function AcoesManager({ regionId, acoes: initialAcoes }: AcoesManagerProp
 
       {/* Tabela */}
       {acoes.length === 0 ? (
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-12 shadow-sm text-center">
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-12 shadow-xs text-center">
           <MapPin className="w-12 h-12 text-neutral-300 dark:text-neutral-600 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50 mb-2">
             Nenhuma ação registrada
@@ -140,7 +140,7 @@ export function AcoesManager({ regionId, acoes: initialAcoes }: AcoesManagerProp
           </p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>

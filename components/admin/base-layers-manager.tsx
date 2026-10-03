@@ -119,7 +119,7 @@ export function BaseLayersManager({
 
   if (!layers || layers.length === 0) {
     return (
-      <div className="w-full h-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 flex flex-col items-center justify-center text-center shadow-sm">
+      <div className="w-full h-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-8 flex flex-col items-center justify-center text-center shadow-xs">
         <Layers className="w-12 h-12 text-neutral-300 dark:text-neutral-700 mb-4" />
         <h3 className="font-semibold text-neutral-700 dark:text-neutral-300">Nenhuma camada Base</h3>
         <p className="text-neutral-500 text-sm mt-1 max-w-[200px]">Faça upload de um arquivo para começar a configurar sobreposições.</p>
@@ -128,7 +128,7 @@ export function BaseLayersManager({
   }
 
   return (
-    <div className="w-full h-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-sm overflow-hidden flex flex-col relative animate-in zoom-in-95 duration-300">
+    <div className="w-full h-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xs overflow-hidden flex flex-col relative animate-in zoom-in-95 duration-300">
       {/* Header stuck to top */}
       <div className="px-5 py-4 border-b border-neutral-100 dark:border-neutral-800 flex justify-between items-center bg-white dark:bg-neutral-900 shrink-0 z-10 shadow-[0_1px_3px_rgba(0,0,0,0.02)]">
         <div>
@@ -162,7 +162,7 @@ export function BaseLayersManager({
                       <Input
                         value={editName}
                         onChange={e => setEditName(e.target.value)}
-                        className="h-10 font-bold bg-neutral-50 dark:bg-neutral-950/50 border-neutral-200 focus-visible:ring-emerald-500 shadow-sm"
+                        className="h-10 font-bold bg-neutral-50 dark:bg-neutral-950/50 border-neutral-200 focus-visible:ring-emerald-500 shadow-xs"
                         placeholder="Nome desta camada"
                         autoFocus
                       />
@@ -192,7 +192,7 @@ export function BaseLayersManager({
                               value={editWeight}
                               onChange={e => setEditWeight(Number(e.target.value))}
                               min={1} max={10}
-                              className="h-10 pr-7 text-sm font-medium border-neutral-200 shadow-sm focus-visible:ring-emerald-500"
+                              className="h-10 pr-7 text-sm font-medium border-neutral-200 shadow-xs focus-visible:ring-emerald-500"
                             />
                             <span className="absolute right-3 top-3 text-xs text-neutral-400 pointer-events-none font-semibold">px</span>
                           </div>
@@ -206,7 +206,7 @@ export function BaseLayersManager({
                               value={Math.round(editOpacity * 100)}
                               onChange={e => setEditOpacity(Number(e.target.value) / 100)}
                               min={0} max={100} step={5}
-                              className="h-10 pr-7 text-sm font-medium border-neutral-200 shadow-sm focus-visible:ring-emerald-500"
+                              className="h-10 pr-7 text-sm font-medium border-neutral-200 shadow-xs focus-visible:ring-emerald-500"
                             />
                             <span className="absolute right-3 top-3 text-xs text-neutral-400 pointer-events-none font-semibold">%</span>
                           </div>
@@ -225,9 +225,9 @@ export function BaseLayersManager({
               ) : (
                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 gap-4">
                   <div className="flex items-center gap-4 overflow-hidden flex-1 min-w-0">
-                    <div className="relative flex-shrink-0 flex items-center justify-center w-10 h-10">
+                    <div className="relative shrink-0 flex items-center justify-center w-10 h-10">
                        <div
-                         className="absolute inset-0 rounded-full border-[3px] shadow-sm pointer-events-none transition-colors"
+                         className="absolute inset-0 rounded-full border-[3px] shadow-xs pointer-events-none transition-colors"
                          style={{ borderColor: color, backgroundColor: `${color}20` }}
                        />
                        <div className="w-4 h-4 rounded-full shadow-inner ring-1 ring-black/10" style={{ backgroundColor: color }} />
@@ -238,7 +238,7 @@ export function BaseLayersManager({
                          {layer.name}
                        </span>
                        <div className="flex items-center gap-1.5 mt-1 opacity-80">
-                         <span className="w-2.5 h-2.5 rounded-full inline-block ring-1 ring-black/10 shadow-sm" style={{ backgroundColor: color }}></span>
+                         <span className="w-2.5 h-2.5 rounded-full inline-block ring-1 ring-black/10 shadow-xs" style={{ backgroundColor: color }}></span>
                          <span className="text-[11px] text-neutral-500 font-mono font-medium tracking-tight">
                             {color.toUpperCase()} <span className="text-neutral-300 dark:text-neutral-700 px-0.5">•</span> W:{layer.visualConfig?.baseStyle?.weight || 2} <span className="text-neutral-300 dark:text-neutral-700 px-0.5">•</span> Op:{Math.round((layer.visualConfig?.baseStyle?.fillOpacity || 0.2) * 100)}%
                          </span>
@@ -246,13 +246,13 @@ export function BaseLayersManager({
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1.5 shrink-0 bg-neutral-50 dark:bg-neutral-800/40 p-1.5 rounded-xl border border-neutral-100 dark:border-neutral-800 shadow-sm w-full sm:w-auto justify-end sm:justify-start">
+                  <div className="flex items-center gap-1.5 shrink-0 bg-neutral-50 dark:bg-neutral-800/40 p-1.5 rounded-xl border border-neutral-100 dark:border-neutral-800 shadow-xs w-full sm:w-auto justify-end sm:justify-start">
                     
                     <Button 
                       size="icon" 
                       variant="ghost" 
                       onClick={() => handleToggleVisibility(layer, !isVisible)} 
-                      className={`h-8 w-8 rounded-lg shadow-sm transition-all ${isVisible ? 'bg-white dark:bg-neutral-900 border border-emerald-100 dark:border-emerald-900/40 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/30' : 'text-neutral-400 hover:text-neutral-600 hover:bg-neutral-200 dark:hover:bg-neutral-700 bg-transparent border border-transparent'}`} 
+                      className={`h-8 w-8 rounded-lg shadow-xs transition-all ${isVisible ? 'bg-white dark:bg-neutral-900 border border-emerald-100 dark:border-emerald-900/40 text-emerald-600 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/30' : 'text-neutral-400 hover:text-neutral-600 hover:bg-neutral-200 dark:hover:bg-neutral-700 bg-transparent border border-transparent'}`} 
                       title={isVisible ? "Ocultar camada e seus limites" : "Tornar de novo visível"}
                     >
                       {isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4 opacity-50" />}

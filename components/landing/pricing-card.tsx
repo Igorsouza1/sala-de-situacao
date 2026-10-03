@@ -13,7 +13,7 @@ interface PricingCardProps {
 export function PricingCard({ title, price, description, features, buttonText, popular = false }: PricingCardProps) {
   return (
     <div
-      className={`flex flex-col p-6 bg-white rounded-lg shadow-sm border ${
+      className={`flex flex-col p-6 bg-white rounded-lg shadow-xs border ${
         popular ? "border-[#478D4F] ring-2 ring-[#478D4F] ring-opacity-50" : "border-[#D2E5B0]"
       } hover:shadow-md transition-shadow`}
     >

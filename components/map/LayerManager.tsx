@@ -77,12 +77,12 @@ function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { 
             id={option.id}
             checked={isChecked}
             onCheckedChange={onToggle}
-            className="w-3.5 h-3.5 border-slate-600 data-[state=checked]:bg-brand-primary data-[state=checked]:border-brand-primary data-[state=checked]:text-white flex-shrink-0"
+            className="w-3.5 h-3.5 border-slate-600 data-[state=checked]:bg-brand-primary data-[state=checked]:border-brand-primary data-[state=checked]:text-white shrink-0"
             />
 
             {legendType === 'point' && (
                 <div 
-                    className="h-5 w-5 rounded flex items-center justify-center flex-shrink-0 bg-white/5 border border-white/10"
+                    className="h-5 w-5 rounded flex items-center justify-center shrink-0 bg-white/5 border border-white/10"
                     style={{ borderColor: isChecked ? option.color : 'rgba(255,255,255,0.1)' }}
                 >
                     <IconComponent 
@@ -93,7 +93,7 @@ function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { 
             )}
 
             {legendType === 'line' && (
-                <div className="h-5 w-5 flex items-center justify-center flex-shrink-0">
+                <div className="h-5 w-5 flex items-center justify-center shrink-0">
                     <svg width="20" height="20" viewBox="0 0 20 20" className="opacity-80">
                         <path 
                             d="M2 15 C 8 15, 12 5, 18 5" 
@@ -107,9 +107,9 @@ function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { 
             )}
 
             {legendType === 'circle' && (
-                <div className="h-5 w-5 flex items-center justify-center flex-shrink-0">
+                <div className="h-5 w-5 flex items-center justify-center shrink-0">
                     <span
-                        className="h-3 w-3 rounded-full shadow-sm ring-2 ring-inset"
+                        className="h-3 w-3 rounded-full shadow-xs ring-2 ring-inset"
                         style={{ 
                             borderColor: option.color,
                             backgroundColor: option.color
@@ -119,9 +119,9 @@ function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { 
             )}
 
             {legendType === 'polygon' && (
-                <div className="h-5 w-5 flex items-center justify-center flex-shrink-0">
+                <div className="h-5 w-5 flex items-center justify-center shrink-0">
                     <span
-                        className="h-3 w-3 rounded-[2px] shadow-sm ring-1 ring-white/20"
+                        className="h-3 w-3 rounded-[2px] shadow-xs ring-1 ring-white/20"
                         style={{ 
                             backgroundColor: option.fillColor || option.color, // Fill
                             borderColor: option.color
@@ -131,9 +131,9 @@ function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { 
             )}
 
             {legendType === 'heatmap' && (
-                <div className="h-5 w-5 flex items-center justify-center flex-shrink-0">
+                <div className="h-5 w-5 flex items-center justify-center shrink-0">
                      <div 
-                        className="h-3 w-3 rounded-sm shadow-sm"
+                        className="h-3 w-3 rounded-sm shadow-xs"
                         style={{
                             background: `linear-gradient(135deg, ${option.color || 'red'} 0%, transparent 100%)`, 
                             border: '1px solid rgba(255,255,255,0.2)'
@@ -144,7 +144,7 @@ function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { 
 
             {legendType === 'icon' && (
                 <div 
-                    className="h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 bg-white/5 border border-white/10"
+                    className="h-5 w-5 rounded-full flex items-center justify-center shrink-0 bg-white/5 border border-white/10"
                     style={{ borderColor: isChecked ? option.color : 'rgba(255,255,255,0.1)' }}
                 >
                     <IconComponent 
@@ -227,7 +227,7 @@ export function LayerManager({
       <CardHeader className="p-3 border-b border-white/10">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="h-8 w-8 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center flex-shrink-0">
+            <div className="h-8 w-8 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center shrink-0">
               <Globe className="w-4 h-4 text-brand-primary" />
             </div>
 
@@ -336,7 +336,7 @@ export function LayerManager({
                                                                 checked={isAllSelected}
                                                                 // @ts-ignore
                                                                 onClick={handleGroupCheckbox}
-                                                                className={`w-3.5 h-3.5 border-slate-600 data-[state=checked]:bg-brand-primary data-[state=checked]:border-brand-primary data-[state=checked]:text-white flex-shrink-0 ${!isAllSelected && !isNoneSelected ? 'opacity-50 bg-brand-primary/50' : ''}`}
+                                                                className={`w-3.5 h-3.5 border-slate-600 data-[state=checked]:bg-brand-primary data-[state=checked]:border-brand-primary data-[state=checked]:text-white shrink-0 ${!isAllSelected && !isNoneSelected ? 'opacity-50 bg-brand-primary/50' : ''}`}
                                                             />
 
                                                             {/* Optional: Icon for the group */}

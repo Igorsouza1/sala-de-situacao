@@ -139,7 +139,7 @@ export function MapPrintTemplate({ lat, lng, zoom, layers, activeSlugs }: MapPri
                                <div key={item.id} className="flex items-center gap-2">
                                    {/* Simple Icon Representation */}
                                    <div 
-                                      className="w-3 h-3 rounded-full border border-white shadow-sm"
+                                      className="w-3 h-3 rounded-full border border-white shadow-xs"
                                       style={{ backgroundColor: item.color }}
                                    />
                                    <span className="text-xs font-semibold text-slate-800 truncate print-text-dark">

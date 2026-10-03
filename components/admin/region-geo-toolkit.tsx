@@ -455,7 +455,7 @@ export function RegionGeoToolkit({ regionId, nome, descricao, organizationId, in
     <div className="overflow-hidden rounded-[18px] border border-[#e0e0e0] bg-white">
 
       {/* ── toolbar ── */}
-      <div className="flex flex-wrap items-center gap-2 border-b border-[#e0e0e0] bg-[#f5f5f7]/80 px-4 py-3 backdrop-blur">
+      <div className="flex flex-wrap items-center gap-2 border-b border-[#e0e0e0] bg-[#f5f5f7]/80 px-4 py-3 backdrop-blur-sm">
         <div className="flex items-center gap-1">
           <button className={toolBtn(mode === "view")} onClick={() => { setMode("view"); setDrawPoints([]); }}>
             <MousePointer2 className="h-3.5 w-3.5" /> Navegar
@@ -494,7 +494,7 @@ export function RegionGeoToolkit({ regionId, nome, descricao, organizationId, in
               step={0.5}
               value={bufferKm}
               onChange={(e) => setBufferKm(Math.max(0.1, Number(e.target.value) || 0.1))}
-              className="w-14 rounded-lg border border-[#e0e0e0] bg-white px-2 py-1 text-center text-[13px] outline-none focus:border-[#0071e3]"
+              className="w-14 rounded-lg border border-[#e0e0e0] bg-white px-2 py-1 text-center text-[13px] outline-hidden focus:border-[#0071e3]"
             />
             <span className="text-[#7a7a7a]">km</span>
           </div>
@@ -682,7 +682,7 @@ export function RegionGeoToolkit({ regionId, nome, descricao, organizationId, in
         {/* recenter */}
         {geom && (
           <button
-            className="absolute bottom-4 right-4 rounded-full border border-[#e0e0e0] bg-white/90 px-4 py-2 text-[13px] text-[#1d1d1f] backdrop-blur transition-transform active:scale-95"
+            className="absolute bottom-4 right-4 rounded-full border border-[#e0e0e0] bg-white/90 px-4 py-2 text-[13px] text-[#1d1d1f] backdrop-blur-sm transition-transform active:scale-95"
             onClick={() => fitToGeom(geom)}
           >
             Centralizar

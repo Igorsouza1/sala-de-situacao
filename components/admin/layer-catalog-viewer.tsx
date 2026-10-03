@@ -80,7 +80,7 @@ export function LayerCatalogViewer({ layers }: { layers: LayerCatalog[] }) {
               {/* Header */}
               <div className="flex items-start justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-brand-primary to-blue-600 bg-clip-text text-transparent">
+                  <h1 className="text-2xl font-bold bg-linear-to-r from-brand-primary to-blue-600 bg-clip-text text-transparent">
                     {selectedLayer.name}
                   </h1>
                   <div className="flex items-center gap-2 mt-2">

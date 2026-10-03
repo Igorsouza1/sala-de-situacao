@@ -1,15 +1,112 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&display=swap");
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&display=swap')
+layer(utilities);
 
-body {
-  font-family: "Playfair Display", Arial, Helvetica, sans-serif;
+@source '../*.{js,ts,jsx,tsx,mdx}';
+
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: var(--font-inter), sans-serif;
+  --font-mono: var(--font-jetbrains-mono), monospace;
+
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary-dark: #2b1719;
+  --color-primary-forest: #02483e;
+  --color-primary-green: #057c46;
+  --color-primary-lime: #9bb61b;
+  --color-primary-yellow: #f8be00;
+
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-pantaneiro-green: #02483e;
+  --color-pantaneiro-lime: #9bb61b;
+  --color-pantaneiro-lime-hover: #8ba219;
+
+  --color-brand-dark: #0f172a;
+  --color-brand-dark-blue: #111c35;
+  --color-brand-primary: #3b82f6;
+  --color-brand-whatsapp: #005c4b;
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  --background-image-wave-gradient: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1600 800'%3e%3cg fill-opacity='0.15' fill='%2302483E'%3e%3cpath d='M-200 0h2000v800H-200z'/%3e%3cpath d='M-200 0h2000v800H-200z' fill-opacity='1' fill='%23F9FAFB'/%3e%3cpath d='M140.7 562.3c103.3-22.3 211.3-34.3 322.3-34.3 113.3 0 228.3 12.3 346.3 37.3s241.3 53.3 368.3 82.3c127.3 29.3 258.3 58.3 392.3 88.3v284H-200V562.3z'/%3e%3cpath d='M-200 800V538.3c134-30 265-59 392.3-88.3 127-29 250-57.3 368.3-82.3s228-25 346.3-37.3c111-12 219-24 322.3-34.3L1800 286V0H-200v800z'/%3e%3c/g%3e%3c/svg%3e");
+
+  --default-ring-width: 3px;
+  --default-ring-color: hsl(217 91% 60%);
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility text-balance {
+  text-wrap: balance;
 }
 
 @layer utilities {
-  .text-balance {
-    text-wrap: balance;
+  body {
+    font-family: 'Playfair Display', Arial, Helvetica, sans-serif;
   }
 }
 
@@ -102,11 +199,13 @@ body {
   }
 }
 
-.container {
-  width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 16px;
+@layer utilities {
+  .container {
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 16px;
+  }
 }
 
 @layer base {

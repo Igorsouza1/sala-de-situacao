@@ -56,7 +56,7 @@ function CustomTooltip({ active, payload }: any) {
     : value < 120 ? "Precipitação moderada"
     : "Precipitação intensa"
   return (
-    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-xl px-4 py-3 min-w-[170px]">
+    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-xs shadow-xl px-4 py-3 min-w-[170px]">
       <p className="text-[11px] font-medium text-muted-foreground mb-1">{capitalized}</p>
       <div className="flex items-baseline gap-1.5 mb-1">
         <span className="text-2xl font-bold tracking-tight"
@@ -177,7 +177,7 @@ export function GraficoPluviometriaDeque() {
   }
 
   return (
-    <Card className="border-border bg-card shadow-sm w-full">
+    <Card className="border-border bg-card shadow-xs w-full">
       <CardHeader className="pb-2 px-6 pt-6">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="flex items-start gap-3">

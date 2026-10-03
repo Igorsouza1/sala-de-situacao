@@ -123,7 +123,7 @@ function PresetToggle({ value, onChange }: { value: Preset; onChange: (v: Preset
           onClick={() => onChange(days)}
           className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
             value === days
-              ? "bg-primary text-primary-foreground shadow-sm"
+              ? "bg-primary text-primary-foreground shadow-xs"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           }`}
         >
@@ -391,7 +391,7 @@ export function GraficoProximidadeBalneario() {
   const hasData = data.length > 0
 
   return (
-    <Card className="border-border bg-card shadow-sm w-full">
+    <Card className="border-border bg-card shadow-xs w-full">
       <CardHeader className="pb-3 px-6 pt-6">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
           <div>

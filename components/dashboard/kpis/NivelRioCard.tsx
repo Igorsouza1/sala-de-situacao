@@ -61,7 +61,7 @@ export function NivelRioCard({
       : "Tendência Estável"
 
   return (
-    <div className="h-44 bg-card border border-border shadow-sm rounded-xl p-5 flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden group">
+    <div className="h-44 bg-card border border-border shadow-xs rounded-xl p-5 flex flex-col justify-between hover:shadow-md transition-shadow relative overflow-hidden group">
       {/* Decoração de fundo sutil */}
       <div className="absolute -right-6 -top-6 text-blue-500/5 group-hover:text-blue-500/10 transition-colors pointer-events-none">
         <Icon className="w-32 h-32" />
