@@ -48,11 +48,19 @@ export async function countPropriedades(tenantId?: string | null, minArea?: numb
 }
 
 
-export async function findPropriedadeDossieData(id: number, tenantId?: string | null) {
+export async function findPropriedadeDossieData(id: number, tenantId?: string | null, regionIds?: number[]) {
   const effectiveTenantId = requireExplicitTenant(tenantId);
-  const tenantFilter = effectiveTenantId
-    ? sql`AND tenant_id = ${effectiveTenantId}::uuid`
+  // Properties are base data: access comes from spatial overlap with owned
+  // regions, optionally narrowed to all regions assigned to the print user.
+  const regionFilter = regionIds
+    ? regionIds.length ? sql`AND r.id IN (${sql.join(regionIds.map(regionId => sql`${regionId}`), sql`, `)})` : sql`AND false`
     : sql``;
+  const tenantFilter = sql`AND EXISTS (
+    SELECT 1 FROM monitoramento.regioes r
+    WHERE r.organization_id = ${effectiveTenantId}::uuid
+      ${regionFilter}
+      AND ST_Intersects(r.geom, propriedades.geom)
+  )`;
 
   const query = sql`
     WITH prop AS (
@@ -88,7 +96,7 @@ export async function findPropriedadeDossieData(id: number, tenantId?: string | 
           '[]'::json
         )
         FROM "monitoramento"."acoes" a
-        WHERE ST_Intersects(a.geom, p.geom)
+        WHERE a.tenant_id = ${effectiveTenantId}::uuid AND ST_Intersects(a.geom, p.geom)
       ) as "acoes",
       (SELECT COUNT(*)::int FROM "monitoramento"."raw_firms" f WHERE ST_DWithin(f.geom::geography, p.geom::geography, 187.5)) as "focosCount",
       (SELECT COUNT(*)::int FROM "monitoramento"."desmatamento" d WHERE ST_Intersects(d.geom, p.geom)) as "desmatamentoCount",

@@ -6,7 +6,7 @@ import { desc, eq, isNull, or, sql } from "drizzle-orm";
 import { resolveTableLayer, type ResolverSchemaConfig } from "./layer-resolver";
 
 // --- HELPER: BUSCAR GRUPOS DISTINTOS ---
-async function getLayerGroups(slug: string, column: string, schema: string = 'monitoramento'): Promise<{ id: string, label: string, icon?: string }[]> {
+async function getLayerGroups(slug: string, column: string, tenantId?: string | null): Promise<{ id: string, label: string, icon?: string }[]> {
     try {
         if (slug === 'acoes') {
             // Caso especial para tabela acoes (Type A)
@@ -16,6 +16,7 @@ async function getLayerGroups(slug: string, column: string, schema: string = 'mo
                 SELECT DISTINCT ${sql.identifier(column)} as value
                 FROM "monitoramento"."acoes"
                 WHERE ${sql.identifier(column)} IS NOT NULL
+                ${tenantId ? sql`AND tenant_id = ${tenantId}::uuid` : sql``}
                 ORDER BY 1
             `);
             const rows = result.rows || result;
@@ -43,10 +44,11 @@ async function getLayerGroups(slug: string, column: string, schema: string = 'mo
             // Caso genérico para layer_data (Type B)
             // column is inside properties JSONB
             const result = await db.execute(sql`
-                SELECT DISTINCT properties->>${sql.raw(`'${column}'`)} as value
+                SELECT DISTINCT properties->>${column} as value
                 FROM "monitoramento"."layer_data"
                 WHERE layer_id = (SELECT id FROM "monitoramento"."layer_catalog" WHERE slug = ${slug})
-                AND properties->>${sql.raw(`'${column}'`)} IS NOT NULL
+                ${tenantId ? sql`AND tenant_id = ${tenantId}::uuid` : sql``}
+                AND properties->>${column} IS NOT NULL
                 ORDER BY 1
             `);
             const rows = result.rows || result;
@@ -80,6 +82,10 @@ export async function getLayer(slug: string, tenantId?: string | null, startDate
             return null; // Retorna null e o getAllLayers filtra depois
         }
 
+        if (tenantId && catalogEntry.tenantId != null && catalogEntry.tenantId !== tenantId) return null;
+        // Global generic layers contain shared reference data. Their catalog
+        // ownership has already been checked before data/groups are resolved.
+        const dataTenantId = catalogEntry.scope === 'global' && catalogEntry.tenantId == null ? null : tenantId;
         let data: MapFeatureCollection;
 
         if (metadataOnly) {
@@ -117,7 +123,7 @@ export async function getLayer(slug: string, tenantId?: string | null, startDate
                 limit: isLatest ? 1 : undefined,
                 startDate: shouldFilterDate ? startDate : undefined,
                 endDate: shouldFilterDate ? endDate : undefined,
-                tenantId,
+                tenantId: dataTenantId,
             });
         }
         } // end if (!metadataOnly)
@@ -132,7 +138,7 @@ export async function getLayer(slug: string, tenantId?: string | null, startDate
 
         let groups: { id: string, label: string }[] | undefined;
         if (groupByColumn) {
-            groups = await getLayerGroups(slug, groupByColumn);
+            groups = await getLayerGroups(slug, groupByColumn, slug === 'acoes' ? tenantId : dataTenantId);
         }
 
         // Create the final layer object
