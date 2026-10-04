@@ -393,7 +393,7 @@ Cartão branco com sombra, ícone em círculo tingido, título e frase curta, **
 
 ## 14. Referência viva e escolha final
 
-O laboratório `/dev/design-lab` (branch `proto/design-lab`, descartável, nunca vai para a `main`) é a referência visual enquanto o código não é migrado. A escolha final do projeto, no formato de URL do laboratório:
+O laboratório `/dev/design-lab` (branch `proto/design-lab`, descartável, nunca vai para a `main`) é a referência visual e de comportamento enquanto as telas não são migradas. Depois da escolha abaixo, ele ganhou as seções **Estados** (2.1.1, com comportamento, som e continuidade 8.4) e **Voz e tom** (3.2). A escolha final do projeto, no formato de URL do laboratório:
 
 ```
 f=plex w=600 g=white t=ink r=b s=shadow d=comfy i=a c=viva e=focus z=historico
@@ -402,6 +402,18 @@ q=none l=entrada u=soft n=d k=a y=tech p=a m=ofm-mineral j=tilt3d h=medium
 ```
 
 Atmosferas testadas, para registro: **Natureza** (terrosa: lia como papel, rejeitada), **Instrumento** (tudo em cinza: apática, rejeitada) e **Instrumento vivo** (moldura fria e precisa com conteúdo vivo: **escolhida**).
+
+### 14.1 Onde cada decisão já está no código
+
+| Já no código (PR 1) | Ainda só no laboratório |
+|---|---|
+| Tokens de cor, de dados, raio, sombra e fontes (`app/globals.css`, `@theme static`) | **Sons** (9): a política de som no produto está em aberto (pendência 4) |
+| Fontes IBM Plex Sans e Mono; Inter, JetBrains, Noto e Playfair removidas | **Cursor Prisma aurora** (10): só a regra de pointer foi portada |
+| Sem modo escuro (446 classes `dark:` removidas) e sem os tokens brand/pantaneiro | **Onda do clique, animação de menu, diálogo e abas** (8.1) |
+| Botão "Tátil", card branco com sombra, campo com borda Pedra e foco de 3 px, badge sem pílula, esqueleto com brilho, toast (12) | **Componente de estado** (`StateBlock`) e as transições `Swap` e `Collapse` (2.1.2, 8.4) |
+| Cursor de clicável, títulos 600, números em mono, movimento reduzido (globais) | **Critério de severidade, KPI em foco, gráfico "traço técnico"** (7) |
+| Nada pulsa em loop; "Sala de Situação" fora da interface | **Mapa** recolorido, relevo e 3D (13) e **ícones Tabler** (11; hoje lucide) |
+| Teste `design-guard`: o design antigo não volta | |
 
 ---
 
@@ -432,6 +444,11 @@ Para ninguém recolocar sem motivo.
 | Basemap Dark Matter | Sem dark mode, perde o sentido |
 | Cursor de mão nativo como único | Queríamos uma marca também no cursor |
 | Mais de um verde "sem papel" (musgo `#2B4234`) | Lia como oliva escuro; ficou o Floresta |
+| Seletor de tema (`next-themes`) e a variante `dark` dos gráficos | Sem modo escuro; o seletor nunca foi usado |
+| Tokens `hsl(var(--x))` e as variáveis HSL (`--primary: 217 91% 60%`…) | Os tokens agora são cores diretas; o tom era o azul da marca antiga |
+| `primary-dark/forest/green/lime/yellow` e `brand-whatsapp` | Nunca foram usados |
+| Esqueleto e pontos "ativo" pulsando (`animate-pulse`) | Pulsar em loop é proibido (8.2); o esqueleto usa brilho |
+| Toast verde sólido | O toast é cartão branco com borda na cor do alerta (12) |
 | Estados com ilustração, título, frase e botão **iguais** em todos | Genérico, "sem alma, sem intenção"; ver 2.1.1 |
 | Primeira folha de ilustrações dos estados (monocromática, só verdes) | Substituída por decisão do responsável de design pela folha colorida (`public/estados-novos.png`) |
 | Mudança de conteúdo "de uma vez" (o bloco troca sem caminho) | O usuário não entendia o que tinha acontecido; ver 8.4 |
@@ -446,7 +463,11 @@ Para ninguém recolocar sem motivo.
 
 Descobertas na prática; valem para quem implementar.
 
-- **Tailwind v4:** o `@theme` declara `--color-x: hsl(var(--x))` na raiz. Sobrescrever `--primary` em um elemento filho **não funciona**; sobrescreva `--color-*` diretamente. O v4 também **zerou o `cursor: pointer` dos botões**: é preciso regra global para tudo que é clicável.
+- **Tailwind v4:** os tokens são `--color-*` em `@theme static` (cores diretas). Para sobrescrever num elemento filho, sobrescreva `--color-*`. O v4 **zerou o `cursor: pointer` dos botões**: a regra global do `globals.css` cobre tudo que é clicável.
+- **`@theme static`:** sem o `static`, o Tailwind só emite as variáveis que aparecem em classes; os gráficos usam `var(--color-crit)` em strings e ficariam sem cor.
+- **`@source not`:** o Tailwind varre o projeto inteiro, inclusive `.agent`, `.claude` e `docs`, e gerava classes `dark:` a partir de documentação. O `globals.css` exclui essas pastas.
+- **Teste `design-guard`** (`lib/__tests__`): o limite de paleta e hexadecimais por arquivo só desce. Quem migrar uma tela roda `UPDATE_DESIGN_BASELINE=1 npx jest lib/__tests__/design-guard` para registrar o progresso.
+- **Botão `aria-disabled`:** o variant `default` já trata `aria-disabled` (sem movimento, 45% de opacidade); `disabled` continua existindo mas esconde o cursor.
 - **Diálogo:** o v4 centraliza com a propriedade `translate`, não `transform`. Animações do diálogo não podem usar `translate(-50%, -50%)`.
 - **Recharts 2.15 com React 19:** não enxerga `<>…</>` como filho de gráfico (perde séries e o eixo Y). Use arrays com `key`. Ao criar um segundo `YAxis`, dê `yAxisId` explícito a **todas** as séries.
 - **Filtros SVG** calculam em espaço linear por padrão; use `color-interpolation-filters='sRGB'` ou o resultado clareia.
@@ -461,13 +482,16 @@ Descobertas na prática; valem para quem implementar.
 2. **Consolidar os verdes.** Hoje há três: verde mineral (marca), Floresta (ação) e verde-folha `#2E7D5B` (dado "normal"). Decidir se o "normal" deve ser o Floresta ou o mineral.
 3. **Licenças e termos** dos provedores de mapa (Esri, OSM, Carto, OpenTopoMap, OpenFreeMap) antes de ir para produção.
 4. **Política de som no produto:** padrão "sutil" ligado, mas confirmar se começa ligado ou desligado para novos usuários.
-5. **Segunda onda** (fora do escopo atual): impressão e PDF, e-mails, manifest do PWA, mapa em Leaflet legado, reescrita dos textos existentes no tom da seção 3, vetorização do logo.
+5. **Segunda onda** (fora do escopo atual): impressão e PDF, e-mails, manifest do PWA, mapa em Leaflet legado, reescrita dos textos existentes no tom da seção 3, vetorização do logo. Específicos (ticket #69): `manifest.json` (nome "Registro de Javali - PRISMA", `theme_color` verde antigo) e as cores do e-mail em `lib/email/resend.ts`.
 6. **Landing:** só troca de cores; layout e textos ficam como estão.
 7. **Teste existente falhando**, sem relação com design: `maplibre-layer.test.ts` (`resolveLayerType`).
 8. **Estados: desenhados e vistoriados no laboratório (ticket #68), ver 2.1.1 e 2.1.2.** Vistoria feita em três frentes: (a) **código e cálculo** (contrastes medidos, foco, avisos, movimento reduzido); (b) **verificador automático axe-core 4.13.0** (regras WCAG 2.0, 2.1 e 2.2 nível AA mais boas práticas) rodado em Chrome real, com movimento reduzido, em **24 telas e estados** (todos os vazios, erro antes e depois da falha, carregando em 3 momentos, parcial, bloqueado nos dois lados, sem permissão, desatualizado em 3 momentos, ação destrutiva com o toast, sucesso e "Voz e tom"): **0 violações**; (c) **foco por teclado**, medido: depois de uma troca de bloco o foco fica no bloco novo (não no início da página) e, ao remover, vai para "Desfazer". O axe só pega parte dos problemas: **falta um teste manual com leitor de tela** (anúncio das trocas e dos erros) e **migrar** os estados para as telas, uma por vez nos PRs de dashboard, mapa, admin e auth. Corrigido na vistoria: texto do chip no hover (4,47:1 passou a grafite), destaque que sumia com movimento reduzido, foco perdido quando o bloco sai de cena, região viva para o leitor de tela, `alt` das ilustrações, rótulo de placar que o leitor de tela ignorava. Limite conhecido: o "diálogo" de remoção do laboratório é um bloco em linha; no produto use o `Dialog` (que já devolve o foco a quem abriu).
 9. **Auditar as telas atuais** com o checklist da seção 1.2 e a seção 2: onde há espera sem aviso, lista vazia sem explicação, erro sem saída, botão desabilitado sem motivo ou etapa que dá para eliminar.
 10. **Cor das ilustrações dos estados.** A folha atual é colorida (marrom do café e da madeira, laranja da placa e dos avisos, azul do passarinho). A seção 4 diz "cor quente só para o crítico", mas as artes são conteúdo, não moldura. Decidir se isso fica como regra ("a ilustração é conteúdo, pode ter cor") e registrar o motivo.
-11. **Textos de exemplo** (nome do administrador, números, horários, "CAR") são fictícios. Os que dependem de dados reais (último foco, quem administra, o que vai junto ao remover) precisam vir do sistema.
+11. **Ainda não portado do laboratório** (tabela da 14.1): sons, cursor animado, onda do clique, animação de menu, diálogo e abas, `StateBlock`, `Swap` e `Collapse`, critério de severidade e KPI em foco, ícones Tabler, mapa.
+12. **Dependência `next-themes`** continua no `package.json` sem uso. Remover junto com a atualização de `bun.lock` e `package-lock.json`.
+13. **Migração das telas.** A guarda registra o que falta: **120 arquivos, 1.424 classes de paleta e 455 cores hexadecimais**. Por área (classes / hex): admin 399 / 119, mapa 355 / 128, importação de GPX 219 / 0, dashboard e gráficos 191 / 131, outros 135 / 1, auth 106 / 0, landing 19 / 71. Os componentes base (`components/ui`) já estão zerados. Ordem do plano: PR 2 dashboard e gráficos, PR 3 mapa, PR 4 admin, PR 5 auth e landing; cada um zera o seu limite. Os neutros (slate, gray, neutral: 832 classes) viram tokens com pouca decisão; os tons de cor (azul 196, vermelho 141, verde 118, âmbar 113…) pedem decisão por tela (marca, água, severidade ou decoração), e em superfície escura o realce é `accent`, não `primary`.
+14. **Textos de exemplo** (nome do administrador, números, horários, "CAR") são fictícios. Os que dependem de dados reais (último foco, quem administra, o que vai junto ao remover) precisam vir do sistema.
 
 ---
 
