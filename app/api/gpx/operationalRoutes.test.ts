@@ -72,7 +72,7 @@ test("leituras de estrada e expedição retornam 401 sem sessão", async () => {
 test("leituras passam tenant da sessão aos serviços", async () => {
   expect((await getEstradas()).status).toBe(200);
   expect((await getExpedicoes()).status).toBe(200);
-  expect(findAllEstradasData).toHaveBeenCalledWith(orgA, false);
+  expect(findAllEstradasData).toHaveBeenCalledWith(orgA, false, [12]);
   expect(getAllExpedicoesData).toHaveBeenCalledWith(orgA, false, [12]);
 });
 

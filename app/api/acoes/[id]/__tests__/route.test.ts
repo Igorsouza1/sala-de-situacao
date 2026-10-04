@@ -13,6 +13,7 @@ jest.mock("@/lib/service/acoesService", () => ({
   updateAcaoFieldsById: jest.fn(),
 }));
 
+jest.mock("@/lib/api/require-region", () => ({ getAccessibleRegionIdsForUser: jest.fn().mockResolvedValue([11]) }));
 import { db } from "@/db";
 import { createClient } from "@/lib/supabase/server";
 import * as acoesService from "@/lib/service/acoesService";
@@ -53,7 +54,7 @@ describe("GET /api/acoes/[id]", () => {
 
     await GET(new Request("http://localhost/api/acoes/1"), makeContext("1"));
 
-    expect(acoesService.getAcaoDossie).toHaveBeenCalledWith(1, TENANT);
+    expect(acoesService.getAcaoDossie).toHaveBeenCalledWith(1, TENANT, [11]);
   });
 
   it("retorna 404 quando getAcaoDossie lança 'Ação não encontrada'", async () => {

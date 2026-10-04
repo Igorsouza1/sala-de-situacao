@@ -4,26 +4,28 @@ import { getAllAcoesData, getAllAcoesForMap, createAcoesWithTrilha } from "@/lib
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { createAcoesSchema } from "@/lib/validations/acoes";
 import { requireAuthWithTenant, requireRole } from "@/lib/api/require-auth";
+import { getAccessibleRegionIdsForUser } from "@/lib/api/require-region";
 import { requireWriteRegion } from "@/lib/api/require-write-region";
 import { revalidatePath } from "next/cache";
 
 
 
 export async function GET(request: Request) {
-  const { tenantId, response: authResponse } = await requireAuthWithTenant();
+  const { user, tenantId, response: authResponse } = await requireAuthWithTenant();
   if (authResponse) return authResponse;
 
   try {
+    const regionIds = await getAccessibleRegionIdsForUser(user!.id, tenantId!, user?.app_metadata?.is_superadmin === true);
     const { searchParams } = new URL(request.url);
     const view = searchParams.get("view");
 
     if (view === "dashboard") {
-      const result = await getAllAcoesData(tenantId);
+      const result = await getAllAcoesData(tenantId, regionIds);
       return apiSuccess(result);
     }
 
     if (view === "map") {
-      const result = await getAllAcoesForMap(tenantId);
+      const result = await getAllAcoesForMap(tenantId, regionIds);
       return apiSuccess(result);
     }
 

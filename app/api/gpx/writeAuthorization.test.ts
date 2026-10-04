@@ -1,15 +1,22 @@
+jest.mock("@/lib/service/estradaService", () => ({ createEstradaData: jest.fn() }));
+jest.mock("@/lib/repositories/estradasRepository", () => ({ findAllEstradasData: jest.fn() }));
 jest.mock("@/lib/supabase/server", () => ({ createClient: jest.fn() }));
 jest.mock("@/db", () => ({ db: { execute: jest.fn(), select: jest.fn() }, sql: jest.requireActual("drizzle-orm").sql }));
-jest.mock("@/lib/service/acoesService", () => ({ createAcoesWithTrilha: jest.fn(), getAllAcoesData: jest.fn(), getAllAcoesForMap: jest.fn() }));
+jest.mock("@/lib/service/acoesService", () => ({ createAcoesWithTrilha: jest.fn(), getAllAcoesData: jest.fn(), getAllAcoesForMap: jest.fn(), getAcaoDossie: jest.fn(), updateAcaoFieldsById: jest.fn() }));
 jest.mock("@/lib/service/gpxImportService", () => ({ importGpx: jest.fn() }));
-jest.mock("next/cache", () => ({ revalidatePath: jest.fn() }));
+jest.mock("next/cache", () => ({ revalidatePath: jest.fn(), revalidateTag: jest.fn() }));
+import { GET as getAcao, PUT as putAcao } from "../acoes/[id]/route";
+import { GET as listAcoes } from "../acoes/route";
+import { GET as roads, POST as createRoad } from "../estradas/route";
+import { createEstradaData } from "@/lib/service/estradaService";
+import { findAllEstradasData } from "@/lib/repositories/estradasRepository";
 import { POST as acoes } from "../acoes/route";
 import { POST as gpx } from "./route";
 import { POST as gpxImport } from "./import/route";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { PgDialect } from "drizzle-orm/pg-core";
-import { createAcoesWithTrilha } from "@/lib/service/acoesService";
+import { getAllAcoesData, getAllAcoesForMap, getAcaoDossie, updateAcaoFieldsById, createAcoesWithTrilha } from "@/lib/service/acoesService";
 import { importGpx } from "@/lib/service/gpxImportService";
 let role = "editor";
 let authenticated = true;
@@ -39,6 +46,8 @@ beforeEach(() => {
     if (q.sql.includes("SELECT region_id")) return { rows: defaultRegion == null ? [] : [{ region_id: defaultRegion }] };
     if (q.sql.includes("SELECT regiao_id")) return { rows: [] };
     if (q.sql.includes("FROM monitoramento.regioes")) return { rows: [{ tenant_id: q.params[0] === 22 ? "org-b" : "org-a" }] };
+    if (q.sql.includes("SELECT EXISTS") && q.sql.includes("AS ok") && q.params.length === 2) return { rows: [{ ok: role === "owner" }] };
+    if (q.sql.includes('FROM "monitoramento"."acoes" a')) return { rows: q.params[0] === 22 ? [] : [{ id: q.params[0], regiao_id: q.params[0] === 12 ? 12 : 11 }] };
     if (q.sql.includes("SELECT EXISTS")) {
       expect(q.params.slice(0, 2)).toEqual(["user-a", "org-a"]);
       expect(q.sql).toContain("role = 'owner'"); expect(q.sql).toContain("role = 'editor'");
@@ -51,7 +60,13 @@ beforeEach(() => {
     const q = new PgDialect().sqlToQuery(condition);
     return q.params.slice(2).includes(role) ? [{ id: 1 }] : [];
   } }) }) });
+  (createEstradaData as jest.Mock).mockResolvedValue({ id: 1 });
+  (findAllEstradasData as jest.Mock).mockResolvedValue([]);
   (createAcoesWithTrilha as jest.Mock).mockResolvedValue({ id: 1 });
+  (getAllAcoesData as jest.Mock).mockResolvedValue([]);
+  (getAllAcoesForMap as jest.Mock).mockResolvedValue([]);
+  (getAcaoDossie as jest.Mock).mockImplementation(async (id, _tenant, regions) => (regions === null || regions.includes(id)) && id !== 22 ? { id } : null);
+  (updateAcaoFieldsById as jest.Mock).mockResolvedValue({ success: true });
   (importGpx as jest.Mock).mockResolvedValue({ acoesIds: [1], totalFotos: 0 });
 });
 describe.each([["acoes", acoes], ["gpx", gpx], ["gpx/import", gpxImport]] as const)("POST %s", (kind, handler) => {
@@ -93,4 +108,53 @@ test.each([["acoes", acoes], ["gpx", gpx]] as const)("%s without assigned defaul
   defaultRegion = null;
   const req = request(kind); const form = await req.formData(); form.delete("regiaoId");
   expect((await handler(new Request("http://localhost/test", { method: "POST", body: form }))).status).toBe(403);
+});
+
+const context = (id: number) => ({ params: Promise.resolve({ id: String(id) }) });
+const readRequest = () => new Request("http://localhost/api/acoes/11");
+const editRequest = () => { const form = new FormData(); form.set("status", "Identificado"); return new Request("http://localhost/api/acoes/11", { method: "PUT", body: form }); };
+test.each([getAcao, putAcao])("action detail denies anonymous sessions", async handler => {
+  authenticated = false; expect((await handler(editRequest(), context(11))).status).toBe(401);
+});
+test.each(["viewer", "auditor"])("%s cannot edit action", async selected => {
+  role = selected; expect((await putAcao(editRequest(), context(11))).status).toBe(403);
+  expect(updateAcaoFieldsById).not.toHaveBeenCalled();
+});
+test("editor cannot edit an action in another granted-read-only region", async () => {
+  expect((await putAcao(editRequest(), context(12))).status).toBe(403);
+  expect(updateAcaoFieldsById).not.toHaveBeenCalled();
+});
+test("foreign organization action is hidden and cannot be edited", async () => {
+  expect((await getAcao(readRequest(), context(22))).status).toBe(404);
+  expect((await putAcao(editRequest(), context(22))).status).toBe(404);
+  expect(updateAcaoFieldsById).not.toHaveBeenCalled();
+});
+test("action GET carries assigned regions and hides another region", async () => {
+  role = "viewer";
+  expect((await getAcao(readRequest(), context(11))).status).toBe(200);
+  expect(getAcaoDossie).toHaveBeenCalledWith(11, "org-a", [11]);
+  expect((await getAcao(readRequest(), context(12))).status).toBe(404);
+});
+test("editor updates authorized action", async () => {
+  expect((await putAcao(editRequest(), context(11))).status).toBe(200);
+  expect(updateAcaoFieldsById).toHaveBeenCalledWith(11, expect.any(FormData), "org-a");
+});
+test.each(["dashboard", "map"])("action %s listing passes regional grants", async view => {
+  role = "viewer";
+  expect((await listAcoes(new Request("http://localhost/api/acoes?view=" + view))).status).toBe(200);
+  expect(view === "dashboard" ? getAllAcoesData : getAllAcoesForMap).toHaveBeenCalledWith("org-a", [11]);
+});
+
+const roadRequest = (regiaoId = 11) => new Request("http://localhost/api/estradas", { method: "POST", body: JSON.stringify({ nome: "Road", regiaoId, tenantId: "org-injected" }) });
+test("road listing carries regional grants", async () => {
+  expect((await roads()).status).toBe(200);
+  expect(findAllEstradasData).toHaveBeenCalledWith("org-a", false, [11]);
+});
+test.each([12, 22])("road creation rejects unauthorized region %s", async regionId => {
+  expect((await createRoad(roadRequest(regionId))).status).toBe(403);
+  expect(createEstradaData).not.toHaveBeenCalled();
+});
+test("road creation ignores forged tenant and uses authorized region", async () => {
+  expect((await createRoad(roadRequest())).status).toBe(201);
+  expect(createEstradaData).toHaveBeenCalledWith(expect.any(Object), "org-a", 11);
 });

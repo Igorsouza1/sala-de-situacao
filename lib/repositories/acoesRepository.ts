@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { acoesInMonitoramento, fotosAcoesInMonitoramento, NewAcoesData } from "@/db/schema"
-import { and, eq, desc, sql } from "drizzle-orm";
+import { and, eq, desc, sql, inArray } from "drizzle-orm";
 
 // ADR 0010: isolamento na aplicação — escopo de tenant é obrigatório e explícito.
 // Falha alto em vez de cair silenciosamente num tenant padrão ou retornar dados
@@ -13,7 +13,7 @@ function requireExplicitTenant(tenantId?: string | null): string {
 }
 
 
-export async function findAcaoById(id: number, tenantId?: string | null) {
+export async function findAcaoById(id: number, tenantId?: string | null, regionIds: number[] | null = null) {
   const effectiveTenantId = requireExplicitTenant(tenantId);
   const tenantFilter = effectiveTenantId
     ? sql`AND a.tenant_id = ${effectiveTenantId}::uuid`
@@ -34,13 +34,14 @@ export async function findAcaoById(id: number, tenantId?: string | null) {
       AND ST_DWithin(ld.geom::geography, a.geom::geography, 5000)
     WHERE a.id = ${id}
     ${tenantFilter}
+    ${regionIds === null ? sql`` : regionIds.length ? sql`AND a.regiao_id IN (${sql.join(regionIds.map(id => sql`${id}`), sql`, `)})` : sql`AND FALSE`}
   `;
 
   const result = await db.execute(query);
   return result.rows[0];
 }
 
-export async function findAllAcoesData(tenantId?: string | null) {
+export async function findAllAcoesData(tenantId?: string | null, regionIds: number[] | null = null) {
   const effectiveTenantId = requireExplicitTenant(tenantId);
 
   return db
@@ -54,10 +55,10 @@ export async function findAllAcoesData(tenantId?: string | null) {
       acao: acoesInMonitoramento.acao,
     })
     .from(acoesInMonitoramento)
-    .where(effectiveTenantId ? eq(acoesInMonitoramento.tenantId, effectiveTenantId) : undefined);
+    .where(and(eq(acoesInMonitoramento.tenantId, effectiveTenantId), regionIds === null ? undefined : regionIds.length ? inArray(acoesInMonitoramento.regiaoId, regionIds) : sql`FALSE`));
 }
 
-export async function findAllAcoesDataWithGeometry(tenantId?: string | null, startDate?: Date, endDate?: Date) {
+export async function findAllAcoesDataWithGeometry(tenantId?: string | null, startDate?: Date, endDate?: Date, regionIds: number[] | null = null) {
   const effectiveTenantId = requireExplicitTenant(tenantId);
 
   const conditions: ReturnType<typeof sql>[] = [];
@@ -65,6 +66,7 @@ export async function findAllAcoesDataWithGeometry(tenantId?: string | null, sta
   if (effectiveTenantId) {
     conditions.push(sql`a.tenant_id = ${effectiveTenantId}::uuid`);
   }
+  if (regionIds !== null) conditions.push(regionIds.length ? sql`a.regiao_id IN (${sql.join(regionIds.map(id => sql`${id}`), sql`, `)})` : sql`FALSE`);
   if (startDate) {
     conditions.push(sql`a.time >= ${startDate.toISOString()}::timestamp`);
   }

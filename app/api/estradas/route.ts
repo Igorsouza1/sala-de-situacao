@@ -2,14 +2,16 @@ import { apiError, apiSuccess } from "@/lib/api/responses";
 import { createEstradaData } from "@/lib/service/estradaService";
 import { ZodError } from "zod";
 import { requireAuthWithTenant, requireRole } from "@/lib/api/require-auth";
-import { getRegionIdForUser } from "@/lib/api/require-region";
+import { getAccessibleRegionIdsForUser } from "@/lib/api/require-region";
+import { requireWriteRegion } from "@/lib/api/require-write-region";
 import { findAllEstradasData } from "@/lib/repositories/estradasRepository";
 
 export async function GET() {
     const { user, tenantId, response } = await requireAuthWithTenant();
     if (response) return response;
     try {
-        return apiSuccess(await findAllEstradasData(tenantId!, user?.app_metadata?.is_superadmin === true));
+        const regionIds = await getAccessibleRegionIdsForUser(user!.id, tenantId!, user?.app_metadata?.is_superadmin === true);
+        return apiSuccess(await findAllEstradasData(tenantId!, user?.app_metadata?.is_superadmin === true, regionIds));
     } catch (error) {
         console.error("Erro ao consultar estradas:", error);
         return apiError("Ocorreu um erro inesperado no servidor.", 500);
@@ -22,8 +24,9 @@ export async function POST(req: Request){
     if (response) return response;
     try{
         const body = await req.json()
-        const regiaoId = await getRegionIdForUser(user!.id, tenantId!);
-        const newEntry = await createEstradaData(body, tenantId!, regiaoId)
+        const region = await requireWriteRegion(user!, tenantId!, body.regiaoId == null ? null : String(body.regiaoId));
+        if (region.response) return region.response;
+        const newEntry = await createEstradaData(body, region.tenantId, region.regionId)
         return apiSuccess(newEntry, 201)
     }catch(error){
         if(error instanceof ZodError){

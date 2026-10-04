@@ -1,6 +1,9 @@
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { getAcaoDossie, updateAcaoFieldsById } from "@/lib/service/acoesService";
-import { requireAuthWithTenant } from "@/lib/api/require-auth";
+import { findAcaoById } from "@/lib/repositories/acoesRepository";
+import { getAccessibleRegionIdsForUser } from "@/lib/api/require-region";
+import { requireWriteRegion } from "@/lib/api/require-write-region";
+import { requireAuthWithTenant, requireRole } from "@/lib/api/require-auth";
 import { revalidateTag } from "next/cache";
 
 type RouteContext = {
@@ -8,13 +11,18 @@ type RouteContext = {
 }
 
 export async function PUT(request: Request, context: RouteContext) {
-  const { tenantId, response: authResponse } = await requireAuthWithTenant();
+  const { user, tenantId, response: authResponse } = await requireRole("editor");
   if (authResponse) return authResponse;
 
   try {
     const { id } = await context.params;
     const numId = Number(id);
 
+    if (!Number.isInteger(numId) || numId <= 0) return apiError("ID invalido", 400);
+    const acao = await findAcaoById(numId, tenantId);
+    if (!acao) return apiError("Acao nao encontrada", 404);
+    const region = await requireWriteRegion(user!, tenantId!, String(acao.regiao_id));
+    if (region.response) return region.response;
     const formData = await request.formData();
     const result = await updateAcaoFieldsById(numId, formData, tenantId);
     revalidateTag("acoes");
@@ -26,7 +34,7 @@ export async function PUT(request: Request, context: RouteContext) {
 }
 
 export async function GET(_request: Request, context: RouteContext) {
-  const { tenantId, response: authResponse } = await requireAuthWithTenant();
+  const { user, tenantId, response: authResponse } = await requireAuthWithTenant();
   if (authResponse) return authResponse;
 
   try {
@@ -37,7 +45,8 @@ export async function GET(_request: Request, context: RouteContext) {
       return apiError("ID inválido", 400);
     }
 
-    const result = await getAcaoDossie(numId, tenantId);
+    const regionIds = await getAccessibleRegionIdsForUser(user!.id, tenantId!, user?.app_metadata?.is_superadmin === true);
+    const result = await getAcaoDossie(numId, tenantId, regionIds);
 
     if (!result) {
       return apiError("Ação não encontrada", 404);
