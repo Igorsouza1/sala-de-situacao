@@ -5,7 +5,6 @@ import { GET as indicadorDesmatamento } from "../desmatamento/indicador/route";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { getRegionIdForUser } from "@/lib/api/require-region";
-import { getTenantIdForRegion } from "@/lib/api/region-tenant";
 import { getAllFirmsData, getFocosIndicador } from "@/lib/service/firmsService";
 import { getAllDesmatamentoDataGroupedByMonthAndYear } from "@/lib/service/desmatamentoService";
 
@@ -13,14 +12,11 @@ import { getAllDesmatamentoDataGroupedByMonthAndYear } from "@/lib/service/desma
 jest.mock("@/lib/supabase/server", () => ({ createClient: jest.fn() }));
 jest.mock("@/db", () => ({ db: { execute: jest.fn() } }));
 jest.mock("@/lib/api/require-region", () => ({ getRegionIdForUser: jest.fn() }));
-jest.mock("@/lib/api/region-tenant", () => ({ getTenantIdForRegion: jest.fn() }));
-jest.mock("@/lib/api/active-region-server", () => ({ readActiveRegionId: jest.fn().mockResolvedValue(null) }));
 jest.mock("@/lib/service/firmsService", () => ({ getAllFirmsData: jest.fn(), getFocosIndicador: jest.fn() }));
 jest.mock("@/lib/service/desmatamentoService", () => ({ getAllDesmatamentoDataGroupedByMonthAndYear: jest.fn() }));
 
 const services = [getAllFirmsData, getFocosIndicador, getAllDesmatamentoDataGroupedByMonthAndYear];
 const region = jest.mocked(getRegionIdForUser);
-const regionTenant = jest.mocked(getTenantIdForRegion);
 
 function session(appMetadata: Record<string, unknown> | null) {
   (createClient as jest.Mock).mockResolvedValue({
@@ -35,7 +31,6 @@ beforeEach(() => {
   session({ tenant_id: "org-a" });
   (db.execute as jest.Mock).mockResolvedValue({ rows: [] });
   region.mockResolvedValue(11);
-  regionTenant.mockResolvedValue("org-a");
   for (const service of services) (service as jest.Mock).mockResolvedValue({ 2026: Array(12).fill(0) });
 });
 
@@ -80,13 +75,14 @@ describe.each([
   });
 
   test("Região explícita autorizada restringe a consulta", async () => {
+    (db.execute as jest.Mock).mockResolvedValue({ rows: [{ tenant_id: "org-a" }] });
     expect((await handler(request("regiao_id=12"))).status).toBe(200);
-    expect(regionTenant).toHaveBeenCalledWith(12);
+    expect(db.execute).toHaveBeenCalled();
     expect(service).toHaveBeenCalledWith("org-a", false, 12);
   });
 
   test("Região de outra Organização retorna 403 antes da consulta", async () => {
-    regionTenant.mockResolvedValue("org-b");
+    (db.execute as jest.Mock).mockResolvedValue({ rows: [{ tenant_id: "org-b" }] });
     expect((await handler(request("regiao_id=22"))).status).toBe(403);
     expect(service).not.toHaveBeenCalled();
   });
@@ -105,7 +101,7 @@ describe.each([
 
   test("Superadmin pode consultar uma Região explícita de outra Organização", async () => {
     session({ tenant_id: "org-a", is_superadmin: true });
-    regionTenant.mockResolvedValue("org-b");
+    (db.execute as jest.Mock).mockResolvedValue({ rows: [{ tenant_id: "org-b" }] });
     expect((await handler(request("regiao_id=22"))).status).toBe(200);
     expect(service).toHaveBeenCalledWith("org-b", true, 22);
   });
