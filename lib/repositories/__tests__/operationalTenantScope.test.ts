@@ -49,7 +49,8 @@ test("superadmin pode consultar globalmente sem filtro regional", async () => {
   expect(query).toHaveBeenCalledTimes(2);
   for (const [statement, params] of query.mock.calls) {
     expect(statement.text).not.toContain("regiao_id IN");
-    expect(statement.text).not.toContain("tenant_id =");
+    expect(statement.text).not.toMatch(/WHERE\s+(?:w\.)?tenant_id\s*=/);
+    expect(params).not.toContain(orgA);
     expect(params).not.toContain(7);
   }
 });
