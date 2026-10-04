@@ -1,16 +1,16 @@
 import { db } from "@/db"
 import { balnearioMunicipalInMonitoramento } from "@/db/schema"
-import { and, gte, lte, desc, inArray } from "drizzle-orm"
+import { eq, and, gte, lte, desc, inArray } from "drizzle-orm"
 
 export type NewBalnearioData = typeof balnearioMunicipalInMonitoramento.$inferInsert;
 
-export async function findAllBalnearioData() {
-  const result = await db.select().from(balnearioMunicipalInMonitoramento)
+export async function findAllBalnearioData(tenantId: string) {
+  const result = await db.select().from(balnearioMunicipalInMonitoramento).where(eq(balnearioMunicipalInMonitoramento.tenantId, tenantId))
   return result
 }
 
-export async function findBalnearioDataByDateRange(startDate: string, endDate: string) {
-  const conditions = []
+export async function findBalnearioDataByDateRange(tenantId: string, startDate: string, endDate: string) {
+  const conditions = [eq(balnearioMunicipalInMonitoramento.tenantId, tenantId)]
 
   if (startDate) conditions.push(gte(balnearioMunicipalInMonitoramento.data, startDate))
   if (endDate)   conditions.push(lte(balnearioMunicipalInMonitoramento.data, endDate))
@@ -43,7 +43,7 @@ export async function upsertBalnearioDataBatch(rows: NewBalnearioData[]): Promis
   const existing = await db
     .select({ data: balnearioMunicipalInMonitoramento.data })
     .from(balnearioMunicipalInMonitoramento)
-    .where(inArray(balnearioMunicipalInMonitoramento.data, dates))
+    .where(and(inArray(balnearioMunicipalInMonitoramento.data, dates), eq(balnearioMunicipalInMonitoramento.tenantId, rows[0].tenantId!)))
 
   const existingDates = new Set(existing.map((r) => r.data));
 
@@ -53,6 +53,7 @@ export async function upsertBalnearioDataBatch(rows: NewBalnearioData[]): Promis
       .values(row)
       .onConflictDoUpdate({
         target: balnearioMunicipalInMonitoramento.data,
+        setWhere: eq(balnearioMunicipalInMonitoramento.tenantId, row.tenantId!),
         set: {
           turbidez:       row.turbidez,
           secchiVertical: row.secchiVertical,

@@ -1,3 +1,4 @@
+import { requireStationAccess } from "@/lib/api/station-access"
 import { apiError, apiSuccess } from "@/lib/api/responses"
 import {  createDequeData, getAllDequeDataGroupedByMonth } from "@/lib/service/dequeService"
 import { NextRequest } from "next/server"
@@ -5,8 +6,11 @@ import { ZodError } from "zod"
 
 
 export async function GET() {
+  const access = await requireStationAccess("deque-pedras", false)
+  if (access.response) return access.response
+
     try{
-        const dequeData = await getAllDequeDataGroupedByMonth()
+        const dequeData = await getAllDequeDataGroupedByMonth(access.tenantId!)
 
         return apiSuccess(dequeData)
     } catch (error) {
@@ -17,9 +21,12 @@ export async function GET() {
 
 
 export async function POST(req: NextRequest) {
+  const access = await requireStationAccess("deque-pedras", true)
+  if (access.response) return access.response
+
     try{
         const body = await req.json()
-        const newEntry = await createDequeData(body)
+        const newEntry = await createDequeData(access.tenantId!, body)
         return apiSuccess(newEntry, 201)
     }catch(error){
         if(error instanceof ZodError){

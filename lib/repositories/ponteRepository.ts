@@ -1,11 +1,11 @@
 import { db } from "@/db"
 import { ponteDoCureInMonitoramento } from "@/db/schema"
-import { gte, lte } from "drizzle-orm"
+import { eq, and, gte, lte } from "drizzle-orm"
 
 export type NewPonteData = typeof ponteDoCureInMonitoramento.$inferInsert;
 
 
-export async function findAllPonteData() {
+export async function findAllPonteData(tenantId: string) {
   const result = await db
     .select({
       mes: ponteDoCureInMonitoramento.mes,
@@ -14,26 +14,18 @@ export async function findAllPonteData() {
       nivel: ponteDoCureInMonitoramento.nivel,
       visibilidade: ponteDoCureInMonitoramento.visibilidade,
     })
-    .from(ponteDoCureInMonitoramento)
+    .from(ponteDoCureInMonitoramento).where(eq(ponteDoCureInMonitoramento.tenantId, tenantId))
     .execute()
 
   return result
 }
 
 
-export async function findPonteDataByDateRange(startDate: string, endDate: string) {
-  let query = db
-    .select()
-    .from(ponteDoCureInMonitoramento).$dynamic()
-
-  if (startDate) {
-    query = query.where(gte(ponteDoCureInMonitoramento.data, startDate))
-  }
-
-  if (endDate) {
-    query = query.where(lte(ponteDoCureInMonitoramento.data, endDate))
-  }
-
+export async function findPonteDataByDateRange(tenantId: string, startDate: string, endDate: string) {
+  const conditions = [eq(ponteDoCureInMonitoramento.tenantId, tenantId)]
+  if (startDate) conditions.push(gte(ponteDoCureInMonitoramento.data, startDate))
+  if (endDate) conditions.push(lte(ponteDoCureInMonitoramento.data, endDate))
+  const query = db.select().from(ponteDoCureInMonitoramento).where(and(...conditions))
   const result = await query.execute()
 
   return result

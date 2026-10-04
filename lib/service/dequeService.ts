@@ -10,8 +10,8 @@ interface MonthData {
     turbidezMedia?: number
   }
 
-export async function getAllDequeDataGroupedByMonth(){
-    const dequeData = await findAllDequeData()
+export async function getAllDequeDataGroupedByMonth(tenantId: string){
+    const dequeData = await findAllDequeData(tenantId)
     // Agrupar os dados por mês
     const groupedData = dequeData.reduce(
         (acc, item) => {
@@ -55,8 +55,8 @@ export async function getAllDequeDataGroupedByMonth(){
 
 
 
-export async function getDequeDataByDateRange(startDate: string, endDate: string){
-    const dequeData = await findDequeDataByDateRange(startDate, endDate)
+export async function getDequeDataByDateRange(tenantId: string, startDate: string, endDate: string){
+    const dequeData = await findDequeDataByDateRange(tenantId, startDate, endDate)
     return dequeData
 }
 
@@ -64,12 +64,13 @@ export async function getDequeDataByDateRange(startDate: string, endDate: string
 type DequeInput = Zod.infer<typeof createDequeSchema>;
 
 
-export async function createDequeData(input: DequeInput){
+export async function createDequeData(tenantId: string, input: DequeInput){
     const validatedData = createDequeSchema.parse(input);
 
     const mes = validatedData.data.toLocaleString('pt-BR', { month: 'long' });
 
     const completeData = {
+    tenantId,
       data: validatedData.data.toISOString().split('T')[0],
       local: "Deque de Pedras",
       mes: mes,
@@ -86,7 +87,7 @@ export async function createDequeData(input: DequeInput){
 }
 
 
-export async function getchuvaComparativoPct() {
+export async function getchuvaComparativoPct(tenantId: string) {
   const today = new Date()
   const year = today.getFullYear()
   const month0 = today.getMonth()
@@ -109,8 +110,8 @@ export async function getchuvaComparativoPct() {
   const toNum = (v: any) => (v === null || v === undefined ? NaN : Number(v))
 
   const [rowsAtual, rowsPassado] = await Promise.all([
-    getDequeDataByDateRange(fmt(startThis), fmt(endThis)),
-    getDequeDataByDateRange(fmt(startLast), fmt(endLast)),
+    getDequeDataByDateRange(tenantId, fmt(startThis), fmt(endThis)),
+    getDequeDataByDateRange(tenantId, fmt(startLast), fmt(endLast)),
   ])
 
   // ordene por data para garantir a "última" linha correta
@@ -186,8 +187,8 @@ function iterMonths(startYear: number, endYear: number, endMonth: number) {
   return months
 }
 
-export async function getTurbidezDequeHistorico() {
-  const data = await findAllDequeData()
+export async function getTurbidezDequeHistorico(tenantId: string) {
+  const data = await findAllDequeData(tenantId)
   const byMonth: Record<string, number[]> = {}
   for (const row of data) {
     if (!row.data || row.turbidez == null) continue
@@ -207,8 +208,8 @@ export async function getTurbidezDequeHistorico() {
   })
 }
 
-export async function getSecchiDequeHistorico() {
-  const data = await findAllDequeData()
+export async function getSecchiDequeHistorico(tenantId: string) {
+  const data = await findAllDequeData(tenantId)
   const byMonth: Record<string, number[]> = {}
   for (const row of data) {
     if (!row.data || row.secchiVertical == null) continue
@@ -228,8 +229,8 @@ export async function getSecchiDequeHistorico() {
   })
 }
 
-export async function getPluviometriaDequeHistorico() {
-  const data = await findAllDequeData()
+export async function getPluviometriaDequeHistorico(tenantId: string) {
+  const data = await findAllDequeData(tenantId)
   const byMonth: Record<string, number> = {}
   for (const row of data) {
     if (!row.data || row.chuva == null) continue
@@ -245,7 +246,7 @@ export async function getPluviometriaDequeHistorico() {
   }))
 }
 
-export async function getTurbidezIndicador() {
+export async function getTurbidezIndicador(tenantId: string) {
   const today = new Date()
   const fmt = (d: Date) => {
     const y = d.getFullYear()
@@ -261,9 +262,9 @@ export async function getTurbidezIndicador() {
   const start14 = new Date(today.getTime() - 14 * 86400000)
 
   const [thisWeekRows, lastWeekRows, last14Rows] = await Promise.all([
-    getDequeDataByDateRange(fmt(startThis), fmt(today)),
-    getDequeDataByDateRange(fmt(startLast), fmt(endLast)),
-    getDequeDataByDateRange(fmt(start14), fmt(today)),
+    getDequeDataByDateRange(tenantId, fmt(startThis), fmt(today)),
+    getDequeDataByDateRange(tenantId, fmt(startLast), fmt(endLast)),
+    getDequeDataByDateRange(tenantId, fmt(start14), fmt(today)),
   ])
 
   const byDate = (a: any, b: any) => new Date(a.data).getTime() - new Date(b.data).getTime()
