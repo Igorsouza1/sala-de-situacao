@@ -1,3 +1,4 @@
+import { resolveScope } from "@/lib/api/scope";
 import { NextResponse } from "next/server";
 import { db } from "@/db";
 import { acoesInMonitoramento, javaliAvistamentosInMonitoramento } from "@/db/schema";
@@ -5,6 +6,8 @@ import { eq, isNotNull, and, sql } from "drizzle-orm";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 
 export async function GET() {
+  const scope = await resolveScope();
+  if (scope.response) return scope.response;
   try {
     const data = await db
       .select({
@@ -14,6 +17,7 @@ export async function GET() {
       .from(acoesInMonitoramento)
       .where(
         and(
+          eq(acoesInMonitoramento.tenantId, scope.tenantId),
           eq(acoesInMonitoramento.tipoTecnico, "Fauna Exótica"),
           isNotNull(acoesInMonitoramento.latitude),
           isNotNull(acoesInMonitoramento.longitude)
@@ -35,7 +39,8 @@ export async function GET() {
         latitude: sql<number>`ST_Y(${javaliAvistamentosInMonitoramento.geom}::geometry)`,
         longitude: sql<number>`ST_X(${javaliAvistamentosInMonitoramento.geom}::geometry)`,
       })
-      .from(javaliAvistamentosInMonitoramento);
+      .from(javaliAvistamentosInMonitoramento)
+      .where(eq(javaliAvistamentosInMonitoramento.tenantId, scope.tenantId));
 
     const avistamentosHeatData = avistamentosData
       .filter(row => row.latitude !== null && row.longitude !== null)
