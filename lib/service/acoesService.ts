@@ -83,6 +83,8 @@ export async function updateAcaoFieldsById(
 export async function createAcoesWithTrilha(input: {
   trilha: TrilhaInput;
   waypoints: (WaypointInput & { fotos?: File[] })[];
+  tenantId: string;
+  regiaoId: number | null;
 }) {
   const trilhaRecord = await insertTrilhaData({
     nome: input.trilha.nome,
@@ -90,6 +92,8 @@ export async function createAcoesWithTrilha(input: {
     dataFim: input.trilha.dataFim ?? null,
     duracaoMinutos: input.trilha.duracaoMinutos ?? null,
     geom: input.trilha.geom,
+    tenantId: input.tenantId,
+    regiaoId: input.regiaoId,
   });
 
   const trilhaId = trilhaRecord.id;
@@ -103,6 +107,8 @@ export async function createAcoesWithTrilha(input: {
       ele: wp.elevation ?? null,
       recordedat: wp.time ?? null,
       geom: pointWkt,
+      tenantId: input.tenantId,
+      regiaoId: input.regiaoId,
     });
 
     const acaoRecord = await insertAcaoData({
@@ -116,6 +122,8 @@ export async function createAcoesWithTrilha(input: {
       atuacao: wp.atuacao,
       acao: wp.acao ?? null,
       geom: pointWkt,
+      tenantId: input.tenantId,
+      regiaoId: input.regiaoId,
     });
 
     const acaoId = acaoRecord.id;

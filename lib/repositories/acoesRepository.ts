@@ -159,6 +159,7 @@ export async function addAcaoImageById(acaoId: number, url: string, descricao: s
 
 
 export async function insertAcaoData(data: NewAcoesData) {
+  if (!data.tenantId) throw new Error("tenantId é obrigatório para criar ação");
   const [newRecord] = await db
     .insert(acoesInMonitoramento)
     .values({
@@ -171,6 +172,8 @@ export async function insertAcaoData(data: NewAcoesData) {
       mes: data.mes,
       atuacao: data.atuacao,
       acao: data.acao,
+      tenantId: data.tenantId,
+      regiaoId: data.regiaoId,
 
       geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4674)`,
     })

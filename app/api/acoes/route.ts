@@ -3,7 +3,8 @@
 import { getAllAcoesData, getAllAcoesForMap, createAcoesWithTrilha } from "@/lib/service/acoesService";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { createAcoesSchema } from "@/lib/validations/acoes";
-import { requireAuthWithTenant } from "@/lib/api/require-auth";
+import { requireAuthWithTenant, requireRole } from "@/lib/api/require-auth";
+import { getRegionIdForUser } from "@/lib/api/require-region";
 import { revalidatePath } from "next/cache";
 
 
@@ -36,6 +37,8 @@ export async function GET(request: Request) {
 
 
 export async function POST(request: Request) {
+  const { user, tenantId, response } = await requireRole("editor");
+  if (response) return response;
   try {
     const formData = await request.formData();
     const trilhaRaw = formData.get("trilha");
@@ -70,6 +73,8 @@ export async function POST(request: Request) {
     const created = await createAcoesWithTrilha({
       trilha: parsed.data.trilha,
       waypoints,
+      tenantId: tenantId!,
+      regiaoId: await getRegionIdForUser(user!.id, tenantId!),
     });
 
     revalidatePath('/protected');

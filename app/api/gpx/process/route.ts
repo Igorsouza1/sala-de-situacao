@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { gpx as gpxToGeoJSON } from "@tmcw/togeojson"
 import { DOMParser } from "@xmldom/xmldom"
 import type { FeatureCollection, Geometry, Point, Feature } from "geojson"
+import { requireRole } from "@/lib/api/require-auth"
 
 export const dynamic = "force-dynamic"
 
@@ -10,6 +11,8 @@ function isPoint(g: Geometry): g is Point {
 }
 
 export async function POST(req: NextRequest) {
+  const { response } = await requireRole("editor")
+  if (response) return response
   try {
     const formData = await req.formData()
     const file = formData.get("file") as File | null
