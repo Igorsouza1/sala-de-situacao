@@ -30,7 +30,7 @@ const TENANT = "tenant-uuid";
 
 beforeEach(() => {
   jest.clearAllMocks();
-  (db.execute as jest.Mock).mockResolvedValue({ rows: [] });
+  (db.execute as jest.Mock).mockResolvedValue({ rows: [{ tenant_id: TENANT }] });
   mockLimit.mockResolvedValue([]);
 });
 

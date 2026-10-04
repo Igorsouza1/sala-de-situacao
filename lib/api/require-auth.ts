@@ -28,48 +28,42 @@ export async function requireAuth(): Promise<AuthResult> {
   return { user, response: null };
 }
 
-/**
- * Resolve o tenant de um usuário sem exigir contexto de request (ADR 0010).
- * Cadeia: JWT app_metadata → roles (primária) → user_access (legada) →
- * superadmin sem tenant explícito usa o primeiro tenant. Sem fallback SEED:
- * usuário sem tenant resolvível retorna null (a rota responde 403).
- */
+/** Metadata selects a preferred organization; current database access authorizes it. */
 export async function resolveTenantIdForUser(user: User): Promise<string | null> {
-  // 1º: JWT app_metadata
-  let tenantId = extractTenantId(user);
+  const preferred = extractTenantId(user);
+  if (user.app_metadata?.is_superadmin === true && preferred) return preferred;
 
-  // 2º: tabela roles (RBAC — fonte primária)
-  if (!tenantId) {
-    const row = await db.execute<{ tenant_id: string }>(sql`
-      SELECT tenant_id::text AS tenant_id
-      FROM monitoramento.roles
-      WHERE user_id = ${user.id}::uuid
-      ORDER BY id ASC
-      LIMIT 1
-    `);
-    tenantId = row.rows[0]?.tenant_id ?? null;
+  const roles = await db.execute<{ tenant_id: string }>(sql`
+    SELECT tenant_id::text AS tenant_id
+    FROM monitoramento.roles
+    WHERE user_id = ${user.id}::uuid
+    ORDER BY id ASC
+  `);
+  if (roles.rows.length) {
+    return roles.rows.find(row => row.tenant_id === preferred)?.tenant_id
+      ?? roles.rows[0].tenant_id;
   }
 
-  // 3º: tabela legada user_access (usuários ainda não re-convidados)
-  if (!tenantId) {
-    const row = await db.execute<{ organization_id: string }>(sql`
-      SELECT organization_id
-      FROM monitoramento.user_access
-      WHERE user_id = ${user.id}::uuid
-      LIMIT 1
-    `);
-    tenantId = row.rows[0]?.organization_id ?? null;
+  // Legitimate legacy accounts remain supported. Revocation removes this
+  // compatibility association when the last role in that organization is removed.
+  const legacy = await db.execute<{ organization_id: string }>(sql`
+    SELECT organization_id::text AS organization_id
+    FROM monitoramento.user_access
+    WHERE user_id = ${user.id}::uuid
+    ORDER BY organization_id ASC
+  `);
+  if (legacy.rows.length) {
+    return legacy.rows.find(row => row.organization_id === preferred)?.organization_id
+      ?? legacy.rows[0].organization_id;
   }
 
-  // 4º: superadmin sem tenant explícito → usa primeiro tenant disponível
-  if (!tenantId && user.app_metadata?.is_superadmin === true) {
+  if (user.app_metadata?.is_superadmin === true) {
     const firstTenant = await db.execute<{ id: string }>(sql`
       SELECT id FROM monitoramento.tenants ORDER BY created_at ASC LIMIT 1
     `);
-    tenantId = firstTenant.rows[0]?.id ?? null;
+    return firstTenant.rows[0]?.id ?? null;
   }
-
-  return tenantId;
+  return null;
 }
 
 export async function requireAuthWithTenant(): Promise<AuthWithTenantResult> {

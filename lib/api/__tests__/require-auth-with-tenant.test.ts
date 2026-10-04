@@ -34,13 +34,13 @@ it("retorna 401 quando não autenticado", async () => {
   expect(result.tenantId).toBeNull();
 });
 
-it("retorna tenantId real do JWT quando presente", async () => {
-  mockSupabaseUser({ id: "u1", email: "a@b.com", app_metadata: { tenant_id: "real-tenant-uuid" } });
+it("uses metadata organization only with a current role", async () => {
+  mockSupabaseUser({ id: "u1", app_metadata: { tenant_id: "real-tenant-uuid" } });
+  (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [{ tenant_id: "real-tenant-uuid" }] });
   const result = await requireAuthWithTenant();
   expect(result.response).toBeNull();
   expect(result.tenantId).toBe("real-tenant-uuid");
-  // não consulta o banco quando o JWT já traz o tenant
-  expect(db.execute).not.toHaveBeenCalled();
+  expect(db.execute).toHaveBeenCalledTimes(1);
 });
 
 it("resolve tenant via tabela roles quando JWT sem tenant", async () => {
@@ -78,4 +78,24 @@ it("superadmin sem tenant explícito usa o primeiro tenant disponível", async (
   const result = await requireAuthWithTenant();
   expect(result.response).toBeNull();
   expect(result.tenantId).toBe("first-tenant");
+});
+
+it("rejects stale metadata after all current and legacy associations are revoked", async () => {
+  mockSupabaseUser({ id: "revoked", app_metadata: { tenant_id: "old-org" } });
+  expect((await requireAuthWithTenant()).response?.status).toBe(403);
+});
+it("resolves current association instead of stale metadata", async () => {
+  mockSupabaseUser({ id: "moved", app_metadata: { tenant_id: "old-org" } });
+  (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [{ tenant_id: "new-org" }] });
+  expect((await requireAuthWithTenant()).tenantId).toBe("new-org");
+});
+it("preserves preferred organization only while currently assigned", async () => {
+  mockSupabaseUser({ id: "multi", app_metadata: { tenant_id: "org-b" } });
+  (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [{ tenant_id: "org-a" }, { tenant_id: "org-b" }] });
+  expect((await requireAuthWithTenant()).tenantId).toBe("org-b");
+});
+it("supports legitimate legacy membership despite stale metadata", async () => {
+  mockSupabaseUser({ id: "legacy", app_metadata: { tenant_id: "old-org" } });
+  (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [{ organization_id: "current-org" }] });
+  expect((await requireAuthWithTenant()).tenantId).toBe("current-org");
 });

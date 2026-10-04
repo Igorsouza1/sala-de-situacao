@@ -14,6 +14,7 @@ jest.mock("@/lib/service/layerService", () => ({
   getAllLayers: jest.fn().mockResolvedValue([]),
 }));
 
+import { db } from "@/db";
 import { createClient } from "@/lib/supabase/server";
 import * as layerService from "@/lib/service/layerService";
 import { GET } from "../route";
@@ -28,6 +29,7 @@ function makeRequest(params: Record<string, string> = {}) {
 }
 
 function mockUser(user: any) {
+  (db.execute as jest.Mock).mockResolvedValue({ rows: user?.app_metadata?.tenant_id ? [{ tenant_id: user.app_metadata.tenant_id }] : [] });
   (createClient as jest.Mock).mockResolvedValue({
     auth: {
       getUser: jest.fn().mockResolvedValue({ data: { user }, error: null }),

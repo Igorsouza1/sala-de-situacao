@@ -22,7 +22,7 @@ const params = { params: Promise.resolve({ slug: "private" }) };
 const req = () => new Request("http://localhost/layers/private/data", { method: "POST", body: JSON.stringify({ geojson: { type: "Point", coordinates: [0, 0] }, properties: {} }) });
 beforeEach(() => {
   jest.clearAllMocks(); rows = []; user();
-  (db.execute as jest.Mock).mockResolvedValue({ rows: [{ ok: false }] });
+  (db.execute as jest.Mock).mockReset().mockResolvedValue({ rows: [{ ok: false }] }).mockResolvedValueOnce({ rows: [{ tenant_id: "org-a" }] });
   const chain: any = { from: () => chain, where: (condition: any) => { where(condition); return chain; }, orderBy: () => Promise.resolve(rows), limit: () => Promise.resolve(rows), then: (resolve: any) => Promise.resolve(rows).then(resolve) };
   (db.select as jest.Mock).mockReturnValue(chain);
 });
@@ -33,7 +33,7 @@ test("write endpoint requires a session", async () => {
   user(null); expect((await write(req() as any, params)).status).toBe(401); expect(db.select).not.toHaveBeenCalled();
 });
 test.each(["viewer", "auditor"])("%s cannot write layer data", async () => {
-  expect((await write(req() as any, params)).status).toBe(403); expect(db.execute).not.toHaveBeenCalled();
+  expect((await write(req() as any, params)).status).toBe(403); expect(db.execute).toHaveBeenCalledTimes(1);
 });
 test("catalog includes own organization and global layers via SQL predicate", async () => {
   await catalog(); const q = predicate();
@@ -68,17 +68,17 @@ test("editor cannot write a global layer", async () => {
   // First select validates the editor role; second finds the global catalog entry.
   rows = [{ id: 1, tenantId: null }];
   const response = await write(req() as any, params);
-  expect(response.status).toBe(403); expect(db.execute).not.toHaveBeenCalled();
+  expect(response.status).toBe(403); expect(db.execute).toHaveBeenCalledTimes(1);
 });
 test("editor cannot write a legacy global layer with tenant_id populated", async () => {
   rows = [{ id: 1, tenantId: "org-a", scope: "global" }];
   expect((await write(req() as any, params)).status).toBe(403);
-  expect(db.execute).not.toHaveBeenCalled();
+  expect(db.execute).toHaveBeenCalledTimes(1);
 });
 test("editor writes own layer with catalog tenant, not request tenant", async () => {
   rows = [{ id: 1, tenantId: "org-a" }];
   const response = await write(req() as any, params);
   expect(response.status).toBe(200);
-  const q = new PgDialect().sqlToQuery((db.execute as jest.Mock).mock.calls[0][0]);
+  const q = new PgDialect().sqlToQuery((db.execute as jest.Mock).mock.calls.at(-1)[0]);
   expect(q.sql).toContain("tenant_id"); expect(q.params).toContain("org-a");
 });
