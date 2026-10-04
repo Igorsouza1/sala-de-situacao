@@ -2,8 +2,13 @@
 
 Fonte única da identidade visual, de movimento, de som e de linguagem do produto. Substitui qualquer outro documento de design.
 
-> **Princípio mestre: nada existe porque "tem que existir". Existe porque foi pensado, no detalhe, com cuidado, por um motivo que dá para dizer em uma frase.**
+> **Princípio 1 — O usuário vem sempre em primeiro lugar.** Quem usa o Prisma não deveria precisar pensar, adivinhar nem esperar sem saber por quê. Ele é informado de cada intenção do sistema (carregando, vazio, erro, sucesso, bloqueado), e tudo o que existe passa por uma pergunta: *dá para ser mais simples, ter menos etapas, ou a interface pensar por ele?*
+>
+> **Princípio 2 — Nada existe porque "tem que existir".** Existe porque foi pensado, no detalhe, com cuidado, por um motivo que dá para dizer em uma frase.
+>
 > Uma interface boa de verdade é bonita, responde a quem usa (movimento e som), provoca uma sensação intencional e não obriga ninguém a pensar para entendê-la.
+
+**Quando os princípios entram em conflito, vence esta ordem: o usuário, a clareza, a simplicidade, a beleza, a novidade.** Beleza é obrigatória, mas nunca à custa de o usuário entender ou ser informado (seção 2).
 
 Este documento vale para **toda UI que for criada daqui para a frente**. Se algo novo não encaixa aqui, a decisão é registrada aqui, com o motivo, antes de ir para o código.
 
@@ -23,19 +28,72 @@ Responda antes de construir. Se uma resposta for "não sei", a coisa ainda não 
 
 | # | Pergunta | Se a resposta for ruim |
 |---|---|---|
-| 1 | **Motivo.** Qual é o objetivo disto, em uma frase? | Não entra. |
-| 2 | **Clareza.** Alguém entende sem pensar? Os textos são frases comuns, sem sigla, intervalo ou jargão? | Reescreva. O detalhe técnico vai para um tooltip. |
-| 3 | **Sensação.** O que o usuário deve sentir (precisão, calma, segurança, cuidado)? Isso é o que ele sente? | Ajuste forma, cor ou movimento. |
-| 4 | **Resposta.** Cada elemento clicável responde (movimento, som, estado)? Existem os estados: repouso, hover, pressionado, foco, carregando, sucesso, erro, desabilitado e vazio? | Complete os estados. |
-| 5 | **Movimento.** Há motivo para mover? Só elementos clicáveis se movem; nada fica em loop. | Tire o movimento. |
-| 6 | **Som.** A interação tem o som certo da seção 8? Ação destrutiva tem som próprio? | Defina o som. |
-| 7 | **Acessibilidade.** Contraste mínimo de 4,5:1 para texto, foco visível, uso por teclado, `prefers-reduced-motion`, som desligável, cursor com alternativa? | Corrija antes de entregar. |
-| 8 | **Cor.** A cor significa algo? A moldura é neutra e quem tem cor é o conteúdo? | Troque por neutro. |
-| 9 | **Registro.** A decisão e o motivo estão neste documento? | Registre. |
+| 1 | **Usuário primeiro.** Em cada momento, o usuário sabe o que está acontecendo (carregando, vazio, erro, sucesso, bloqueado, desatualizado)? Cada um desses estados tem texto, visual e próximo passo desenhados? | Desenhe o estado que falta (seção 2.1). |
+| 2 | **Simplicidade.** Dá para ser mais simples? Faz o usuário pensar? Dá para ter menos etapas? A interface já pensou por ele (padrão certo, próximo passo oferecido)? | Simplifique antes de embelezar (seção 2.2). |
+| 3 | **Motivo.** Qual é o objetivo disto, em uma frase? | Não entra. |
+| 4 | **Clareza.** Alguém entende sem pensar? Os textos são frases comuns, sem sigla, intervalo ou jargão? | Reescreva. O detalhe técnico vai para um tooltip. |
+| 5 | **Sensação.** O que o usuário deve sentir (precisão, calma, segurança, cuidado)? Isso é o que ele sente? | Ajuste forma, cor ou movimento. |
+| 6 | **Resposta.** Cada elemento clicável responde (movimento, som, estado)? Existem repouso, hover, pressionado, foco, carregando, sucesso, erro, desabilitado (com o porquê) e vazio? | Complete os estados. |
+| 7 | **Movimento.** Há motivo para mover? Só elementos clicáveis se movem; nada fica em loop. | Tire o movimento. |
+| 8 | **Som.** A interação tem o som certo da seção 9? Ação destrutiva tem som próprio? | Defina o som. |
+| 9 | **Acessibilidade.** Contraste mínimo de 4,5:1 para texto, foco visível, uso por teclado, `prefers-reduced-motion`, som desligável, cursor com alternativa? | Corrija antes de entregar. |
+| 10 | **Cor.** A cor significa algo? A moldura é neutra e quem tem cor é o conteúdo? | Troque por neutro. |
+| 11 | **Registro.** A decisão e o motivo estão neste documento? | Registre. |
 
 ---
 
-## 2. Marca
+## 2. O usuário em primeiro lugar
+
+Antes de tela, componente ou animação, vem a pessoa que usa. Duas obrigações decorrem disso: **informá-la de cada coisa que o sistema está fazendo** e **fazer o sistema pensar por ela sempre que possível**.
+
+### 2.1 O usuário sempre sabe o que está acontecendo
+
+Em qualquer momento, quem usa deve saber, sem precisar deduzir, se algo está carregando, vazio, com erro, concluído, bloqueado ou desatualizado. **Um estado sem desenho é uma interface incompleta.** "Não desenhei o erro" nunca é uma entrega aceitável.
+
+| Situação | O usuário precisa saber | Como comunicamos | Exemplo |
+|---|---|---|---|
+| **Carregando** | que está carregando, o quê e, se demorar, que continua funcionando | Esqueleto com a forma do conteúdo (nunca tela em branco nem círculo solto); o botão muda para "Salvando…"; texto curto se passar de uns 3 s | "Buscando os focos de calor…" |
+| **Vazio** | que está vazio, **por quê** e o que fazer | Mensagem + o próximo passo como botão; distinguir "não há dados" de "o filtro escondeu tudo" | "Nenhum foco nos últimos 7 dias. Ver os últimos 30 dias" |
+| **Erro** | o que aconteceu, se o que ele fez está seguro e o que fazer agora | Frase simples, sem código técnico na tela; a ação de resolver ao lado; o que ele digitou é preservado | "Não foi possível salvar. O que você preencheu continua aqui. Tentar de novo" |
+| **Sucesso** | que deu certo, na hora | Confirmação proporcional: check no botão para o que fica na tela; toast para o que sai dela | "Salvo", com check animado e som de sucesso |
+| **Parcial** | o que já está pronto e o que falta | Mostra o que chegou e sinaliza o resto (esqueleto só na parte que falta) | O mapa abre enquanto os focos ainda carregam |
+| **Bloqueado** | **por que** não pode agir | Explicação visível (legenda ou tooltip) junto ao controle desabilitado. Botão desabilitado sem explicação é uma pergunta sem resposta | "Disponível depois de escolher uma propriedade" |
+| **Sem permissão** | o que falta e com quem falar | Texto claro e o caminho | "Seu perfil não pode remover. Fale com o administrador" |
+| **Desatualizado ou sem conexão** | desde quando o dado vale | Hora e fonte à vista | "Dados da NASA · atualizados às 14:32" |
+| **Ação destrutiva** | exatamente o que será perdido | Nome do item na confirmação, som próprio (seção 9), desfazer quando for possível | "Remover a Faz. Santa Clara? Os 128 focos registrados também serão apagados" |
+
+Regras:
+
+1. **Cada tipo de interação** (carregar, salvar, filtrar, excluir, importar, exportar, sincronizar, enviar) tem seus estados **desenhados antes do código**: texto, visual, movimento e, onde couber, som.
+2. Estados iguais se parecem em toda a plataforma. O usuário aprende uma vez.
+3. Nunca deixar o usuário esperando em silêncio: se algo vai demorar, a interface diz.
+4. As mensagens falam do que **o usuário** pode fazer, não do que o sistema falhou em fazer.
+
+### 2.2 Simplicidade: a interface pensa pelo usuário
+
+Para tudo o que existe (tela, campo, passo, rótulo, número), faça estas perguntas, nesta ordem:
+
+1. **Precisa existir?** Dá para tirar?
+2. **Faz o usuário pensar?** Rótulo que exige interpretação, número sem contexto, escolha sem padrão sugerido.
+3. **Dá para ter menos etapas?** Cada clique, tela e campo é um custo. Junte, adie ou dispense.
+4. **A interface já pensou por ele?** Valor padrão certo, próximo passo já oferecido, dado preenchido a partir do que já sabemos, decisão que o sistema pode tomar sozinho.
+5. **O usuário saberia responder ao que pedimos?** Se não, pergunte de outro jeito, ou não pergunte.
+
+Exemplos do próprio projeto:
+
+- O KPI traz a conclusão ("64% acima do normal"), não números crus para o usuário comparar de cabeça.
+- O card crítico oferece a ação que resolve ("Ver propriedades críticas"): ninguém precisa procurar o próximo passo.
+- O critério histórico evita pedir um limite para cada indicador.
+- A legenda "Como ler" aparece uma vez, no lugar certo, em vez de explicações espalhadas.
+- Saiu por obrigar a pensar: "média ago/2020–24: 1,55 m".
+
+### 2.3 Quando há conflito
+
+A ordem é: **o usuário (ser informado e entender), a clareza, a simplicidade, a beleza, a novidade.** Foi por isso que o cursor animado tem alternativas e salvaguardas, que as texturas saíram e que o movimento só existe em quem é clicável.
+
+---
+
+## 3. Marca
 
 **Tom:** preciso, calmo e inteligente. Técnico sem parecer burocrático. Seguro sem parecer arrogante. Poucas palavras, frases muito claras.
 
@@ -43,13 +101,13 @@ Responda antes de construir. Se uma resposta for "não sei", a coisa ainda não 
 
 **Calmo não é apático.** Esta foi uma lição direta dos testes: a versão toda em cinza ficou triste e ninguém tinha vontade de olhar. A moldura é calma e quase monocromática; a vida vem do **conteúdo** (dados, mapa, números), do movimento e do som.
 
-### 2.1 Nome
+### 3.1 Nome
 
 - Wordmark: **GEO PRISMA**.
 - No texto corrido: **Prisma** (nunca "PRISMA" em caixa-alta).
 - **"Sala de Situação" não aparece na interface.** Motivo: decisão de produto; Prisma é o nome único.
 
-### 2.2 Linguagem
+### 3.2 Linguagem
 
 Escreva como se falasse com uma pessoa inteligente que não é especialista.
 
@@ -70,11 +128,11 @@ Regras:
 
 ---
 
-## 3. Cor
+## 4. Cor
 
 **Regra central:** a moldura da interface (fundo, cards, bordas, texto, botões) é neutra e verde. **Quem tem cor é o conteúdo** (dados, mapa). A cor quente existe só para o que é crítico.
 
-### 3.1 Tokens
+### 4.1 Tokens
 
 | Papel | Nome | Valor | Contraste / observação |
 |---|---|---|---|
@@ -88,7 +146,7 @@ Regras:
 | Seleção e hover suave | Verde claro | `#DCE5DF` | Fundo de seleção, aba ativa, hover de linha |
 | Texto sobre verde claro | Verde-tinta | `#355042` | 6,86:1 sobre verde claro |
 
-### 3.2 Cores de dados (escala "viva")
+### 4.2 Cores de dados (escala "viva")
 
 | Significado | Valor | Contraste sobre branco | Uso |
 |---|---|---|---|
@@ -98,7 +156,7 @@ Regras:
 | Água | `#2A7DA6` | 4,58:1 | |
 | Recuo (o que não pede atenção) | `#CDD2CD` | n/a | Barras e itens abaixo do critério |
 
-### 3.3 Por que é assim
+### 4.3 Por que é assim
 
 - **Fundo branco com cards brancos e sombra suave.** O off-white `#F5F5F2` do briefing lia como **bege/papel**; a névoa fria funcionou, mas o branco com sombra foi a escolha final por ser limpo e dar respiro.
 - **Texto secundário `#5C625D`, não o cinza-pedra do briefing.** `#858B86` dá 3,2:1 sobre o fundo e falha em texto pequeno. O pedra ficou só para elementos sem texto.
@@ -108,7 +166,7 @@ Regras:
 
 ---
 
-## 4. Tipografia
+## 5. Tipografia
 
 - **Interface:** IBM Plex Sans. **Números, coordenadas e dados técnicos:** IBM Plex Mono (com `tabular-nums`).
 - **Títulos:** peso 600, espaçamento levemente negativo. **Corpo:** 400.
@@ -118,7 +176,7 @@ Regras:
 
 ---
 
-## 5. Forma e superfície
+## 6. Forma e superfície
 
 | Decisão | Valor | Motivo |
 |---|---|---|
@@ -129,15 +187,15 @@ Regras:
 | Abas e toggle | Seguem o mesmo estilo dos campos (lista branca com borda, aba ativa em verde claro, trilho do toggle derivado) | Antes herdavam um cinza fixo que destoava do fundo |
 | Gradientes | **Só em pontos focais** (card em foco). Nunca em superfícies comuns | Gradiente em tudo vira decoração |
 
-### 5.1 Texturas: nenhuma
+### 6.1 Texturas: nenhuma
 
 Foram testadas e **descartadas**: grão (a primeira versão alterava as cores; corrigida para neutra, mas sem valor percebido), tela/linho (forte demais), curvas de relevo e pontos (sem adesão). **Papel, terra e natureza não são o tom da marca.** Não reintroduzir sem um motivo novo e medido.
 
 ---
 
-## 6. Dados e severidade
+## 7. Dados e severidade
 
-### 6.1 O critério de destaque (histórico)
+### 7.1 O critério de destaque (histórico)
 
 O destaque precisa de um **critério explícito e visível**, senão o usuário pergunta "por que este brilha?".
 
@@ -148,7 +206,7 @@ O destaque precisa de um **critério explícito e visível**, senão o usuário 
 - Motivo do histórico: fogo em agosto é sempre alto; um teto único marca o ano inteiro e esconde a sazonalidade. Exemplo medido: setembro com 140 focos, abaixo do limite de 150, está 47% acima do normal do mês e deve ser visto.
 - ⚠️ **Os valores usados nos protótipos (150, 128, 71…) são exemplos.** O produto precisa **calcular** o normal e os limites por organização (ver pendências).
 
-### 6.2 Componentes
+### 7.2 Componentes
 
 | Componente | Decisão | Motivo |
 |---|---|---|
@@ -164,11 +222,11 @@ O destaque precisa de um **critério explícito e visível**, senão o usuário 
 
 ---
 
-## 7. Movimento
+## 8. Movimento
 
 **Regra:** só **elementos clicáveis** se movem. Nada fica em loop (exceto indicador de carregamento). Cada movimento tem um motivo: confirmar, orientar ou dar sensação de qualidade.
 
-### 7.1 Sistema "Tátil"
+### 8.1 Sistema "Tátil"
 
 | Interação | Comportamento | Motivo |
 |---|---|---|
@@ -184,13 +242,13 @@ O destaque precisa de um **critério explícito e visível**, senão o usuário 
 | Entrada | Seções entram em ordem de leitura (90 ms entre elas); números contam até o valor (1 s); a barra de referência cresce (900 ms) | Orienta a leitura e dá vida |
 | Carregando | Esqueleto com brilho passando (1,3 s) | Mostra a forma do que vem |
 
-### 7.2 Proibido
+### 8.2 Proibido
 
 - **Pulsar em loop.** O ponto "ao vivo" pulsando foi removido: tinha "cara de IA" e não dizia nada. Hoje o texto informa fonte e horário.
 - **Luz que segue o mouse** nos cards: era bonita, mas sem intenção.
 - Movimento em card informativo.
 
-### 7.3 Acessibilidade
+### 8.3 Acessibilidade
 
 `prefers-reduced-motion`: todas as animações e o degradê do cursor ficam paradas.
 
@@ -198,7 +256,7 @@ O destaque precisa de um **critério explícito e visível**, senão o usuário 
 
 ---
 
-## 8. Som
+## 9. Som
 
 Som é parte do design, não um enfeite. **Toda interação definida tem seu som**, sintetizado (Web Audio, sem arquivos), curto e baixo.
 
@@ -224,7 +282,7 @@ Regras:
 
 ---
 
-## 9. Cursor
+## 10. Cursor
 
 **Prisma aurora**, em todo o site.
 
@@ -243,7 +301,7 @@ Motivos: a marca se chama Prisma; o degradê que passa pela borda evoca luz atra
 
 ---
 
-## 10. Ícones
+## 11. Ícones
 
 **Tabler**, traço de 1,75. Motivo: geométricos e firmes, combinam com a linguagem técnica. Foram testados Lucide (2 espessuras), Phosphor (6 pesos), Remix e Iconoir; o traço fino do Lucide ficou tímido e o cheio, pesado.
 
@@ -251,13 +309,13 @@ Cada conceito tem um ícone fixo (fogo, árvore, gota, pin, camadas, sino, downl
 
 ---
 
-## 11. Toasts
+## 12. Toasts
 
 Cartão branco com sombra, ícone em círculo tingido, título e frase curta, **borda de 1 px na cor do alerta** (70%) para o estado ser lido sem ler o texto, **X funcional**. Entrada com mola, saída deslizando.
 
 ---
 
-## 12. Mapa
+## 13. Mapa
 
 - **Base padrão:** OpenFreeMap vetorial **recolorido na paleta** ("mineral"): vegetação em verde suave, água em azul-ardósia claro, ruas brancas. Motivo: mostra o território com vida sem o bege de carta topográfica.
 - **Relevo sombreado médio** (elevação gratuita da AWS) e **inclinação de 50°, girado −14°, com relevo 3D** (exagero 1,8). Motivo: dá profundidade e faz o território parecer território.
@@ -268,7 +326,7 @@ Cartão branco com sombra, ícone em círculo tingido, título e frase curta, **
 
 ---
 
-## 13. Referência viva e escolha final
+## 14. Referência viva e escolha final
 
 O laboratório `/dev/design-lab` (branch `proto/design-lab`, descartável, nunca vai para a `main`) é a referência visual enquanto o código não é migrado. A escolha final do projeto, no formato de URL do laboratório:
 
@@ -282,7 +340,7 @@ Atmosferas testadas, para registro: **Natureza** (terrosa: lia como papel, rejei
 
 ---
 
-## 14. O que foi removido e por quê
+## 15. O que foi removido e por quê
 
 Para ninguém recolocar sem motivo.
 
@@ -302,7 +360,7 @@ Para ninguém recolocar sem motivo.
 | Ponto "Atualizado agora" pulsando | Sem informação; "cara de IA" |
 | Luz que segue o mouse | Sem intenção |
 | Raios coloridos no cursor | Desagradaram; trocados pelo degradê na borda |
-| Texturas (grão, tela, curvas, pontos) | Ver 5.1 |
+| Texturas (grão, tela, curvas, pontos) | Ver 6.1 |
 | Brilho terracota no card em foco, linhas críticas rosadas, barras recuadas em rosa | Calor desnecessário; a tela passava "terra" |
 | Mapa topográfico (OpenTopoMap) como padrão | 50% bege e 46% verde de mata: lia como carta de natureza |
 | Satélite como mapa padrão | O mapa bonito é o principal; satélite é utilidade |
@@ -312,7 +370,7 @@ Para ninguém recolocar sem motivo.
 
 ---
 
-## 15. Armadilhas técnicas
+## 16. Armadilhas técnicas
 
 Descobertas na prática; valem para quem implementar.
 
@@ -320,25 +378,27 @@ Descobertas na prática; valem para quem implementar.
 - **Diálogo:** o v4 centraliza com a propriedade `translate`, não `transform`. Animações do diálogo não podem usar `translate(-50%, -50%)`.
 - **Recharts 2.15 com React 19:** não enxerga `<>…</>` como filho de gráfico (perde séries e o eixo Y). Use arrays com `key`. Ao criar um segundo `YAxis`, dê `yAxisId` explícito a **todas** as séries.
 - **Filtros SVG** calculam em espaço linear por padrão; use `color-interpolation-filters='sRGB'` ou o resultado clareia.
-- **Botão desabilitado** do shadcn tem `pointer-events: none` (ver seção 9).
+- **Botão desabilitado** do shadcn tem `pointer-events: none` (ver seção 10).
 - **Licenças** dos provedores de mapa não foram conferidas (ver pendências).
 
 ---
 
-## 16. Pendências em aberto
+## 17. Pendências em aberto
 
 1. **Limites e "normal" são dados de exemplo.** Definir de onde vêm (cálculo por organização a partir do histórico, regra legal ou configuração) antes de implementar o dashboard.
 2. **Consolidar os verdes.** Hoje há três: verde mineral (marca), Floresta (ação) e verde-folha `#2E7D5B` (dado "normal"). Decidir se o "normal" deve ser o Floresta ou o mineral.
 3. **Licenças e termos** dos provedores de mapa (Esri, OSM, Carto, OpenTopoMap, OpenFreeMap) antes de ir para produção.
 4. **Política de som no produto:** padrão "sutil" ligado, mas confirmar se começa ligado ou desligado para novos usuários.
-5. **Segunda onda** (fora do escopo atual): impressão e PDF, e-mails, manifest do PWA, mapa em Leaflet legado, reescrita dos textos existentes no tom da seção 2, vetorização do logo.
+5. **Segunda onda** (fora do escopo atual): impressão e PDF, e-mails, manifest do PWA, mapa em Leaflet legado, reescrita dos textos existentes no tom da seção 3, vetorização do logo.
 6. **Landing:** só troca de cores; layout e textos ficam como estão.
 7. **Teste existente falhando**, sem relação com design: `maplibre-layer.test.ts` (`resolveLayerType`).
+8. **Desenhar os estados que faltam** (seção 2.1). Nos protótipos só existem **carregando** (esqueleto) e **sucesso** (check no botão). Faltam, para cada tipo de interação do produto: **vazio** (com o porquê e o próximo passo), **erro** (com o que fazer e o que foi preservado), **parcial**, **sem permissão**, **bloqueado com explicação** e **confirmação destrutiva** (com o nome do item e o que será perdido). Isso vem antes de construir cada tela, não depois.
+9. **Auditar as telas atuais** com o checklist da seção 1.2 e a seção 2: onde há espera sem aviso, lista vazia sem explicação, erro sem saída, botão desabilitado sem motivo ou etapa que dá para eliminar.
 
 ---
 
-## 17. Como evoluir este documento
+## 18. Como evoluir este documento
 
-- Toda mudança de design **registra o motivo** aqui, na seção certa, e se algo foi removido, na seção 14.
+- Toda mudança de design **registra o motivo** aqui, na seção certa, e se algo foi removido, na seção 15.
 - Antes de criar UI nova, passe pelo checklist da seção 1.2.
-- Mudou uma decisão? Não apague a antiga: mova para a seção 14 com o motivo.
+- Mudou uma decisão? Não apague a antiga: mova para a seção 15 com o motivo.
