@@ -27,4 +27,6 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - run: npm test -- --runInBand
+      - run: npx tsc --noEmit --incremental false
       - run: npx jest --config tests/integration/jest.config.cjs --runInBand

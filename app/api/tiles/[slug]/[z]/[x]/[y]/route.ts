@@ -40,24 +40,21 @@ export async function GET(
     }
     try {
         // Organization data and base data remain scoped even under a global catalog entry.
-        const needsRegions = tableName !== 'estradas' || !global;
         let regionFilter = sql``;
-        if (needsRegions) {
-            const superadmin = user.app_metadata?.is_superadmin === true;
-            const owner = superadmin || (await db.execute<{ ok: boolean }>(sql`
+        const superadmin = user.app_metadata?.is_superadmin === true;
+        const owner = superadmin || (await db.execute<{ ok: boolean }>(sql`
                 SELECT EXISTS (SELECT 1 FROM monitoramento.roles
                 WHERE user_id = ${user.id}::uuid AND tenant_id = ${tenantId}::uuid
                 AND role = 'owner') AS ok
-            `)).rows[0]?.ok === true;
-            const ids = owner ? null : await getRegionIdsForUser(user.id, tenantId);
-            if (requestedRegion !== null && ids !== null && !ids.includes(requestedRegion)) {
-                return new Response('Region not accessible', { status: 403 });
-            }
-            if (requestedRegion !== null) regionFilter = sql` AND r.id = ${requestedRegion}`;
-            else if (ids !== null) regionFilter = ids.length
-                ? sql` AND r.id IN (${sql.join(ids.map(id => sql`${id}`), sql`, `)})`
-                : sql` AND FALSE`;
+        `)).rows[0]?.ok === true;
+        const ids = owner ? null : await getRegionIdsForUser(user.id, tenantId);
+        if (requestedRegion !== null && ids !== null && !ids.includes(requestedRegion)) {
+            return new Response('Region not accessible', { status: 403 });
         }
+        if (requestedRegion !== null) regionFilter = sql` AND r.id = ${requestedRegion}`;
+        else if (ids !== null) regionFilter = ids.length
+            ? sql` AND r.id IN (${sql.join(ids.map(id => sql`${id}`), sql`, `)})`
+            : sql` AND FALSE`;
         const regionOwnership = sql`r.organization_id = ${tenantId}::uuid ${regionFilter}`;
         let dataFilter;
         if (tableName === 'raw_firms' || tableName === 'desmatamento') {
@@ -69,8 +66,6 @@ export async function GET(
         } else if (tableName === 'propriedades') {
             dataFilter = sql`EXISTS (SELECT 1 FROM monitoramento.regioes r
                 WHERE ${regionOwnership} AND ST_Intersects(t.${sql.identifier(geometryColumn)}, r.geom))`;
-        } else if (tableName === 'estradas' && global) {
-            dataFilter = sql`TRUE`;
         } else {
             dataFilter = sql`t.tenant_id = ${tenantId}::uuid AND EXISTS (
                 SELECT 1 FROM monitoramento.regioes r WHERE r.id = t.regiao_id AND ${regionOwnership})`;

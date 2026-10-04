@@ -54,9 +54,11 @@ test("actions constrain both organization and assigned region", async () => {
   catalog("acoes"); await GET(request(), params); const q = query();
   expect(q.sql).toContain("t.tenant_id"); expect(q.sql).toContain("r.id = t.regiao_id"); expect(q.params).toContain("org-a"); expect(q.params).toContain(11);
 });
-test.each([["org-b", "global"], [null, "tenant"]])("global roads remain available despite legacy owner %s", async (tenant, scope) => {
+test.each([["org-b", "global"], [null, "tenant"]])("roads stay within the caller's organization and region despite catalog owner %s", async (tenant, scope) => {
   catalog("estradas", tenant, scope!); expect((await GET(request(), params)).status).toBe(200);
-  expect(query().sql).not.toContain("tenant_id"); expect(query().params).not.toContain("org-a");
+  expect(query().sql).toContain("t.tenant_id");
+  expect(query().sql).toContain("r.id = t.regiao_id");
+  expect(query().params).toEqual(expect.arrayContaining(["org-a", 11]));
 });
 test("global catalog does not expose base data outside accessible regions", async () => {
   catalog("raw_firms", "org-b", "global"); await GET(request(), params);
