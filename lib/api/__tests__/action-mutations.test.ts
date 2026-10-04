@@ -1,3 +1,6 @@
+jest.mock("@/db", () => ({ db: { execute: jest.fn() } }));
+import { db } from "@/db";
+import { PgDialect } from "drizzle-orm/pg-core";
 jest.mock('@/lib/api/require-auth', () => ({ requireRole: jest.fn() }));
 jest.mock('@/lib/api/require-region', () => ({ getAccessibleRegionIdsForUser: jest.fn() }));
 jest.mock('@/lib/api/scope', () => ({ getTenantIdForRegion: jest.fn() }));
@@ -31,6 +34,7 @@ beforeEach(() => {
   (findAcaoById as jest.Mock).mockResolvedValue({ id: 5, regiao_id: 11 });
   (getTenantIdForRegion as jest.Mock).mockResolvedValue('org-a');
   (getAccessibleRegionIdsForUser as jest.Mock).mockResolvedValue([11]);
+  (db.execute as jest.Mock).mockResolvedValue({ rows: [{ ok: true }] });
   (deleteAcaoItemHistoryById as jest.Mock).mockResolvedValue([{ id: 7 }]);
   upload.mockResolvedValue({ error: null });
   createSignedUploadUrl.mockResolvedValue({ data: { signedUrl: 'https://storage/upload' }, error: null });
@@ -53,6 +57,7 @@ describe.each([{name:'update POST',handler:update},{name:'update DELETE',handler
   });
   it('rejects a region in the same organization without user grants',async()=> {
     (getAccessibleRegionIdsForUser as jest.Mock).mockResolvedValue([12]);
+    (db.execute as jest.Mock).mockResolvedValue({ rows: [{ ok: false }] });
     expect((await handler(request(),context)).status).toBe(403); noMutation();
   });
   it('rejects an action whose region belongs to another organization',async()=> {
@@ -61,12 +66,15 @@ describe.each([{name:'update POST',handler:update},{name:'update DELETE',handler
   });
   it('rejects a viewer without regional assignments',async()=> {
     (getAccessibleRegionIdsForUser as jest.Mock).mockResolvedValue([]);
+    (db.execute as jest.Mock).mockResolvedValue({ rows: [{ ok: false }] });
     expect((await handler(request(),context)).status).toBe(403); noMutation();
   });
   it('accepts an editor in the assigned region',async()=> {
     expect((await handler(request(),context)).status).toBe(200);
     expect(requireRole).toHaveBeenCalledWith('editor');
-    expect(getAccessibleRegionIdsForUser).toHaveBeenCalledWith('user-a','org-a',false);
+    const q = new PgDialect().sqlToQuery((db.execute as jest.Mock).mock.calls[0][0]);
+    expect(q.params).toEqual(['user-a','org-a',11]);
+    expect(q.sql).toContain("role = 'editor' AND region_id =");
   });
   it('accepts organization owners with all-region access',async()=> {
     (getAccessibleRegionIdsForUser as jest.Mock).mockResolvedValue(null);
@@ -83,4 +91,20 @@ it('photo upload writes storage and image record only after authorization',async
   await photo(request(),context);
   expect(upload).toHaveBeenCalledTimes(1);
   expect(addAcaoImageById).toHaveBeenCalledWith(5,expect.stringContaining('/acoes/5/'),'description',expect.any(Date));
+});
+
+it('denies editor in region A and viewer in target region B using the writing grant query', async () => {
+  (findAcaoById as jest.Mock).mockResolvedValue({ id: 5, regiao_id: 12 });
+  (getAccessibleRegionIdsForUser as jest.Mock).mockResolvedValue([11,12]);
+  (db.execute as jest.Mock).mockImplementation(async statement => {
+    const q = new PgDialect().sqlToQuery(statement);
+    expect(q.sql).toContain("role = 'editor' AND region_id =");
+    expect(q.sql).toContain("role = 'owner'");
+    expect(q.params).toEqual(['user-a','org-a',12]);
+    return { rows: [{ ok: false }] };
+  });
+  expect((await update(request(),context)).status).toBe(403);
+  expect((await photo(request(),context)).status).toBe(403);
+  expect((await signedUrl(request(),context)).status).toBe(403);
+  noMutation();
 });

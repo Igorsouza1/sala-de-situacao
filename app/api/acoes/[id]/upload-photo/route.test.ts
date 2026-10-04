@@ -39,7 +39,7 @@ beforeEach(() => {
   (db.execute as jest.Mock).mockImplementation(async statement => {
     const q = new PgDialect().sqlToQuery(statement);
     if (q.sql.includes('FROM monitoramento.regioes')) return { rows: [{ tenant_id: TENANT }] };
-    if (q.sql.includes('SELECT EXISTS')) return { rows: [{ ok: false }] };
+    if (q.sql.includes('SELECT EXISTS')) return { rows: [{ ok: true }] };
     if (q.sql.includes('FROM monitoramento.roles')) return { rows: [{ region_id: 11 }] };
     throw new Error('Unexpected authorization query: ' + q.sql);
   });
