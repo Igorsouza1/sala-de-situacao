@@ -65,7 +65,7 @@ export async function resolveTableLayer(
   } else if (tableName === 'propriedades') {
     whereParts.push(sql`EXISTS (SELECT 1 FROM monitoramento.regioes r
       WHERE ${ownership} AND ST_Intersects(t.${sql.identifier(geometryColumn)}, r.geom))`);
-  } else if (tableName === 'acoes' || scope !== 'global') {
+  } else if (tableName === 'acoes' || tableName === 'estradas' || scope !== 'global') {
     whereParts.push(sql`t.tenant_id = ${options.tenantId}::uuid`);
     whereParts.push(sql`EXISTS (SELECT 1 FROM monitoramento.regioes r
       WHERE r.id = t.regiao_id AND ${ownership})`);

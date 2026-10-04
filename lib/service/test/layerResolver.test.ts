@@ -35,10 +35,11 @@ it('owner organization scope still filters junction ownership', async () => {
   expect(q.params).toEqual(['org-a']);
   expect(q.sql).toContain('r.organization_id =');
 });
-it('global reference roads remain available', async () => {
+it('roads remain private even when the catalog labels the layer global', async () => {
   const q = await query('estradas', 'global');
-  expect(q.sql).toContain('WHERE TRUE');
-  expect(q.params).toEqual([]);
+  expect(q.sql).toContain('t.tenant_id =');
+  expect(q.sql).toContain('r.id = t.regiao_id');
+  expect(q.params).toEqual(['org-a', 'org-a', 11]);
 });
 it('returns actual geometry and feature properties from query rows', async () => {
   (db.execute as jest.Mock).mockResolvedValue({ rows: [{ id: 5, acq_date: '2026-10-04', geojson: '{"type":"Point","coordinates":[1,2]}' }] });

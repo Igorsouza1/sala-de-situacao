@@ -26,6 +26,8 @@ beforeAll(async () => {
     CREATE TABLE monitoramento.acoes (id int PRIMARY KEY, tenant_id uuid, regiao_id int,
       acao text, name text, descricao text, mes text, atuacao text, status text, categoria text, tipo text,
       eixo_tematico text, tipo_tecnico text, carater text, time timestamp, geom geometry(Point,4674));
+    CREATE TABLE monitoramento.estradas (id int PRIMARY KEY, tenant_id uuid, regiao_id int,
+      nome text, tipo text, codigo text, geom geometry(LineString,4674));
     CREATE TABLE monitoramento.raw_firms (id uuid PRIMARY KEY, tenant_id uuid, regiao_id int, acq_date date,
       acq_time text, frp numeric, satellite text, cod_imovel text, latitude numeric, longitude numeric, geom geometry(Point,4674));
     CREATE TABLE monitoramento.desmatamento (id int PRIMARY KEY, tenant_id uuid, regiao_id int, alertid text UNIQUE,
@@ -47,6 +49,9 @@ beforeAll(async () => {
     (1,$1,11,ST_SetSRID(ST_Point(1,1),4674)),
     (2,$2,21,ST_SetSRID(ST_Point(1,1),4674)),
     (3,$1,12,ST_SetSRID(ST_Point(4,4),4674));`, [A,B]);
+  await pool.query(`INSERT INTO monitoramento.estradas(id,tenant_id,regiao_id,geom) VALUES
+    (1,$1,11,ST_MakeLine(ST_SetSRID(ST_Point(0,0),4674),ST_SetSRID(ST_Point(1,1),4674))),
+    (2,$2,21,ST_MakeLine(ST_SetSRID(ST_Point(0,0),4674),ST_SetSRID(ST_Point(1,1),4674)));`, [A,B]);
   await pool.query(`INSERT INTO monitoramento.raw_firms(id,acq_date,geom) VALUES
     ($1,'2026-10-04',ST_SetSRID(ST_Point(1,1),4674)),
     ($2,'2026-10-04',ST_SetSRID(ST_Point(7,7),4674));`, [F,G]);
@@ -92,6 +97,11 @@ it('properties follow owned spatial regions even when legacy tenant points elsew
   expect(await ids('propriedades',B,21)).toEqual([1]);
   expect(await ids('propriedades',A,22)).toEqual([]);
   expect(await ids('propriedades',A)).toEqual([1]);
+});
+test.each(['tenant','region','global'] as LayerScope[])('roads remain private with overlapping geometry and catalog %s', async scope => {
+  expect(await ids('estradas',A,11,scope)).toEqual([1]);
+  expect(await ids('estradas',B,21,scope)).toEqual([2]);
+  expect(await ids('estradas',A,21,scope)).toEqual([]);
 });
 it('property count uses the assigned regions rather than the legacy tenant column', async()=> {
   expect(await countPropriedades(A,undefined,undefined,[11])).toBe(1);
