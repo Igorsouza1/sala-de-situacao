@@ -1,14 +1,13 @@
 import { apiError, apiSuccess } from "@/lib/api/responses"
 import { getFocosIndicador } from "@/lib/service/firmsService"
-import { resolveScope, parseRegiaoIdParam } from "@/lib/api/scope"
+import { resolveEnvironmentalReadScope } from "@/lib/api/environmental-read-scope"
 
 export async function GET(request: Request) {
-  const regiaoId = parseRegiaoIdParam(new URL(request.url).searchParams);
-  const scope = await resolveScope({ regiaoId });
+  const scope = await resolveEnvironmentalReadScope(request);
   if (scope.response) return scope.response;
 
   try {
-    const data = await getFocosIndicador(scope.tenantId, scope.user.app_metadata?.is_superadmin === true, regiaoId ?? undefined)
+    const data = await getFocosIndicador(scope.tenantId, scope.isSuperadmin, scope.regionFilter)
     return apiSuccess(data)
   } catch (error: any) {
     return apiError(error?.message || "Erro ao buscar indicador de focos de incêndio", 500)

@@ -4,19 +4,20 @@ import { GET as desmatamento } from "../desmatamento/route";
 import { GET as indicadorDesmatamento } from "../desmatamento/indicador/route";
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { getRegionIdForUser } from "@/lib/api/require-region";
+import { getAccessibleRegionIdsForUser, getRegionIdForUser } from "@/lib/api/require-region";
 import { getAllFirmsData, getFocosIndicador } from "@/lib/service/firmsService";
 import { getAllDesmatamentoDataGroupedByMonthAndYear } from "@/lib/service/desmatamentoService";
 
 // resolveScope e requireAuthWithTenant são reais: a rota autentica sem middleware.
 jest.mock("@/lib/supabase/server", () => ({ createClient: jest.fn() }));
 jest.mock("@/db", () => ({ db: { execute: jest.fn() } }));
-jest.mock("@/lib/api/require-region", () => ({ getRegionIdForUser: jest.fn() }));
+jest.mock("@/lib/api/require-region", () => ({ getRegionIdForUser: jest.fn(), getAccessibleRegionIdsForUser: jest.fn() }));
 jest.mock("@/lib/service/firmsService", () => ({ getAllFirmsData: jest.fn(), getFocosIndicador: jest.fn() }));
 jest.mock("@/lib/service/desmatamentoService", () => ({ getAllDesmatamentoDataGroupedByMonthAndYear: jest.fn() }));
 
 const services = [getAllFirmsData, getFocosIndicador, getAllDesmatamentoDataGroupedByMonthAndYear];
 const region = jest.mocked(getRegionIdForUser);
+const accessibleRegions = jest.mocked(getAccessibleRegionIdsForUser);
 
 function session(appMetadata: Record<string, unknown> | null) {
   (createClient as jest.Mock).mockResolvedValue({
@@ -31,6 +32,7 @@ beforeEach(() => {
   session({ tenant_id: "org-a" });
   (db.execute as jest.Mock).mockResolvedValue({ rows: [] });
   region.mockResolvedValue(11);
+  accessibleRegions.mockResolvedValue(null);
   for (const service of services) (service as jest.Mock).mockResolvedValue({ 2026: Array(12).fill(0) });
 });
 
@@ -79,6 +81,25 @@ describe.each([
     expect((await handler(request("regiao_id=12"))).status).toBe(200);
     expect(db.execute).toHaveBeenCalled();
     expect(service).toHaveBeenCalledWith("org-a", false, 12);
+  });
+
+  test("usuário com duas Regiões recebe apenas ambas as Regiões autorizadas", async () => {
+    accessibleRegions.mockResolvedValue([11, 12]);
+    expect((await handler(request())).status).toBe(200);
+    expect(service).toHaveBeenCalledWith("org-a", false, [11, 12]);
+  });
+
+  test("Região explícita fora das atribuições é bloqueada mesmo dentro da Organização", async () => {
+    accessibleRegions.mockResolvedValue([11]);
+    (db.execute as jest.Mock).mockResolvedValue({ rows: [{ tenant_id: "org-a" }] });
+    expect((await handler(request("regiao_id=12"))).status).toBe(403);
+    expect(service).not.toHaveBeenCalled();
+  });
+
+  test("usuário sem Regiões atribuídas não consulta dados", async () => {
+    accessibleRegions.mockResolvedValue([]);
+    expect((await handler(request())).status).toBe(403);
+    expect(service).not.toHaveBeenCalled();
   });
 
   test("Região de outra Organização retorna 403 antes da consulta", async () => {

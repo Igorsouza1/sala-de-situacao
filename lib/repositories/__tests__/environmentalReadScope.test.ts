@@ -17,7 +17,7 @@ const end = "2026-08-31";
 const readers = [
   { name: "Focos de Calor mensais", table: "raw_firms", junction: "firms_regioes", alias: "fr", fk: "firm_id", read: findAllFirmsData },
   { name: "indicador de Focos de Calor", table: "raw_firms", junction: "firms_regioes", alias: "fr", fk: "firm_id",
-    read: (tenantId: string, superadmin: boolean, regiaoId?: number) => firmsRepository.getFirmsDataByDateRange(tenantId, superadmin, start, end, regiaoId) },
+    read: (tenantId: string, superadmin: boolean, regiaoId?: number | number[]) => firmsRepository.getFirmsDataByDateRange(tenantId, superadmin, start, end, regiaoId) },
   { name: "Detecções de Desmatamento", table: "desmatamento", junction: "desmatamento_regioes", alias: "dr", fk: "desmatamento_id", read: findAllDesmatamentoData },
 ];
 
@@ -49,6 +49,14 @@ describe.each(readers)("$name", ({ table, junction, alias, fk, read }) => {
     expect(text).toContain("r.organization_id =");
     expect(text).toMatch(/AND r\.id = \$\d+/);
     expect(params).toEqual(expect.arrayContaining([orgA, 12]));
+  });
+
+  test("múltiplas Regiões concedidas mantêm filtro de Organização sem duplicar alertas", async () => {
+    await read(orgA, false, [11, 12]);
+    const [{ text }, params] = query.mock.calls[0];
+    expect(text).toMatch(/r\.id IN \(\$\d+, \$\d+\)/);
+    expect(params).toEqual(expect.arrayContaining([orgA, 11, 12]));
+    expect(text).toContain("EXISTS");
   });
 
   test("Superadmin lê globalmente, inclusive Dados de Base sem associação", async () => {

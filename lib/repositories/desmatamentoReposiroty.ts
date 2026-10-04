@@ -26,14 +26,17 @@ export async function findExistingDesmatamentoAlertids(
   return new Set(rows.map((r) => r.alertid).filter((id): id is string => id !== null));
 }
 
-export async function findAllDesmatamentoData(tenantId: string, isSuperadmin: boolean, regiaoId?: number) {
+export async function findAllDesmatamentoData(tenantId: string, isSuperadmin: boolean, regiaoIds?: number | number[]) {
   // A associação pode existir em várias Regiões; hectares contam uma única vez.
-  const scope = isSuperadmin && regiaoId == null ? sql`true` : sql`EXISTS (
+  const regionFilter = regiaoIds == null ? sql`` : Array.isArray(regiaoIds)
+    ? regiaoIds.length ? sql`AND r.id IN (${sql.join(regiaoIds.map(id => sql`${id}`), sql`, `)})` : sql`AND false`
+    : sql`AND r.id = ${regiaoIds}`;
+  const scope = isSuperadmin && regiaoIds == null ? sql`true` : sql`EXISTS (
     SELECT 1 FROM monitoramento.desmatamento_regioes dr
     JOIN monitoramento.regioes r ON r.id = dr.regiao_id
     WHERE dr.desmatamento_id = ${desmatamentoInMonitoramento.id}
       ${isSuperadmin ? sql`` : sql`AND r.organization_id = ${tenantId}::uuid`}
-      ${regiaoId == null ? sql`` : sql`AND r.id = ${regiaoId}`}
+      ${regionFilter}
   )`;
   const result = await db.select(
     {

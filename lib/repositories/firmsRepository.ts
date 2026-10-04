@@ -7,29 +7,32 @@ import { sql, and } from "drizzle-orm";
 // Este repositório atende só os indicadores do dashboard (/api/fogo/*).
 
 // EXISTS mantém cada Foco de Calor único mesmo em Regiões sobrepostas.
-function firmsReadScope(tenantId: string, isSuperadmin: boolean, regiaoId?: number) {
-  if (isSuperadmin && regiaoId == null) return sql`true`;
+function firmsReadScope(tenantId: string, isSuperadmin: boolean, regiaoIds?: number | number[]) {
+  if (isSuperadmin && regiaoIds == null) return sql`true`;
+  const regionFilter = regiaoIds == null ? sql`` : Array.isArray(regiaoIds)
+    ? regiaoIds.length ? sql`AND r.id IN (${sql.join(regiaoIds.map(id => sql`${id}`), sql`, `)})` : sql`AND false`
+    : sql`AND r.id = ${regiaoIds}`;
   return sql`EXISTS (
     SELECT 1 FROM monitoramento.firms_regioes fr
     JOIN monitoramento.regioes r ON r.id = fr.regiao_id
     WHERE fr.firm_id = ${rawFirmsInMonitoramento.id}
       ${isSuperadmin ? sql`` : sql`AND r.organization_id = ${tenantId}::uuid`}
-      ${regiaoId == null ? sql`` : sql`AND r.id = ${regiaoId}`}
+      ${regionFilter}
   )`;
 }
 
-export async function findAllFirmsData(tenantId: string, isSuperadmin: boolean, regiaoId?: number) {
+export async function findAllFirmsData(tenantId: string, isSuperadmin: boolean, regiaoIds?: number | number[]) {
   const result = await db.execute(sql`
       SELECT id, acq_date, acq_time, frp, satellite, cod_imovel
       FROM "monitoramento"."raw_firms"
-      WHERE ${firmsReadScope(tenantId, isSuperadmin, regiaoId)}
+      WHERE ${firmsReadScope(tenantId, isSuperadmin, regiaoIds)}
     `)
 
   return result
 }
 
 class FirmsRepository {
-  async getFirmsDataByDateRange(tenantId: string, isSuperadmin: boolean, startDate: string, endDate: string, regiaoId?: number) {
+  async getFirmsDataByDateRange(tenantId: string, isSuperadmin: boolean, startDate: string, endDate: string, regiaoIds?: number | number[]) {
     return await db
       .select({
         id: rawFirmsInMonitoramento.id,
@@ -41,7 +44,7 @@ class FirmsRepository {
       .from(rawFirmsInMonitoramento)
       .where(
         and(
-          firmsReadScope(tenantId, isSuperadmin, regiaoId),
+          firmsReadScope(tenantId, isSuperadmin, regiaoIds),
           sql`${rawFirmsInMonitoramento.acqDate} >= ${startDate}`,
           sql`${rawFirmsInMonitoramento.acqDate} <= ${endDate}`
         )

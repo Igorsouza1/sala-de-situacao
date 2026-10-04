@@ -2,8 +2,8 @@ import { findAllDesmatamentoData } from "../repositories/desmatamentoReposiroty"
 
 
 
-export async function getAllDesmatamentoDataGroupedByMonthAndYear(tenantId: string, isSuperadmin: boolean, regiaoId?: number){
-    const desmatamentoData = await findAllDesmatamentoData(tenantId, isSuperadmin, regiaoId)
+export async function getAllDesmatamentoDataGroupedByMonthAndYear(tenantId: string, isSuperadmin: boolean, regiaoIds?: number | number[]){
+    const desmatamentoData = await findAllDesmatamentoData(tenantId, isSuperadmin, regiaoIds)
 
     // Agrupar os dados por mês e ano
     const groupedData = desmatamentoData.reduce(
