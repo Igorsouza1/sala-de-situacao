@@ -15,6 +15,7 @@ import { findAllDesmatamentoData } from '@/lib/repositories/desmatamentoReposiro
 import { countPropriedades } from '@/lib/repositories/propriedadesRepository';
 import { resolveTenantIdForUser } from '@/lib/api/require-auth';
 import { getAccessibleRegionIdsForUser } from '@/lib/api/require-region';
+import { listUserAccess } from '@/lib/service/userManagementService';
 import type { LayerScope } from '@/types/map-dto';
 const pool = require('@/db').integrationPool;
 const A = '00000000-0000-0000-0000-00000000000a';
@@ -23,11 +24,17 @@ const F = '00000000-0000-0000-0000-000000000001';
 const G = '00000000-0000-0000-0000-000000000002';
 const REVOKED = '00000000-0000-0000-0000-000000000003';
 const ASSIGNED = '00000000-0000-0000-0000-000000000004';
+const SUPERADMIN = '00000000-0000-0000-0000-000000000005';
 beforeAll(async () => {
   await pool.query(`CREATE EXTENSION IF NOT EXISTS postgis;
+    CREATE SCHEMA auth;
     CREATE SCHEMA monitoramento;
-    CREATE TABLE monitoramento.regioes (id int PRIMARY KEY, organization_id uuid, geom geometry(Polygon,4674));
-    CREATE TABLE monitoramento.roles (id serial PRIMARY KEY, user_id uuid, tenant_id uuid, role text, region_id int);
+    CREATE TABLE auth.users (id uuid PRIMARY KEY, email text, invited_at timestamptz,
+      email_confirmed_at timestamptz, last_sign_in_at timestamptz, raw_app_meta_data jsonb DEFAULT '{}'::jsonb);
+    CREATE TABLE monitoramento.tenants (id uuid PRIMARY KEY, name text);
+    CREATE TABLE monitoramento.regioes (id int PRIMARY KEY, organization_id uuid, nome text, geom geometry(Polygon,4674));
+    CREATE TABLE monitoramento.roles (id serial PRIMARY KEY, user_id uuid, tenant_id uuid, role text,
+      region_id int, created_at timestamptz DEFAULT now());
     CREATE TABLE monitoramento.user_access (id serial PRIMARY KEY, user_id uuid, organization_id uuid, regiao_id int);
     CREATE TABLE monitoramento.acoes (id int PRIMARY KEY, tenant_id uuid, regiao_id int,
       acao text, name text, descricao text, mes text, atuacao text, status text, categoria text, tipo text,
@@ -45,12 +52,17 @@ beforeAll(async () => {
     CREATE TABLE monitoramento.propriedades (id int PRIMARY KEY, tenant_id uuid, cod_tema text, nom_tema text,
       cod_imovel text, mod_fiscal numeric, num_area numeric, ind_status text, ind_tipo text,
       des_condic text, municipio text, geom geometry(Polygon,4674));`);
-  await pool.query(`INSERT INTO monitoramento.regioes VALUES
+  await pool.query(`INSERT INTO monitoramento.tenants(id,name) VALUES ($1,'Org A'),($2,'Org B');`, [A,B]);
+  await pool.query(`INSERT INTO monitoramento.regioes(id,organization_id,geom) VALUES
     (11,$1,ST_MakeEnvelope(0,0,2,2,4674)),
     (12,$1,ST_MakeEnvelope(3,3,5,5,4674)),
     (21,$2,ST_MakeEnvelope(0,0,2,2,4674)),
     (22,$2,ST_MakeEnvelope(6,6,8,8,4674));
     `, [A,B]);
+  await pool.query(`INSERT INTO auth.users(id,email,email_confirmed_at,raw_app_meta_data) VALUES
+    ($1,'revoked@example.com',now(),'{}'::jsonb),
+    ($2,'assigned@example.com',now(),'{}'::jsonb),
+    ($3,'superadmin@example.com',now(),'{"is_superadmin": true}'::jsonb);`, [REVOKED,ASSIGNED,SUPERADMIN]);
   await pool.query(`INSERT INTO monitoramento.user_access(user_id,organization_id,regiao_id) VALUES
     ($1,$3,11),($2,$4,21);`, [REVOKED,ASSIGNED,A,B]);
   await pool.query(`INSERT INTO monitoramento.roles(user_id,tenant_id,role,region_id) VALUES
@@ -127,4 +139,10 @@ it('current roles override stale legacy regional and organization entries', asyn
   const user = { id: ASSIGNED, app_metadata: { tenant_id: B } } as any;
   expect(await resolveTenantIdForUser(user)).toBe(A);
   expect(await getAccessibleRegionIdsForUser(ASSIGNED,A)).toEqual([12]);
+});
+it('admin list shows roleless accounts in red status and distinguishes superadmin', async()=> {
+  const rows = await listUserAccess();
+  expect(rows.find((row) => row.userId === REVOKED)).toMatchObject({ roleId: null, status: 'no_access', tenantId: null });
+  expect(rows.find((row) => row.userId === ASSIGNED)).toMatchObject({ status: 'active', regionId: 12, tenantId: A });
+  expect(rows.find((row) => row.userId === SUPERADMIN)).toMatchObject({ roleId: null, status: 'superadmin' });
 });

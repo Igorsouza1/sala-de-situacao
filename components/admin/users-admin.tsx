@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Mail, Pencil, Trash2, UserX } from "lucide-react";
+import { AlertCircle, Mail, Pencil, Trash2, UserX } from "lucide-react";
 
 type Organization = { id: string; name: string; slug: string | null };
 type Region = { id: number; nome: string; organizationId: string | null };
@@ -27,16 +27,17 @@ type Region = { id: number; nome: string; organizationId: string | null };
 type Role = "owner" | "editor" | "viewer" | "auditor";
 
 type AccessRow = {
-  roleId: number;
+  roleId: number | null;
   userId: string;
   email: string | null;
-  role: Role;
-  tenantId: string;
-  organizationName: string;
+  role: Role | null;
+  tenantId: string | null;
+  organizationName: string | null;
   regionId: number | null;
   regionName: string | null;
-  createdAt: string;
-  status: "pending" | "active";
+  createdAt: string | null;
+  status: "pending" | "active" | "no_access" | "no_region" | "superadmin";
+  isSuperadmin: boolean;
 };
 
 const ROLE_LABELS: Record<Role, string> = {
@@ -46,13 +47,14 @@ const ROLE_LABELS: Record<Role, string> = {
   auditor: "Auditor",
 };
 
-const initialCreateForm = { email: "", tenantId: "", role: "viewer" as Role, regionIds: [] as number[], allRegions: false };
+const initialCreateForm = { email: "", tenantId: "", role: "viewer" as Role, regionIds: [] as number[] };
 
 export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
   const [orgs, setOrgs] = useState<Organization[]>([]);
   const [regions, setRegions] = useState<Region[]>([]);
   const [rows, setRows] = useState<AccessRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const [orgFilter, setOrgFilter] = useState<string>(initialOrgId ?? "all");
 
@@ -78,16 +80,23 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
 
   const loadAll = async () => {
     setLoading(true);
-    const [orgsRes, regionsRes, usersRes] = await Promise.all([
-      fetch("/api/admin/organizations", { cache: "no-store" }),
-      fetch("/api/admin/regions", { cache: "no-store" }),
-      fetch("/api/admin/users", { cache: "no-store" }),
-    ]);
-    const [orgsJson, regionsJson, usersJson] = await Promise.all([orgsRes.json(), regionsRes.json(), usersRes.json()]);
-    setOrgs(orgsJson.data ?? []);
-    setRegions(regionsJson.data ?? []);
-    setRows(usersJson.data ?? []);
-    setLoading(false);
+    setLoadError(null);
+    try {
+      const responses = await Promise.all([
+        fetch("/api/admin/organizations", { cache: "no-store" }),
+        fetch("/api/admin/regions", { cache: "no-store" }),
+        fetch("/api/admin/users", { cache: "no-store" }),
+      ]);
+      if (responses.some((response) => !response.ok)) throw new Error("Falha ao carregar acessos.");
+      const [orgsJson, regionsJson, usersJson] = await Promise.all(responses.map((response) => response.json()));
+      setOrgs(orgsJson.data ?? []);
+      setRegions(regionsJson.data ?? []);
+      setRows(usersJson.data ?? []);
+    } catch {
+      setLoadError("Não foi possível carregar os usuários e seus acessos. Tente novamente.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -105,12 +114,24 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
   const regionsForOrg = (orgId: string) => regions.filter((r) => r.organizationId === orgId);
 
   const filteredRows = useMemo(
-    () => (orgFilter === "all" ? rows : rows.filter((r) => r.tenantId === orgFilter)),
+    () => orgFilter === "all" ? rows : orgFilter === "attention"
+      ? rows.filter((row) => row.status === "no_access" || row.status === "no_region")
+      : rows.filter((row) => row.tenantId === orgFilter),
     [rows, orgFilter],
   );
+  const attentionCount = useMemo(() => new Set(rows
+    .filter((row) => row.status === "no_access" || row.status === "no_region")
+    .map((row) => row.userId)).size, [rows]);
 
   const openCreate = () => {
     setCreateForm(initialCreateForm);
+    setCreateError(null);
+    setCreateSuccess(null);
+    setCreateOpen(true);
+  };
+
+  const openCreateForUser = (row: AccessRow) => {
+    setCreateForm({ ...initialCreateForm, email: row.email ?? "", tenantId: initialOrgId ?? "" });
     setCreateError(null);
     setCreateSuccess(null);
     setCreateOpen(true);
@@ -131,6 +152,10 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
       setCreateError("Email e organização são obrigatórios.");
       return;
     }
+    if (createForm.role !== "owner" && createForm.regionIds.length === 0) {
+      setCreateError("Selecione ao menos uma região para este papel.");
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -141,7 +166,7 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
           email: createForm.email,
           tenantId: createForm.tenantId,
           role: createForm.role,
-          regionIds: createForm.allRegions ? [] : createForm.regionIds,
+          regionIds: createForm.role === "owner" ? [] : createForm.regionIds,
         }),
       });
       const json = await res.json();
@@ -163,18 +188,23 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
   };
 
   const openEdit = (row: AccessRow) => {
+    if (row.roleId === null || !row.role || !row.tenantId) return;
     setEditing(row);
-    setEditForm({ role: row.role, regionId: row.regionId ? String(row.regionId) : "" });
+    setEditForm({ role: row.role, regionId: row.role === "owner" ? "" : row.regionId ? String(row.regionId) : "" });
     setEditError(null);
   };
 
   const onEditSubmit = async () => {
-    if (!editing) return;
+    if (!editing || editing.roleId === null) return;
     setEditError(null);
+    if (editForm.role !== "owner" && !editForm.regionId) {
+      setEditError("Selecione uma região para este papel.");
+      return;
+    }
     const res = await fetch(`/api/admin/users/${editing.roleId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ role: editForm.role, regionId: editForm.regionId ? Number(editForm.regionId) : null }),
+      body: JSON.stringify({ role: editForm.role, regionId: editForm.role === "owner" ? null : Number(editForm.regionId) }),
     });
     const json = await res.json();
     if (!res.ok) {
@@ -186,6 +216,7 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
   };
 
   const onRevoke = async (row: AccessRow) => {
+    if (row.roleId === null) return;
     if (!confirm(`Revogar acesso de ${row.email ?? row.userId} à região "${row.regionName ?? "toda a organização"}"?`)) return;
     await fetch(`/api/admin/users/${row.roleId}`, { method: "DELETE" });
     await loadAll();
@@ -217,6 +248,7 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
   };
 
   const onResend = async (row: AccessRow) => {
+    if (row.roleId === null) return;
     setResendingId(row.roleId);
     setResendMsg(null);
     try {
@@ -239,14 +271,18 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-4 flex-wrap">
-        <h1 className="text-2xl font-semibold">Usuários das Regiões</h1>
+        <div>
+          <h1 className="text-2xl font-semibold">Acessos dos usuários</h1>
+          <p className="mt-1 text-sm text-neutral-600">Contas sem papel ou sem região aparecem em vermelho.</p>
+        </div>
         <div className="flex items-center gap-2">
           <Select value={orgFilter} onValueChange={setOrgFilter}>
             <SelectTrigger className="w-56">
               <SelectValue placeholder="Filtrar por organização" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas as organizações</SelectItem>
+              <SelectItem value="all">Todos os usuários</SelectItem>
+              <SelectItem value="attention">Precisam de acesso</SelectItem>
               {orgs.map((o) => (
                 <SelectItem key={o.id} value={o.id}>
                   {o.name}
@@ -259,6 +295,16 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
       </div>
 
       {resendMsg && <p className="text-sm text-blue-600">{resendMsg}</p>}
+      {loadError && <p role="alert" className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">{loadError}</p>}
+      {!loading && !loadError && attentionCount > 0 && (
+        <div role="alert" className="flex items-center justify-between gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-red-800">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            {attentionCount} {attentionCount === 1 ? "usuário precisa" : "usuários precisam"} de acesso ou região.
+          </div>
+          <Button variant="outline" size="sm" className="border-red-300 text-red-800" onClick={() => setOrgFilter("attention")}>Ver usuários</Button>
+        </div>
+      )}
 
       <div className="rounded-lg border bg-white">
         <Table>
@@ -273,23 +319,31 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {!loading && filteredRows.length === 0 && (
+            {!loading && !loadError && filteredRows.length === 0 && (
               <TableRow>
                 <TableCell colSpan={6} className="text-center text-neutral-400 py-8">
                   Nenhum usuário encontrado.
                 </TableCell>
               </TableRow>
             )}
-            {filteredRows.map((row) => (
-              <TableRow key={row.roleId}>
+            {!loadError && filteredRows.map((row) => (
+              <TableRow key={row.roleId ?? `no-access-${row.userId}`} className={row.status === "no_access" || row.status === "no_region" ? "bg-red-50/70" : undefined}>
                 <TableCell className="font-medium">{row.email ?? row.userId}</TableCell>
-                <TableCell>{row.organizationName}</TableCell>
+                <TableCell>{row.organizationName ?? "—"}</TableCell>
                 <TableCell>
-                  {row.regionName ?? <span className="text-neutral-400 text-xs italic">toda a organização</span>}
+                  {row.regionName ?? (row.role === "owner" || row.isSuperadmin
+                    ? <span className="text-neutral-500 text-xs italic">toda a organização</span>
+                    : <span className="text-red-700 text-xs font-medium">Sem região atribuída</span>)}
                 </TableCell>
-                <TableCell>{ROLE_LABELS[row.role] ?? row.role}</TableCell>
+                <TableCell>{row.role ? ROLE_LABELS[row.role] ?? row.role : "—"}</TableCell>
                 <TableCell>
-                  {row.status === "active" ? (
+                  {row.status === "no_access" ? (
+                    <Badge variant="secondary" className="bg-red-100 text-red-800 hover:bg-red-100">Sem acesso</Badge>
+                  ) : row.status === "no_region" ? (
+                    <Badge variant="secondary" className="bg-red-100 text-red-800 hover:bg-red-100">Sem região</Badge>
+                  ) : row.status === "superadmin" ? (
+                    <Badge variant="secondary" className="bg-blue-100 text-blue-800 hover:bg-blue-100">Superadmin</Badge>
+                  ) : row.status === "active" ? (
                     <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
                       Ativo
                     </Badge>
@@ -300,7 +354,12 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
                   )}
                 </TableCell>
                 <TableCell className="text-right space-x-2 whitespace-nowrap">
-                  {row.status === "pending" && (
+                  {row.status === "no_access" && (
+                    <Button variant="outline" size="sm" className="border-red-300 text-red-800" disabled={!row.email} onClick={() => openCreateForUser(row)}>
+                      Conceder acesso
+                    </Button>
+                  )}
+                  {row.roleId !== null && row.status === "pending" && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -311,20 +370,21 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
                       <Mail className="h-3.5 w-3.5" />
                     </Button>
                   )}
-                  <Button variant="outline" size="sm" onClick={() => openEdit(row)} title="Editar">
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button variant="destructive" size="sm" onClick={() => onRevoke(row)} title="Revogar só este acesso (essa organização/região)">
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="sm"
-                    onClick={() => openDeleteUser(row)}
-                    title="Excluir usuário completamente (todas as organizações + conta de login)"
-                  >
-                    <UserX className="h-3.5 w-3.5" />
-                  </Button>
+                  {row.roleId !== null && !row.isSuperadmin && (
+                    <>
+                      <Button variant="outline" size="sm" onClick={() => openEdit(row)} title="Editar acesso">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button variant="destructive" size="sm" onClick={() => onRevoke(row)} title="Revogar só este acesso">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </>
+                  )}
+                  {!row.isSuperadmin && (
+                    <Button variant="outline" size="sm" onClick={() => openDeleteUser(row)} title="Excluir usuário completamente">
+                      <UserX className="h-3.5 w-3.5" />
+                    </Button>
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -363,7 +423,7 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
                 <Label>Organização</Label>
                 <Select
                   value={createForm.tenantId}
-                  onValueChange={(v) => setCreateForm((p) => ({ ...p, tenantId: v, regionIds: [], allRegions: false }))}
+                  onValueChange={(v) => setCreateForm((p) => ({ ...p, tenantId: v, regionIds: [] }))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Selecionar organização…" />
@@ -380,7 +440,7 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
 
               <div className="space-y-1.5">
                 <Label>Papel (Role)</Label>
-                <Select value={createForm.role} onValueChange={(v) => setCreateForm((p) => ({ ...p, role: v as Role }))}>
+                <Select value={createForm.role} onValueChange={(v) => setCreateForm((p) => ({ ...p, role: v as Role, regionIds: v === "owner" ? [] : p.regionIds }))}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -395,22 +455,12 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
 
               {createForm.tenantId && (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Checkbox
-                      id="all-regions"
-                      checked={createForm.allRegions}
-                      onCheckedChange={(checked) =>
-                        setCreateForm((p) => ({ ...p, allRegions: checked === true, regionIds: [] }))
-                      }
-                    />
-                    <Label htmlFor="all-regions" className="font-normal cursor-pointer">
-                      Acesso a toda a organização (sem restringir região)
-                    </Label>
-                  </div>
-
-                  {!createForm.allRegions && (
+                  {createForm.role === "owner" ? (
+                    <p className="text-sm text-neutral-600">Owner acessa todas as regiões desta organização.</p>
+                  ) : (
                     <div className="space-y-1.5">
-                      <Label>Regiões</Label>
+                      <Label>Regiões permitidas</Label>
+                      <p className="text-xs text-neutral-500">Selecione ao menos uma região para o usuário conseguir acessar os dados.</p>
                       <div className="max-h-40 overflow-y-auto rounded-md border p-2 space-y-1.5">
                         {regionsForOrg(createForm.tenantId).length === 0 && (
                           <p className="text-xs text-neutral-400 italic">Essa organização não tem regiões cadastradas.</p>
@@ -442,7 +492,7 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
               <Button variant="outline" onClick={() => setCreateOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={onCreateSubmit} disabled={submitting || !createForm.email || !createForm.tenantId}>
+              <Button onClick={onCreateSubmit} disabled={submitting || !createForm.email || !createForm.tenantId || (createForm.role !== "owner" && createForm.regionIds.length === 0)}>
                 {submitting ? "Enviando…" : "Criar e enviar acesso"}
               </Button>
             </DialogFooter>
@@ -460,7 +510,7 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label>Papel (Role)</Label>
-                <Select value={editForm.role} onValueChange={(v) => setEditForm((p) => ({ ...p, role: v as Role }))}>
+                <Select value={editForm.role} onValueChange={(v) => setEditForm((p) => ({ ...p, role: v as Role, regionId: v === "owner" ? "" : p.regionId }))}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -473,22 +523,23 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
                 </Select>
               </div>
 
-              <div className="space-y-1.5">
-                <Label>Região</Label>
-                <Select value={editForm.regionId || "none"} onValueChange={(v) => setEditForm((p) => ({ ...p, regionId: v === "none" ? "" : v }))}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Toda a organização (sem região específica)</SelectItem>
-                    {regionsForOrg(editing.tenantId).map((r) => (
-                      <SelectItem key={r.id} value={String(r.id)}>
-                        {r.nome}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {editForm.role === "owner" ? (
+                <p className="text-sm text-neutral-600">Owner acessa todas as regiões desta organização.</p>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label>Região permitida</Label>
+                  <Select value={editForm.regionId} onValueChange={(v) => setEditForm((p) => ({ ...p, regionId: v }))}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione uma região" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {regionsForOrg(editing.tenantId ?? "").map((r) => (
+                        <SelectItem key={r.id} value={String(r.id)}>{r.nome}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
 
               {editError && <p className="text-sm text-red-600">{editError}</p>}
             </div>

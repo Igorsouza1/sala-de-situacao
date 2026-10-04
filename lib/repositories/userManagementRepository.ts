@@ -17,12 +17,21 @@ export interface UserAccessRow {
   lastSignInAt: string | null;
 }
 
-/** Lista todas as atribuições (organização + região + papel) de todos os usuários. */
-export async function listUserAccessInDb(): Promise<UserAccessRow[]> {
-  const result = await db.execute(sql<UserAccessRow>`
+export interface UserAccountAccessRow extends Omit<UserAccessRow, "roleId" | "role" | "tenantId" | "organizationName" | "createdAt"> {
+  roleId: number | null;
+  role: string | null;
+  tenantId: string | null;
+  organizationName: string | null;
+  createdAt: string | null;
+  isSuperadmin: boolean;
+}
+
+/** Lista contas de login, inclusive as que ainda não possuem papel atual. */
+export async function listUserAccessInDb(): Promise<UserAccountAccessRow[]> {
+  const result = await db.execute(sql<UserAccountAccessRow>`
     SELECT
       r.id AS "roleId",
-      r.user_id::text AS "userId",
+      u.id::text AS "userId",
       u.email AS "email",
       r.role,
       r.tenant_id::text AS "tenantId",
@@ -32,15 +41,16 @@ export async function listUserAccessInDb(): Promise<UserAccessRow[]> {
       r.created_at AS "createdAt",
       u.invited_at AS "invitedAt",
       u.email_confirmed_at AS "emailConfirmedAt",
-      u.last_sign_in_at AS "lastSignInAt"
-    FROM monitoramento.roles r
-    JOIN monitoramento.tenants t ON t.id = r.tenant_id
+      u.last_sign_in_at AS "lastSignInAt",
+      COALESCE(u.raw_app_meta_data @> '{"is_superadmin": true}'::jsonb, false) AS "isSuperadmin"
+    FROM auth.users u
+    LEFT JOIN monitoramento.roles r ON r.user_id = u.id
+    LEFT JOIN monitoramento.tenants t ON t.id = r.tenant_id
     LEFT JOIN monitoramento.regioes g ON g.id = r.region_id
-    LEFT JOIN auth.users u ON u.id = r.user_id
-    ORDER BY t.name ASC, u.email ASC NULLS LAST, g.nome ASC NULLS FIRST
+    ORDER BY (r.id IS NULL) DESC, lower(u.email) ASC NULLS LAST, t.name ASC, g.nome ASC NULLS FIRST
   `);
 
-  return result.rows as unknown as UserAccessRow[];
+  return result.rows as unknown as UserAccountAccessRow[];
 }
 
 export async function getRoleAssignmentByIdInDb(roleId: number): Promise<UserAccessRow | null> {
