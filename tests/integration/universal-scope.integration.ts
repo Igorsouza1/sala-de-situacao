@@ -52,8 +52,9 @@ beforeAll(async () => {
     (22,$2,ST_MakeEnvelope(6,6,8,8,4674));
     `, [A,B]);
   await pool.query(`INSERT INTO monitoramento.user_access(user_id,organization_id,regiao_id) VALUES
-    ($1,$3,11),($2,$4,21);
-    INSERT INTO monitoramento.roles(user_id,tenant_id,role,region_id) VALUES ($2,$3,'viewer',12);`, [REVOKED,ASSIGNED,A,B]);
+    ($1,$3,11),($2,$4,21);`, [REVOKED,ASSIGNED,A,B]);
+  await pool.query(`INSERT INTO monitoramento.roles(user_id,tenant_id,role,region_id) VALUES
+    ($1,$2,'viewer',12);`, [ASSIGNED,A]);
   await pool.query(`INSERT INTO monitoramento.acoes(id,tenant_id,regiao_id,geom) VALUES
     (1,$1,11,ST_SetSRID(ST_Point(1,1),4674)),
     (2,$2,21,ST_SetSRID(ST_Point(1,1),4674)),
