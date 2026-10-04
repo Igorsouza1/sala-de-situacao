@@ -1,4 +1,4 @@
-﻿import { loadPrintAcao, loadPrintPropriedade, loadPrintLayers } from '../loaders';
+import { loadPrintAcao, loadPrintPropriedade, loadPrintLayers } from '../loaders';
 import { resolveScope } from '@/lib/api/scope';
 import { getAcaoDossie } from '@/lib/service/acoesService';
 import { findPropriedadeDossieData } from '@/lib/repositories/propriedadesRepository';
@@ -46,4 +46,9 @@ it('denies users without a resolvable tenant', async () => {
   (resolveScope as jest.Mock).mockResolvedValue({ response: new Response(null, { status: 403 }) });
   await expect(loadPrintLayers()).rejects.toThrow('NEXT_NOT_FOUND');
   expect(getAllLayers).not.toHaveBeenCalled();
+});
+
+it('prints a property overlapping an assigned region', async () => {
+  (findPropriedadeDossieData as jest.Mock).mockResolvedValue({ id: 3, nome: 'Own property' });
+  expect(await loadPrintPropriedade(3)).toEqual({ id: 3, nome: 'Own property' });
 });
