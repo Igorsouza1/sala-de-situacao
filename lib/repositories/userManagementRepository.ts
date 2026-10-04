@@ -145,12 +145,32 @@ export async function updateRoleAssignmentInDb(
 }
 
 export async function deleteRoleAssignmentInDb(roleId: number) {
-  const [deleted] = await db
-    .delete(rolesInMonitoramento)
-    .where(eq(rolesInMonitoramento.id, roleId))
-    .returning({ id: rolesInMonitoramento.id });
-
-  return deleted ?? null;
+  return db.transaction(async (tx) => {
+    // Serialize revocations for one user and organization. Otherwise two
+    // concurrent removals could each observe the other's final role.
+    const assignment = await tx.execute<{ user_id: string; tenant_id: string }>(sql`
+      SELECT user_id::text, tenant_id::text FROM monitoramento.roles WHERE id = ${roleId}
+    `);
+    const target = assignment.rows[0];
+    if (!target) return null;
+    await tx.execute(sql`
+      SELECT pg_advisory_xact_lock(hashtextextended(${target.user_id + ':' + target.tenant_id}, 0))
+    `);
+    const [deleted] = await tx.delete(rolesInMonitoramento)
+      .where(eq(rolesInMonitoramento.id, roleId))
+      .returning({ id: rolesInMonitoramento.id });
+    if (!deleted) return null;
+    await tx.execute(sql`
+      DELETE FROM monitoramento.user_access
+      WHERE user_id = ${target.user_id}::uuid
+        AND organization_id = ${target.tenant_id}::uuid
+        AND NOT EXISTS (
+          SELECT 1 FROM monitoramento.roles
+          WHERE user_id = ${target.user_id}::uuid AND tenant_id = ${target.tenant_id}::uuid
+        )
+    `);
+    return deleted;
+  });
 }
 
 /** Remove TODAS as atribuições (todas as orgs/regiões) de um usuário. Retorna quantas linhas foram removidas. */

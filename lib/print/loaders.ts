@@ -14,14 +14,17 @@ async function requirePrintScope() {
   return scope;
 }
 export async function loadPrintAcao(id: number) {
-  const { tenantId } = await requirePrintScope();
+  const { tenantId, user } = await requirePrintScope();
+  const regionIds = await getAccessibleRegionIdsForUser(user.id, tenantId, user.app_metadata?.is_superadmin === true);
+  if (regionIds?.length === 0) notFound();
   let data;
   try {
-    data = await getAcaoDossie(id, tenantId);
+    data = await getAcaoDossie(id, tenantId, regionIds);
   } catch (error) {
     if (error instanceof Error && error.message === 'Ação não encontrada') notFound();
     throw error;
   }
+  if (!data) notFound();
   return data;
 }
 export async function loadPrintPropriedade(id: number) {

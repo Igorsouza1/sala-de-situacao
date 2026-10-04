@@ -5,18 +5,19 @@ import { GET as getEstradas, POST as postEstrada } from "../estradas/route";
 import { GET as getExpedicoes } from "../expedicoes/route";
 import { requireAuthWithTenant, requireRole } from "@/lib/api/require-auth";
 import { getTenantIdForRegion } from "@/lib/api/scope";
-import { getRegionIdForUser } from "@/lib/api/require-region";
+import { getAccessibleRegionIdsForUser, getRegionIdForUser } from "@/lib/api/require-region";
 import { createEstradaData } from "@/lib/service/estradaService";
 import { findAllEstradasData } from "@/lib/repositories/estradasRepository";
 import { getAllExpedicoesData } from "@/lib/service/expedicoesService";
 import { importGpx } from "@/lib/service/gpxImportService";
 import { gpxImportRequestSchema } from "@/lib/validators/gpx-import";
+import { db } from "@/db";
 import { apiError } from "@/lib/api/responses";
 
 jest.mock("@/db", () => ({ db: { execute: jest.fn() }, sql: jest.requireActual("drizzle-orm").sql }));
 jest.mock("@/lib/api/require-auth", () => ({ requireAuthWithTenant: jest.fn(), requireRole: jest.fn() }));
 jest.mock("@/lib/api/scope", () => ({ getTenantIdForRegion: jest.fn() }));
-jest.mock("@/lib/api/require-region", () => ({ getRegionIdForUser: jest.fn() }));
+jest.mock("@/lib/api/require-region", () => ({ getRegionIdForUser: jest.fn(), getAccessibleRegionIdsForUser: jest.fn() }));
 jest.mock("@/lib/service/estradaService", () => ({ createEstradaData: jest.fn() }));
 jest.mock("@/lib/repositories/estradasRepository", () => ({ findAllEstradasData: jest.fn() }));
 jest.mock("@/lib/service/expedicoesService", () => ({ getAllExpedicoesData: jest.fn() }));
@@ -37,10 +38,12 @@ function formRequest() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (db.execute as jest.Mock).mockResolvedValue({ rows: [{ ok: true }] });
   jest.mocked(requireRole).mockResolvedValue({ user, tenantId: orgA, response: null } as any);
   jest.mocked(requireAuthWithTenant).mockResolvedValue({ user, tenantId: orgA, response: null } as any);
   jest.mocked(getTenantIdForRegion).mockResolvedValue(orgA);
   jest.mocked(getRegionIdForUser).mockResolvedValue(12);
+  jest.mocked(getAccessibleRegionIdsForUser).mockResolvedValue([12]);
   jest.mocked(createEstradaData).mockResolvedValue({ id: 1 });
   jest.mocked(findAllEstradasData).mockResolvedValue([]);
   jest.mocked(getAllExpedicoesData).mockResolvedValue({ trilhas: {}, waypoints: {} } as any);
@@ -69,8 +72,8 @@ test("leituras de estrada e expedição retornam 401 sem sessão", async () => {
 test("leituras passam tenant da sessão aos serviços", async () => {
   expect((await getEstradas()).status).toBe(200);
   expect((await getExpedicoes()).status).toBe(200);
-  expect(findAllEstradasData).toHaveBeenCalledWith(orgA, false);
-  expect(getAllExpedicoesData).toHaveBeenCalledWith(orgA, false);
+  expect(findAllEstradasData).toHaveBeenCalledWith(orgA, false, [12]);
+  expect(getAllExpedicoesData).toHaveBeenCalledWith(orgA, false, [12]);
 });
 
 test("estrada nova recebe tenant e região da sessão", async () => {

@@ -10,32 +10,30 @@ function requireExplicitTenant(tenantId?: string | null): string {
 }
 
 
-export async function updatePropriedadeName(id: number, nome: string, tenantId?: string | null) {
-  const effectiveTenantId = requireExplicitTenant(tenantId);
-  const tenantFilter = effectiveTenantId
-    ? sql`AND tenant_id = ${effectiveTenantId}::uuid`
-    : sql``;
-
+// A propriedade Ã© um fato compartilhado: alterar seu nome afeta todas as
+// OrganizaÃ§Ãµes. Somente a rota Superadmin pode chamar esta operaÃ§Ã£o.
+export async function updatePropriedadeName(id: number, nome: string) {
   return await db.execute(sql`
     UPDATE "monitoramento"."propriedades"
     SET nome = ${nome}
     WHERE id = ${id}
-    ${tenantFilter}
+    RETURNING id
   `);
 }
 
-export async function countPropriedades(tenantId?: string | null, minArea?: number, maxArea?: number) {
+export async function countPropriedades(tenantId: string, minArea?: number, maxArea?: number, regionIds?: number[], isSuperadmin = false) {
   const effectiveTenantId = requireExplicitTenant(tenantId);
-
-  let query = sql`
-    SELECT COUNT(*)::int as count
-    FROM "monitoramento"."propriedades"
-    WHERE 1=1
-  `;
-
-  if (effectiveTenantId) {
-    query = sql`${query} AND tenant_id = ${effectiveTenantId}::uuid`;
-  }
+  const regionFilter = regionIds == null ? sql`` : regionIds.length
+    ? sql`AND r.id IN (${sql.join(regionIds.map(id => sql`${id}`), sql`, `)})`
+    : sql`AND false`;
+  let query = sql`SELECT COUNT(*)::int AS count
+    FROM monitoramento.propriedades p
+    WHERE ${isSuperadmin ? sql`true` : sql`EXISTS (
+      SELECT 1 FROM monitoramento.regioes r
+      WHERE r.organization_id = ${effectiveTenantId}::uuid
+        ${regionFilter}
+        AND ST_Intersects(r.geom, p.geom)
+    )`}`;
   if (minArea !== undefined && minArea !== null) {
     query = sql`${query} AND num_area >= ${minArea}`;
   }
@@ -110,7 +108,14 @@ export async function findPropriedadeDossieData(id: number, tenantId?: string | 
           '[]'::json
         )
         FROM "monitoramento"."acoes" a
-        WHERE a.tenant_id = ${effectiveTenantId}::uuid AND ST_Intersects(a.geom, p.geom)
+        WHERE a.tenant_id = ${effectiveTenantId}::uuid
+          AND EXISTS (
+            SELECT 1 FROM monitoramento.regioes r
+            WHERE r.id = a.regiao_id
+              AND r.organization_id = ${effectiveTenantId}::uuid
+              ${regionFilter}
+          )
+          AND ST_Intersects(a.geom, p.geom)
       ) as "acoes",
       (SELECT COUNT(*)::int FROM "monitoramento"."raw_firms" f WHERE ST_DWithin(f.geom::geography, p.geom::geography, 187.5) AND ${firmsScope}) as "focosCount",
       (SELECT COUNT(*)::int FROM "monitoramento"."desmatamento" d WHERE ST_Intersects(d.geom, p.geom) AND ${desmatamentoScope}) as "desmatamentoCount",

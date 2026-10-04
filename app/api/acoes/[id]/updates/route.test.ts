@@ -1,3 +1,6 @@
+jest.mock("@/db", () => ({ db: { execute: jest.fn() } }));
+import { db } from "@/db";
+import { PgDialect } from "drizzle-orm/pg-core";
 jest.mock("@/lib/api/require-auth", () => ({ requireRole: jest.fn() }));
 jest.mock("@/lib/repositories/acoesRepository", () => ({ findAcaoById: jest.fn() }));
 jest.mock("@/lib/service/acoesService", () => ({
@@ -30,8 +33,15 @@ function deleteRequest(updateId = 7) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (db.execute as jest.Mock).mockImplementation(async statement => {
+    const q = new PgDialect().sqlToQuery(statement);
+    if (q.sql.includes('FROM monitoramento.regioes')) return { rows: [{ tenant_id: TENANT }] };
+    if (q.sql.includes('SELECT EXISTS')) return { rows: [{ ok: true }] };
+    if (q.sql.includes('FROM monitoramento.roles')) return { rows: [{ region_id: 11 }] };
+    throw new Error('Unexpected authorization query: ' + q.sql);
+  });
   (requireRole as jest.Mock).mockResolvedValue({ user: USER, tenantId: TENANT, response: null });
-  (findAcaoById as jest.Mock).mockResolvedValue({ id: 42 });
+  (findAcaoById as jest.Mock).mockResolvedValue({ id: 42, regiao_id: 11 });
   (addAcaoUpdate as jest.Mock).mockResolvedValue({ message: "ok" });
   (deleteAcaoItemHistoryById as jest.Mock).mockResolvedValue([{ id: 7 }]);
 });
@@ -82,4 +92,17 @@ it("returns 404 when the update does not belong to the requested action", async 
   const response = await DELETE(deleteRequest(99), context);
   expect(response.status).toBe(404);
   expect(revalidateTag).not.toHaveBeenCalled();
+});
+
+it('denies an editor assigned only to a different region before mutations', async () => {
+  (db.execute as jest.Mock).mockImplementation(async statement => {
+    const q = new PgDialect().sqlToQuery(statement);
+    if (q.sql.includes('FROM monitoramento.regioes')) return { rows: [{ tenant_id: TENANT }] };
+    if (q.sql.includes('SELECT EXISTS')) return { rows: [{ ok: false }] };
+    return { rows: [{ region_id: 12 }] };
+  });
+  expect((await POST(postRequest(), context)).status).toBe(403);
+  expect((await DELETE(deleteRequest(), context)).status).toBe(403);
+  expect(addAcaoUpdate).not.toHaveBeenCalled();
+  expect(deleteAcaoItemHistoryById).not.toHaveBeenCalled();
 });

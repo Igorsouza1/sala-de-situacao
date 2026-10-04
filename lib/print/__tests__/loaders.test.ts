@@ -21,7 +21,7 @@ beforeEach(() => {
 it('turns another organization action into 404', async () => {
   (getAcaoDossie as jest.Mock).mockRejectedValue(new Error('Ação não encontrada'));
   await expect(loadPrintAcao(2)).rejects.toThrow('NEXT_NOT_FOUND');
-  expect(getAcaoDossie).toHaveBeenCalledWith(2, 'org-a');
+  expect(getAcaoDossie).toHaveBeenCalledWith(2, 'org-a', [7, 8]);
 });
 it('prints an action in its own organization', async () => {
   (getAcaoDossie as jest.Mock).mockResolvedValue({ id: 1 });
@@ -67,4 +67,10 @@ it('owner print scope includes all owned regions', async () => {
   expect(findPropriedadeDossieData).toHaveBeenCalledWith(3, 'org-a', undefined);
   await loadPrintLayers();
   expect(getAllLayers).toHaveBeenCalledWith('org-a', undefined, undefined, undefined, undefined, undefined);
+});
+
+it('action print fails closed without regional grants', async () => {
+  (getAccessibleRegionIdsForUser as jest.Mock).mockResolvedValue([]);
+  await expect(loadPrintAcao(1)).rejects.toThrow('NEXT_NOT_FOUND');
+  expect(getAcaoDossie).not.toHaveBeenCalled();
 });

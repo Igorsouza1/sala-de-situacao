@@ -19,12 +19,13 @@ export async function insertEstradaData(data: NewEstradaData) {
   return newRecord;
 }
 
-export async function findAllEstradasData(tenantId: string, isSuperadmin = false) {
+export async function findAllEstradasData(tenantId: string, isSuperadmin = false, regionIds: number[] | null = null) {
   if (!tenantId) throw new Error("tenantId é obrigatório para consultar estradas");
   const result = await db.execute(sql`
     SELECT id, nome, tipo, codigo, regiao_id, ST_AsGeoJSON(geom) AS geojson
     FROM monitoramento.estradas
     WHERE ${isSuperadmin ? sql`TRUE` : sql`tenant_id = ${tenantId}::uuid`}
+      ${regionIds === null ? sql`` : regionIds.length ? sql`AND regiao_id IN (${sql.join(regionIds.map(id => sql`${id}`), sql`, `)})` : sql`AND FALSE`}
   `);
   return result.rows;
 }

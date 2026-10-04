@@ -6,7 +6,7 @@ import { desc, eq, isNull, or, sql } from "drizzle-orm";
 import { resolveTableLayer, type ResolverSchemaConfig } from "./layer-resolver";
 
 // --- HELPER: BUSCAR GRUPOS DISTINTOS ---
-async function getLayerGroups(slug: string, column: string, tenantId?: string | null): Promise<{ id: string, label: string, icon?: string }[]> {
+async function getLayerGroups(slug: string, column: string, tenantId?: string | null, regiaoId?: number): Promise<{ id: string, label: string, icon?: string }[]> {
     try {
         if (slug === 'acoes') {
             // Caso especial para tabela acoes (Type A)
@@ -17,6 +17,7 @@ async function getLayerGroups(slug: string, column: string, tenantId?: string | 
                 FROM "monitoramento"."acoes"
                 WHERE ${sql.identifier(column)} IS NOT NULL
                 ${tenantId ? sql`AND tenant_id = ${tenantId}::uuid` : sql``}
+                ${regiaoId == null ? sql`` : sql`AND regiao_id = ${regiaoId}`}
                 ORDER BY 1
             `);
             const rows = result.rows || result;
@@ -138,7 +139,7 @@ export async function getLayer(slug: string, tenantId?: string | null, startDate
 
         let groups: { id: string, label: string }[] | undefined;
         if (groupByColumn) {
-            groups = await getLayerGroups(slug, groupByColumn, slug === 'acoes' ? tenantId : dataTenantId);
+            groups = await getLayerGroups(slug, groupByColumn, slug === 'acoes' ? tenantId : dataTenantId, slug === 'acoes' ? regiaoId : undefined);
         }
 
         // Create the final layer object

@@ -1,13 +1,13 @@
 
 import { updatePropriedadeName } from "@/lib/repositories/propriedadesRepository";
-import { requireAuthWithTenant } from "@/lib/api/require-auth";
+import { requireSuperadmin } from "@/lib/api/require-auth";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function PUT(
     request: NextRequest,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const { tenantId, response: authResponse } = await requireAuthWithTenant();
+    const { response: authResponse } = await requireSuperadmin();
     if (authResponse) return authResponse;
 
     try {
@@ -23,7 +23,10 @@ export async function PUT(
             return NextResponse.json({ success: false, error: "Nome inválido" }, { status: 400 })
         }
 
-        const updated = await updatePropriedadeName(parseInt(id), nome, tenantId)
+        const updated = await updatePropriedadeName(parseInt(id), nome)
+        if (!updated.rows.length) {
+            return NextResponse.json({ success: false, error: "Propriedade não encontrada" }, { status: 404 })
+        }
 
         return NextResponse.json({ success: true, data: updated })
     } catch (error: any) {

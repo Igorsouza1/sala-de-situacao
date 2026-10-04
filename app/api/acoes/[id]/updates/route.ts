@@ -1,13 +1,9 @@
 import { apiError, apiSuccess } from "@/lib/api/responses"
 import { addAcaoUpdate, deleteAcaoItemHistoryById } from "@/lib/service/acoesService"
-import { requireRole } from "@/lib/api/require-auth"
-import { findAcaoById } from "@/lib/repositories/acoesRepository"
+import { authorizeAcaoPhotoUpload } from "@/lib/api/authorize-acao-photo"
 import { revalidateTag } from "next/cache"
 
 export async function POST(request: Request, context: any) {
-  const { tenantId, response: authResponse } = await requireRole("editor");
-  if (authResponse) return authResponse;
-
   try {
     const { id } = await context.params as { id: string }
     const acaoId = Number(id)
@@ -16,8 +12,8 @@ export async function POST(request: Request, context: any) {
       return apiError("ID de ação inválido", 400)
     }
 
-    const acao = await findAcaoById(acaoId, tenantId);
-    if (!acao) return apiError("Ação não encontrada", 404);
+    const authorization = await authorizeAcaoPhotoUpload(acaoId);
+    if (authorization.response) return authorization.response;
 
     const body = await request.json().catch(() => null)
 
@@ -60,9 +56,6 @@ export async function DELETE(
   request: Request,
   context: any,
 ) {
-  const { tenantId, response: authResponse } = await requireRole("editor");
-  if (authResponse) return authResponse;
-
   try {
     const { id } = await context.params as { id: string }
     const acaoId = Number(id)
@@ -71,8 +64,8 @@ export async function DELETE(
       return apiError("ID de ação inválido", 400)
     }
 
-    const acao = await findAcaoById(acaoId, tenantId);
-    if (!acao) return apiError("Ação não encontrada", 404);
+    const authorization = await authorizeAcaoPhotoUpload(acaoId);
+    if (authorization.response) return authorization.response;
 
     const url = new URL(request.url)
     const updateIdParam = url.searchParams.get("updateId")

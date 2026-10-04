@@ -9,10 +9,12 @@
 
 jest.mock("@/lib/supabase/server", () => ({ createClient: jest.fn() }));
 jest.mock("@/db", () => ({ db: { execute: jest.fn().mockResolvedValue({ rows: [] }), select: jest.fn() } }));
+jest.mock("@/lib/api/require-region", () => ({ getAccessibleRegionIdsForUser: jest.fn().mockResolvedValue([11]) }));
 jest.mock("@/lib/service/layerService", () => ({
   getAllLayers: jest.fn().mockResolvedValue([]),
 }));
 
+import { db } from "@/db";
 import { createClient } from "@/lib/supabase/server";
 import * as layerService from "@/lib/service/layerService";
 import { GET } from "../route";
@@ -27,6 +29,7 @@ function makeRequest(params: Record<string, string> = {}) {
 }
 
 function mockUser(user: any) {
+  (db.execute as jest.Mock).mockResolvedValue({ rows: user?.app_metadata?.tenant_id ? [{ tenant_id: user.app_metadata.tenant_id }] : [] });
   (createClient as jest.Mock).mockResolvedValue({
     auth: {
       getUser: jest.fn().mockResolvedValue({ data: { user }, error: null }),

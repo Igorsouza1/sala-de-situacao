@@ -10,9 +10,10 @@ it('authorizes base properties through owned assigned regions and scopes related
   expect(query.sql).toContain('ST_Intersects(r.geom, propriedades.geom)');
   expect(query.sql).toContain('r.id IN');
   expect(query.sql).toContain('a.tenant_id =');
+  expect(query.sql).toContain('r.id = a.regiao_id');
   expect((query.sql.match(/monitoramento\.firms_regioes fr/g) ?? [])).toHaveLength(3);
   expect((query.sql.match(/monitoramento\.desmatamento_regioes dr/g) ?? [])).toHaveLength(3);
-  expect((query.sql.match(/r\.organization_id =/g) ?? [])).toHaveLength(7);
+  expect((query.sql.match(/r\.organization_id =/g) ?? [])).toHaveLength(8);
   expect(query.params).toEqual(expect.arrayContaining(['org-a', 7, 8]));
 });
 it('an explicitly empty region grant authorizes no properties', async () => {

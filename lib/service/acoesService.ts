@@ -18,13 +18,13 @@ import type { TrilhaInput, WaypointInput } from "@/lib/validations/acoes";
 
 // Retorna todas as ações
 // UTILIZAREMOS PARA O DASHBOARD
-export async function getAllAcoesData(tenantId?: string | null) {
-  return findAllAcoesData(tenantId);
+export async function getAllAcoesData(tenantId?: string | null, regionIds: number[] | null = null) {
+  return findAllAcoesData(tenantId, regionIds);
 }
 
 // Retorna todas as ações com geometria
-export async function getAllAcoesForMap(tenantId?: string | null) {
-  return findAllAcoesDataWithGeometry(tenantId);
+export async function getAllAcoesForMap(tenantId?: string | null, regionIds: number[] | null = null) {
+  return findAllAcoesDataWithGeometry(tenantId, undefined, undefined, regionIds);
 }
 
 export async function deleteAcaoItemHistoryById(acaoId: number, id: number) {
@@ -41,7 +41,9 @@ export async function updateAcaoFieldsById(
 ) {
   const textUpdates: Record<string, string> = {}
 
+  const editableFields = new Set(["name", "descricao", "time", "acao", "categoria", "status", "tipo", "tipoTecnico", "carater", "eixoTematico", "mes", "atuacao", "latitude", "longitude", "elevation"]);
   for (const [key, value] of formData.entries()) {
+    if (!editableFields.has(key)) continue
     if (value instanceof File) continue
 
     const str = String(value).trim()
@@ -146,19 +148,18 @@ export async function createAcoesWithTrilha(input: {
 
 
 
-export async function getAcaoDossie(id: number, tenantId?: string | null) {
+export async function getAcaoDossie(id: number, tenantId?: string | null, regionIds: number[] | null = null) {
   // 1. Busca os dados principais e o histórico em paralelo
   // findAcaoById filtra por tenant_id → retorna null se pertencer a outro tenant (IDOR prevention)
-  const [acaoPrincipal, historico] = await Promise.all([
-    findAcaoById(id, tenantId),
-    findAllAcoesUpdates(id)
-  ]);
+  const acaoPrincipal = await findAcaoById(id, tenantId, regionIds);
 
   // 2. Regra de negócio: se a ação principal não existe, é um erro
   if (!acaoPrincipal) {
     // O handler da API vai transformar isso em um 404
     throw new Error("Ação não encontrada");
   }
+
+  const historico = await findAllAcoesUpdates(id);
 
   // 3. Transforma o histórico para o formato esperado pelo frontend
   const formattedHistory = historico.map((update: any) => ({

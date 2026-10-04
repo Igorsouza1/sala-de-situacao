@@ -20,6 +20,8 @@ const region = jest.mocked(getRegionIdForUser);
 const accessibleRegions = jest.mocked(getAccessibleRegionIdsForUser);
 
 function session(appMetadata: Record<string, unknown> | null) {
+  (db.execute as jest.Mock).mockReset().mockResolvedValue({ rows: [] });
+  if (appMetadata?.is_superadmin !== true) (db.execute as jest.Mock).mockResolvedValueOnce({ rows: appMetadata?.tenant_id ? [{ tenant_id: appMetadata.tenant_id }] : [] });
   (createClient as jest.Mock).mockResolvedValue({
     auth: { getUser: jest.fn().mockResolvedValue({ data: {
       user: appMetadata === null ? null : { id: "user-a", app_metadata: appMetadata },
@@ -28,9 +30,9 @@ function session(appMetadata: Record<string, unknown> | null) {
 }
 
 beforeEach(() => {
-  jest.clearAllMocks();
-  session({ tenant_id: "org-a" });
+  jest.resetAllMocks();
   (db.execute as jest.Mock).mockResolvedValue({ rows: [] });
+  session({ tenant_id: "org-a" });
   region.mockResolvedValue(11);
   accessibleRegions.mockResolvedValue(null);
   for (const service of services) (service as jest.Mock).mockResolvedValue({ 2026: Array(12).fill(0) });
@@ -66,7 +68,7 @@ describe.each([
     const response = await handler(req);
     expect(response.status).toBe(200);
     expect(service).toHaveBeenCalledWith(tenantId, false, undefined);
-    expect(region).toHaveBeenCalledWith("user-a", tenantId);
+    expect(accessibleRegions).toHaveBeenCalledWith("user-a", tenantId, false);
     expect(await response.json()).toEqual({ success: true, data: { 2026: Array(12).fill(0) }, error: null });
   });
 
