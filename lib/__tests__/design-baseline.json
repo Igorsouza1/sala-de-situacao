@@ -471,33 +471,9 @@
     "paleta": 8,
     "hex": 0
   },
-  "components/ui/calendar.tsx": {
-    "paleta": 7,
-    "hex": 0
-  },
   "components/ui/chart.tsx": {
     "paleta": 0,
     "hex": 5
-  },
-  "components/ui/confirm-destructive.tsx": {
-    "paleta": 2,
-    "hex": 0
-  },
-  "components/ui/detail-Item.tsx": {
-    "paleta": 3,
-    "hex": 0
-  },
-  "components/ui/image-carousel.tsx": {
-    "paleta": 9,
-    "hex": 0
-  },
-  "components/ui/image-modal.tsx": {
-    "paleta": 2,
-    "hex": 0
-  },
-  "components/ui/toast.tsx": {
-    "paleta": 6,
-    "hex": 0
   },
   "components/user-profile-modal.tsx": {
     "paleta": 3,

@@ -50,13 +50,13 @@ export const ImageModal = ({
                   onClick={prevImage}
                   className="absolute left-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 backdrop-blur-xs rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-colors"
                 >
-                  <ChevronLeft className="w-6 h-6 text-gray-700" />
+                  <ChevronLeft className="w-6 h-6 text-foreground" />
                 </button>
                 <button
                   onClick={nextImage}
                   className="absolute right-4 top-1/2 -translate-y-1/2 w-12 h-12 bg-white/90 backdrop-blur-xs rounded-full shadow-lg flex items-center justify-center hover:bg-white transition-colors"
                 >
-                  <ChevronRight className="w-6 h-6 text-gray-700" />
+                  <ChevronRight className="w-6 h-6 text-foreground" />
                 </button>
               </>
             )}
