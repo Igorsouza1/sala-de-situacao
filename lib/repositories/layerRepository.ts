@@ -84,7 +84,7 @@ export async function getLayerCatalog(slug: string, tenantId?: string) {
     const result = await db
         .select()
         .from(layerCatalogInMonitoramento)
-        .where(and(eq(layerCatalogInMonitoramento.slug, slug), tenantId ? or(eq(layerCatalogInMonitoramento.tenantId, tenantId), isNull(layerCatalogInMonitoramento.tenantId)) : undefined))
+        .where(and(eq(layerCatalogInMonitoramento.slug, slug), tenantId ? or(eq(layerCatalogInMonitoramento.tenantId, tenantId), isNull(layerCatalogInMonitoramento.tenantId), eq(layerCatalogInMonitoramento.scope, "global")) : undefined))
         .limit(1);
 
     return result[0];
@@ -94,7 +94,7 @@ export async function findAllLayersCatalog(tenantId?: string) {
     return await db
         .select()
         .from(layerCatalogInMonitoramento)
-        .where(tenantId ? or(eq(layerCatalogInMonitoramento.tenantId, tenantId), isNull(layerCatalogInMonitoramento.tenantId)) : undefined)
+        .where(tenantId ? or(eq(layerCatalogInMonitoramento.tenantId, tenantId), isNull(layerCatalogInMonitoramento.tenantId), eq(layerCatalogInMonitoramento.scope, "global")) : undefined)
         .orderBy(desc(layerCatalogInMonitoramento.ordering));
 }
 

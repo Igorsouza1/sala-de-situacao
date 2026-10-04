@@ -82,10 +82,10 @@ export async function getLayer(slug: string, tenantId?: string | null, startDate
             return null; // Retorna null e o getAllLayers filtra depois
         }
 
-        if (tenantId && catalogEntry.tenantId != null && catalogEntry.tenantId !== tenantId) return null;
+        if (tenantId && catalogEntry.scope !== 'global' && catalogEntry.tenantId != null && catalogEntry.tenantId !== tenantId) return null;
         // Global generic layers contain shared reference data. Their catalog
         // ownership has already been checked before data/groups are resolved.
-        const dataTenantId = catalogEntry.scope === 'global' && catalogEntry.tenantId == null ? null : tenantId;
+        const dataTenantId = catalogEntry.scope === 'global' ? null : tenantId;
         let data: MapFeatureCollection;
 
         if (metadataOnly) {
@@ -182,12 +182,13 @@ export async function getLayer(slug: string, tenantId?: string | null, startDate
  * @param metadataOnly - When true, skips GeoJSON data fetching (for lazy loading boot)
  */
 export async function getAllLayers(tenantId?: string | null, startDate?: Date, endDate?: Date, minArea?: number, maxArea?: number, regiaoId?: number, metadataOnly = false): Promise<LayerResponseDTO[]> {
-    // Filter catalog: tenant-owned layers + global layers (tenantId IS NULL).
+    // Filter catalog: tenant-owned layers + global layers, including legacy global rows with tenant_id.
     // When no tenantId is provided (superadmin without explicit region), return all.
     const catalogWhere = tenantId
         ? or(
             eq(layerCatalogInMonitoramento.tenantId, tenantId),
             isNull(layerCatalogInMonitoramento.tenantId),
+            eq(layerCatalogInMonitoramento.scope, 'global'),
           )
         : undefined;
 

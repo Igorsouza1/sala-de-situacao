@@ -25,7 +25,7 @@ export async function POST(
             );
         }
 
-        if (!layer.tenantId && auth.user?.app_metadata?.is_superadmin !== true) {
+        if ((layer.scope === 'global' || !layer.tenantId) && auth.user?.app_metadata?.is_superadmin !== true) {
             return NextResponse.json({ error: "Camada Global restrita ao Superadmin." }, { status: 403 });
         }
 
@@ -38,7 +38,7 @@ export async function POST(
         }
 
         // 5. Inserir Dados
-        await insertLayerData(layer.id, geojson, properties, layer.tenantId);
+        await insertLayerData(layer.id, geojson, properties, layer.tenantId ?? auth.tenantId!);
 
         return NextResponse.json({ success: true });
     } catch (error: any) {

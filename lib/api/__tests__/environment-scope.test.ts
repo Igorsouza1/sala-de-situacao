@@ -37,13 +37,14 @@ test.each(["viewer", "auditor"])("%s cannot write layer data", async () => {
 });
 test("catalog includes own organization and global layers via SQL predicate", async () => {
   await catalog(); const q = predicate();
-  expect(q.params).toEqual(["org-a"]);
+  expect(q.params).toEqual(["org-a", "global"]);
   expect(q.sql).toContain('"tenant_id" ='); expect(q.sql).toContain('"tenant_id" is null');
+  expect(q.sql).toContain('"scope" =');
 });
 test("slug lookup retains catalog organization isolation", async () => {
   await getLayerCatalog("private", "org-a"); const q = predicate();
-  expect(q.params).toEqual(["private", "org-a"]);
-  expect(q.sql).toContain('"tenant_id" is null');
+  expect(q.params).toEqual(["private", "org-a", "global"]);
+  expect(q.sql).toContain('"tenant_id" is null'); expect(q.sql).toContain('"scope" =');
 });
 test("heatmap filters both actions and sightings by organization", async () => {
   await heatmap();
@@ -68,6 +69,11 @@ test("editor cannot write a global layer", async () => {
   rows = [{ id: 1, tenantId: null }];
   const response = await write(req() as any, params);
   expect(response.status).toBe(403); expect(db.execute).not.toHaveBeenCalled();
+});
+test("editor cannot write a legacy global layer with tenant_id populated", async () => {
+  rows = [{ id: 1, tenantId: "org-a", scope: "global" }];
+  expect((await write(req() as any, params)).status).toBe(403);
+  expect(db.execute).not.toHaveBeenCalled();
 });
 test("editor writes own layer with catalog tenant, not request tenant", async () => {
   rows = [{ id: 1, tenantId: "org-a" }];

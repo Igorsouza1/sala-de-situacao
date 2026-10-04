@@ -21,6 +21,11 @@ it('retains global generic layer data for authenticated users', async () => {
   expect(await getLayer('acoes', 'org-a')).not.toBeNull();
   expect(getGenericLayerData).toHaveBeenCalledWith(1, 'monitoramento', expect.objectContaining({ tenantId: null }));
 });
+it('retains legacy global layer data even when catalog tenant belongs to another organization', async () => {
+  (getLayerCatalog as jest.Mock).mockResolvedValue({ ...base, tenantId: 'org-b', scope: 'global' });
+  expect(await getLayer('acoes', 'org-a')).not.toBeNull();
+  expect(getGenericLayerData).toHaveBeenCalledWith(1, 'monitoramento', expect.objectContaining({ tenantId: null }));
+});
 it('does not expose action group names from another organization', async () => {
   (getLayerCatalog as jest.Mock).mockResolvedValue({ ...base, visualConfig: { groupByColumn: 'categoria' } });
   await getLayer('acoes', 'org-a');
