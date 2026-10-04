@@ -1,3 +1,6 @@
+jest.mock("@/db", () => ({ db: { execute: jest.fn() } }));
+import { db } from "@/db";
+import { PgDialect } from "drizzle-orm/pg-core";
 jest.mock("@/lib/api/require-auth", () => ({ requireRole: jest.fn() }));
 jest.mock("@/lib/repositories/acoesRepository", () => ({
   findAcaoById: jest.fn(),
@@ -33,8 +36,15 @@ function urlRequest(contentType = "image/jpeg") {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  (requireRole as jest.Mock).mockResolvedValue({ tenantId: TENANT, response: null });
-  (findAcaoById as jest.Mock).mockResolvedValue({ id: 42 });
+  (db.execute as jest.Mock).mockImplementation(async statement => {
+    const q = new PgDialect().sqlToQuery(statement);
+    if (q.sql.includes('FROM monitoramento.regioes')) return { rows: [{ tenant_id: TENANT }] };
+    if (q.sql.includes('SELECT EXISTS')) return { rows: [{ ok: false }] };
+    if (q.sql.includes('FROM monitoramento.roles')) return { rows: [{ region_id: 11 }] };
+    throw new Error('Unexpected authorization query: ' + q.sql);
+  });
+  (requireRole as jest.Mock).mockResolvedValue({ user: { id: "editor-a", app_metadata: {} }, tenantId: TENANT, response: null });
+  (findAcaoById as jest.Mock).mockResolvedValue({ id: 42, regiao_id: 11 });
   mockUpload.mockResolvedValue({ error: null });
   mockCreateSignedUploadUrl.mockResolvedValue({ data: { signedUrl: "https://storage/upload" }, error: null });
   (createAdminClient as jest.Mock).mockReturnValue({
@@ -91,4 +101,17 @@ it("rejects non-image MIME types on both upload paths", async () => {
   expect(signedResponse.status).toBe(400);
   expect(mockUpload).not.toHaveBeenCalled();
   expect(mockCreateSignedUploadUrl).not.toHaveBeenCalled();
+});
+
+it('denies an editor assigned only to a different region before mutations', async () => {
+  (db.execute as jest.Mock).mockImplementation(async statement => {
+    const q = new PgDialect().sqlToQuery(statement);
+    if (q.sql.includes('FROM monitoramento.regioes')) return { rows: [{ tenant_id: TENANT }] };
+    if (q.sql.includes('SELECT EXISTS')) return { rows: [{ ok: false }] };
+    return { rows: [{ region_id: 12 }] };
+  });
+  expect((await uploadPhoto(formRequest(), context)).status).toBe(403);
+  expect((await createUploadUrl(urlRequest(), context)).status).toBe(403);
+  expect(createAdminClient).not.toHaveBeenCalled();
+  expect(addAcaoImageById).not.toHaveBeenCalled();
 });
