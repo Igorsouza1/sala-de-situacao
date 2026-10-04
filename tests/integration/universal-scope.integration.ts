@@ -13,16 +13,22 @@ import { resolveTableLayer } from '@/lib/service/layer-resolver';
 import { findAllFirmsData } from '@/lib/repositories/firmsRepository';
 import { findAllDesmatamentoData } from '@/lib/repositories/desmatamentoReposiroty';
 import { countPropriedades } from '@/lib/repositories/propriedadesRepository';
+import { resolveTenantIdForUser } from '@/lib/api/require-auth';
+import { getAccessibleRegionIdsForUser } from '@/lib/api/require-region';
 import type { LayerScope } from '@/types/map-dto';
 const pool = require('@/db').integrationPool;
 const A = '00000000-0000-0000-0000-00000000000a';
 const B = '00000000-0000-0000-0000-00000000000b';
 const F = '00000000-0000-0000-0000-000000000001';
 const G = '00000000-0000-0000-0000-000000000002';
+const REVOKED = '00000000-0000-0000-0000-000000000003';
+const ASSIGNED = '00000000-0000-0000-0000-000000000004';
 beforeAll(async () => {
   await pool.query(`CREATE EXTENSION IF NOT EXISTS postgis;
     CREATE SCHEMA monitoramento;
     CREATE TABLE monitoramento.regioes (id int PRIMARY KEY, organization_id uuid, geom geometry(Polygon,4674));
+    CREATE TABLE monitoramento.roles (id serial PRIMARY KEY, user_id uuid, tenant_id uuid, role text, region_id int);
+    CREATE TABLE monitoramento.user_access (id serial PRIMARY KEY, user_id uuid, organization_id uuid, regiao_id int);
     CREATE TABLE monitoramento.acoes (id int PRIMARY KEY, tenant_id uuid, regiao_id int,
       acao text, name text, descricao text, mes text, atuacao text, status text, categoria text, tipo text,
       eixo_tematico text, tipo_tecnico text, carater text, time timestamp, geom geometry(Point,4674));
@@ -45,6 +51,10 @@ beforeAll(async () => {
     (21,$2,ST_MakeEnvelope(0,0,2,2,4674)),
     (22,$2,ST_MakeEnvelope(6,6,8,8,4674));
     `, [A,B]);
+  await pool.query(`INSERT INTO monitoramento.user_access(user_id,organization_id,regiao_id) VALUES
+    ($1,$3,11),($2,$4,21);`, [REVOKED,ASSIGNED,A,B]);
+  await pool.query(`INSERT INTO monitoramento.roles(user_id,tenant_id,role,region_id) VALUES
+    ($1,$2,'viewer',12);`, [ASSIGNED,A]);
   await pool.query(`INSERT INTO monitoramento.acoes(id,tenant_id,regiao_id,geom) VALUES
     (1,$1,11,ST_SetSRID(ST_Point(1,1),4674)),
     (2,$2,21,ST_SetSRID(ST_Point(1,1),4674)),
@@ -107,4 +117,14 @@ it('property count uses the assigned regions rather than the legacy tenant colum
   expect(await countPropriedades(A,undefined,undefined,[11])).toBe(1);
   expect(await countPropriedades(A,undefined,undefined,[])).toBe(0);
   expect(await countPropriedades(B,undefined,undefined,[21,22])).toBe(2);
+});
+it('revoked legacy associations cannot restore organization or regional access', async()=> {
+  const user = { id: REVOKED, app_metadata: { tenant_id: A } } as any;
+  expect(await resolveTenantIdForUser(user)).toBeNull();
+  expect(await getAccessibleRegionIdsForUser(REVOKED,A)).toEqual([]);
+});
+it('current roles override stale legacy regional and organization entries', async()=> {
+  const user = { id: ASSIGNED, app_metadata: { tenant_id: B } } as any;
+  expect(await resolveTenantIdForUser(user)).toBe(A);
+  expect(await getAccessibleRegionIdsForUser(ASSIGNED,A)).toEqual([12]);
 });

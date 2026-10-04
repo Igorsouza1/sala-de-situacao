@@ -25,9 +25,10 @@ it('does not revive a legacy region when current roles exist without regional gr
   expect(await getAccessibleRegionIdsForUser('user', 'org-a')).toEqual([]);
   expect(db.execute).toHaveBeenCalledTimes(2);
 });
-it('uses a legacy region only for an account with no current roles', async () => {
+it('does not use a legacy region for an account with no current roles', async () => {
   (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [{ ok: false }] })
     .mockResolvedValueOnce({ rows: [] })
     .mockResolvedValueOnce({ rows: [{ regiao_id: 9 }] });
-  expect(await getAccessibleRegionIdsForUser('user', 'org-a')).toEqual([9]);
+  expect(await getAccessibleRegionIdsForUser('user', 'org-a')).toEqual([]);
+  expect(db.execute).toHaveBeenCalledTimes(2);
 });

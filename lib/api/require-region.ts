@@ -3,7 +3,7 @@ import { sql } from 'drizzle-orm';
 
 /**
  * Resolve o regiaoId do usuário.
- * Prioridade: roles atuais → user_access somente sem roles → null
+ * Apenas roles atuais concedem uma região.
  */
 export async function getRegionIdForUser(
   userId: string,
@@ -20,20 +20,12 @@ export async function getRegionIdForUser(
   `);
   if (roleRow.rows.length) return roleRow.rows[0].region_id;
 
-  // 2º: tabela legada user_access
-  const accessRow = await db.execute<{ regiao_id: number | null }>(sql`
-    SELECT regiao_id
-    FROM monitoramento.user_access
-    WHERE user_id        = ${userId}::uuid
-      AND organization_id = ${tenantId}::uuid
-    LIMIT 1
-  `);
-  return accessRow.rows[0]?.regiao_id ?? null;
+  return null;
 }
 
 /**
  * Retorna todos os region_ids do usuário (para multi-região).
- * Prioridade: roles atuais → user_access somente sem roles.
+ * Apenas roles atuais concedem regiões.
  */
 export async function getRegionIdsForUser(
   userId: string,
@@ -46,19 +38,9 @@ export async function getRegionIdsForUser(
       AND tenant_id = ${tenantId}::uuid
     ORDER BY id ASC
   `);
-  if (roleRows.rows.length) return roleRows.rows
+  return roleRows.rows
     .map((r) => r.region_id)
     .filter((id): id is number => id != null);
-
-  const accessRow = await db.execute<{ regiao_id: number | null }>(sql`
-    SELECT regiao_id
-    FROM monitoramento.user_access
-    WHERE user_id        = ${userId}::uuid
-      AND organization_id = ${tenantId}::uuid
-    LIMIT 1
-  `);
-  const id = accessRow.rows[0]?.regiao_id;
-  return id != null ? [id] : [];
 }
 
 /** null means every region owned by the resolved tenant; [] means no access. */

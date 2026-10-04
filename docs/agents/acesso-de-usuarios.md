@@ -16,7 +16,7 @@ O código não define um papel `admin` no verificador atual. As permissões de V
 
 ## Organização e regiões
 
-Uma requisição autenticada resolve uma organização pelo `tenant_id` dos metadados do usuário ou por vínculos em `monitoramento.roles` e na tabela legada `monitoramento.user_access`. Sem organização resolvida, as rotas que exigem esse contexto negam acesso.
+Uma requisição autenticada usa `tenant_id` dos metadados apenas como preferência e confirma o vínculo atual em `monitoramento.roles`. A tabela legada `monitoramento.user_access` não autoriza acesso. Sem papel atual, as rotas que exigem organização negam acesso.
 
 Rotas que aplicam escopo regional limitam resultados às regiões da organização e, quando aplicável, às regiões vinculadas ao usuário. Owner e Superadmin recebem acesso a todas as regiões dentro do escopo que a rota permite. Região pertencente a outra organização só pode ser consultada por Superadmin nas rotas que verificam esse vínculo.
 
@@ -34,7 +34,7 @@ Rotas que aplicam escopo regional limitam resultados às regiões da organizaç�
 - Para usuários que não são Owner nem Superadmin, as consultas regionais usam os vínculos com `region_id` preenchido. Um vínculo com `region_id = NULL` não é tratado uniformemente como “todas as regiões”.
 - A importação manual de propriedades ainda conserva `tenant_id`/`regiao_id` legados no registro físico. As consultas citadas acima usam interseção espacial; a canonização da importação e uma tabela de associações próprias para propriedades ainda estão pendentes.
 - O escopo das estações é por organização, não por região individual.
-- Contas revogadas antes da correção de limpeza do acesso legado podem conservar linha antiga em `user_access`. Elas exigem auditoria da base para distinguir esse resíduo de contas legadas válidas.
+- Contas antigas que possuam apenas `user_access`, sem registro migrado em `roles`, precisam receber um papel atual pelo administrador para voltar a acessar. Linhas legadas residuais não restauram acesso; sua limpeza da base ainda pode ser auditada separadamente.
 
 ## Referências no código
 
