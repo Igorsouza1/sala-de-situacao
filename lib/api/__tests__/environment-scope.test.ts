@@ -1,6 +1,6 @@
 jest.mock("@/lib/supabase/server", () => ({ createClient: jest.fn() }));
 jest.mock("@/db", () => ({ db: { execute: jest.fn(), select: jest.fn() } }));
-jest.mock("@/lib/api/require-region", () => ({ getRegionIdForUser: jest.fn().mockResolvedValue(null), getRegionIdsForUser: jest.fn().mockResolvedValue([11]) }));
+jest.mock("@/lib/api/require-region", () => ({ getRegionIdForUser: jest.fn().mockResolvedValue(null), getAccessibleRegionIdsForUser: jest.fn().mockResolvedValue([11]), getRegionIdsForUser: jest.fn().mockResolvedValue([11]) }));
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
 import { PgDialect } from "drizzle-orm/pg-core";

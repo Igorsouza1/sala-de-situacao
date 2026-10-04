@@ -3,7 +3,7 @@ import { db } from "@/db";
 import { sql } from "drizzle-orm";
 import { apiError } from "@/lib/api/responses";
 import { requireAuthWithTenant } from "@/lib/api/require-auth";
-import { getRegionIdForUser } from "@/lib/api/require-region";
+import { getAccessibleRegionIdsForUser } from "@/lib/api/require-region";
 
 /**
  * Resolve a Organização dona de uma Região.
@@ -51,10 +51,16 @@ export async function resolveScope(
     if (regionTenant !== tenantId && user.app_metadata?.is_superadmin !== true) {
       return denied(apiError("Região pertence a outra Organização.", 403));
     }
+    const allowed = await getAccessibleRegionIdsForUser(user.id, regionTenant, user.app_metadata?.is_superadmin === true);
+    if (allowed !== null && !allowed.includes(opts.regiaoId)) {
+      return denied(apiError("Região não acessível.", 403));
+    }
     return { user, tenantId: regionTenant, regiaoId: opts.regiaoId, response: null };
   }
 
-  const regiaoId = await getRegionIdForUser(user.id, tenantId);
+  const allowed = await getAccessibleRegionIdsForUser(user.id, tenantId, user.app_metadata?.is_superadmin === true);
+  if (allowed?.length === 0) return denied(apiError("Região não acessível.", 403));
+  const regiaoId = allowed === null ? null : allowed[0];
   return { user, tenantId, regiaoId, response: null };
 }
 

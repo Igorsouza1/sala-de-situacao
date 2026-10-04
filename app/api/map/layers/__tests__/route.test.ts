@@ -9,6 +9,7 @@
 
 jest.mock("@/lib/supabase/server", () => ({ createClient: jest.fn() }));
 jest.mock("@/db", () => ({ db: { execute: jest.fn().mockResolvedValue({ rows: [] }), select: jest.fn() } }));
+jest.mock("@/lib/api/require-region", () => ({ getAccessibleRegionIdsForUser: jest.fn().mockResolvedValue([11]) }));
 jest.mock("@/lib/service/layerService", () => ({
   getAllLayers: jest.fn().mockResolvedValue([]),
 }));
