@@ -68,7 +68,7 @@ describe.each([
     const response = await handler(req);
     expect(response.status).toBe(200);
     expect(service).toHaveBeenCalledWith(tenantId, false, undefined);
-    expect(region).toHaveBeenCalledWith("user-a", tenantId);
+    expect(accessibleRegions).toHaveBeenCalledWith("user-a", tenantId, false);
     expect(await response.json()).toEqual({ success: true, data: { 2026: Array(12).fill(0) }, error: null });
   });
 
