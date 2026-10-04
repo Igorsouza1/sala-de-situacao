@@ -1,0 +1,506 @@
+{
+  "app/(auth-pages)/confirm-pass/page.tsx": {
+    "paleta": 22,
+    "hex": 0
+  },
+  "app/(auth-pages)/forgot-password/page.tsx": {
+    "paleta": 13,
+    "hex": 0
+  },
+  "app/(auth-pages)/invite/page.tsx": {
+    "paleta": 22,
+    "hex": 0
+  },
+  "app/(auth-pages)/layout.tsx": {
+    "paleta": 3,
+    "hex": 0
+  },
+  "app/(auth-pages)/reset-password/page.tsx": {
+    "paleta": 17,
+    "hex": 0
+  },
+  "app/(auth-pages)/sign-in/page.tsx": {
+    "paleta": 20,
+    "hex": 0
+  },
+  "app/admin/organizations/page.tsx": {
+    "paleta": 0,
+    "hex": 4
+  },
+  "app/admin/page.tsx": {
+    "paleta": 0,
+    "hex": 21
+  },
+  "app/admin/regions/[id]/expand/page.tsx": {
+    "paleta": 3,
+    "hex": 0
+  },
+  "app/admin/regions/[id]/page.tsx": {
+    "paleta": 0,
+    "hex": 8
+  },
+  "app/admin/regions/page.tsx": {
+    "paleta": 0,
+    "hex": 4
+  },
+  "app/admin/users/page.tsx": {
+    "paleta": 1,
+    "hex": 0
+  },
+  "app/avistamento-javali/layout.tsx": {
+    "paleta": 0,
+    "hex": 1
+  },
+  "app/avistamento-javali/page.tsx": {
+    "paleta": 26,
+    "hex": 0
+  },
+  "app/page.tsx": {
+    "paleta": 0,
+    "hex": 28
+  },
+  "app/print/dossie/[id]/page.tsx": {
+    "paleta": 3,
+    "hex": 0
+  },
+  "app/print/propriedade/[id]/page.tsx": {
+    "paleta": 3,
+    "hex": 0
+  },
+  "components/admin/acoes-manager.tsx": {
+    "paleta": 24,
+    "hex": 0
+  },
+  "components/admin/base-layers-manager.tsx": {
+    "paleta": 55,
+    "hex": 2
+  },
+  "components/admin/create-acao-dialog.tsx": {
+    "paleta": 3,
+    "hex": 0
+  },
+  "components/admin/desmatamento-manager.tsx": {
+    "paleta": 33,
+    "hex": 0
+  },
+  "components/admin/focos-manager.tsx": {
+    "paleta": 46,
+    "hex": 0
+  },
+  "components/admin/geojson-uploader.tsx": {
+    "paleta": 6,
+    "hex": 0
+  },
+  "components/admin/layer-catalog-viewer.tsx": {
+    "paleta": 11,
+    "hex": 0
+  },
+  "components/admin/organizations-admin.tsx": {
+    "paleta": 8,
+    "hex": 7
+  },
+  "components/admin/properties-manager.tsx": {
+    "paleta": 48,
+    "hex": 0
+  },
+  "components/admin/property-dossier-dialog.tsx": {
+    "paleta": 33,
+    "hex": 0
+  },
+  "components/admin/property-edit-dialog.tsx": {
+    "paleta": 2,
+    "hex": 0
+  },
+  "components/admin/region-expand-preview.tsx": {
+    "paleta": 10,
+    "hex": 4
+  },
+  "components/admin/region-geo-toolkit.tsx": {
+    "paleta": 5,
+    "hex": 43
+  },
+  "components/admin/region-geometry-editor.tsx": {
+    "paleta": 13,
+    "hex": 1
+  },
+  "components/admin/region-map-preview.tsx": {
+    "paleta": 56,
+    "hex": 22
+  },
+  "components/admin/region-simple-edit.tsx": {
+    "paleta": 17,
+    "hex": 0
+  },
+  "components/admin/regions-admin.tsx": {
+    "paleta": 9,
+    "hex": 3
+  },
+  "components/admin/users-admin.tsx": {
+    "paleta": 16,
+    "hex": 0
+  },
+  "components/alerts/AlertManagerModal.tsx": {
+    "paleta": 24,
+    "hex": 0
+  },
+  "components/auth/form-message.tsx": {
+    "paleta": 9,
+    "hex": 0
+  },
+  "components/contact-modal.tsx": {
+    "paleta": 13,
+    "hex": 0
+  },
+  "components/dashboard/charts/custom-tooltip.tsx": {
+    "paleta": 3,
+    "hex": 0
+  },
+  "components/dashboard/charts/grafico-desmatamento.tsx": {
+    "paleta": 4,
+    "hex": 9
+  },
+  "components/dashboard/charts/grafico-fogo.tsx": {
+    "paleta": 4,
+    "hex": 7
+  },
+  "components/dashboard/charts/GraficoCombinado.tsx": {
+    "paleta": 7,
+    "hex": 10
+  },
+  "components/dashboard/charts/GraficoCureDiario.tsx": {
+    "paleta": 27,
+    "hex": 2
+  },
+  "components/dashboard/charts/GraficoNivelRioBalneario.tsx": {
+    "paleta": 7,
+    "hex": 0
+  },
+  "components/dashboard/charts/GraficoPluviometriaBalneario.tsx": {
+    "paleta": 4,
+    "hex": 0
+  },
+  "components/dashboard/charts/GraficoPluviometriaDeque.tsx": {
+    "paleta": 4,
+    "hex": 0
+  },
+  "components/dashboard/charts/GraficoProximidadeBalneario.tsx": {
+    "paleta": 6,
+    "hex": 9
+  },
+  "components/dashboard/charts/GraficoSaudeRio.tsx": {
+    "paleta": 15,
+    "hex": 25
+  },
+  "components/dashboard/charts/GraficoSecchiBalneario.tsx": {
+    "paleta": 4,
+    "hex": 21
+  },
+  "components/dashboard/charts/GraficoSecchiDeque.tsx": {
+    "paleta": 4,
+    "hex": 17
+  },
+  "components/dashboard/charts/GraficoTurbidezDeque.tsx": {
+    "paleta": 4,
+    "hex": 14
+  },
+  "components/dashboard/charts/GraficoTurbidezDiario.tsx": {
+    "paleta": 3,
+    "hex": 6
+  },
+  "components/dashboard/dashboard.tsx": {
+    "paleta": 55,
+    "hex": 7
+  },
+  "components/dashboard/kpis/KpiCard.tsx": {
+    "paleta": 19,
+    "hex": 4
+  },
+  "components/dashboard/kpis/KpiSection.tsx": {
+    "paleta": 9,
+    "hex": 0
+  },
+  "components/dashboard/kpis/NivelRioCard.tsx": {
+    "paleta": 12,
+    "hex": 0
+  },
+  "components/data-insert/DataInsertDialog.tsx": {
+    "paleta": 5,
+    "hex": 0
+  },
+  "components/data-insert/forms/AcoesForm.tsx": {
+    "paleta": 2,
+    "hex": 0
+  },
+  "components/data-insert/forms/DynamicLayerForm.tsx": {
+    "paleta": 1,
+    "hex": 0
+  },
+  "components/data-insert/forms/EstradaForm.tsx": {
+    "paleta": 5,
+    "hex": 0
+  },
+  "components/data-insert/preview/CardsPreview.tsx": {
+    "paleta": 3,
+    "hex": 0
+  },
+  "components/data-insert/preview/MapPreview.tsx": {
+    "paleta": 2,
+    "hex": 0
+  },
+  "components/data-insert/preview/TablePreview.tsx": {
+    "paleta": 8,
+    "hex": 0
+  },
+  "components/data-insert/TypeSelector.tsx": {
+    "paleta": 8,
+    "hex": 0
+  },
+  "components/gpx-import/GpxImportTab.tsx": {
+    "paleta": 28,
+    "hex": 0
+  },
+  "components/gpx-import/GpxUploader.tsx": {
+    "paleta": 18,
+    "hex": 0
+  },
+  "components/gpx-import/PhotoUploader.tsx": {
+    "paleta": 9,
+    "hex": 0
+  },
+  "components/gpx-import/Step1GeneralInfo.tsx": {
+    "paleta": 37,
+    "hex": 0
+  },
+  "components/gpx-import/Step2TrailData.tsx": {
+    "paleta": 33,
+    "hex": 0
+  },
+  "components/gpx-import/Step3Waypoints.tsx": {
+    "paleta": 13,
+    "hex": 0
+  },
+  "components/gpx-import/WaypointAccordion.tsx": {
+    "paleta": 47,
+    "hex": 0
+  },
+  "components/gpx-import/WaypointBulkActions.tsx": {
+    "paleta": 17,
+    "hex": 0
+  },
+  "components/gpx-upload-modal.tsx": {
+    "paleta": 17,
+    "hex": 0
+  },
+  "components/InstallPrompt.tsx": {
+    "paleta": 21,
+    "hex": 0
+  },
+  "components/landing/feature-card.tsx": {
+    "paleta": 2,
+    "hex": 2
+  },
+  "components/landing/mobile-nav.tsx": {
+    "paleta": 4,
+    "hex": 6
+  },
+  "components/landing/pillar-scroll-section.tsx": {
+    "paleta": 10,
+    "hex": 9
+  },
+  "components/landing/pricing-card.tsx": {
+    "paleta": 0,
+    "hex": 14
+  },
+  "components/landing/temperature-card.tsx": {
+    "paleta": 0,
+    "hex": 4
+  },
+  "components/landing/testimonial-card.tsx": {
+    "paleta": 3,
+    "hex": 2
+  },
+  "components/landing/weather-details-card.tsx": {
+    "paleta": 0,
+    "hex": 3
+  },
+  "components/landing/wind-card.tsx": {
+    "paleta": 0,
+    "hex": 3
+  },
+  "components/map/acaoDossie.tsx": {
+    "paleta": 11,
+    "hex": 0
+  },
+  "components/map/AcaoHoverCard.tsx": {
+    "paleta": 0,
+    "hex": 19
+  },
+  "components/map/ActionLayerCard.tsx": {
+    "paleta": 10,
+    "hex": 0
+  },
+  "components/map/config/actions-config.tsx": {
+    "paleta": 3,
+    "hex": 7
+  },
+  "components/map/CoordinateInspector.tsx": {
+    "paleta": 7,
+    "hex": 2
+  },
+  "components/map/CustomLayerControl.tsx": {
+    "paleta": 1,
+    "hex": 0
+  },
+  "components/map/CustomZoomControl.tsx": {
+    "paleta": 2,
+    "hex": 0
+  },
+  "components/map/DateFilterControl.tsx": {
+    "paleta": 11,
+    "hex": 0
+  },
+  "components/map/dossie-map.tsx": {
+    "paleta": 10,
+    "hex": 0
+  },
+  "components/map/dossie-template.tsx": {
+    "paleta": 76,
+    "hex": 0
+  },
+  "components/map/FaunaHeatmapControl.tsx": {
+    "paleta": 5,
+    "hex": 2
+  },
+  "components/map/feature-details.tsx": {
+    "paleta": 24,
+    "hex": 0
+  },
+  "components/map/FilterPopover.tsx": {
+    "paleta": 6,
+    "hex": 0
+  },
+  "components/map/helpers/map-visuals.tsx": {
+    "paleta": 0,
+    "hex": 16
+  },
+  "components/map/helpers/maplibre-layer.ts": {
+    "paleta": 0,
+    "hex": 3
+  },
+  "components/map/LayerManager.tsx": {
+    "paleta": 15,
+    "hex": 0
+  },
+  "components/map/map.tsx": {
+    "paleta": 6,
+    "hex": 0
+  },
+  "components/map/MapLayerCard.tsx": {
+    "paleta": 8,
+    "hex": 0
+  },
+  "components/map/MaplibreCoordinateInspector.tsx": {
+    "paleta": 7,
+    "hex": 0
+  },
+  "components/map/MaplibreFaunaHeatmapControl.tsx": {
+    "paleta": 5,
+    "hex": 0
+  },
+  "components/map/MaplibreIconMarkers.tsx": {
+    "paleta": 0,
+    "hex": 1
+  },
+  "components/map/MapLibreMap.tsx": {
+    "paleta": 12,
+    "hex": 9
+  },
+  "components/map/MaplibreMeasureControl.tsx": {
+    "paleta": 11,
+    "hex": 0
+  },
+  "components/map/MaplibreSnapshotControl.tsx": {
+    "paleta": 2,
+    "hex": 0
+  },
+  "components/map/MapPlaceholder.tsx": {
+    "paleta": 1,
+    "hex": 0
+  },
+  "components/map/MapPrintTemplate.tsx": {
+    "paleta": 16,
+    "hex": 3
+  },
+  "components/map/MeasureControl.tsx": {
+    "paleta": 13,
+    "hex": 9
+  },
+  "components/map/Modal.tsx": {
+    "paleta": 0,
+    "hex": 2
+  },
+  "components/map/PropertyFilterControl.tsx": {
+    "paleta": 4,
+    "hex": 0
+  },
+  "components/map/PropertyInfoControl.tsx": {
+    "paleta": 0,
+    "hex": 21
+  },
+  "components/map/propriedade-dossie-template.tsx": {
+    "paleta": 74,
+    "hex": 0
+  },
+  "components/map/PropriedadeDossie.tsx": {
+    "paleta": 0,
+    "hex": 30
+  },
+  "components/map/PropriedadeMap.tsx": {
+    "paleta": 3,
+    "hex": 2
+  },
+  "components/map/ShapefileUploader.tsx": {
+    "paleta": 10,
+    "hex": 2
+  },
+  "components/map/SnapshotControl.tsx": {
+    "paleta": 2,
+    "hex": 0
+  },
+  "components/Navbar.tsx": {
+    "paleta": 8,
+    "hex": 0
+  },
+  "components/ui/calendar.tsx": {
+    "paleta": 7,
+    "hex": 0
+  },
+  "components/ui/chart.tsx": {
+    "paleta": 0,
+    "hex": 5
+  },
+  "components/ui/confirm-destructive.tsx": {
+    "paleta": 2,
+    "hex": 0
+  },
+  "components/ui/detail-Item.tsx": {
+    "paleta": 3,
+    "hex": 0
+  },
+  "components/ui/image-carousel.tsx": {
+    "paleta": 9,
+    "hex": 0
+  },
+  "components/ui/image-modal.tsx": {
+    "paleta": 2,
+    "hex": 0
+  },
+  "components/ui/toast.tsx": {
+    "paleta": 6,
+    "hex": 0
+  },
+  "components/user-profile-modal.tsx": {
+    "paleta": 3,
+    "hex": 0
+  }
+}
