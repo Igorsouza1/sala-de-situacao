@@ -5,7 +5,6 @@ import { requireRole } from "@/lib/api/require-auth";
 import { apiError } from "@/lib/api/responses";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
-import { findExistingDesmatamentoAlertids } from "@/lib/repositories/desmatamentoReposiroty";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
@@ -37,17 +36,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     const tenantId = await getTenantIdForRegion(regionId);
     if (!tenantId) return apiError(`Região ${regionId} não possui Organização associada.`, 400);
 
-    // Coletar todos os alertids presentes no arquivo
-    const alertidsNoArquivo = features
-      .map((f) => {
-        const p = f.properties || {};
-        const id = p.ALERTID ?? p.alertid;
-        return id != null ? String(id) : undefined;
-      })
-      .filter((id): id is string => !!id);
-
-    // Buscar quais alertids já existem para essa região (query parametrizada — sem sql.raw)
-    const existingAlertids = await findExistingDesmatamentoAlertids(regionId, alertidsNoArquivo);
+    const seenInFile = new Set<string>();
 
     let insertedCount = 0;
     let skippedCount = 0;
@@ -56,18 +45,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       const props = feature.properties || {};
       const geometry = feature.geometry;
 
-      if (!geometry) {
+      const alertid = String(props.ALERTID ?? props.alertid ?? "").trim();
+      if (!geometry || !alertid || seenInFile.has(alertid)) {
         skippedCount++;
         continue;
       }
-
-      const alertid: string | null = String(props.ALERTID ?? props.alertid ?? "") || null;
-
-      // Deduplicação por alertid quando disponível
-      if (alertid && existingAlertids.has(alertid)) {
-        skippedCount++;
-        continue;
-      }
+      seenInFile.add(alertid);
 
       const alertcode: string | null = String(props.ALERTCODE ?? props.alertcode ?? "") || null;
       const rawAlertHA = props.ALERTHA ?? props.alertha;
@@ -82,23 +65,36 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
 
       const geomJson = JSON.stringify(geometry);
 
-      await db.execute(sql`
-        INSERT INTO monitoramento.desmatamento
-          (alertid, alertcode, alertha, source, detectat, detectyear,
-           state, stateha, geom, regiao_id, tenant_id)
-        VALUES
-          (${alertid}, ${alertcode},
-           ${isNaN(alertha as number) ? null : alertha},
-           ${source}, ${detectat},
-           ${isNaN(detectyear as number) ? null : detectyear},
-           ${state},
-           ${isNaN(stateha as number) ? null : stateha},
-           ST_SetSRID(ST_GeomFromGeoJSON(${geomJson}), 4674),
-           ${regionId}, ${tenantId}::uuid)
+      // O fato físico é universal. A associação, inclusive o estado da
+      // notificação histórica, pertence à região. Um único comando mantém
+      // o upsert e o vínculo atômicos mesmo em importações concorrentes.
+      const result = await db.execute<{ linked: boolean }>(sql`
+        WITH fact AS (
+          INSERT INTO monitoramento.desmatamento
+            (alertid, alertcode, alertha, source, detectat, detectyear,
+             state, stateha, geom)
+          VALUES
+            (${alertid}, ${alertcode},
+             ${isNaN(alertha as number) ? null : alertha},
+             ${source}, ${detectat},
+             ${isNaN(detectyear as number) ? null : detectyear},
+             ${state},
+             ${isNaN(stateha as number) ? null : stateha},
+             ST_SetSRID(ST_GeomFromGeoJSON(${geomJson}), 4674))
+          ON CONFLICT (alertid) WHERE alertid IS NOT NULL
+          DO UPDATE SET alertid = EXCLUDED.alertid
+          RETURNING id
+        ), link AS (
+          INSERT INTO monitoramento.desmatamento_regioes
+            (desmatamento_id, regiao_id, alerta_enviado)
+          SELECT id, ${regionId}, true FROM fact
+          ON CONFLICT (desmatamento_id, regiao_id) DO NOTHING
+          RETURNING id
+        )
+        SELECT EXISTS(SELECT 1 FROM link) AS linked
       `);
-
-      if (alertid) existingAlertids.add(alertid);
-      insertedCount++;
+      if (result.rows[0]?.linked) insertedCount++;
+      else skippedCount++;
     }
 
     return Response.json({ success: true, data: { inserted: insertedCount, skipped: skippedCount } });

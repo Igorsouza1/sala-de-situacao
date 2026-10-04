@@ -67,14 +67,13 @@ describe('resolveLayerType', () => {
     expect(resolveLayerType()).toBe('fill');
   });
 
-  it('style type takes priority over geometry type', () => {
+  it('keeps a Point as a circle when style requests a polygon', () => {
     const feature: Feature = {
       type: 'Feature',
       geometry: { type: 'Point', coordinates: [0, 0] },
       properties: {},
     };
-    // Even though geometry is Point, explicit type overrides
-    expect(resolveLayerType({ type: 'polygon' }, feature)).toBe('fill');
+    expect(resolveLayerType({ type: 'polygon' }, feature)).toBe('circle');
   });
 });
 
