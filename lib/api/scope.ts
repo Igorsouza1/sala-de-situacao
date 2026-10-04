@@ -30,7 +30,7 @@ export type ScopeResult =
  * - Com `regiaoId` explícito: o tenant efetivo é o da Organização dona da
  *   Região. Se a Região pertence a outra Organização, só Superadmin passa —
  *   usuário comum recebe 403 (isolamento de tenant).
- * - Sem `regiaoId`: usa a Região associada ao usuário (roles → user_access).
+ * - Sem `regiaoId`: usa a Região associada ao usuário em roles.
  */
 export async function resolveScope(
   opts: { regiaoId?: number | null } = {},

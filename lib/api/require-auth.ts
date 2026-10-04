@@ -44,19 +44,8 @@ export async function resolveTenantIdForUser(user: User): Promise<string | null>
       ?? roles.rows[0].tenant_id;
   }
 
-  // Legitimate legacy accounts remain supported. Revocation removes this
-  // compatibility association when the last role in that organization is removed.
-  const legacy = await db.execute<{ organization_id: string }>(sql`
-    SELECT organization_id::text AS organization_id
-    FROM monitoramento.user_access
-    WHERE user_id = ${user.id}::uuid
-    ORDER BY organization_id ASC
-  `);
-  if (legacy.rows.length) {
-    return legacy.rows.find(row => row.organization_id === preferred)?.organization_id
-      ?? legacy.rows[0].organization_id;
-  }
-
+  // roles is authoritative. A leftover user_access row cannot restore access
+  // revoked before the cleanup path was introduced.
   if (user.app_metadata?.is_superadmin === true) {
     const firstTenant = await db.execute<{ id: string }>(sql`
       SELECT id FROM monitoramento.tenants ORDER BY created_at ASC LIMIT 1
