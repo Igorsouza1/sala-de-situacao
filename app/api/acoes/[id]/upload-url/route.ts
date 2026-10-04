@@ -1,6 +1,7 @@
 // app/api/acoes/[id]/upload-url/route.ts
 import { apiError, apiSuccess } from "@/lib/api/responses"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { authorizeAcaoPhotoUpload } from "@/lib/api/authorize-acao-photo"
 
 const BUCKET = "acoes"
 
@@ -13,13 +14,22 @@ export async function POST(request: Request, context: any) {
       return apiError("ID de ação inválido", 400)
     }
 
+    const authorization = await authorizeAcaoPhotoUpload(acaoId)
+    if (authorization.response) return authorization.response
+
     const body = await request.json().catch(() => null)
 
     if (!body || typeof body.fileName !== "string" || !body.fileName.trim()) {
       return apiError("fileName é obrigatório", 400)
     }
 
-    const path = `${acaoId}/${Date.now()}-${body.fileName}`
+    const validTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"]
+    if (typeof body.contentType !== "string" || !validTypes.includes(body.contentType)) {
+      return apiError("Tipo de arquivo inválido. Use JPG, PNG ou WebP", 400)
+    }
+
+    const fileName = body.fileName.split(/[\\/]/).pop()!.replace(/[^\w.-]/g, "_")
+    const path = `${acaoId}/${Date.now()}-${fileName}`
     const supabase = createAdminClient()
 
     const { data, error } = await supabase.storage

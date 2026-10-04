@@ -12,8 +12,8 @@ interface MonthData {
   nivelAguaMedia?: number
 }
 
-export async function getAllBalnearioDataGroupedByMonth() {
-  const data = await findAllBalnearioData()
+export async function getAllBalnearioDataGroupedByMonth(tenantId: string) {
+  const data = await findAllBalnearioData(tenantId)
 
   const groupedData = data.reduce(
     (acc, item) => {
@@ -63,18 +63,19 @@ export async function getAllBalnearioDataGroupedByMonth() {
   return groupedData
 }
 
-export async function getBalnearioDataByDateRange(startDate: string, endDate: string) {
-  return findBalnearioDataByDateRange(startDate, endDate)
+export async function getBalnearioDataByDateRange(tenantId: string, startDate: string, endDate: string) {
+  return findBalnearioDataByDateRange(tenantId, startDate, endDate)
 }
 
 type BalnearioInput = Zod.infer<typeof createBalnearioSchema>;
 
-export async function createBalnearioData(input: BalnearioInput) {
+export async function createBalnearioData(tenantId: string, input: BalnearioInput) {
   const validatedData = createBalnearioSchema.parse(input)
 
   const mes = validatedData.data.toLocaleString("pt-BR", { month: "long" })
 
   const completeData = {
+    tenantId,
     data: validatedData.data.toISOString().split("T")[0],
     local: "Balneário Municipal",
     mes,
@@ -113,13 +114,13 @@ function mean(rows: any[], field: string) {
   return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
 }
 
-export async function getNivelAguaBalnearioIndicador() {
+export async function getNivelAguaBalnearioIndicador(tenantId: string) {
   const today = new Date()
   const { startThis, startLast, endLast } = mtdRange(today)
 
   const [rowsAtual, rowsPassado] = await Promise.all([
-    findBalnearioDataByDateRange(fmt(startThis), fmt(today)),
-    findBalnearioDataByDateRange(fmt(startLast), fmt(endLast)),
+    findBalnearioDataByDateRange(tenantId, fmt(startThis), fmt(today)),
+    findBalnearioDataByDateRange(tenantId, fmt(startLast), fmt(endLast)),
   ])
 
   const validAtual = rowsAtual
@@ -140,13 +141,13 @@ export async function getNivelAguaBalnearioIndicador() {
   return { current, mtdAtual, mtdPassado, deltaPct, lastDate: lastRow?.data ?? null }
 }
 
-export async function getPluviometriaBalnearioIndicador() {
+export async function getPluviometriaBalnearioIndicador(tenantId: string) {
   const today = new Date()
   const { startThis, startLast, endLast } = mtdRange(today)
 
   const [rowsAtual, rowsPassado] = await Promise.all([
-    findBalnearioDataByDateRange(fmt(startThis), fmt(today)),
-    findBalnearioDataByDateRange(fmt(startLast), fmt(endLast)),
+    findBalnearioDataByDateRange(tenantId, fmt(startThis), fmt(today)),
+    findBalnearioDataByDateRange(tenantId, fmt(startLast), fmt(endLast)),
   ])
 
   const validAtual = rowsAtual
@@ -166,15 +167,15 @@ export async function getPluviometriaBalnearioIndicador() {
   return { mtdAtual, mtdPassado, deltaPct, lastDate: lastRow?.data ?? null }
 }
 
-export async function getSecchiBalnearioIndicador() {
+export async function getSecchiBalnearioIndicador(tenantId: string) {
   const today = new Date()
   const { startThis, startLast, endLast } = mtdRange(today)
   const start30 = new Date(today.getTime() - 30 * 86400000)
 
   const [rowsRecent, rowsAtual, rowsPassado] = await Promise.all([
-    findBalnearioDataByDateRange(fmt(start30), fmt(today)),
-    findBalnearioDataByDateRange(fmt(startThis), fmt(today)),
-    findBalnearioDataByDateRange(fmt(startLast), fmt(endLast)),
+    findBalnearioDataByDateRange(tenantId, fmt(start30), fmt(today)),
+    findBalnearioDataByDateRange(tenantId, fmt(startThis), fmt(today)),
+    findBalnearioDataByDateRange(tenantId, fmt(startLast), fmt(endLast)),
   ])
 
   const byDate = (a: any, b: any) => new Date(a.data!).getTime() - new Date(b.data!).getTime()
@@ -192,8 +193,8 @@ export async function getSecchiBalnearioIndicador() {
   return { current, mtdAtual, mtdPassado, deltaPct, lastDate: lastRow?.data ?? null }
 }
 
-export async function getSecchiBalnearioHistorico() {
-  const data = await findAllBalnearioData()
+export async function getSecchiBalnearioHistorico(tenantId: string) {
+  const data = await findAllBalnearioData(tenantId)
 
   const byMonth: Record<string, number[]> = {}
 
@@ -225,8 +226,8 @@ export async function getSecchiBalnearioHistorico() {
   return result
 }
 
-export async function getPluviometriaBalnearioHistorico() {
-  const data = await findAllBalnearioData()
+export async function getPluviometriaBalnearioHistorico(tenantId: string) {
+  const data = await findAllBalnearioData(tenantId)
 
   const byMonth: Record<string, number> = {}
 
@@ -255,8 +256,8 @@ export async function getPluviometriaBalnearioHistorico() {
   return result
 }
 
-export async function getNivelRioBalnearioHistorico() {
-  const data = await findAllBalnearioData()
+export async function getNivelRioBalnearioHistorico(tenantId: string) {
+  const data = await findAllBalnearioData(tenantId)
 
   const byMonth: Record<string, number[]> = {}
 

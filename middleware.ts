@@ -3,11 +3,10 @@ import { updateSession } from "@/lib/supabase/middleware";
 
 export async function middleware(request: NextRequest) {
   return await updateSession(request);
-
 }
 
 export const config = {
-  matcher: [
+  matcher: ["/api/:path*", "/print/:path*",
     /*
      * Match all request paths except:
      * - _next/static (static files)

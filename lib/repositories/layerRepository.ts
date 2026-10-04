@@ -1,6 +1,6 @@
 import { db } from "@/db";
 import { MapFeatureCollection } from "@/types/map-dto";
-import { sql, eq, desc } from "drizzle-orm";
+import { sql, eq, desc, and, or, isNull } from "drizzle-orm";
 import { layerCatalogInMonitoramento } from "@/db/schema";
 
 /**
@@ -80,30 +80,31 @@ export async function getGenericLayerData(layerId: number, schema: string = 'mon
 /**
  * Fetches the configuration for a specific layer from the catalog.
  */
-export async function getLayerCatalog(slug: string) {
+export async function getLayerCatalog(slug: string, tenantId?: string) {
     const result = await db
         .select()
         .from(layerCatalogInMonitoramento)
-        .where(eq(layerCatalogInMonitoramento.slug, slug))
+        .where(and(eq(layerCatalogInMonitoramento.slug, slug), tenantId ? or(eq(layerCatalogInMonitoramento.tenantId, tenantId), isNull(layerCatalogInMonitoramento.tenantId), eq(layerCatalogInMonitoramento.scope, "global")) : undefined))
         .limit(1);
 
     return result[0];
 }
 
-export async function findAllLayersCatalog() {
+export async function findAllLayersCatalog(tenantId?: string) {
     return await db
         .select()
         .from(layerCatalogInMonitoramento)
+        .where(tenantId ? or(eq(layerCatalogInMonitoramento.tenantId, tenantId), isNull(layerCatalogInMonitoramento.tenantId), eq(layerCatalogInMonitoramento.scope, "global")) : undefined)
         .orderBy(desc(layerCatalogInMonitoramento.ordering));
 }
 
-export async function insertLayerData(layerId: number, geojson: any, properties: any) {
+export async function insertLayerData(layerId: number, geojson: any, properties: any, tenantId: string | null) {
     // Ensure 4674 SRID
     const geomSQL = sql`ST_SetSRID(ST_GeomFromGeoJSON(${JSON.stringify(geojson)}), 4674)`;
 
     return await db.execute(sql`
-        INSERT INTO "monitoramento"."layer_data" (layer_id, geom, properties, data_registro)
-        VALUES (${layerId}, ${geomSQL}, ${properties}, NOW())
+        INSERT INTO "monitoramento"."layer_data" (layer_id, geom, properties, data_registro, tenant_id)
+        VALUES (${layerId}, ${geomSQL}, ${properties}, NOW(), ${tenantId}::uuid)
         RETURNING id
     `);
 }

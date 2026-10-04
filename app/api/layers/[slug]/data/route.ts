@@ -1,3 +1,4 @@
+import { requireRole } from "@/lib/api/require-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { getLayerCatalog, insertLayerData } from "@/lib/repositories/layerRepository";
 
@@ -6,6 +7,8 @@ export async function POST(
     // 1. Update the type to expect a Promise
     { params }: { params: Promise<{ slug: string }> }
 ) {
+    const auth = await requireRole("editor");
+    if (auth.response) return auth.response;
     try {
         // 2. Await the params to extract the slug
         const { slug } = await params;
@@ -14,12 +17,16 @@ export async function POST(
         const { geojson, properties } = body;
 
         // 3. Validar Slug e buscar Layer ID
-        const layer = await getLayerCatalog(slug);
+        const layer = await getLayerCatalog(slug, auth.user?.app_metadata?.is_superadmin === true ? undefined : auth.tenantId!);
         if (!layer) {
             return NextResponse.json(
                 { success: false, error: "Camada não encontrada" },
                 { status: 404 }
             );
+        }
+
+        if ((layer.scope === 'global' || !layer.tenantId) && auth.user?.app_metadata?.is_superadmin !== true) {
+            return NextResponse.json({ error: "Camada Global restrita ao Superadmin." }, { status: 403 });
         }
 
         // 4. Validar Input Básico
@@ -31,7 +38,7 @@ export async function POST(
         }
 
         // 5. Inserir Dados
-        await insertLayerData(layer.id, geojson, properties);
+        await insertLayerData(layer.id, geojson, properties, layer.tenantId ?? auth.tenantId!);
 
         return NextResponse.json({ success: true });
     } catch (error: any) {

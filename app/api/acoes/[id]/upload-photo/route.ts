@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { addAcaoImageById } from "@/lib/repositories/acoesRepository";
+import { authorizeAcaoPhotoUpload } from "@/lib/api/authorize-acao-photo";
 
 const BUCKET = "acoes";
 
@@ -13,6 +14,9 @@ export async function POST(request: Request, context: any) {
     if (Number.isNaN(acaoId)) {
       return apiError("ID de ação inválido", 400);
     }
+
+    const authorization = await authorizeAcaoPhotoUpload(acaoId);
+    if (authorization.response) return authorization.response;
 
     const formData = await request.formData();
     const file = formData.get("file") as File;

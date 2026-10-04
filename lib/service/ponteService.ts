@@ -12,8 +12,8 @@ interface MonthData {
     }
   }
 
-export async function getAllPonteData(){
-    const ponteData = await findAllPonteData()
+export async function getAllPonteData(tenantId: string){
+    const ponteData = await findAllPonteData(tenantId)
 
     const groupedData = ponteData.reduce(
         (acc, item) => {
@@ -77,20 +77,21 @@ export async function getAllPonteData(){
 }
 
 
-export async function getPonteDataByDateRange(startDate: string, endDate: string){
-  const dequeData = await findPonteDataByDateRange(startDate, endDate)
+export async function getPonteDataByDateRange(tenantId: string, startDate: string, endDate: string){
+  const dequeData = await findPonteDataByDateRange(tenantId, startDate, endDate)
   return dequeData
 }
 
 
 type DequeInput = Zod.infer<typeof createPonteSchema>;
 
-export async function createPonteData(input: DequeInput){
+export async function createPonteData(tenantId: string, input: DequeInput){
   const validatedData = createPonteSchema.parse(input);
 
   const mes = validatedData.data.toLocaleString('pt-BR', { month: 'long' });
 
   const completeData = {
+    tenantId,
     data: validatedData.data.toISOString().split('T')[0],
     local: "Ponte do Cure",
     mes: mes,
@@ -107,7 +108,7 @@ return newEntry;
 
 
 
-export async function getNivelRioComparativoPct() {
+export async function getNivelRioComparativoPct(tenantId: string) {
   const today = new Date();
   const year = today.getFullYear();
   const month0 = today.getMonth();
@@ -125,8 +126,8 @@ export async function getNivelRioComparativoPct() {
   const toNum = (v: any) => (v === null || v === undefined ? NaN : Number(v));
 
   const [rowsAtual, rowsPassado] = await Promise.all([
-    getPonteDataByDateRange(fmt(startThis), fmt(endThis)),
-    getPonteDataByDateRange(fmt(startLast), fmt(endLast)),
+    getPonteDataByDateRange(tenantId, fmt(startThis), fmt(endThis)),
+    getPonteDataByDateRange(tenantId, fmt(startLast), fmt(endLast)),
   ]);
 
   const validAtual = (rowsAtual ?? []).filter(r => !isNaN(toNum(r?.nivel)));

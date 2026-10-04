@@ -129,7 +129,8 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
              // Get Upload URL
              const resUrl = await fetch(`/api/acoes/${acaoId}/upload-url`, {
                  method: 'POST',
-                 body: JSON.stringify({ fileName: input.file.name })
+                 headers: { 'Content-Type': 'application/json' },
+                 body: JSON.stringify({ fileName: input.file.name, contentType: input.file.type })
              })
              const urlData = await resUrl.json()
              if (!urlData.success) throw new Error(urlData.error || "Erro ao gerar URL de upload")

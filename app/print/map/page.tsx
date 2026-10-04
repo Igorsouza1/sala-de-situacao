@@ -1,5 +1,5 @@
 import { MapPrintTemplate } from "@/components/map/MapPrintTemplate"
-import { getAllLayers } from "@/lib/service/layerService"
+import { loadPrintLayers } from "@/lib/print/loaders"
 import { LayerResponseDTO } from "@/types/map-dto"
 
 interface PrintMapPageProps {
@@ -26,8 +26,7 @@ export default async function PrintMapPage({ searchParams }: PrintMapPageProps) 
   const startDate = params.startDate ? new Date(params.startDate) : undefined
   const endDate = params.endDate ? new Date(params.endDate) : undefined
 
-  // tenantId will be injected here in task 2.4 via requireAuthWithTenant()
-  const allLayers = await getAllLayers(undefined, startDate, endDate)
+  const allLayers = await loadPrintLayers(startDate, endDate)
   
   const activeLayers: LayerResponseDTO[] = []
 

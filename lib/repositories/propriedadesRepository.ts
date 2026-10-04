@@ -48,11 +48,33 @@ export async function countPropriedades(tenantId?: string | null, minArea?: numb
 }
 
 
-export async function findPropriedadeDossieData(id: number, tenantId?: string | null) {
+export async function findPropriedadeDossieData(id: number, tenantId?: string | null, regionIds?: number[]) {
   const effectiveTenantId = requireExplicitTenant(tenantId);
-  const tenantFilter = effectiveTenantId
-    ? sql`AND tenant_id = ${effectiveTenantId}::uuid`
+  // Properties are base data: access comes from spatial overlap with owned
+  // regions, optionally narrowed to all regions assigned to the print user.
+  const regionFilter = regionIds
+    ? regionIds.length ? sql`AND r.id IN (${sql.join(regionIds.map(regionId => sql`${regionId}`), sql`, `)})` : sql`AND false`
     : sql``;
+  const tenantFilter = sql`AND EXISTS (
+    SELECT 1 FROM monitoramento.regioes r
+    WHERE r.organization_id = ${effectiveTenantId}::uuid
+      ${regionFilter}
+      AND ST_Intersects(r.geom, propriedades.geom)
+  )`;
+  // Alert facts are shared between organizations. Only associations through
+  // this user's accessible regions may contribute to dossier totals/lists.
+  const firmsScope = sql`EXISTS (
+    SELECT 1 FROM monitoramento.firms_regioes fr
+    JOIN monitoramento.regioes r ON r.id = fr.regiao_id
+    WHERE fr.firm_id = f.id AND r.organization_id = ${effectiveTenantId}::uuid
+      ${regionFilter}
+  )`;
+  const desmatamentoScope = sql`EXISTS (
+    SELECT 1 FROM monitoramento.desmatamento_regioes dr
+    JOIN monitoramento.regioes r ON r.id = dr.regiao_id
+    WHERE dr.desmatamento_id = d.id AND r.organization_id = ${effectiveTenantId}::uuid
+      ${regionFilter}
+  )`;
 
   const query = sql`
     WITH prop AS (
@@ -88,11 +110,11 @@ export async function findPropriedadeDossieData(id: number, tenantId?: string | 
           '[]'::json
         )
         FROM "monitoramento"."acoes" a
-        WHERE ST_Intersects(a.geom, p.geom)
+        WHERE a.tenant_id = ${effectiveTenantId}::uuid AND ST_Intersects(a.geom, p.geom)
       ) as "acoes",
-      (SELECT COUNT(*)::int FROM "monitoramento"."raw_firms" f WHERE ST_DWithin(f.geom::geography, p.geom::geography, 187.5)) as "focosCount",
-      (SELECT COUNT(*)::int FROM "monitoramento"."desmatamento" d WHERE ST_Intersects(d.geom, p.geom)) as "desmatamentoCount",
-      (SELECT COALESCE(SUM(alertha), 0)::float FROM "monitoramento"."desmatamento" d WHERE ST_Intersects(d.geom, p.geom)) as "desmatamentoArea",
+      (SELECT COUNT(*)::int FROM "monitoramento"."raw_firms" f WHERE ST_DWithin(f.geom::geography, p.geom::geography, 187.5) AND ${firmsScope}) as "focosCount",
+      (SELECT COUNT(*)::int FROM "monitoramento"."desmatamento" d WHERE ST_Intersects(d.geom, p.geom) AND ${desmatamentoScope}) as "desmatamentoCount",
+      (SELECT COALESCE(SUM(alertha), 0)::float FROM "monitoramento"."desmatamento" d WHERE ST_Intersects(d.geom, p.geom) AND ${desmatamentoScope}) as "desmatamentoArea",
       (
         SELECT COALESCE(
           ST_Area(
@@ -104,7 +126,7 @@ export async function findPropriedadeDossieData(id: number, tenantId?: string | 
            0
         )::float
         FROM "monitoramento"."raw_firms" f
-        WHERE ST_DWithin(f.geom::geography, p.geom::geography, 187.5)
+        WHERE ST_DWithin(f.geom::geography, p.geom::geography, 187.5) AND ${firmsScope}
       ) as "areaQueimada",
       (
   SELECT COALESCE(
@@ -122,9 +144,9 @@ export async function findPropriedadeDossieData(id: number, tenantId?: string | 
   )
   FROM (
     SELECT *
-    FROM "monitoramento"."raw_firms"
-    WHERE ST_DWithin(geom::geography, p.geom::geography, 187.5)
-    ORDER BY acq_date DESC
+    FROM "monitoramento"."raw_firms" f
+    WHERE ST_DWithin(f.geom::geography, p.geom::geography, 187.5) AND ${firmsScope}
+    ORDER BY f.acq_date DESC
     LIMIT 5
   ) f
 ) as "focos",
@@ -142,7 +164,7 @@ export async function findPropriedadeDossieData(id: number, tenantId?: string | 
           '[]'::json
         )
         FROM "monitoramento"."desmatamento" d
-        WHERE ST_Intersects(d.geom, p.geom)
+        WHERE ST_Intersects(d.geom, p.geom) AND ${desmatamentoScope}
       ) as "desmatamentos"
     FROM prop p
   `;

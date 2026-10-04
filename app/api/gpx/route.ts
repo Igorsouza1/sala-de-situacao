@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import { db, sql } from "@/db"
 import { gpx as gpxToGeoJSON } from "@tmcw/togeojson"
 import { DOMParser } from "@xmldom/xmldom"
+import { requireRole } from "@/lib/api/require-auth"
+import { getRegionIdForUser } from "@/lib/api/require-region"
 
 import type {
   FeatureCollection,
@@ -33,7 +35,10 @@ function toMultiLineStringZ(fc: FeatureCollection): string | null {
 
 // ────── POST: Upload de arquivo GPX ──────
 export async function POST(request: Request) {
+  const { user, tenantId, response } = await requireRole("editor")
+  if (response) return response
   try {
+    const regiaoId = await getRegionIdForUser(user!.id, tenantId!)
     // ─── Recebe e valida o arquivo GPX ───
     const form = await request.formData()
     const file = form.get("file")
@@ -69,13 +74,15 @@ export async function POST(request: Request) {
     // ─── Insere trilha no banco ───
     const nomeBase = file.name.replace(/\.gpx$/i, "")
     const { rows } = await db.execute(sql`
-      INSERT INTO monitoramento.trilhas (nome, geom, data_inicio, data_fim, duracao_minutos)
+      INSERT INTO monitoramento.trilhas (nome, geom, data_inicio, data_fim, duracao_minutos, regiao_id, tenant_id)
       VALUES (
         ${nomeBase},
         ST_SetSRID(ST_GeomFromText(${wkt}), 4674),
         ${dataInicio},
         ${dataFim},
-        ${duracaoMinutos}
+        ${duracaoMinutos},
+        ${regiaoId},
+        ${tenantId}::uuid
       )
       RETURNING id
     `)
@@ -87,13 +94,15 @@ export async function POST(request: Request) {
       if (isPoint(geom)) {
         const [lon, lat, ele] = geom.coordinates
         await db.execute(sql`
-          INSERT INTO monitoramento.waypoints (trilha_id, nome, geom, ele, recordedAt)
+          INSERT INTO monitoramento.waypoints (trilha_id, nome, geom, ele, recordedAt, regiao_id, tenant_id)
           VALUES (
             ${trilhaId},
             ${feat.properties?.name ?? null},
             ST_SetSRID(ST_MakePoint(${lon}, ${lat}, ${ele ?? 0}), 4674),
             ${ele ?? null},
-            ${feat.properties?.time ?? null}
+            ${feat.properties?.time ?? null},
+            ${regiaoId},
+            ${tenantId}::uuid
           )
         `)
       }

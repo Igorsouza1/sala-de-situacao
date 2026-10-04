@@ -1,68 +1,37 @@
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { type NextRequest, NextResponse } from "next/server";
+﻿import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { type NextRequest, NextResponse } from 'next/server';
+import { isPublicApiRequest, unauthenticatedResponse } from './auth-policy';
 
 export const updateSession = async (request: NextRequest) => {
-  // This `try/catch` block is only here for the interactive tutorial.
-  // Feel free to remove once you have Supabase connected.
+  if (isPublicApiRequest(request)) return NextResponse.next();
+  let response = NextResponse.next({ request: { headers: request.headers } });
   try {
-    // Create an unmodified response
-    let response = NextResponse.next({
-      request: {
-        headers: request.headers,
-      },
-    });
-
     const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return request.cookies.getAll();
-          },
-          setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
-            cookiesToSet.forEach(({ name, value }) =>
-              request.cookies.set(name, value),
-            );
-            response = NextResponse.next({
-              request,
-            });
-            cookiesToSet.forEach(({ name, value, options }) =>
-              response.cookies.set(name, value, options),
-            );
-          },
+      process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: {
+        getAll() { return request.cookies.getAll(); },
+        setAll(cookiesToSet: { name: string; value: string; options: CookieOptions }[]) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value));
+          response = NextResponse.next({ request });
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
         },
-      },
+      } },
     );
-
-    // This will refresh session if expired - required for Server Components
-    // https://supabase.com/docs/guides/auth/server-side/nextjs
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-
-    // protected routes
-    if (
-      (request.nextUrl.pathname.startsWith("/protected") ||
-        request.nextUrl.pathname.startsWith("/admin")) &&
-      authError
-    ) {
-      return NextResponse.redirect(new URL("/sign-in", request.url));
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) {
+      const denied = unauthenticatedResponse(request);
+      if (denied) {
+        response.cookies.getAll().forEach(cookie => denied.cookies.set(cookie));
+        return denied;
+      }
+    } else if (['/sign-in', '/forgot-password', '/invite'].includes(request.nextUrl.pathname)) {
+      const destination = user.app_metadata?.is_superadmin === true ? '/admin' : '/protected';
+      const redirect = NextResponse.redirect(new URL(destination, request.url));
+      response.cookies.getAll().forEach(cookie => redirect.cookies.set(cookie));
+      return redirect;
     }
-
-    const authOnlyPaths = ["/sign-in", "/forgot-password", "/invite"];
-    if (authOnlyPaths.includes(request.nextUrl.pathname) && !authError) {
-      const dest = user?.app_metadata?.is_superadmin === true ? "/admin" : "/protected";
-      return NextResponse.redirect(new URL(dest, request.url));
-    }
-
     return response;
-  } catch (e) {
-    // If you are here, a Supabase client could not be created!
-    // This is likely because you have not set up environment variables.
-    // Check out http://localhost:3000 for Next Steps.
-    return NextResponse.next({
-      request: {
-        headers: request.headers,
-      },
-    });
+  } catch {
+    return unauthenticatedResponse(request) ?? response;
   }
 };

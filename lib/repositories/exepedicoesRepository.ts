@@ -3,16 +3,19 @@ import { NewTrilhaData, trilhasInMonitoramento, waypointsInMonitoramento, NewWay
 
 
 
-export async function findAllExpedicoesData() {
+export async function findAllExpedicoesData(tenantId: string, isSuperadmin = false) {
+  if (!tenantId) throw new Error("tenantId é obrigatório para consultar expedições");
   const [trilhas, waypoints] = await Promise.all([
-    db.execute(`
+    db.execute(sql`
           SELECT id, nome, data_inicio, data_fim, duracao_minutos, ST_AsGeoJSON(geom) as geojson
-          FROM "monitoramento"."trilhas"
+          FROM monitoramento.trilhas
+          WHERE ${isSuperadmin ? sql`TRUE` : sql`tenant_id = ${tenantId}::uuid`}
         `),
-    db.execute(`
+    db.execute(sql`
           SELECT w.id, w.trilha_id, w.nome, w.ele, w.recordedat, t.nome as trilha_nome, ST_AsGeoJSON(w.geom) as geojson
-          FROM "monitoramento"."waypoints" w
-          JOIN "monitoramento"."trilhas" t ON w.trilha_id = t.id
+          FROM monitoramento.waypoints w
+          JOIN monitoramento.trilhas t ON w.trilha_id = t.id AND w.tenant_id = t.tenant_id
+          WHERE ${isSuperadmin ? sql`TRUE` : sql`w.tenant_id = ${tenantId}::uuid`}
         `),
   ])
 
@@ -24,6 +27,7 @@ export async function findAllExpedicoesData() {
 
 
 export async function insertTrilhaData(data: NewTrilhaData) {
+  if (!data.tenantId) throw new Error("tenantId é obrigatório para criar trilha");
   const [newRecord] = await db
     .insert(trilhasInMonitoramento)
     .values({
@@ -31,6 +35,8 @@ export async function insertTrilhaData(data: NewTrilhaData) {
       dataInicio: data.dataInicio,
       dataFim: data.dataFim,
       duracaoMinutos: data.duracaoMinutos,
+      regiaoId: data.regiaoId,
+      tenantId: data.tenantId,
       geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4674)`,
     })
     .returning({ id: trilhasInMonitoramento.id });
@@ -40,6 +46,7 @@ export async function insertTrilhaData(data: NewTrilhaData) {
 
 
 export async function insertWaypointDataInWaypointsTable(data: NewWaypointData) {
+  if (!data.tenantId) throw new Error("tenantId é obrigatório para criar waypoint");
   const [newRecord] = await db
     .insert(waypointsInMonitoramento)
     .values({
@@ -47,6 +54,8 @@ export async function insertWaypointDataInWaypointsTable(data: NewWaypointData) 
       nome: data.nome,
       ele: data.ele,
       recordedat: data.recordedat,
+      regiaoId: data.regiaoId,
+      tenantId: data.tenantId,
       geom: sql`ST_SetSRID(ST_GeomFromText(${data.geom}), 4674)`,
     })
     .returning({ id: waypointsInMonitoramento.id });

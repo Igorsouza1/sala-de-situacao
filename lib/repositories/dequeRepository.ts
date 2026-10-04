@@ -1,33 +1,25 @@
 
 import { db } from "@/db"
 import { dequeDePedrasInMonitoramento } from "@/db/schema"
-import { and, gte, lte } from "drizzle-orm"
+import { eq, and, gte, lte } from "drizzle-orm"
 
 
 export type NewDequeData = typeof dequeDePedrasInMonitoramento.$inferInsert;
 
 
-export async function findAllDequeData() {
-    const result = await db.select().from(dequeDePedrasInMonitoramento)
+export async function findAllDequeData(tenantId: string) {
+    const result = await db.select().from(dequeDePedrasInMonitoramento).where(eq(dequeDePedrasInMonitoramento.tenantId, tenantId))
 
     return result
 
 }
 
-export async function findDequeDataByDateRange(startDate: string, endDate: string) {
-    let query = db
-        .select()
-        .from(dequeDePedrasInMonitoramento).$dynamic()
-
-    if (startDate) {
-        query = query.where(gte(dequeDePedrasInMonitoramento.data, startDate))
-    }
-
-    if (endDate) {
-        query = query.where(lte(dequeDePedrasInMonitoramento.data, endDate))
-    }
-
-    const result = await query.execute()
+export async function findDequeDataByDateRange(tenantId: string, startDate: string, endDate: string) {
+    const conditions = [eq(dequeDePedrasInMonitoramento.tenantId, tenantId)]
+  if (startDate) conditions.push(gte(dequeDePedrasInMonitoramento.data, startDate))
+  if (endDate) conditions.push(lte(dequeDePedrasInMonitoramento.data, endDate))
+  const query = db.select().from(dequeDePedrasInMonitoramento).where(and(...conditions))
+  const result = await query.execute()
 
     return result
 }

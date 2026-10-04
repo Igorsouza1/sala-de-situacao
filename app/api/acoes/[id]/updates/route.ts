@@ -1,10 +1,11 @@
 import { apiError, apiSuccess } from "@/lib/api/responses"
 import { addAcaoUpdate, deleteAcaoItemHistoryById } from "@/lib/service/acoesService"
-import { requireAuthWithTenant } from "@/lib/api/require-auth"
+import { requireRole } from "@/lib/api/require-auth"
+import { findAcaoById } from "@/lib/repositories/acoesRepository"
 import { revalidateTag } from "next/cache"
 
 export async function POST(request: Request, context: any) {
-  const { response: authResponse } = await requireAuthWithTenant();
+  const { tenantId, response: authResponse } = await requireRole("editor");
   if (authResponse) return authResponse;
 
   try {
@@ -14,6 +15,9 @@ export async function POST(request: Request, context: any) {
     if (Number.isNaN(acaoId)) {
       return apiError("ID de ação inválido", 400)
     }
+
+    const acao = await findAcaoById(acaoId, tenantId);
+    if (!acao) return apiError("Ação não encontrada", 404);
 
     const body = await request.json().catch(() => null)
 
@@ -56,7 +60,7 @@ export async function DELETE(
   request: Request,
   context: any,
 ) {
-  const { response: authResponse } = await requireAuthWithTenant();
+  const { tenantId, response: authResponse } = await requireRole("editor");
   if (authResponse) return authResponse;
 
   try {
@@ -66,6 +70,9 @@ export async function DELETE(
     if (Number.isNaN(acaoId)) {
       return apiError("ID de ação inválido", 400)
     }
+
+    const acao = await findAcaoById(acaoId, tenantId);
+    if (!acao) return apiError("Ação não encontrada", 404);
 
     const url = new URL(request.url)
     const updateIdParam = url.searchParams.get("updateId")
@@ -79,7 +86,8 @@ export async function DELETE(
       return apiError("ID de update inválido", 400)
     }
 
-    const result = await deleteAcaoItemHistoryById(updateId)
+    const result = await deleteAcaoItemHistoryById(acaoId, updateId)
+    if (!result.length) return apiError("Registro não encontrado", 404)
 
     revalidateTag("acoes")
     return apiSuccess(result)

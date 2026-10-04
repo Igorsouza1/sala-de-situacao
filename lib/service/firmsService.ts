@@ -6,8 +6,8 @@ import { firmsRepository, findAllFirmsData } from "../repositories/firmsReposito
 // Supabase Edge Functions (supabase/functions/firms-sync|firms-notify,
 // ADR 0009). Este service atende só os indicadores do dashboard.
 
-export async function getAllFirmsData() {
-  const result = await findAllFirmsData();
+export async function getAllFirmsData(tenantId: string, isSuperadmin: boolean, regiaoIds?: number | number[]) {
+  const result = await findAllFirmsData(tenantId, isSuperadmin, regiaoIds);
   const rows = result.rows;
 
   const data: Record<number, number[]> = {};
@@ -30,7 +30,7 @@ export async function getAllFirmsData() {
   return data;
 }
 
-export async function getFocosIndicador() {
+export async function getFocosIndicador(tenantId: string, isSuperadmin: boolean, regiaoIds?: number | number[]) {
   const today = new Date();
   const fmt = (d: Date) => d.toISOString().split("T")[0];
 
@@ -41,8 +41,8 @@ export async function getFocosIndicador() {
 
   // 2. Fetch data
   const [currentFirms, previousFirms] = await Promise.all([
-    firmsRepository.getFirmsDataByDateRange(fmt(startCurrent), fmt(endCurrent)),
-    firmsRepository.getFirmsDataByDateRange(fmt(startPrevious), fmt(startCurrent)),
+    firmsRepository.getFirmsDataByDateRange(tenantId, isSuperadmin, fmt(startCurrent), fmt(endCurrent), regiaoIds),
+    firmsRepository.getFirmsDataByDateRange(tenantId, isSuperadmin, fmt(startPrevious), fmt(startCurrent), regiaoIds),
   ]);
 
   const current = currentFirms.length;

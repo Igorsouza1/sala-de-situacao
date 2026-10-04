@@ -6,7 +6,7 @@ import {
   regioesInMonitoramento,
 } from "@/db/schema";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 export interface FotoUpload {
   file: File;
@@ -39,6 +39,7 @@ export interface TrilhaData {
 
 export interface GpxImportData {
   regiaoId: number;
+  tenantId: string;
   trilha?: TrilhaData;
   acoes: AcaoData[];
 }
@@ -54,7 +55,8 @@ export interface GpxImportResult {
  * Cria trilha (opcional), ações e fotos em transação única
  */
 export async function importGpx(data: GpxImportData): Promise<GpxImportResult> {
-  const { regiaoId, trilha, acoes } = data;
+  const { regiaoId, tenantId, trilha, acoes } = data;
+  if (!tenantId) throw new Error("tenantId é obrigatório para importar GPX");
   const result: GpxImportResult = {
     acoesIds: [],
     totalFotos: 0,
@@ -67,7 +69,7 @@ export async function importGpx(data: GpxImportData): Promise<GpxImportResult> {
     const regiao = await db
       .select({ id: regioesInMonitoramento.id })
       .from(regioesInMonitoramento)
-      .where(eq(regioesInMonitoramento.id, regiaoId))
+      .where(and(eq(regioesInMonitoramento.id, regiaoId), eq(regioesInMonitoramento.organizationId, tenantId)))
       .limit(1);
 
     if (regiao.length === 0) {
@@ -92,6 +94,7 @@ export async function importGpx(data: GpxImportData): Promise<GpxImportResult> {
             dataInicio: trilha.dataInicio,
             dataFim: trilha.dataFim,
             regiaoId,
+            tenantId,
           })
           .returning({ id: trilhasInMonitoramento.id });
 
@@ -123,6 +126,7 @@ export async function importGpx(data: GpxImportData): Promise<GpxImportResult> {
             time: acao.time || null,
             geom: sql`ST_GeomFromText(${geomWkt}, 4674)` as any,
             regiaoId,
+            tenantId,
           })
           .returning({ id: acoesInMonitoramento.id });
 
