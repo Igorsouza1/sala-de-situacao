@@ -20,6 +20,8 @@ Uma requisição autenticada usa `tenant_id` dos metadados apenas como preferên
 
 Rotas que aplicam escopo regional limitam resultados às regiões da organização e, quando aplicável, às regiões vinculadas ao usuário. Owner e Superadmin recebem acesso a todas as regiões dentro do escopo que a rota permite. Região pertencente a outra organização só pode ser consultada por Superadmin nas rotas que verificam esse vínculo.
 
+No painel **Admin → Gerir Usuários**, todas as contas de login aparecem, inclusive as que não têm papel atual. **Sem acesso** e **Sem região** ficam em vermelho; o filtro **Precisam de acesso** reúne esses casos. **Conceder acesso** reaproveita o email da conta existente. Owner recebe a organização inteira; Editor, Viewer e Auditor precisam de ao menos uma região atribuída.
+
 ## Dados e propriedade
 
 - **Estações legadas** — Balneário Municipal, Deque de Pedras e Ponte do Cure pertencem a uma organização cada. O código compara a organização resolvida do usuário com a organização configurada para a estação. Sem configuração inequívoca, a rota nega acesso. Leitura exige autenticação e escrita exige papel Editor ou superior.

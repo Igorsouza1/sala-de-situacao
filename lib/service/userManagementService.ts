@@ -15,16 +15,20 @@ import {
   regionsBelongToTenantInDb,
   tenantExistsInDb,
   updateRoleAssignmentInDb,
+  type UserAccountAccessRow,
   type UserAccessRow,
 } from "@/lib/repositories/userManagementRepository";
 
-export type AccessStatus = "pending" | "active";
+export type AccessStatus = "pending" | "active" | "no_access" | "no_region" | "superadmin";
 
-export interface UserAccessListItem extends UserAccessRow {
+export interface UserAccessListItem extends UserAccountAccessRow {
   status: AccessStatus;
 }
 
-function statusOf(row: UserAccessRow): AccessStatus {
+function statusOf(row: UserAccountAccessRow): AccessStatus {
+  if (row.isSuperadmin) return "superadmin";
+  if (row.roleId === null) return "no_access";
+  if (row.role !== "owner" && row.regionId === null) return "no_region";
   return row.emailConfirmedAt ? "active" : "pending";
 }
 
