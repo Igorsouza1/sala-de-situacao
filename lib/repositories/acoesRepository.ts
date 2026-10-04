@@ -2,7 +2,7 @@
 
 import { db } from "@/db"
 import { acoesInMonitoramento, fotosAcoesInMonitoramento, NewAcoesData } from "@/db/schema"
-import { eq, desc, sql } from "drizzle-orm";
+import { and, eq, desc, sql } from "drizzle-orm";
 
 // ADR 0010: isolamento na aplicação — escopo de tenant é obrigatório e explícito.
 // Falha alto em vez de cair silenciosamente num tenant padrão ou retornar dados
@@ -111,10 +111,14 @@ export async function findAllAcoesUpdates(id: number) {
 }
 
 
-export async function deleteAcaoUpdateById(id: number) {
+export async function deleteAcaoUpdateById(id: number, acaoId: number) {
   const result = await db
     .delete(fotosAcoesInMonitoramento)
-    .where(eq(fotosAcoesInMonitoramento.id, id))
+    .where(and(
+      eq(fotosAcoesInMonitoramento.id, id),
+      eq(fotosAcoesInMonitoramento.acaoId, acaoId),
+    ))
+    .returning({ id: fotosAcoesInMonitoramento.id })
     .execute()
   return result
 }

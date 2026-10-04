@@ -27,8 +27,8 @@ export async function getAllAcoesForMap(tenantId?: string | null) {
   return findAllAcoesDataWithGeometry(tenantId);
 }
 
-export async function deleteAcaoItemHistoryById(id: number) {
-  const result = await deleteAcaoUpdateById(id);
+export async function deleteAcaoItemHistoryById(acaoId: number, id: number) {
+  const result = await deleteAcaoUpdateById(id, acaoId);
   return result;
 }
 
