@@ -1,5 +1,7 @@
 # Issue tracker: GitHub
 
+Para convenções de nomenclatura e classificação por área de branches e PRs, consulte [branch-classification.md](branch-classification.md).
+
 Issues and PRDs for this repo live as GitHub issues. Use the `gh` CLI for all operations.
 
 ## Conventions
