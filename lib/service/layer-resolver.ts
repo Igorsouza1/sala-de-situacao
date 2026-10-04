@@ -51,31 +51,24 @@ export async function resolveTableLayer(
 
   const whereParts: ReturnType<typeof sql>[] = [];
 
-  switch (scope) {
-    case 'tenant':
-      whereParts.push(sql`tenant_id = ${options.tenantId}::uuid`);
-      break;
-    case 'region':
-      if (options.regiaoId) {
-        // Filtra espacialmente pela geometria da região — usa índice GiST
-        whereParts.push(sql`ST_Intersects(
-          ${sql.identifier(geometryColumn)},
-          (SELECT geom FROM monitoramento.regioes WHERE id = ${options.regiaoId})
-        )`);
-      } else {
-        // Sem regiaoId: intersecta com as regiões da organização (regioes.organization_id,
-        // migration 0008) para não retornar o dataset inteiro. Não usa tenant_id da própria
-        // tabela — Dados de Base (ADR 0008) não têm mais essa coluna como fonte de verdade.
-        whereParts.push(sql`EXISTS (
-          SELECT 1 FROM monitoramento.regioes reg
-          WHERE reg.organization_id = ${options.tenantId}::uuid
-            AND ST_Intersects(t.${sql.identifier(geometryColumn)}, reg.geom)
-        )`);
-      }
-      break;
-    case 'global':
-      // sem filtro — dados de referência global
-      break;
+  // Catalog scope cannot widen access to operational or shared physical facts.
+  const regionFilter = options.regiaoId == null ? sql`` : sql`AND r.id = ${options.regiaoId}`;
+  const ownership = sql`r.organization_id = ${options.tenantId}::uuid ${regionFilter}`;
+  if (tableName === 'raw_firms' || tableName === 'desmatamento') {
+    const junction = tableName === 'raw_firms' ? 'firms_regioes' : 'desmatamento_regioes';
+    const foreignKey = tableName === 'raw_firms' ? 'firm_id' : 'desmatamento_id';
+    whereParts.push(sql`EXISTS (
+      SELECT 1 FROM monitoramento.${sql.identifier(junction)} j
+      JOIN monitoramento.regioes r ON r.id = j.regiao_id
+      WHERE j.${sql.identifier(foreignKey)} = t.id AND ${ownership}
+    )`);
+  } else if (tableName === 'propriedades') {
+    whereParts.push(sql`EXISTS (SELECT 1 FROM monitoramento.regioes r
+      WHERE ${ownership} AND ST_Intersects(t.${sql.identifier(geometryColumn)}, r.geom))`);
+  } else if (tableName === 'acoes' || scope !== 'global') {
+    whereParts.push(sql`t.tenant_id = ${options.tenantId}::uuid`);
+    whereParts.push(sql`EXISTS (SELECT 1 FROM monitoramento.regioes r
+      WHERE r.id = t.regiao_id AND ${ownership})`);
   }
 
   if (dateColumn) {
