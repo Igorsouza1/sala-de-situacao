@@ -37,19 +37,19 @@ function StatusBadge({ code }: { code?: string | null }) {
 function Row({ label, value }: { label: string; value?: string | number | null }) {
   if (value == null || value === "") return null;
   return (
-    <div className="flex justify-between items-start gap-4 py-2 border-b border-neutral-100 dark:border-neutral-800 last:border-0">
+    <div className="flex justify-between items-start gap-4 py-2 border-b border-neutral-100 last:border-0">
       <span className="text-xs text-neutral-500 shrink-0 w-[48%]">{label}</span>
-      <span className="text-xs font-medium text-neutral-800 dark:text-neutral-200 text-right">{value}</span>
+      <span className="text-xs font-medium text-neutral-800 text-right">{value}</span>
     </div>
   );
 }
 
 function Section({ title, icon, children }: { title: string; icon: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
-      <div className="px-4 py-3 bg-neutral-50 dark:bg-neutral-800/50 border-b border-neutral-200 dark:border-neutral-800 flex items-center gap-2">
+    <div className="rounded-xl border border-neutral-200 overflow-hidden">
+      <div className="px-4 py-3 bg-neutral-50 border-b border-neutral-200 flex items-center gap-2">
         {icon}
-        <span className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">{title}</span>
+        <span className="text-sm font-semibold text-neutral-700">{title}</span>
       </div>
       <div className="px-4 py-1">{children}</div>
     </div>
@@ -117,7 +117,7 @@ export function PropertyDossierDialog({ property, isOpen, onOpenChange }: Proper
                 <span className="group-open:rotate-90 transition-transform inline-block">▶</span>
                 Todos os campos ({Object.keys(p).length})
               </summary>
-              <div className="mt-2 rounded-xl border border-neutral-200 dark:border-neutral-800 overflow-hidden">
+              <div className="mt-2 rounded-xl border border-neutral-200 overflow-hidden">
                 <div className="px-4 py-1">
                   {Object.entries(p).map(([key, val]) => (
                     <Row key={key} label={key} value={val != null ? String(val) : null} />

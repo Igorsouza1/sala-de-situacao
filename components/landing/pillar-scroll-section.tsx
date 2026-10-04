@@ -58,9 +58,9 @@ function MapVisual({ active }: { active: number }) {
         <div className="absolute top-[30%] left-[28%] w-[44%] h-[36%] border border-red-500/50 rounded-md">
           <div className="absolute inset-0 bg-red-500/8 rounded-md" />
         </div>
-        <div className="absolute top-[38%] right-[34%] w-5 h-5 bg-orange-500 rounded-full blur-md animate-pulse" />
-        <div className="absolute top-[50%] left-[36%] w-3 h-3 bg-red-500 rounded-full blur-xs animate-pulse [animation-delay:400ms]" />
-        <div className="absolute top-[34%] left-[45%] w-2 h-2 bg-amber-400 rounded-full blur-xs animate-pulse [animation-delay:800ms]" />
+        <div className="absolute top-[38%] right-[34%] w-5 h-5 bg-orange-500 rounded-full blur-md" />
+        <div className="absolute top-[50%] left-[36%] w-3 h-3 bg-red-500 rounded-full blur-xs" />
+        <div className="absolute top-[34%] left-[45%] w-2 h-2 bg-amber-400 rounded-full blur-xs" />
       </div>
 
       {/* Pillar 02 – Water: thermal plume */}
@@ -99,7 +99,7 @@ function MapVisual({ active }: { active: number }) {
 
       {/* Corner label */}
       <div className="absolute top-4 left-4 text-[9px] font-mono text-white/20 tracking-widest uppercase">
-        PRISMA · Sala de Situação
+        GEO PRISMA
       </div>
     </div>
   )

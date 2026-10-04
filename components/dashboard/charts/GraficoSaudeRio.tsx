@@ -62,7 +62,7 @@ function correlationLabel(r: number): { text: string; color: string } {
   const a = Math.abs(r)
   if (a >= 0.7) return { text: "Forte",    color: r < 0 ? "#06b6d4" : "#f97316" }
   if (a >= 0.4) return { text: "Moderada", color: "#eab308" }
-  return               { text: "Fraca",    color: "hsl(var(--muted-foreground))" }
+  return               { text: "Fraca",    color: "var(--color-muted-foreground)" }
 }
 
 function fmtDate(d: Date) {
@@ -79,7 +79,7 @@ function XTickMensal({ x, y, payload }: any) {
     return (
       <g transform={`translate(${x},${y})`}>
         <text x={0} y={0} dy={14} textAnchor="middle"
-          fill="hsl(var(--foreground))" fontSize={11} fontWeight={700}>{yr}</text>
+          fill="var(--color-foreground)" fontSize={11} fontWeight={700}>{yr}</text>
       </g>
     )
   }
@@ -88,7 +88,7 @@ function XTickMensal({ x, y, payload }: any) {
   return (
     <g transform={`translate(${x},${y})`}>
       <text x={0} y={0} dy={14} textAnchor="middle"
-        fill="hsl(var(--muted-foreground))" fontSize={10}>{abbr}</text>
+        fill="var(--color-muted-foreground)" fontSize={10}>{abbr}</text>
     </g>
   )
 }
@@ -105,7 +105,7 @@ function XTickDiario({ x, y, payload, index, visibleTicksCount }: any) {
   return (
     <g transform={`translate(${x},${y})`}>
       <text x={0} y={0} dy={14} textAnchor="middle"
-        fill="hsl(var(--muted-foreground))" fontSize={10}>{label}</text>
+        fill="var(--color-muted-foreground)" fontSize={10}>{label}</text>
     </g>
   )
 }
@@ -121,7 +121,7 @@ function TooltipMensal({ active, payload }: any) {
     ? format(parseISO(`${p.periodo}-01`), "MMMM 'de' yyyy", { locale: ptBR })
     : ""
   const label = date.charAt(0).toUpperCase() + date.slice(1)
-  const qc = secchi === null ? "hsl(var(--muted-foreground))"
+  const qc = secchi === null ? "var(--color-muted-foreground)"
     : secchi < 0.5 ? "#ef4444" : secchi < 1.5 ? "#f97316" : secchi < 3 ? "#22c55e" : "#06b6d4"
   return (
     <div className="rounded-xl border border-border bg-background/95 backdrop-blur-xs shadow-xl px-4 py-3 min-w-[180px] space-y-2">
@@ -153,7 +153,7 @@ function TooltipDiario({ active, payload }: any) {
     ? format(parseISO(p.dateStr), "dd 'de' MMMM yyyy", { locale: ptBR })
     : ""
   const label = date.charAt(0).toUpperCase() + date.slice(1)
-  const qc = secchi === null ? "hsl(var(--muted-foreground))"
+  const qc = secchi === null ? "var(--color-muted-foreground)"
     : secchi < 0.5 ? "#ef4444" : secchi < 1.5 ? "#f97316" : secchi < 3 ? "#22c55e" : "#06b6d4"
   return (
     <div className="rounded-xl border border-border bg-background/95 backdrop-blur-xs shadow-xl px-4 py-3 min-w-[190px] space-y-2">
@@ -280,7 +280,7 @@ function GraficoComposto({ data, xKey, XTick, TooltipComp, gradId, extraChildren
             </linearGradient>
           </defs>
 
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" strokeOpacity={0.4} vertical={false} />
 
           {extraChildren}
 
@@ -298,7 +298,7 @@ function GraficoComposto({ data, xKey, XTick, TooltipComp, gradId, extraChildren
             width={44} unit=" mm" tickCount={5}
           />
 
-          <Tooltip content={<TooltipComp />} cursor={{ stroke: "hsl(var(--border))", strokeWidth: 1 }} />
+          <Tooltip content={<TooltipComp />} cursor={{ stroke: "var(--color-border)", strokeWidth: 1 }} />
 
           <Bar yAxisId="chuva" dataKey="pluviometria"
             fill="hsl(210, 80%, 65%)" fillOpacity={0.5}
@@ -308,7 +308,7 @@ function GraficoComposto({ data, xKey, XTick, TooltipComp, gradId, extraChildren
             stroke="#06b6d4" strokeWidth={2.5}
             fill={`url(#${gradId})`}
             connectNulls={false} dot={false}
-            activeDot={{ r: 5, fill: "#06b6d4", stroke: "hsl(var(--background))", strokeWidth: 2 }}
+            activeDot={{ r: 5, fill: "#06b6d4", stroke: "var(--color-background)", strokeWidth: 2 }}
           />
         </ComposedChart>
       </ResponsiveContainer>
@@ -332,7 +332,7 @@ function VistaMensal({ data }: { data: any[] }) {
       gradId="secchiGradMensal"
       extraChildren={yearMarkers.map((p) => (
         <ReferenceLine key={p} x={p} yAxisId="secchi"
-          stroke="hsl(var(--muted-foreground))" strokeOpacity={0.25} strokeDasharray="4 3" />
+          stroke="var(--color-muted-foreground)" strokeOpacity={0.25} strokeDasharray="4 3" />
       ))}
     />
   )
@@ -407,22 +407,22 @@ function VistaCorrelacao({ pairs, r, reg, scope }: {
       >
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 8, right: 16, left: 0, bottom: 24 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} />
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" strokeOpacity={0.4} />
             <XAxis type="number" dataKey="x" domain={[0, xMax]}
               tickLine={false} axisLine={false}
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} unit=" mm"
-              label={{ value: "Chuva (mm)", position: "insideBottom", offset: -16, fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} unit=" mm"
+              label={{ value: "Chuva (mm)", position: "insideBottom", offset: -16, fontSize: 10, fill: "var(--color-muted-foreground)" }}
             />
             <YAxis type="number" dataKey="y" domain={[0, yMax]}
               tickLine={false} axisLine={false}
-              tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }} unit=" m" width={42}
-              label={{ value: "Secchi (m)", angle: -90, position: "insideLeft", offset: 10, fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+              tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} unit=" m" width={42}
+              label={{ value: "Secchi (m)", angle: -90, position: "insideLeft", offset: 10, fontSize: 10, fill: "var(--color-muted-foreground)" }}
             />
             <Tooltip content={<TooltipScatter />} cursor={{ strokeDasharray: "3 3" }} />
             {trendLine.length === 2 && (
               <ReferenceLine
                 segment={[{ x: trendLine[0].x, y: trendLine[0].y }, { x: trendLine[1].x, y: trendLine[1].y }]}
-                stroke="hsl(var(--muted-foreground))" strokeDasharray="6 3" strokeWidth={1.5} strokeOpacity={0.6}
+                stroke="var(--color-muted-foreground)" strokeDasharray="6 3" strokeWidth={1.5} strokeOpacity={0.6}
               />
             )}
             <Scatter data={pairs} fill="#06b6d4" fillOpacity={0.7} stroke="#06b6d4" strokeOpacity={0.3} r={scope === "diario" ? 4 : 5} />
@@ -635,7 +635,7 @@ export function GraficoSaudeRio() {
             <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border ${health.bg} border-transparent`}>
               <div className="relative w-8 h-8">
                 <svg viewBox="0 0 36 36" className="w-8 h-8 -rotate-90">
-                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="hsl(var(--muted))" strokeWidth="3" />
+                  <circle cx="18" cy="18" r="15.9" fill="none" stroke="var(--color-muted)" strokeWidth="3" />
                   <circle cx="18" cy="18" r="15.9" fill="none"
                     stroke={health.color} strokeWidth="3"
                     strokeDasharray={`${score} 100`} strokeLinecap="round"

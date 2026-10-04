@@ -153,10 +153,10 @@ export function RegionExpandPreview({ regionId, initialGeoJson }: RegionExpandPr
     <div className="w-full space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-xl font-semibold text-neutral-900 dark:text-neutral-50">
+          <h2 className="text-xl font-semibold text-neutral-900">
             Pré-visualização da Fusão (ST_Union)
           </h2>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400">
+          <p className="text-sm text-neutral-500">
             Esta ação pode demorar dependendo do tamanho do arquivo.
           </p>
         </div>
@@ -183,13 +183,13 @@ export function RegionExpandPreview({ regionId, initialGeoJson }: RegionExpandPr
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
         <div className={`col-span-1 ${isPreviewing ? 'lg:col-span-3' : 'lg:col-span-4'}`}>
-          <div className="h-[500px] w-full rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-xs relative z-0">
+          <div className="h-[500px] w-full rounded-2xl overflow-hidden border border-neutral-200 shadow-xs relative z-0">
 
             {isLoading && (
-              <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-xs">
+              <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-white/50 backdrop-blur-xs">
                 <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="w-8 h-8 animate-spin text-blue-600 dark:text-blue-400" />
-                  <span className="font-medium text-neutral-800 dark:text-neutral-200">Calculando união geográfica...</span>
+                  <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+                  <span className="font-medium text-neutral-800">Calculando união geográfica...</span>
                 </div>
               </div>
             )}
@@ -226,9 +226,9 @@ export function RegionExpandPreview({ regionId, initialGeoJson }: RegionExpandPr
         </div>
 
         {isPreviewing && (
-          <div className="col-span-1 space-y-6 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
+          <div className="col-span-1 space-y-6 bg-white border border-neutral-200 rounded-2xl p-6 shadow-xs flex flex-col justify-between">
             <div>
-              <h3 className="font-semibold text-lg border-b pb-4 dark:border-neutral-800 flex items-center gap-2">
+              <h3 className="font-semibold text-lg border-b pb-4 flex items-center gap-2">
                 <Maximize className="w-5 h-5 text-blue-500" /> Confirmar Expansão
               </h3>
               <p className="text-sm text-neutral-500 mt-4 leading-relaxed">
@@ -236,7 +236,7 @@ export function RegionExpandPreview({ regionId, initialGeoJson }: RegionExpandPr
               </p>
             </div>
 
-            <div className="pt-6 mt-6 border-t dark:border-neutral-800">
+            <div className="pt-6 mt-6 border-t">
                <Button
                   onClick={handleSave}
                   disabled={isSaving}

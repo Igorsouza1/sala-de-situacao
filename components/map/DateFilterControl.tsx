@@ -160,7 +160,7 @@ export function DateFilterControl({ onDateChange }: DateFilterControlProps) {
           <div className="flex gap-2 pt-1 border-t border-slate-100">
             <Button
               size="sm"
-              className="flex-1 bg-brand-primary hover:bg-blue-600 text-white"
+              className="flex-1 bg-primary hover:bg-blue-600 text-white"
               onClick={() => handleApply(close)}
             >
               Aplicar

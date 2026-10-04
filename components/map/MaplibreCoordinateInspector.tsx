@@ -48,7 +48,7 @@ export function MaplibreCoordinateInspector({
         size="icon"
         className={`shadow-md transition-all ${
           isActive
-            ? "bg-brand-primary text-white border-brand-primary"
+            ? "bg-primary text-white border-primary"
             : "bg-white text-black hover:bg-gray-100"
         }`}
         onClick={onToggle}

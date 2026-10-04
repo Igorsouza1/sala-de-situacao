@@ -193,7 +193,7 @@ export function AcaoDossie({ acaoId }: { acaoId: number }) {
                 variant={isEditing ? "default" : "outline"} 
                 size="sm" 
                 onClick={() => setIsEditing(!isEditing)} 
-                className={isEditing ? "bg-brand-primary text-white" : "bg-white hover:bg-slate-50 text-slate-700 border-slate-300"}
+                className={isEditing ? "bg-primary text-white" : "bg-white hover:bg-slate-50 text-slate-700 border-slate-300"}
                 disabled={isSubmitting}
             >
                 {isEditing ? <Save className="w-4 h-4 mr-2" /> : <Pencil className="w-4 h-4 mr-2" />}

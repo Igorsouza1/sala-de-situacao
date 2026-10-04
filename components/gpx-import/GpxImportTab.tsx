@@ -231,7 +231,7 @@ export function GpxImportTab({ regionId, regioes, onTrailPreview, onWaypointsPre
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
                     : state.step > 1
                     ? "bg-emerald-600 text-white"
-                    : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
+                    : "bg-neutral-200 text-neutral-500"
                 }
               `}
             >
@@ -242,10 +242,10 @@ export function GpxImportTab({ regionId, regioes, onTrailPreview, onWaypointsPre
                 text-xs font-medium text-center max-w-[100px]
                 ${
                   state.step === 1
-                    ? "text-blue-600 dark:text-blue-400"
+                    ? "text-blue-600"
                     : state.step > 1
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-neutral-500 dark:text-neutral-400"
+                    ? "text-emerald-600"
+                    : "text-neutral-500"
                 }
               `}
             >
@@ -257,7 +257,7 @@ export function GpxImportTab({ regionId, regioes, onTrailPreview, onWaypointsPre
           <div
             className={`
               w-16 h-1 rounded-full transition-all
-              ${state.step > 1 ? "bg-emerald-600" : "bg-neutral-200 dark:bg-neutral-800"}
+              ${state.step > 1 ? "bg-emerald-600" : "bg-neutral-200"}
             `}
           />
 
@@ -271,7 +271,7 @@ export function GpxImportTab({ regionId, regioes, onTrailPreview, onWaypointsPre
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
                     : state.step > 2
                     ? "bg-emerald-600 text-white"
-                    : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
+                    : "bg-neutral-200 text-neutral-500"
                 }
               `}
             >
@@ -282,10 +282,10 @@ export function GpxImportTab({ regionId, regioes, onTrailPreview, onWaypointsPre
                 text-xs font-medium text-center max-w-[100px]
                 ${
                   state.step === 2
-                    ? "text-blue-600 dark:text-blue-400"
+                    ? "text-blue-600"
                     : state.step > 2
-                    ? "text-emerald-600 dark:text-emerald-400"
-                    : "text-neutral-500 dark:text-neutral-400"
+                    ? "text-emerald-600"
+                    : "text-neutral-500"
                 }
               `}
             >
@@ -297,7 +297,7 @@ export function GpxImportTab({ regionId, regioes, onTrailPreview, onWaypointsPre
           <div
             className={`
               w-16 h-1 rounded-full transition-all
-              ${state.step > 2 ? "bg-emerald-600" : "bg-neutral-200 dark:bg-neutral-800"}
+              ${state.step > 2 ? "bg-emerald-600" : "bg-neutral-200"}
             `}
           />
 
@@ -309,7 +309,7 @@ export function GpxImportTab({ regionId, regioes, onTrailPreview, onWaypointsPre
                 ${
                   state.step === 3
                     ? "bg-blue-600 text-white shadow-lg shadow-blue-600/30"
-                    : "bg-neutral-200 dark:bg-neutral-800 text-neutral-500 dark:text-neutral-400"
+                    : "bg-neutral-200 text-neutral-500"
                 }
               `}
             >
@@ -320,8 +320,8 @@ export function GpxImportTab({ regionId, regioes, onTrailPreview, onWaypointsPre
                 text-xs font-medium text-center max-w-[100px]
                 ${
                   state.step === 3
-                    ? "text-blue-600 dark:text-blue-400"
-                    : "text-neutral-500 dark:text-neutral-400"
+                    ? "text-blue-600"
+                    : "text-neutral-500"
                 }
               `}
             >
@@ -365,7 +365,7 @@ export function GpxImportTab({ regionId, regioes, onTrailPreview, onWaypointsPre
 
         {state.step === 3 && !state.waypoints && (
           <div className="text-center py-20 space-y-4">
-            <p className="text-lg font-semibold text-neutral-900 dark:text-neutral-50">
+            <p className="text-lg font-semibold text-neutral-900">
               Nenhum waypoint encontrado no arquivo GPX.
             </p>
             <button
@@ -374,7 +374,7 @@ export function GpxImportTab({ regionId, regioes, onTrailPreview, onWaypointsPre
                 if (onTrailPreview) onTrailPreview(null);
                 setState((prev) => ({ ...prev, step: 1 }));
               }}
-              className="text-blue-600 dark:text-blue-400 hover:underline text-sm"
+              className="text-blue-600 hover:underline text-sm"
             >
               Voltar ao início
             </button>

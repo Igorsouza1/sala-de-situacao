@@ -166,7 +166,7 @@ export function MeasureControl() {
                  <Button
                     variant={measureMode === 'distance' ? "default" : "ghost"}
                     size="icon"
-                    className={`h-8 w-8 ${measureMode === 'distance' ? 'bg-brand-primary text-white hover:bg-brand-primary/90' : 'text-slate-600 hover:bg-slate-100'}`}
+                    className={`h-8 w-8 ${measureMode === 'distance' ? 'bg-primary text-white hover:bg-primary/90' : 'text-slate-600 hover:bg-slate-100'}`}
                     onClick={toggleMode('distance')}
                     title="Medir Distância"
                 >
@@ -177,7 +177,7 @@ export function MeasureControl() {
                  <Button
                     variant={measureMode === 'area' ? "default" : "ghost"}
                     size="icon"
-                    className={`h-8 w-8 ${measureMode === 'area' ? 'bg-brand-primary text-white hover:bg-brand-primary/90' : 'text-slate-600 hover:bg-slate-100'}`}
+                    className={`h-8 w-8 ${measureMode === 'area' ? 'bg-primary text-white hover:bg-primary/90' : 'text-slate-600 hover:bg-slate-100'}`}
                     onClick={toggleMode('area')}
                     title="Medir Área"
                 >

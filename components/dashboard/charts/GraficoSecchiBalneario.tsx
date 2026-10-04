@@ -37,7 +37,7 @@ const QUALITY_BANDS = [
 ]
 
 function qualityFor(v: number | null): { label: string; color: string; barColor: string } {
-  if (v === null) return { label: "Sem dado",   color: "hsl(var(--muted-foreground))", barColor: "hsl(var(--muted))" }
+  if (v === null) return { label: "Sem dado",   color: "var(--color-muted-foreground)", barColor: "var(--color-muted)" }
   if (v < 0.5)   return { label: "Turva",       color: "#ef4444", barColor: "#ef4444" }
   if (v < 1.5)   return { label: "Moderada",    color: "#f97316", barColor: "#f97316" }
   if (v < 3.0)   return { label: "Boa",         color: "#22c55e", barColor: "#22c55e" }
@@ -115,7 +115,7 @@ function CustomXTick({ x, y, payload }: any) {
     return (
       <g transform={`translate(${x},${y})`}>
         <text x={0} y={0} dy={14} textAnchor="middle"
-          fill="hsl(var(--foreground))" fontSize={11} fontWeight={700}>
+          fill="var(--color-foreground)" fontSize={11} fontWeight={700}>
           {yr}
         </text>
       </g>
@@ -126,7 +126,7 @@ function CustomXTick({ x, y, payload }: any) {
   return (
     <g transform={`translate(${x},${y})`}>
       <text x={0} y={0} dy={14} textAnchor="middle"
-        fill="hsl(var(--muted-foreground))" fontSize={10}>
+        fill="var(--color-muted-foreground)" fontSize={10}>
         {monthAbbr}
       </text>
     </g>
@@ -140,7 +140,7 @@ function StatBadge({ label, value, unit, color }: { label: string; value: string
     <div className="flex flex-col items-end sm:items-start">
       <span className="text-[11px] text-muted-foreground">{label}</span>
       <div className="flex items-baseline gap-1">
-        <span className="text-lg font-bold" style={{ color: color ?? "hsl(var(--foreground))" }}>
+        <span className="text-lg font-bold" style={{ color: color ?? "var(--color-foreground)" }}>
           {value}
         </span>
         {unit && <span className="text-xs text-muted-foreground">{unit}</span>}
@@ -286,7 +286,7 @@ export function GraficoSecchiBalneario() {
 
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="hsl(var(--border))"
+                stroke="var(--color-border)"
                 strokeOpacity={0.4}
                 vertical={false}
               />
@@ -319,14 +319,14 @@ export function GraficoSecchiBalneario() {
                 <ReferenceLine
                   key={periodo}
                   x={periodo}
-                  stroke="hsl(var(--muted-foreground))"
+                  stroke="var(--color-muted-foreground)"
                   strokeOpacity={0.3}
                   strokeDasharray="4 3"
                   label={{
                     value: periodo.slice(0, 4),
                     position: "insideTopLeft",
                     fontSize: 10,
-                    fill: "hsl(var(--muted-foreground))",
+                    fill: "var(--color-muted-foreground)",
                     dy: -4,
                   }}
                 />
@@ -345,7 +345,7 @@ export function GraficoSecchiBalneario() {
                 domain={[0, yMax]}
                 tickLine={false}
                 axisLine={false}
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
                 width={42}
                 unit=" m"
                 tickCount={6}
@@ -353,7 +353,7 @@ export function GraficoSecchiBalneario() {
 
               <Tooltip
                 content={<CustomTooltip />}
-                cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.35, radius: 4 }}
+                cursor={{ fill: "var(--color-muted)", fillOpacity: 0.35, radius: 4 }}
               />
 
               <Bar dataKey="secchi" radius={[4, 4, 0, 0]} maxBarSize={28}>
@@ -362,7 +362,7 @@ export function GraficoSecchiBalneario() {
                   return (
                     <Cell
                       key={index}
-                      fill={entry.secchi === null ? "hsl(var(--muted))" : q.barColor}
+                      fill={entry.secchi === null ? "var(--color-muted)" : q.barColor}
                       fillOpacity={entry.secchi === null ? 0.3 : 0.85}
                     />
                   )

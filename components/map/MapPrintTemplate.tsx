@@ -113,7 +113,7 @@ export function MapPrintTemplate({ lat, lng, zoom, layers, activeSlugs }: MapPri
                      className="h-10 w-auto object-contain"
                    />
                    <div className="ml-2">
-                       <h1 className="text-sm font-black text-slate-900 leading-tight uppercase print-text-dark">Sala de Situação</h1>
+                       <h1 className="text-sm font-black text-slate-900 leading-tight uppercase print-text-dark">GEO PRISMA</h1>
                        <p className="text-[10px] text-slate-500 font-bold tracking-widest uppercase print-text-dark">{regionSubtitle(region)}</p>
                    </div>
                </div>

@@ -106,7 +106,7 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
             config={{
               chuva: {
                 label: "Chuva (mm)",
-                color: "hsl(var(--chart-3))", // Blue
+                color: "var(--color-water)", // Blue
               },
             }}
             className="h-[300px]"
@@ -119,13 +119,13 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
                   tickLine={false}
                   axisLine={false}
                   tickMargin={10}
-                  tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  tick={{ fill: 'var(--color-muted-foreground)' }}
                 />
                 <YAxis
                   tickLine={false}
                   axisLine={false}
                   tickMargin={10}
-                  tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                  tick={{ fill: 'var(--color-muted-foreground)' }}
                 />
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="chuva" fill="var(--color-chuva)" radius={[4, 4, 0, 0]} />
@@ -140,15 +140,15 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
               config={{
                 turbidezMax: {
                   label: "Turbidez Máxima",
-                  color: "hsl(var(--chart-1))", // Red
+                  color: "var(--color-crit)", // Red
                 },
                 turbidezMin: {
                   label: "Turbidez Mínima",
-                  color: "hsl(var(--chart-2))", // Green
+                  color: "var(--color-ok)", // Green
                 },
                 turbidezMedia: {
                   label: "Turbidez Média",
-                  color: "hsl(var(--chart-4))", // Yellow/Orange
+                  color: "var(--color-warn)", // Yellow/Orange
                 },
               }}
               className="h-[300px]"
@@ -161,13 +161,13 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
                     tickLine={false}
                     axisLine={false}
                     tickMargin={10}
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    tick={{ fill: 'var(--color-muted-foreground)' }}
                   />
                   <YAxis
                     tickLine={false}
                     axisLine={false}
                     tickMargin={10}
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    tick={{ fill: 'var(--color-muted-foreground)' }}
                   />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Area type="monotone" dataKey="turbidezMax" stroke="var(--color-turbidezMax)" fill="var(--color-turbidezMax)" fillOpacity={0.3} />
@@ -185,15 +185,15 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
               config={{
                 cristalino: {
                   label: "Cristalino",
-                  color: "hsl(var(--chart-3))", // Blue
+                  color: "var(--color-water)", // Blue
                 },
                 turvo: {
                   label: "Turvo",
-                  color: "hsl(var(--chart-4))", // Yellow/Orange
+                  color: "var(--color-warn)", // Yellow/Orange
                 },
                 muitoTurvo: {
                   label: "Muito Turvo",
-                  color: "hsl(var(--chart-1))", // Red
+                  color: "var(--color-crit)", // Red
                 },
               }}
               className="h-[300px]"
@@ -206,13 +206,13 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
                     tickLine={false}
                     axisLine={false}
                     tickMargin={10}
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    tick={{ fill: 'var(--color-muted-foreground)' }}
                   />
                   <YAxis
                     tickLine={false}
                     axisLine={false}
                     tickMargin={10}
-                    tick={{ fill: 'hsl(var(--muted-foreground))' }}
+                    tick={{ fill: 'var(--color-muted-foreground)' }}
                   />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Bar dataKey="cristalino" stackId="a" fill="var(--color-cristalino)" />
@@ -230,7 +230,7 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
               config={{
                 nivel: {
                   label: "Nível do Rio (m)",
-                  color: "hsl(var(--chart-2))",
+                  color: "var(--color-ok)",
                 },
               }}
               className="h-[300px]"
@@ -238,8 +238,8 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={dadosNivel}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="mes" tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                  <YAxis tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <XAxis dataKey="mes" tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: 'var(--color-muted-foreground)' }} />
+                  <YAxis tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: 'var(--color-muted-foreground)' }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Area type="monotone" dataKey="nivel" stroke="var(--color-nivel)" fill="var(--color-nivel)" fillOpacity={0.3} />
                 </AreaChart>
@@ -254,7 +254,7 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
               config={{
                 nivel: {
                   label: "Nível da Água (cm)",
-                  color: "hsl(var(--chart-2))",
+                  color: "var(--color-ok)",
                 },
               }}
               className="h-[300px]"
@@ -262,8 +262,8 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={dadosNivelBalneario}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                  <XAxis dataKey="mes" tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
-                  <YAxis tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: 'hsl(var(--muted-foreground))' }} />
+                  <XAxis dataKey="mes" tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: 'var(--color-muted-foreground)' }} />
+                  <YAxis tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: 'var(--color-muted-foreground)' }} />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Area type="monotone" dataKey="nivel" stroke="var(--color-nivel)" fill="var(--color-nivel)" fillOpacity={0.3} />
                 </AreaChart>

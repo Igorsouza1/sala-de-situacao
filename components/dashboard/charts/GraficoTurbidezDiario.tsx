@@ -158,9 +158,9 @@ export function GraficoTurbidezDiario(): JSX.Element {
 
           <ChartContainer
             config={{
-              turbidez: { label: "Turbidez (NTU)", color: "hsl(var(--chart-3))" }, // Blue
-              secchiVert: { label: "Secchi (m)", color: "hsl(var(--chart-4))" }, // Yellow/Orange
-              chuva: { label: "Chuva (mm)", color: "hsl(var(--chart-2))" }, // Cyan/Teal (using Chart 2 for contrast or maybe 5)
+              turbidez: { label: "Turbidez (NTU)", color: "var(--color-water)" }, // Blue
+              secchiVert: { label: "Secchi (m)", color: "var(--color-warn)" }, // Yellow/Orange
+              chuva: { label: "Chuva (mm)", color: "var(--color-ok)" }, // Cyan/Teal (using Chart 2 for contrast or maybe 5)
             }}
             className="h-[400px]"
           >
@@ -169,7 +169,7 @@ export function GraficoTurbidezDiario(): JSX.Element {
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} vertical={false} />
                 <XAxis
                   dataKey="diaFmt"
-                  stroke="hsl(var(--muted-foreground))"
+                  stroke="var(--color-muted-foreground)"
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
@@ -177,7 +177,7 @@ export function GraficoTurbidezDiario(): JSX.Element {
                 />
                 <YAxis
                   yAxisId="turb"
-                  stroke="hsl(var(--chart-3))"
+                  stroke="var(--color-water)"
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
@@ -187,19 +187,19 @@ export function GraficoTurbidezDiario(): JSX.Element {
                     value: "Turbidez (NTU)",
                     angle: -90,
                     position: "insideLeft",
-                    style: { textAnchor: "middle", fill: "hsl(var(--muted-foreground))" },
+                    style: { textAnchor: "middle", fill: "var(--color-muted-foreground)" },
                   }}
                 />
                 <YAxis
                   yAxisId="secchi"
                   orientation="right"
-                  stroke="hsl(var(--chart-4))"
+                  stroke="var(--color-warn)"
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
                   domain={[0, (d: number) => Math.ceil(d * 1.1)]}
                   tickFormatter={(v) => `${v.toFixed(1)}`}
-                  label={{ value: "Secchi (m)", angle: 90, position: "insideRight", style: { textAnchor: "middle", fill: "hsl(var(--muted-foreground))" } }}
+                  label={{ value: "Secchi (m)", angle: 90, position: "insideRight", style: { textAnchor: "middle", fill: "var(--color-muted-foreground)" } }}
                 />
 
                 {TURBIDEZ_BANDS.map((b) => (
@@ -234,7 +234,7 @@ export function GraficoTurbidezDiario(): JSX.Element {
 
                 <Tooltip
                     content={<ChartTooltipContent />}
-                    cursor={{ stroke: "hsl(var(--muted-foreground))", strokeWidth: 1, strokeDasharray: "4 4" }}
+                    cursor={{ stroke: "var(--color-muted-foreground)", strokeWidth: 1, strokeDasharray: "4 4" }}
                 />
               </ComposedChart>
             </ResponsiveContainer>
@@ -242,15 +242,15 @@ export function GraficoTurbidezDiario(): JSX.Element {
 
           <div className="flex flex-wrap gap-4 justify-center text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-0.5 bg-[hsl(var(--chart-3))]" />
+              <div className="w-6 h-0.5 bg-[var(--color-water)]" />
               <span className="text-muted-foreground">Turbidez (NTU)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-6 h-0.5 bg-[hsl(var(--chart-4))]" />
+              <div className="w-6 h-0.5 bg-[var(--color-warn)]" />
               <span className="text-muted-foreground">Secchi (m)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-transparent border-2 border-[hsl(var(--chart-2))]" />
+              <div className="w-3 h-3 rounded bg-transparent border-2 border-[var(--color-ok)]" />
               <span className="text-muted-foreground">Chuva (mm)</span>
             </div>
           </div>

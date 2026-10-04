@@ -45,7 +45,7 @@ function Calendar({ selected, onChange, className }: CalendarProps) {
           "size-9 p-0 font-normal aria-selected:opacity-100"
         ),
         selected:
-          "bg-brand-primary text-white rounded-md hover:bg-blue-600 hover:text-white focus:bg-brand-primary focus:text-white",
+          "bg-primary text-white rounded-md hover:bg-blue-600 hover:text-white focus:bg-primary focus:text-white",
         today: "bg-slate-100 text-slate-900 rounded-md",
         outside: "text-slate-300 opacity-50",
         disabled: "text-slate-300 opacity-50",

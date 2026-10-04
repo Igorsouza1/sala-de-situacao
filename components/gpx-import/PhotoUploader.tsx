@@ -108,10 +108,10 @@ export function PhotoUploader({ photos, onPhotosChange, maxPhotos = 2 }: PhotoUp
           {photos.map((photo, index) => (
             <div
               key={index}
-              className="relative group rounded-lg border border-neutral-200 dark:border-neutral-700 overflow-hidden bg-neutral-50 dark:bg-neutral-950"
+              className="relative group rounded-lg border border-neutral-200 overflow-hidden bg-neutral-50"
             >
               {/* Image Preview */}
-              <div className="aspect-video relative bg-neutral-100 dark:bg-neutral-900">
+              <div className="aspect-video relative bg-neutral-100">
                 <img
                   src={photo.preview}
                   alt={photo.descricao || "Foto"}
@@ -134,7 +134,7 @@ export function PhotoUploader({ photos, onPhotosChange, maxPhotos = 2 }: PhotoUp
                 value={photo.descricao}
                 onChange={(e) => handleDescricaoChange(index, e.target.value)}
                 placeholder="Descrição (opcional)"
-                className="w-full px-3 py-2 text-xs border-t border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 text-neutral-900 dark:text-neutral-50 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 text-xs border-t border-neutral-200 bg-white text-neutral-900 focus:outline-hidden focus:ring-2 focus:ring-blue-500"
               />
             </div>
           ))}
@@ -157,7 +157,7 @@ export function PhotoUploader({ photos, onPhotosChange, maxPhotos = 2 }: PhotoUp
 
       {/* Error Message */}
       {error && (
-        <p className="text-xs text-red-600 dark:text-red-400 flex items-center gap-1">
+        <p className="text-xs text-red-600 flex items-center gap-1">
           <X className="w-3 h-3" /> {error}
         </p>
       )}

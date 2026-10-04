@@ -59,7 +59,7 @@ export function MaplibreMeasureControl({
           size="icon"
           className={`h-8 w-8 ${
             mode === "distance"
-              ? "bg-brand-primary text-white hover:bg-brand-primary/90"
+              ? "bg-primary text-white hover:bg-primary/90"
               : "text-slate-600 hover:bg-slate-100"
           }`}
           onClick={() => onToggleMode("distance")}
@@ -73,7 +73,7 @@ export function MaplibreMeasureControl({
           size="icon"
           className={`h-8 w-8 ${
             mode === "area"
-              ? "bg-brand-primary text-white hover:bg-brand-primary/90"
+              ? "bg-primary text-white hover:bg-primary/90"
               : "text-slate-600 hover:bg-slate-100"
           }`}
           onClick={() => onToggleMode("area")}

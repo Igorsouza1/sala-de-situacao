@@ -10,7 +10,7 @@ import { useFogo } from "@/context/FogoContext"
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 
 function focoColor(count: number): string {
-  if (count === 0)  return "hsl(var(--muted))"
+  if (count === 0)  return "var(--color-muted)"
   if (count <= 5)   return "#f97316"
   if (count <= 20)  return "#ef4444"
   return                   "#7f1d1d"
@@ -34,13 +34,13 @@ function CustomTooltip({ active, payload }: any) {
       <div className="flex items-baseline gap-1.5 mb-1">
         <span
           className="text-2xl font-bold tracking-tight"
-          style={{ color: value === 0 ? "hsl(var(--muted-foreground))" : color }}
+          style={{ color: value === 0 ? "var(--color-muted-foreground)" : color }}
         >
           {value}
         </span>
         <span className="text-xs text-muted-foreground font-medium">focos</span>
       </div>
-      <p className="text-[11px] font-medium" style={{ color: value === 0 ? "hsl(var(--muted-foreground))" : color }}>
+      <p className="text-[11px] font-medium" style={{ color: value === 0 ? "var(--color-muted-foreground)" : color }}>
         {focoLabel(value)}
       </p>
     </div>
@@ -136,7 +136,7 @@ export function GraficoFogo() {
             <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 8 }} barCategoryGap="30%">
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="hsl(var(--border))"
+                stroke="var(--color-border)"
                 strokeOpacity={0.5}
                 vertical={false}
               />
@@ -144,18 +144,18 @@ export function GraficoFogo() {
                 dataKey="mes"
                 tickLine={false}
                 axisLine={false}
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }}
                 tickMargin={8}
               />
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
                 width={32}
               />
               <Tooltip
                 content={<CustomTooltip />}
-                cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.4, radius: 4 }}
+                cursor={{ fill: "var(--color-muted)", fillOpacity: 0.4, radius: 4 }}
               />
               <Bar dataKey="focos" radius={[4, 4, 0, 0]} maxBarSize={32}>
                 {data.map((d, i) => (
@@ -169,7 +169,7 @@ export function GraficoFogo() {
         {/* Legend */}
         <div className="flex items-center justify-center gap-4 mt-1 flex-wrap">
           {[
-            { color: "hsl(var(--muted-foreground))", label: "Sem focos",       opacity: 0.4 },
+            { color: "var(--color-muted-foreground)", label: "Sem focos",       opacity: 0.4 },
             { color: "#f97316",                       label: "Baixo (1–5)"               },
             { color: "#ef4444",                       label: "Moderado (6–20)"            },
             { color: "#7f1d1d",                       label: "Crítico (> 20)"             },

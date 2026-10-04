@@ -60,7 +60,7 @@ function CustomTooltip({ active, payload }: any) {
       <p className="text-[11px] font-medium text-muted-foreground mb-1">{capitalized}</p>
       <div className="flex items-baseline gap-1.5 mb-1">
         <span className="text-2xl font-bold tracking-tight"
-          style={{ color: value === 0 ? "hsl(var(--muted-foreground))" : barColor(value) }}>
+          style={{ color: value === 0 ? "var(--color-muted-foreground)" : barColor(value) }}>
           {value.toFixed(1)}
         </span>
         <span className="text-xs text-muted-foreground font-medium">mm</span>
@@ -80,7 +80,7 @@ function CustomXTick({ x, y, payload }: any) {
     return (
       <g transform={`translate(${x},${y})`}>
         <text x={0} y={0} dy={14} textAnchor="middle"
-          fill="hsl(var(--foreground))" fontSize={11} fontWeight={700}>{yr}</text>
+          fill="var(--color-foreground)" fontSize={11} fontWeight={700}>{yr}</text>
       </g>
     )
   }
@@ -89,7 +89,7 @@ function CustomXTick({ x, y, payload }: any) {
   return (
     <g transform={`translate(${x},${y})`}>
       <text x={0} y={0} dy={14} textAnchor="middle"
-        fill="hsl(var(--muted-foreground))" fontSize={10}>{abbr}</text>
+        fill="var(--color-muted-foreground)" fontSize={10}>{abbr}</text>
     </g>
   )
 }
@@ -211,16 +211,16 @@ export function GraficoPluviometriaDeque() {
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 24 }} barCategoryGap="30%">
 
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" strokeOpacity={0.5} vertical={false} />
 
               {yearMarkers.map((periodo) => (
                 <ReferenceLine
                   key={periodo}
                   x={periodo}
-                  stroke="hsl(var(--muted-foreground))"
+                  stroke="var(--color-muted-foreground)"
                   strokeOpacity={0.3}
                   strokeDasharray="4 3"
-                  label={{ value: periodo.slice(0, 4), position: "insideTopLeft", fontSize: 10, fill: "hsl(var(--muted-foreground))", dy: -4 }}
+                  label={{ value: periodo.slice(0, 4), position: "insideTopLeft", fontSize: 10, fill: "var(--color-muted-foreground)", dy: -4 }}
                 />
               ))}
 
@@ -229,11 +229,11 @@ export function GraficoPluviometriaDeque() {
                 domain={[0, yMax]}
                 tickLine={false}
                 axisLine={false}
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
                 width={42}
                 unit=" mm"
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.4, radius: 4 }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--color-muted)", fillOpacity: 0.4, radius: 4 }} />
 
               <Bar dataKey="pluviometria" radius={[3, 3, 0, 0]} maxBarSize={28}>
                 {data.map((entry, index) => (

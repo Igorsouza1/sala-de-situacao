@@ -285,9 +285,9 @@ export function GpxUploadModal({ isOpen, onClose }: GpxUploadModalProps) {
               onDragOver={onDragOver}
               onDrop={onDrop}
               className={`flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer transition-colors
-                ${isDragging ? "border-primary bg-primary/10" : "border-gray-300 dark:border-gray-600"}
+                ${isDragging ? "border-primary bg-primary/10" : "border-gray-300"}
                 ${error ? "border-destructive bg-destructive/10" : ""}
-                hover:border-gray-400 dark:hover:border-gray-500`}
+                hover:border-gray-400`}
               onClick={() => document.getElementById("gpx-file-input")?.click()}
             >
               <input
@@ -300,8 +300,8 @@ export function GpxUploadModal({ isOpen, onClose }: GpxUploadModalProps) {
               {file ? (
                 <div className="text-center">
                   <FileText className="mx-auto h-12 w-12 text-primary" />
-                  <p className="mt-2 font-semibold text-gray-700 dark:text-gray-300">{file.name}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{(file.size / 1024).toFixed(2)} KB</p>
+                  <p className="mt-2 font-semibold text-gray-700">{file.name}</p>
+                  <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(2)} KB</p>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -318,10 +318,10 @@ export function GpxUploadModal({ isOpen, onClose }: GpxUploadModalProps) {
               ) : (
                 <div className="text-center">
                   <UploadCloud className={`mx-auto h-12 w-12 ${error ? "text-destructive" : "text-gray-400"}`} />
-                  <p className={`mt-2 text-sm ${error ? "text-destructive" : "text-gray-500 dark:text-gray-400"}`}>
+                  <p className={`mt-2 text-sm ${error ? "text-destructive" : "text-gray-500"}`}>
                     <span className="font-semibold">Clique para fazer upload</span> ou arraste e solte
                   </p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">Apenas arquivos .gpx</p>
+                  <p className="text-xs text-gray-400">Apenas arquivos .gpx</p>
                 </div>
               )}
             </div>
@@ -377,7 +377,7 @@ export function GpxUploadModal({ isOpen, onClose }: GpxUploadModalProps) {
       case 3:
         return (
           <div className="space-y-4 max-h-96 overflow-y-auto">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
+            <div className="text-sm text-gray-600">
               {waypoints.length} waypoints encontrados no arquivo GPX. Classifique cada ponto:
             </div>
             {waypoints.map((waypoint) => (
@@ -532,7 +532,7 @@ export function GpxUploadModal({ isOpen, onClose }: GpxUploadModalProps) {
                 ${
                   currentStep >= step.number
                     ? "bg-primary text-primary-foreground"
-                    : "bg-gray-200 text-gray-600 dark:bg-gray-700 dark:text-gray-400"
+                    : "bg-gray-200 text-gray-600"
                 }`}
               >
                 {currentStep > step.number ? <Check className="h-4 w-4" /> : step.number}
@@ -543,7 +543,7 @@ export function GpxUploadModal({ isOpen, onClose }: GpxUploadModalProps) {
               {index < steps.length - 1 && (
                 <div
                   className={`w-12 h-0.5 mx-4 ${
-                    currentStep > step.number ? "bg-primary" : "bg-gray-200 dark:bg-gray-700"
+                    currentStep > step.number ? "bg-primary" : "bg-gray-200"
                   }`}
                 />
               )}

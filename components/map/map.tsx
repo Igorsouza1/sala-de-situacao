@@ -512,8 +512,8 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
 
       {loadingLayers && (
         <div className="absolute inset-0 z-[2000] bg-black/40 backdrop-blur-xs flex items-center justify-center pointer-events-none">
-            <div className="bg-brand-dark border border-white/10 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+            <div className="bg-foreground border border-white/10 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
                 <span className="text-slate-200 text-sm font-medium">Atualizando dados...</span>
             </div>
         </div>

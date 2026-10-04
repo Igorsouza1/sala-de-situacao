@@ -295,7 +295,7 @@ export function AlertManagerModal({ isOpen, onClose }: AlertManagerModalProps) {
                         placeholder="email@exemplo.com"
                         value={newEmail}
                         onChange={(e) => setNewEmail(e.target.value)}
-                        className="bg-slate-950 border-white/10 focus:border-brand-primary h-10"
+                        className="bg-slate-950 border-white/10 focus:border-primary h-10"
                         onKeyDown={(e) => {
                         if (e.key === 'Enter') handleAddRecipient();
                         }}
@@ -305,7 +305,7 @@ export function AlertManagerModal({ isOpen, onClose }: AlertManagerModalProps) {
                 <Button
                     onClick={handleAddRecipient}
                     disabled={!newEmail || loading}
-                    className="bg-brand-primary hover:bg-brand-primary/90 h-10 px-6 font-medium"
+                    className="bg-primary hover:bg-primary/90 h-10 px-6 font-medium"
                 >
                 Adicionar
                 </Button>

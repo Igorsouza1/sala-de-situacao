@@ -11,7 +11,7 @@ import { MapPin, Target, WifiOff, RefreshCw, CheckCircle } from 'lucide-react'
 const JavaliMapPicker = dynamic(() => import('@/components/JavaliMapPicker'), {
   ssr: false,
   loading: () => (
-    <div className="h-[300px] w-full bg-gray-100 animate-pulse rounded-md flex items-center justify-center">
+    <div className="h-[300px] w-full bg-muted bg-shimmer rounded-md flex items-center justify-center">
       Carregando mapa...
     </div>
   ),

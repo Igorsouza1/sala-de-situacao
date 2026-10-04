@@ -111,16 +111,16 @@ export function AcoesManager({ regionId, acoes: initialAcoes }: AcoesManagerProp
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="bg-white border border-neutral-200 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex gap-4 items-center flex-1">
-          <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center shrink-0 shadow-xs border border-blue-100 dark:border-blue-900/50">
+          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0 shadow-xs border border-blue-100">
             <MapPin className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-50 leading-tight">
+            <h2 className="text-lg font-bold text-neutral-900 leading-tight">
               Ações da Região
             </h2>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1">
+            <p className="text-sm text-neutral-500 mt-1">
               {acoes.length} ação(ões) registrada(s)
             </p>
           </div>
@@ -130,21 +130,21 @@ export function AcoesManager({ regionId, acoes: initialAcoes }: AcoesManagerProp
 
       {/* Tabela */}
       {acoes.length === 0 ? (
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-12 shadow-xs text-center">
-          <MapPin className="w-12 h-12 text-neutral-300 dark:text-neutral-600 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-neutral-900 dark:text-neutral-50 mb-2">
+        <div className="bg-white border border-neutral-200 rounded-2xl p-12 shadow-xs text-center">
+          <MapPin className="w-12 h-12 text-neutral-300 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-neutral-900 mb-2">
             Nenhuma ação registrada
           </h3>
-          <p className="text-sm text-neutral-500 dark:text-neutral-400 mb-4">
+          <p className="text-sm text-neutral-500 mb-4">
             Use a importação GPX para adicionar ações a esta região.
           </p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl shadow-xs overflow-hidden">
+        <div className="bg-white border border-neutral-200 rounded-2xl shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
-                <TableRow className="bg-neutral-50 dark:bg-neutral-800/50">
+                <TableRow className="bg-neutral-50">
                   <TableHead className="font-semibold">Nome</TableHead>
                   <TableHead className="font-semibold">Descrição</TableHead>
                   <TableHead className="font-semibold">Data</TableHead>
@@ -157,11 +157,11 @@ export function AcoesManager({ regionId, acoes: initialAcoes }: AcoesManagerProp
               </TableHeader>
               <TableBody>
                 {acoes.map((acao) => (
-                  <TableRow key={acao.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50">
+                  <TableRow key={acao.id} className="hover:bg-neutral-50">
                     <TableCell className="font-medium max-w-[180px] truncate">
                       {acao.name || "—"}
                     </TableCell>
-                    <TableCell className="max-w-[200px] truncate text-sm text-neutral-600 dark:text-neutral-400">
+                    <TableCell className="max-w-[200px] truncate text-sm text-neutral-600">
                       {acao.descricao || "—"}
                     </TableCell>
                     <TableCell>
@@ -190,10 +190,10 @@ export function AcoesManager({ regionId, acoes: initialAcoes }: AcoesManagerProp
                           <img
                             src={acao.ultimaFotoUrl}
                             alt="Última foto"
-                            className="w-10 h-10 rounded-lg object-cover border border-neutral-200 dark:border-neutral-700"
+                            className="w-10 h-10 rounded-lg object-cover border border-neutral-200"
                           />
                         ) : (
-                          <div className="w-10 h-10 rounded-lg bg-neutral-100 dark:bg-neutral-800 flex items-center justify-center">
+                          <div className="w-10 h-10 rounded-lg bg-neutral-100 flex items-center justify-center">
                             <Camera className="w-5 h-5 text-neutral-400" />
                           </div>
                         )}
@@ -224,7 +224,7 @@ export function AcoesManager({ regionId, acoes: initialAcoes }: AcoesManagerProp
                                 <img
                                   src={acao.ultimaFotoUrl}
                                   alt={acao.name || "Ação"}
-                                  className="w-full rounded-lg border border-neutral-200 dark:border-neutral-700"
+                                  className="w-full rounded-lg border border-neutral-200"
                                 />
                               )}
                               <div>
@@ -242,7 +242,7 @@ export function AcoesManager({ regionId, acoes: initialAcoes }: AcoesManagerProp
                                     }
                                   }}
                                   disabled={uploadingAcaoId === acao.id}
-                                  className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-blue-900/30 dark:file:text-blue-400"
+                                  className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
                                 />
                                 {uploadingAcaoId === acao.id && (
                                   <div className="flex items-center gap-2 mt-2 text-sm text-blue-600">

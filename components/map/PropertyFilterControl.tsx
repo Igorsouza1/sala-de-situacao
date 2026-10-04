@@ -58,7 +58,7 @@ export function PropertyFilterControl({ onFilterChange }: PropertyFilterControlP
 
           {count != null && (
             <p className="text-xs text-slate-500 text-center">
-              <span className="font-semibold text-brand-primary">{count}</span> propriedade{count !== 1 ? "s" : ""} encontrada{count !== 1 ? "s" : ""}
+              <span className="font-semibold text-primary">{count}</span> propriedade{count !== 1 ? "s" : ""} encontrada{count !== 1 ? "s" : ""}
             </p>
           )}
 
@@ -79,7 +79,7 @@ export function PropertyFilterControl({ onFilterChange }: PropertyFilterControlP
             </Button>
             <Button
               size="sm"
-              className="flex-1 h-8 text-xs bg-brand-primary hover:bg-blue-600 text-white"
+              className="flex-1 h-8 text-xs bg-primary hover:bg-blue-600 text-white"
               onClick={async () => {
                 const min = minArea ? parseFloat(minArea) : undefined
                 const max = maxArea ? parseFloat(maxArea) : undefined

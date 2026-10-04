@@ -81,22 +81,22 @@ export function WaypointBulkActions({ totalWaypoints, onApply }: WaypointBulkAct
   };
 
   return (
-    <div className="bg-linear-to-r from-amber-50 to-orange-50 dark:from-amber-950/20 dark:to-orange-950/20 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 space-y-4">
+    <div className="bg-linear-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 space-y-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Zap className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+          <Zap className="w-5 h-5 text-amber-600" />
           <div>
-            <h4 className="text-sm font-bold text-amber-900 dark:text-amber-300">
+            <h4 className="text-sm font-bold text-amber-900">
               Aplicar em Lote
             </h4>
-            <p className="text-xs text-amber-700 dark:text-amber-400">
+            <p className="text-xs text-amber-700">
               Preenche apenas campos vazios em {totalWaypoints} waypoint(s)
             </p>
           </div>
         </div>
 
         {appliedCount !== null && (
-          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/30 px-3 py-1.5 rounded-full">
+          <div className="flex items-center gap-2 text-emerald-600 bg-emerald-100 px-3 py-1.5 rounded-full">
             <CheckCircle2 className="w-4 h-4" />
             <span className="text-xs font-semibold">{appliedCount} atualizado(s)</span>
           </div>
@@ -106,7 +106,7 @@ export function WaypointBulkActions({ totalWaypoints, onApply }: WaypointBulkAct
       {/* Bulk Form Fields */}
       <div className="grid grid-cols-2 md:grid-cols-7 gap-3">
         <div className="space-y-1">
-          <Label className="text-xs font-medium text-amber-900 dark:text-amber-300">Ação</Label>
+          <Label className="text-xs font-medium text-amber-900">Ação</Label>
           <Select value={acao} onValueChange={setAcao}>
             <SelectTrigger className="h-9 text-xs">
               <SelectValue placeholder="..." />
@@ -120,7 +120,7 @@ export function WaypointBulkActions({ totalWaypoints, onApply }: WaypointBulkAct
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs font-medium text-amber-900 dark:text-amber-300">Categoria</Label>
+          <Label className="text-xs font-medium text-amber-900">Categoria</Label>
           <Select value={categoria} onValueChange={setCategoria}>
             <SelectTrigger className="h-9 text-xs">
               <SelectValue placeholder="..." />
@@ -134,7 +134,7 @@ export function WaypointBulkActions({ totalWaypoints, onApply }: WaypointBulkAct
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs font-medium text-amber-900 dark:text-amber-300">Tipo</Label>
+          <Label className="text-xs font-medium text-amber-900">Tipo</Label>
           <Select value={tipo} onValueChange={setTipo}>
             <SelectTrigger className="h-9 text-xs">
               <SelectValue placeholder="..." />
@@ -148,7 +148,7 @@ export function WaypointBulkActions({ totalWaypoints, onApply }: WaypointBulkAct
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs font-medium text-amber-900 dark:text-amber-300">Status</Label>
+          <Label className="text-xs font-medium text-amber-900">Status</Label>
           <Select value={status} onValueChange={setStatus}>
             <SelectTrigger className="h-9 text-xs">
               <SelectValue placeholder="..." />
@@ -162,7 +162,7 @@ export function WaypointBulkActions({ totalWaypoints, onApply }: WaypointBulkAct
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs font-medium text-amber-900 dark:text-amber-300">Eixo Temático</Label>
+          <Label className="text-xs font-medium text-amber-900">Eixo Temático</Label>
           <Select value={eixoTematico} onValueChange={setEixoTematico}>
             <SelectTrigger className="h-9 text-xs">
               <SelectValue placeholder="..." />
@@ -176,7 +176,7 @@ export function WaypointBulkActions({ totalWaypoints, onApply }: WaypointBulkAct
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs font-medium text-amber-900 dark:text-amber-300">Tipo Técnico</Label>
+          <Label className="text-xs font-medium text-amber-900">Tipo Técnico</Label>
           <Select value={tipoTecnico} onValueChange={setTipoTecnico}>
             <SelectTrigger className="h-9 text-xs">
               <SelectValue placeholder="..." />
@@ -190,7 +190,7 @@ export function WaypointBulkActions({ totalWaypoints, onApply }: WaypointBulkAct
         </div>
 
         <div className="space-y-1">
-          <Label className="text-xs font-medium text-amber-900 dark:text-amber-300">Caráter</Label>
+          <Label className="text-xs font-medium text-amber-900">Caráter</Label>
           <Select value={carater} onValueChange={setCarater}>
             <SelectTrigger className="h-9 text-xs">
               <SelectValue placeholder="..." />

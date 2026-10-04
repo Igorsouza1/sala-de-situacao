@@ -41,7 +41,7 @@ const layerStyles: { [key: string]: { icon: React.ElementType; title: string; co
   propriedades: {
     icon: Home,
     title: "Propriedade",
-    color: "text-pantaneiro-green",
+    color: "text-primary",
     bgColor: "bg-green-50 border-green-200",
   },
   estradas: {
@@ -71,7 +71,7 @@ const layerStyles: { [key: string]: { icon: React.ElementType; title: string; co
   default: {
     icon: Info,
     title: "Informações",
-    color: "text-pantaneiro-green",
+    color: "text-primary",
     bgColor: "bg-gray-50 border-gray-200",
   },
 }

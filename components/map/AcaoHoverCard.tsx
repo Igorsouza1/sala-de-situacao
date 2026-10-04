@@ -102,7 +102,7 @@ export function AcaoHoverCard({ properties }: Props) {
         background: '#ffffff',
         border: '1px solid rgba(0,0,0,0.08)',
         boxShadow: '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)',
-        fontFamily: "system-ui, -apple-system, 'Inter', sans-serif",
+        fontFamily: "inherit",
       }}
     >
       {/* Acento superior — categoria color, 3px */}

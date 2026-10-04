@@ -205,13 +205,13 @@ function MiniTooltipFormoso({ active, payload }: any) {
       {d?.turbidez > 0 && (
         <div className="flex justify-between gap-3">
           <span className="text-muted-foreground">Turbidez</span>
-          <span className="font-medium text-[hsl(var(--chart-3))]">{fv(d.turbidez)} NTU</span>
+          <span className="font-medium text-[var(--color-water)]">{fv(d.turbidez)} NTU</span>
         </div>
       )}
       {d?.secchiVert > 0 && (
         <div className="flex justify-between gap-3">
           <span className="text-muted-foreground">Secchi</span>
-          <span className="font-medium text-[hsl(var(--chart-4))]">{fv(d.secchiVert)} m</span>
+          <span className="font-medium text-[var(--color-warn)]">{fv(d.secchiVert)} m</span>
         </div>
       )}
       {d?.pluviometria > 0 && (
@@ -237,7 +237,7 @@ function MiniTooltipPrata({ active, payload }: any) {
       {d?.turbidez > 0 && (
         <div className="flex justify-between gap-3">
           <span className="text-muted-foreground">Turbidez</span>
-          <span className="font-medium text-[hsl(var(--chart-3))]">{fv(d.turbidez)} NTU</span>
+          <span className="font-medium text-[var(--color-water)]">{fv(d.turbidez)} NTU</span>
         </div>
       )}
       {d?.chuva > 0 && (
@@ -254,7 +254,7 @@ const MINI_AXIS = {
   fontSize: 10,
   tickLine: false,
   axisLine: false,
-  tick: { fontSize: 10, fill: "hsl(var(--muted-foreground))" },
+  tick: { fontSize: 10, fill: "var(--color-muted-foreground)" },
 } as const;
 
 // ─── Compact Header ────────────────────────────────────────────────────────────
@@ -278,7 +278,7 @@ function DashboardHeader() {
             </span>
             <span className="text-border">·</span>
             <span className="text-sm font-semibold text-foreground">
-              Sala de Situação
+              GEO PRISMA
             </span>
             <span className="text-border">·</span>
             <span className="text-xs text-muted-foreground">{regionSubtitle(region)}</span>
@@ -293,7 +293,7 @@ function DashboardHeader() {
             {timeLabel}
           </span>
           <div className="flex items-center gap-1.5 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-full">
-            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
             <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wide">
               Ativo
             </span>
@@ -369,9 +369,9 @@ function PainelFormoso() {
         ) : (
           <ChartContainer
             config={{
-              turbidez:    { label: "Turbidez (NTU)",   color: "hsl(var(--chart-3))" },
-              secchiVert:  { label: "Secchi Vert. (m)", color: "hsl(var(--chart-4))" },
-              pluviometria:{ label: "Chuva (mm)",        color: "hsl(var(--chart-2))" },
+              turbidez:    { label: "Turbidez (NTU)",   color: "var(--color-water)" },
+              secchiVert:  { label: "Secchi Vert. (m)", color: "var(--color-warn)" },
+              pluviometria:{ label: "Chuva (mm)",        color: "var(--color-ok)" },
             }}
             className="h-full w-full"
           >
@@ -395,7 +395,7 @@ function PainelFormoso() {
                   yAxisId="turb"
                   orientation="left"
                   {...MINI_AXIS}
-                  stroke="hsl(var(--chart-3))"
+                  stroke="var(--color-water)"
                   width={28}
                   domain={[0, (d: number) => Math.ceil((d || 10) * 1.2)]}
                   tickFormatter={(v) => String(v)}
@@ -406,7 +406,7 @@ function PainelFormoso() {
                   yAxisId="secchi"
                   orientation="right"
                   {...MINI_AXIS}
-                  stroke="hsl(var(--chart-4))"
+                  stroke="var(--color-warn)"
                   width={28}
                   domain={[0, (d: number) => Math.ceil((d || 5) * 1.3)]}
                   tickFormatter={(v) => v.toFixed(1)}
@@ -446,7 +446,7 @@ function PainelFormoso() {
 
                 <Tooltip
                   content={<MiniTooltipFormoso />}
-                  cursor={{ stroke: "hsl(var(--muted-foreground))", strokeWidth: 1, strokeDasharray: "4 4" }}
+                  cursor={{ stroke: "var(--color-muted-foreground)", strokeWidth: 1, strokeDasharray: "4 4" }}
                 />
               </ComposedChart>
             </ResponsiveContainer>
@@ -456,9 +456,9 @@ function PainelFormoso() {
 
       {/* Legend footer */}
       <div className="flex items-center gap-4 px-4 py-2 border-t border-border/30 bg-muted/10 flex-none">
-        <LegendaItem color="hsl(var(--chart-3))" label="Turbidez (NTU)" line />
-        <LegendaItem color="hsl(var(--chart-4))" label="Secchi (m)" line />
-        <LegendaItem color="hsl(var(--chart-2))" label="Chuva (mm)" />
+        <LegendaItem color="var(--color-water)" label="Turbidez (NTU)" line />
+        <LegendaItem color="var(--color-warn)" label="Secchi (m)" line />
+        <LegendaItem color="var(--color-ok)" label="Chuva (mm)" />
       </div>
     </div>
   );
@@ -537,8 +537,8 @@ function PainelPrata() {
         ) : (
           <ChartContainer
             config={{
-              turbidez: { label: "Turbidez (NTU)", color: "hsl(var(--chart-3))" },
-              chuva:    { label: "Chuva (mm)",      color: "hsl(var(--chart-2))" },
+              turbidez: { label: "Turbidez (NTU)", color: "var(--color-water)" },
+              chuva:    { label: "Chuva (mm)",      color: "var(--color-ok)" },
             }}
             className="h-full w-full"
           >
@@ -562,7 +562,7 @@ function PainelPrata() {
                   yAxisId="turb"
                   orientation="left"
                   {...MINI_AXIS}
-                  stroke="hsl(var(--chart-3))"
+                  stroke="var(--color-water)"
                   width={28}
                   domain={[0, (d: number) => Math.ceil((d || 10) * 1.2)]}
                   tickFormatter={(v) => String(v)}
@@ -573,7 +573,7 @@ function PainelPrata() {
                   yAxisId="chuva"
                   orientation="right"
                   {...MINI_AXIS}
-                  stroke="hsl(var(--chart-2))"
+                  stroke="var(--color-ok)"
                   width={28}
                   domain={[0, (d: number) => Math.ceil((d || 20) * 1.3)]}
                   tickFormatter={(v) => String(v)}
@@ -603,7 +603,7 @@ function PainelPrata() {
 
                 <Tooltip
                   content={<MiniTooltipPrata />}
-                  cursor={{ stroke: "hsl(var(--muted-foreground))", strokeWidth: 1, strokeDasharray: "4 4" }}
+                  cursor={{ stroke: "var(--color-muted-foreground)", strokeWidth: 1, strokeDasharray: "4 4" }}
                 />
               </ComposedChart>
             </ResponsiveContainer>
@@ -613,8 +613,8 @@ function PainelPrata() {
 
       {/* Legend footer */}
       <div className="flex items-center gap-4 px-4 py-2 border-t border-border/30 bg-muted/10 flex-none">
-        <LegendaItem color="hsl(var(--chart-3))" label="Turbidez (NTU)" line />
-        <LegendaItem color="hsl(var(--chart-2))" label="Chuva (mm)" />
+        <LegendaItem color="var(--color-water)" label="Turbidez (NTU)" line />
+        <LegendaItem color="var(--color-ok)" label="Chuva (mm)" />
         <div className="ml-auto flex items-center gap-3">
           {[
             { fill: "#10b98140", label: "≤3" },
@@ -782,7 +782,7 @@ function UltimosRegistrosFormoso() {
 }
 
 function turbColor(v: number | null): string {
-  if (v == null) return "hsl(var(--muted-foreground))";
+  if (v == null) return "var(--color-muted-foreground)";
   if (v <= 3) return "#10b981";
   if (v <= 7) return "#eab308";
   if (v <= 15) return "#f97316";

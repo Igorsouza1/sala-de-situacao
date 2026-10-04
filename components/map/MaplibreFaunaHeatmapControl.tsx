@@ -59,7 +59,7 @@ export function MaplibreFaunaHeatmapControl({
           </div>
 
           {isLoading && (
-            <p className="text-xs text-slate-500 animate-pulse">
+            <p className="text-xs text-slate-500">
               Carregando dados...
             </p>
           )}

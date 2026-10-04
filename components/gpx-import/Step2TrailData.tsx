@@ -116,7 +116,7 @@ export function Step2TrailData({ geojson, metadata, nomeImportacao, onNext, onBa
           <AlertDescription>
             Este arquivo GPX não contém trilhas (tracks). Apenas waypoints serão importados como Ações.
             <br />
-            <span className="text-xs text-neutral-500 dark:text-neutral-400">
+            <span className="text-xs text-neutral-500">
               Avançando automaticamente para a Etapa 3...
             </span>
           </AlertDescription>
@@ -135,10 +135,10 @@ export function Step2TrailData({ geojson, metadata, nomeImportacao, onNext, onBa
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Header */}
       <div className="space-y-2">
-        <h3 className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
+        <h3 className="text-2xl font-bold text-neutral-900">
           Dados da Trilha
         </h3>
-        <p className="text-sm text-neutral-600 dark:text-neutral-400">
+        <p className="text-sm text-neutral-600">
           Etapa 2 de 3: Configure as informações da trilha
         </p>
       </div>
@@ -153,64 +153,64 @@ export function Step2TrailData({ geojson, metadata, nomeImportacao, onNext, onBa
 
       {/* Info Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 shadow-xs">
+        <div className="bg-white border border-neutral-200 rounded-xl p-4 shadow-xs">
           <div className="flex items-center gap-2 mb-2">
-            <MapPin className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-            <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase">
+            <MapPin className="w-4 h-4 text-blue-600" />
+            <span className="text-xs font-medium text-neutral-500 uppercase">
               Tracks
             </span>
           </div>
-          <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
+          <p className="text-2xl font-bold text-neutral-900">
             {metadata.numTracks}
           </p>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 shadow-xs">
+        <div className="bg-white border border-neutral-200 rounded-xl p-4 shadow-xs">
           <div className="flex items-center gap-2 mb-2">
-            <Ruler className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase">
+            <Ruler className="w-4 h-4 text-emerald-600" />
+            <span className="text-xs font-medium text-neutral-500 uppercase">
               Distância
             </span>
           </div>
-          <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
+          <p className="text-2xl font-bold text-neutral-900">
             {distanciaKm.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} km
           </p>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 shadow-xs">
+        <div className="bg-white border border-neutral-200 rounded-xl p-4 shadow-xs">
           <div className="flex items-center gap-2 mb-2">
-            <Clock className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase">
+            <Clock className="w-4 h-4 text-amber-600" />
+            <span className="text-xs font-medium text-neutral-500 uppercase">
               Duração
             </span>
           </div>
-          <p className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
+          <p className="text-xl font-bold text-neutral-900">
             {Math.floor(duracaoMinutos / 60)}h {duracaoMinutos % 60}min
           </p>
         </div>
 
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-4 shadow-xs">
+        <div className="bg-white border border-neutral-200 rounded-xl p-4 shadow-xs">
           <div className="flex items-center gap-2 mb-2">
-            <MapPin className="w-4 h-4 text-purple-600 dark:text-purple-400" />
-            <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase">
+            <MapPin className="w-4 h-4 text-purple-600" />
+            <span className="text-xs font-medium text-neutral-500 uppercase">
               Waypoints
             </span>
           </div>
-          <p className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
+          <p className="text-2xl font-bold text-neutral-900">
             {metadata.numWaypoints}
           </p>
         </div>
       </div>
 
       {/* Mapa - Instrução */}
-      <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/50 rounded-xl p-4">
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
         <div className="flex items-start gap-3">
-          <MapPin className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 shrink-0" />
+          <MapPin className="w-5 h-5 text-blue-600 mt-0.5 shrink-0" />
           <div className="space-y-1">
-            <p className="text-sm font-semibold text-blue-900 dark:text-blue-300">
+            <p className="text-sm font-semibold text-blue-900">
               Visualização no Mapa
             </p>
-            <p className="text-xs text-blue-700 dark:text-blue-400">
+            <p className="text-xs text-blue-700">
               A trilha será exibida no mapa ao lado com destaque. Use o zoom para visualizar detalhes.
             </p>
           </div>
@@ -218,14 +218,14 @@ export function Step2TrailData({ geojson, metadata, nomeImportacao, onNext, onBa
       </div>
 
       {/* Form Fields */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 shadow-xs space-y-5">
-        <h4 className="font-semibold text-neutral-900 dark:text-neutral-50">
+      <div className="bg-white border border-neutral-200 rounded-xl p-6 shadow-xs space-y-5">
+        <h4 className="font-semibold text-neutral-900">
           Informações da Trilha
         </h4>
 
         {/* Nome */}
         <div className="space-y-2">
-          <Label htmlFor="trilha-nome" className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+          <Label htmlFor="trilha-nome" className="text-sm font-medium text-neutral-700">
             Nome da Trilha <span className="text-red-500">*</span>
           </Label>
           <Input
@@ -239,7 +239,7 @@ export function Step2TrailData({ geojson, metadata, nomeImportacao, onNext, onBa
 
         {/* Data Início */}
         <div className="space-y-2">
-          <Label htmlFor="trilha-inicio" className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+          <Label htmlFor="trilha-inicio" className="text-sm font-medium text-neutral-700">
             <Calendar className="w-4 h-4 inline mr-1" />
             Data e Hora de Início
           </Label>
@@ -250,14 +250,14 @@ export function Step2TrailData({ geojson, metadata, nomeImportacao, onNext, onBa
             onChange={(e) => setDataInicio(e.target.value)}
             className="h-11"
           />
-          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+          <p className="text-xs text-neutral-500">
             Opcional. Extraído automaticamente do GPX.
           </p>
         </div>
 
         {/* Data Fim */}
         <div className="space-y-2">
-          <Label htmlFor="trilha-fim" className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+          <Label htmlFor="trilha-fim" className="text-sm font-medium text-neutral-700">
             <Calendar className="w-4 h-4 inline mr-1" />
             Data e Hora de Fim
           </Label>
@@ -268,14 +268,14 @@ export function Step2TrailData({ geojson, metadata, nomeImportacao, onNext, onBa
             onChange={(e) => setDataFim(e.target.value)}
             className="h-11"
           />
-          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+          <p className="text-xs text-neutral-500">
             Opcional. Extraído automaticamente do GPX.
           </p>
         </div>
       </div>
 
       {/* Navigation Buttons */}
-      <div className="flex items-center justify-between pt-4 border-t border-neutral-200 dark:border-neutral-800">
+      <div className="flex items-center justify-between pt-4 border-t border-neutral-200">
         <Button
           type="button"
           variant="outline"

@@ -85,7 +85,7 @@ export function PropriedadeDossieTemplate({ data, isPrintMode = false }: Proprie
                             Relatório de Propriedade<br/>e Monitoramento
                         </h1>
                         <p className="text-xs font-bold text-slate-500 tracking-widest uppercase mt-1">
-                            Sala de Situação • {regionSubtitle(region)}
+                            GEO PRISMA • {regionSubtitle(region)}
                         </p>
                     </div>
                     <div className="w-24 h-24 flex items-center justify-center">
@@ -97,7 +97,7 @@ export function PropriedadeDossieTemplate({ data, isPrintMode = false }: Proprie
                     
                     {/* --- 1. IDENTIFICAÇÃO --- */}
                     <section aria-label="Identificação">
-                        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-brand-primary pl-2 mb-4">
+                        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-primary pl-2 mb-4">
                             01. Identificação do Imóvel
                         </h2>
                         <div className="grid grid-cols-2 border border-slate-900 text-sm">
@@ -123,7 +123,7 @@ export function PropriedadeDossieTemplate({ data, isPrintMode = false }: Proprie
                     {/* --- 2. DADOS CAR (JSONB) --- */}
                     {data.properties && Object.keys(data.properties).length > 0 && (
                     <section aria-label="Dados CAR">
-                        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-brand-primary pl-2 mb-4">
+                        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-primary pl-2 mb-4">
                             02. Dados Cadastrais (CAR / SICAR)
                         </h2>
 
@@ -181,7 +181,7 @@ export function PropriedadeDossieTemplate({ data, isPrintMode = false }: Proprie
 
                     {/* --- 3. INDICADORES --- */}
                     <section aria-label="Indicadores">
-                        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-brand-primary pl-2 mb-4">
+                        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-primary pl-2 mb-4">
                             03. Indicadores de Monitoramento
                         </h2>
                         <div className="grid grid-cols-3 gap-4">
@@ -193,7 +193,7 @@ export function PropriedadeDossieTemplate({ data, isPrintMode = false }: Proprie
 
                     {/* --- 4. MAPA --- */}
                     <section aria-label="Mapa" className="break-inside-avoid">
-                        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-brand-primary pl-2 mb-4">
+                        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-primary pl-2 mb-4">
                             04. Contexto Espacial
                         </h2>
                         <div className="border border-slate-300 bg-slate-100 p-1 h-[350px]">
@@ -206,7 +206,7 @@ export function PropriedadeDossieTemplate({ data, isPrintMode = false }: Proprie
 
                 {/* --- 5. LISTA DE AÇÕES --- */}
                     <section aria-label="Ações" className="space-y-4">
-                        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-brand-primary pl-2">
+                        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-primary pl-2">
                              05. Detalhamento de Ocorrências e Alertas
                         </h2>
                         
@@ -218,7 +218,7 @@ export function PropriedadeDossieTemplate({ data, isPrintMode = false }: Proprie
                                     <div key={idx} className="break-inside-avoid border border-slate-200 rounded-lg p-4 bg-slate-50">
                                         <div className="flex justify-between items-start mb-2 border-b border-slate-200 pb-2">
                                             <div>
-                                                <span className="text-xs font-bold uppercase text-brand-primary block">{acao.name || "Ação"}</span>
+                                                <span className="text-xs font-bold uppercase text-primary block">{acao.name || "Ação"}</span>
                                                 <span className="text-[10px] text-slate-500 uppercase">{acao.categoria} • {acao.status}</span>
                                             </div>
                                             <span className="font-mono text-xs text-slate-400">{new Date(acao.date).toLocaleDateString()}</span>

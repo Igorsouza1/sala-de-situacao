@@ -35,7 +35,7 @@ const QUALITY_BANDS = [
 ]
 
 function qualityFor(v: number | null): { label: string; color: string } {
-  if (v === null) return { label: "Sem dado",   color: "hsl(var(--muted-foreground))" }
+  if (v === null) return { label: "Sem dado",   color: "var(--color-muted-foreground)" }
   if (v < 1)     return { label: "Turva",       color: "#ef4444" }
   if (v < 3)     return { label: "Moderada",    color: "#f97316" }
   if (v < 6)     return { label: "Boa",         color: "#22c55e" }
@@ -96,7 +96,7 @@ function CustomXTick({ x, y, payload }: any) {
     return (
       <g transform={`translate(${x},${y})`}>
         <text x={0} y={0} dy={14} textAnchor="middle"
-          fill="hsl(var(--foreground))" fontSize={11} fontWeight={700}>{yr}</text>
+          fill="var(--color-foreground)" fontSize={11} fontWeight={700}>{yr}</text>
       </g>
     )
   }
@@ -105,7 +105,7 @@ function CustomXTick({ x, y, payload }: any) {
   return (
     <g transform={`translate(${x},${y})`}>
       <text x={0} y={0} dy={14} textAnchor="middle"
-        fill="hsl(var(--muted-foreground))" fontSize={10}>{abbr}</text>
+        fill="var(--color-muted-foreground)" fontSize={10}>{abbr}</text>
     </g>
   )
 }
@@ -117,7 +117,7 @@ function StatBadge({ label, value, unit, color }: { label: string; value: string
     <div className="flex flex-col items-end sm:items-start">
       <span className="text-[11px] text-muted-foreground">{label}</span>
       <div className="flex items-baseline gap-1">
-        <span className="text-lg font-bold" style={{ color: color ?? "hsl(var(--foreground))" }}>{value}</span>
+        <span className="text-lg font-bold" style={{ color: color ?? "var(--color-foreground)" }}>{value}</span>
         {unit && <span className="text-xs text-muted-foreground">{unit}</span>}
       </div>
     </div>
@@ -247,7 +247,7 @@ export function GraficoSecchiDeque() {
                 />
               ))}
 
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" strokeOpacity={0.4} vertical={false} />
 
               {[
                 { y: 1, label: "1 m — Moderada", color: "#f97316" },
@@ -269,10 +269,10 @@ export function GraficoSecchiDeque() {
                 <ReferenceLine
                   key={periodo}
                   x={periodo}
-                  stroke="hsl(var(--muted-foreground))"
+                  stroke="var(--color-muted-foreground)"
                   strokeOpacity={0.3}
                   strokeDasharray="4 3"
-                  label={{ value: periodo.slice(0, 4), position: "insideTopLeft", fontSize: 10, fill: "hsl(var(--muted-foreground))", dy: -4 }}
+                  label={{ value: periodo.slice(0, 4), position: "insideTopLeft", fontSize: 10, fill: "var(--color-muted-foreground)", dy: -4 }}
                 />
               ))}
 
@@ -281,12 +281,12 @@ export function GraficoSecchiDeque() {
                 domain={[0, yMax]}
                 tickLine={false}
                 axisLine={false}
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
                 width={42}
                 unit=" m"
                 tickCount={6}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.35, radius: 4 }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--color-muted)", fillOpacity: 0.35, radius: 4 }} />
 
               <Bar dataKey="secchi" radius={[4, 4, 0, 0]} maxBarSize={28}>
                 {data.map((entry, index) => {
@@ -294,7 +294,7 @@ export function GraficoSecchiDeque() {
                   return (
                     <Cell
                       key={index}
-                      fill={entry.secchi === null ? "hsl(var(--muted))" : q.color}
+                      fill={entry.secchi === null ? "var(--color-muted)" : q.color}
                       fillOpacity={entry.secchi === null ? 0.3 : 0.85}
                     />
                   )

@@ -74,7 +74,7 @@ export function CoordinateInspector() {
           <Button
             variant={isActive ? "default" : "outline"}
             size="icon"
-            className={`shadow-md transition-all ${isActive ? 'bg-brand-primary text-white border-brand-primary' : 'bg-white text-black hover:bg-gray-100'}`}
+            className={`shadow-md transition-all ${isActive ? 'bg-primary text-white border-primary' : 'bg-white text-black hover:bg-gray-100'}`}
             onClick={toggleActive}
             title="Capturar Coordenadas"
           >

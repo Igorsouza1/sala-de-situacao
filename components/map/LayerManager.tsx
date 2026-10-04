@@ -68,7 +68,7 @@ function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { 
         transition={{ delay: index * 0.02 }}
         className={`group flex items-center justify-between rounded-md border transition-colors duration-150 px-2 py-1.5 ${
             isChecked
-            ? "bg-brand-primary/10 border-brand-primary/20"
+            ? "bg-accent/10 border-accent/20"
             : "bg-transparent border-transparent hover:bg-white/5"
         }`}
         >
@@ -77,7 +77,7 @@ function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { 
             id={option.id}
             checked={isChecked}
             onCheckedChange={onToggle}
-            className="w-3.5 h-3.5 border-slate-600 data-[state=checked]:bg-brand-primary data-[state=checked]:border-brand-primary data-[state=checked]:text-white shrink-0"
+            className="w-3.5 h-3.5 border-slate-600 data-[state=checked]:bg-primary data-[state=checked]:border-accent data-[state=checked]:text-white shrink-0"
             />
 
             {legendType === 'point' && (
@@ -223,12 +223,12 @@ export function LayerManager({
   }, [options]);
 
   return (
-    <Card className="w-80 max-w-sm bg-brand-dark/95 backdrop-blur-md shadow-2xl z-[1000] overflow-hidden border border-white/10 transition-all duration-300">
+    <Card className="w-80 max-w-sm bg-foreground/95 backdrop-blur-md shadow-2xl z-[1000] overflow-hidden border border-white/10 transition-all duration-300">
       <CardHeader className="p-3 border-b border-white/10">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <div className="h-8 w-8 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center shrink-0">
-              <Globe className="w-4 h-4 text-brand-primary" />
+              <Globe className="w-4 h-4 text-accent" />
             </div>
 
             <div className="flex-1 min-w-0">
@@ -336,7 +336,7 @@ export function LayerManager({
                                                                 checked={isAllSelected}
                                                                 // @ts-ignore
                                                                 onClick={handleGroupCheckbox}
-                                                                className={`w-3.5 h-3.5 border-slate-600 data-[state=checked]:bg-brand-primary data-[state=checked]:border-brand-primary data-[state=checked]:text-white shrink-0 ${!isAllSelected && !isNoneSelected ? 'opacity-50 bg-brand-primary/50' : ''}`}
+                                                                className={`w-3.5 h-3.5 border-slate-600 data-[state=checked]:bg-primary data-[state=checked]:border-accent data-[state=checked]:text-white shrink-0 ${!isAllSelected && !isNoneSelected ? 'opacity-50 bg-accent/50' : ''}`}
                                                             />
 
                                                             {/* Optional: Icon for the group */}
@@ -352,7 +352,7 @@ export function LayerManager({
 
                                                             {/* Badge if children active */}
                                                             {activeChildrenCount > 0 && (
-                                                                <Badge variant="secondary" className="bg-brand-primary/20 text-brand-primary text-[9px] h-3.5 px-1 rounded-sm">
+                                                                <Badge variant="secondary" className="bg-accent/20 text-accent text-[9px] h-3.5 px-1 rounded-sm">
                                                                     {activeChildrenCount}/{allChildrenCount}
                                                                 </Badge>
                                                             )}
@@ -414,7 +414,7 @@ export function LayerManager({
                     variant="outline"
                     size="sm"
                     onClick={() => onToggleAll(true)}
-                    className="flex-1 text-xs border-white/10 text-slate-300 bg-white/5 hover:bg-brand-primary/10 hover:text-brand-primary hover:border-brand-primary/20"
+                    className="flex-1 text-xs border-white/10 text-slate-300 bg-white/5 hover:bg-accent/10 hover:text-accent hover:border-accent/20"
                   >
                     Mostrar Todas
                   </Button>
@@ -423,7 +423,7 @@ export function LayerManager({
                     variant="outline"
                     size="sm"
                     onClick={() => onToggleAll(false)}
-                    className="flex-1 text-xs border-white/10 text-slate-300 bg-white/5 hover:bg-brand-primary/10 hover:text-brand-primary hover:border-brand-primary/20"
+                    className="flex-1 text-xs border-white/10 text-slate-300 bg-white/5 hover:bg-accent/10 hover:text-accent hover:border-accent/20"
                   >
                     Ocultar Todas
                   </Button>

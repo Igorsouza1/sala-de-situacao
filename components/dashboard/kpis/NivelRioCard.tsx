@@ -22,14 +22,14 @@ export function NivelRioCard({
 }: NivelRioCardProps) {
   if (loading) {
     return (
-      <div className="h-44 bg-card border border-border rounded-xl p-5 flex flex-col justify-between animate-pulse">
+      <div className="h-44 bg-card border border-border rounded-xl p-5 flex flex-col justify-between">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-muted" />
-          <div className="h-5 w-32 bg-muted rounded" />
+          <div className="w-10 h-10 rounded-full bg-muted bg-shimmer" />
+          <div className="h-5 w-32 bg-muted bg-shimmer rounded" />
         </div>
         <div className="space-y-2">
-          <div className="h-10 w-24 bg-muted rounded" />
-          <div className="h-4 w-40 bg-muted rounded" />
+          <div className="h-10 w-24 bg-muted bg-shimmer rounded" />
+          <div className="h-4 w-40 bg-muted bg-shimmer rounded" />
         </div>
       </div>
     )
@@ -91,7 +91,7 @@ export function NivelRioCard({
         </div>
         
         <p className="text-xs text-muted-foreground flex items-center gap-1.5">
-          <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500/50 animate-pulse" />
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-500/50" />
           Registrado em: <span className="font-medium text-foreground/70">{dataFormatada}</span>
         </p>
       </div>

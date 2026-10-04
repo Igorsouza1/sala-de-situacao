@@ -14,7 +14,7 @@ export default async function RegionExpandPage({ params }: { params: Promise<{ i
   if (!region) return notFound();
 
   return (
-    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950 p-6 md:p-10">
+    <div className="min-h-screen bg-neutral-50 p-6 md:p-10">
       <div className="max-w-4xl mx-auto space-y-6">
         <header className="mb-8">
           <div className="flex items-center gap-4 mb-4">
@@ -24,10 +24,10 @@ export default async function RegionExpandPage({ params }: { params: Promise<{ i
                 </Button>
              </Link>
              <div>
-                <h1 className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
+                <h1 className="text-3xl font-bold tracking-tight text-neutral-900">
                   Expandir Fronteira: {region.nome}
                 </h1>
-                <p className="text-neutral-500 dark:text-neutral-400 mt-1">
+                <p className="text-neutral-500 mt-1">
                   Faça o upload de um GeoJSON para adicionar novas áreas à região principal.
                 </p>
              </div>

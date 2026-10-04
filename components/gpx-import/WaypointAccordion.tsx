@@ -60,16 +60,16 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
 
   const getStatusIcon = () => {
     if (isComplete && isOpen) {
-      return <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />;
+      return <CheckCircle2 className="w-4 h-4 text-emerald-600" />;
     }
     if (hasErrors && !isOpen) {
-      return <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />;
+      return <AlertCircle className="w-4 h-4 text-amber-600" />;
     }
     return null;
   };
 
   return (
-    <div className="border border-neutral-200 dark:border-neutral-700 rounded-lg overflow-hidden transition-all">
+    <div className="border border-neutral-200 rounded-lg overflow-hidden transition-all">
       {/* Header */}
       <div
         role="button"
@@ -84,8 +84,8 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
         className={`
           w-full flex items-center justify-between px-4 py-3 text-left transition-colors cursor-pointer
           ${isOpen
-            ? "bg-blue-50 dark:bg-blue-950/20 border-b border-neutral-200 dark:border-neutral-700"
-            : "bg-white dark:bg-neutral-900 hover:bg-neutral-50 dark:hover:bg-neutral-800"
+            ? "bg-blue-50 border-b border-neutral-200"
+            : "bg-white hover:bg-neutral-50"
           }
         `}
       >
@@ -97,12 +97,12 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
           )}
           
           <div className="flex items-center gap-2 flex-1 min-w-0">
-            <MapPin className={`w-4 h-4 shrink-0 ${isOpen ? "text-blue-600 dark:text-blue-400" : "text-neutral-400"}`} />
+            <MapPin className={`w-4 h-4 shrink-0 ${isOpen ? "text-blue-600" : "text-neutral-400"}`} />
             <div className="flex-1 min-w-0">
-              <p className={`text-sm font-semibold truncate ${isOpen ? "text-blue-900 dark:text-blue-300" : "text-neutral-900 dark:text-neutral-50"}`}>
+              <p className={`text-sm font-semibold truncate ${isOpen ? "text-blue-900" : "text-neutral-900"}`}>
                 {waypoint.nome || `Waypoint ${waypoint.index + 1}`}
               </p>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              <p className="text-xs text-neutral-500">
                 📍 {waypoint.lat.toFixed(6)}, {waypoint.lon.toFixed(6)}
                 {waypoint.ele && waypoint.ele > 0 && ` • ${waypoint.ele.toFixed(0)}m`}
               </p>
@@ -112,7 +112,7 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
 
         <div className="flex items-center gap-2 shrink-0">
           {getStatusIcon()}
-          <span className="text-xs font-medium text-neutral-500 dark:text-neutral-400">
+          <span className="text-xs font-medium text-neutral-500">
             {isComplete ? "Completo" : "Pendente"}
           </span>
           
@@ -123,7 +123,7 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
               e.stopPropagation();
               onDelete();
             }}
-            className="ml-2 p-1.5 rounded-md text-red-500 hover:text-red-700 hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors"
+            className="ml-2 p-1.5 rounded-md text-red-500 hover:text-red-700 hover:bg-red-100 transition-colors"
             title="Remover waypoint"
           >
             <Trash2 className="w-4 h-4" />
@@ -133,27 +133,27 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
 
       {/* Content */}
       {isOpen && (
-        <div className="bg-white dark:bg-neutral-900 p-5 space-y-5 animate-in slide-in-from-top-1 duration-200">
+        <div className="bg-white p-5 space-y-5 animate-in slide-in-from-top-1 duration-200">
           {/* Coordenadas (Read-only) */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 bg-neutral-50 dark:bg-neutral-950 rounded-lg border border-neutral-200 dark:border-neutral-800">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 p-3 bg-neutral-50 rounded-lg border border-neutral-200">
             <div>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">Latitude</p>
-              <p className="text-sm font-mono font-semibold text-neutral-900 dark:text-neutral-50">{waypoint.lat.toFixed(6)}</p>
+              <p className="text-xs text-neutral-500 mb-1">Latitude</p>
+              <p className="text-sm font-mono font-semibold text-neutral-900">{waypoint.lat.toFixed(6)}</p>
             </div>
             <div>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">Longitude</p>
-              <p className="text-sm font-mono font-semibold text-neutral-900 dark:text-neutral-50">{waypoint.lon.toFixed(6)}</p>
+              <p className="text-xs text-neutral-500 mb-1">Longitude</p>
+              <p className="text-sm font-mono font-semibold text-neutral-900">{waypoint.lon.toFixed(6)}</p>
             </div>
             {waypoint.ele && waypoint.ele > 0 && (
               <div>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">Elevação</p>
-                <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">{waypoint.ele.toFixed(1)}m</p>
+                <p className="text-xs text-neutral-500 mb-1">Elevação</p>
+                <p className="text-sm font-semibold text-neutral-900">{waypoint.ele.toFixed(1)}m</p>
               </div>
             )}
             {waypoint.recordedat && (
               <div>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400 mb-1">Data/Hora</p>
-                <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+                <p className="text-xs text-neutral-500 mb-1">Data/Hora</p>
+                <p className="text-sm font-semibold text-neutral-900">
                   {new Date(waypoint.recordedat).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}
                 </p>
               </div>
@@ -162,7 +162,7 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
 
           {/* Nome */}
           <div className="space-y-2">
-            <Label htmlFor={`wp-nome-${waypoint.index}`} className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            <Label htmlFor={`wp-nome-${waypoint.index}`} className="text-sm font-medium text-neutral-700">
               Nome <span className="text-red-500">*</span>
             </Label>
             <Input
@@ -176,7 +176,7 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
 
           {/* Ação */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            <Label className="text-sm font-medium text-neutral-700">
               Ação <span className="text-red-500">*</span>
             </Label>
             <Select value={waypoint.acao} onValueChange={(v) => onChange({ acao: v })}>
@@ -193,7 +193,7 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
 
           {/* Descrição */}
           <div className="space-y-2">
-            <Label htmlFor={`wp-desc-${waypoint.index}`} className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            <Label htmlFor={`wp-desc-${waypoint.index}`} className="text-sm font-medium text-neutral-700">
               Descrição <span className="text-neutral-400 font-normal text-xs">(opcional)</span>
             </Label>
             <Textarea
@@ -208,7 +208,7 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
           {/* Categoria e Status */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              <Label className="text-sm font-medium text-neutral-700">
                 Categoria <span className="text-red-500">*</span>
               </Label>
               <Select value={waypoint.categoria} onValueChange={(v) => onChange({ categoria: v })}>
@@ -224,7 +224,7 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              <Label className="text-sm font-medium text-neutral-700">
                 Status <span className="text-red-500">*</span>
               </Label>
               <Select value={waypoint.status} onValueChange={(v) => onChange({ status: v })}>
@@ -242,7 +242,7 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
 
           {/* Tipo */}
           <div className="space-y-2">
-            <Label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+            <Label className="text-sm font-medium text-neutral-700">
               Tipo <span className="text-red-500">*</span>
             </Label>
             <Select value={waypoint.tipo} onValueChange={(v) => onChange({ tipo: v })}>
@@ -260,7 +260,7 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
           {/* Eixo Temático, Tipo Técnico, Caráter */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              <Label className="text-sm font-medium text-neutral-700">
                 Eixo Temático <span className="text-red-500">*</span>
               </Label>
               <Select value={waypoint.eixoTematico} onValueChange={(v) => onChange({ eixoTematico: v })}>
@@ -276,7 +276,7 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              <Label className="text-sm font-medium text-neutral-700">
                 Tipo Técnico <span className="text-red-500">*</span>
               </Label>
               <Select value={waypoint.tipoTecnico} onValueChange={(v) => onChange({ tipoTecnico: v })}>
@@ -292,7 +292,7 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+              <Label className="text-sm font-medium text-neutral-700">
                 Caráter <span className="text-red-500">*</span>
               </Label>
               <Select value={waypoint.carater} onValueChange={(v) => onChange({ carater: v })}>
@@ -309,8 +309,8 @@ export function WaypointAccordion({ waypoint, onChange, onDelete, isOpen, onTogg
           </div>
 
           {/* Fotos */}
-          <div className="space-y-2 pt-4 border-t border-neutral-200 dark:border-neutral-800">
-            <Label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+          <div className="space-y-2 pt-4 border-t border-neutral-200">
+            <Label className="text-sm font-medium text-neutral-700">
               📷 Fotos (opcional, máx 2)
             </Label>
             <PhotoUploader

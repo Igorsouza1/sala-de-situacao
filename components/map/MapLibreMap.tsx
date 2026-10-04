@@ -1232,7 +1232,7 @@ export default function MapLibreMap({
                 <button
                   key={key}
                   className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-gray-50 transition-colors ${
-                    basemap === key ? 'text-brand-primary font-semibold' : 'text-slate-700'
+                    basemap === key ? 'text-accent font-semibold' : 'text-slate-700'
                   }`}
                   onClick={() => { setBasemap(key); setBasemapOpen(false) }}
                 >
@@ -1345,8 +1345,8 @@ export default function MapLibreMap({
       {/* Loading overlay */}
       {loadingLayers && (
         <div className="absolute inset-0 z-[2000] bg-black/40 backdrop-blur-xs flex items-center justify-center pointer-events-none">
-          <div className="bg-brand-dark border border-white/10 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary" />
+          <div className="bg-foreground border border-white/10 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
             <span className="text-slate-200 text-sm font-medium">
               Atualizando dados...
             </span>

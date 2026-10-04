@@ -77,12 +77,12 @@ const TURBIDEZ_BANDS = [
 
 const AXIS_STYLE = {
   fontSize: 11,
-  stroke: "hsl(var(--muted-foreground))",
+  stroke: "var(--color-muted-foreground)",
   tickLine: false,
   axisLine: false,
 }
 
-const LABEL_STYLE = { fill: "hsl(var(--muted-foreground))", fontSize: 11 }
+const LABEL_STYLE = { fill: "var(--color-muted-foreground)", fontSize: 11 }
 
 // ─── Custom Tooltip ──────────────────────────────────────────────────────────
 
@@ -107,11 +107,11 @@ function CustomTooltipDeque({ active, payload, label }: any): JSX.Element | null
       <p className="text-xs font-semibold text-foreground mb-2">
         {format(parseISO(d.originalDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
       </p>
-      <TooltipRow label="Turbidez"     value={`${fmtV(d.turbidez)} NTU`}  color="hsl(var(--chart-3))" />
-      <TooltipRow label="Secchi Vert." value={`${fmtV(d.secchiVert)} m`}   color="hsl(var(--chart-4))" />
-      <TooltipRow label="Secchi Horiz."value={`${fmtV(d.secchiHoriz)} m`}  color="hsl(var(--chart-5))" />
+      <TooltipRow label="Turbidez"     value={`${fmtV(d.turbidez)} NTU`}  color="var(--color-water)" />
+      <TooltipRow label="Secchi Vert." value={`${fmtV(d.secchiVert)} m`}   color="var(--color-warn)" />
+      <TooltipRow label="Secchi Horiz."value={`${fmtV(d.secchiHoriz)} m`}  color="var(--color-mineral)" />
       <div className="border-t border-border/50 my-1" />
-      <TooltipRow label="Chuva"        value={`${fmtV(d.chuva)} mm`}       color="hsl(var(--chart-2))" />
+      <TooltipRow label="Chuva"        value={`${fmtV(d.chuva)} mm`}       color="var(--color-ok)" />
     </div>
   )
 }
@@ -131,8 +131,8 @@ function CustomTooltipPonte({ active, payload }: any): JSX.Element | null {
       <p className="text-xs font-semibold text-foreground mb-2">
         {format(parseISO(d.originalDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
       </p>
-      <TooltipRow label="Nível do Rio" value={`${fmtV(d.nivel)} m`} color="hsl(var(--chart-1))" />
-      <TooltipRow label="Chuva"        value={`${fmtV(d.chuva)} mm`} color="hsl(var(--chart-2))" />
+      <TooltipRow label="Nível do Rio" value={`${fmtV(d.nivel)} m`} color="var(--color-crit)" />
+      <TooltipRow label="Chuva"        value={`${fmtV(d.chuva)} mm`} color="var(--color-ok)" />
       {d.visibilidade && (
         <div className="flex items-center justify-between gap-4">
           <span className="text-muted-foreground text-xs">Visibilidade</span>
@@ -152,10 +152,10 @@ function CustomTooltipBalneario({ active, payload }: any): JSX.Element | null {
       <p className="text-xs font-semibold text-foreground mb-2">
         {format(parseISO(d.originalDate), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
       </p>
-      <TooltipRow label="Turbidez"     value={`${fmtV(d.turbidez)} NTU`}      color="hsl(var(--chart-3))" />
-      <TooltipRow label="Secchi Vert." value={`${fmtV(d.secchiVert)} m`}       color="hsl(var(--chart-4))" />
+      <TooltipRow label="Turbidez"     value={`${fmtV(d.turbidez)} NTU`}      color="var(--color-water)" />
+      <TooltipRow label="Secchi Vert." value={`${fmtV(d.secchiVert)} m`}       color="var(--color-warn)" />
       <div className="border-t border-border/50 my-1" />
-      <TooltipRow label="Chuva"        value={`${fmtV(d.pluviometria)} mm`}    color="hsl(var(--chart-2))" />
+      <TooltipRow label="Chuva"        value={`${fmtV(d.pluviometria)} mm`}    color="var(--color-ok)" />
     </div>
   )
 }
@@ -199,11 +199,11 @@ function LegendaPonte() {
       </CardHeader>
       <CardContent className="px-4 pb-4 space-y-2">
         <div className="flex items-center gap-2.5">
-          <span className="w-8 h-0.5 rounded flex-none" style={{ background: "hsl(var(--chart-1))" }} />
+          <span className="w-8 h-0.5 rounded flex-none" style={{ background: "var(--color-crit)" }} />
           <p className="text-xs text-muted-foreground">Nível do Rio (m)</p>
         </div>
         <div className="flex items-center gap-2.5">
-          <span className="w-8 h-3 rounded-sm flex-none opacity-40" style={{ background: "hsl(var(--chart-2))" }} />
+          <span className="w-8 h-3 rounded-sm flex-none opacity-40" style={{ background: "var(--color-ok)" }} />
           <p className="text-xs text-muted-foreground">Chuva (mm)</p>
         </div>
         <div className="pt-2 border-t border-border">
@@ -234,10 +234,10 @@ function ChartDeque({ data }: { data: DequePoint[] }) {
   return (
     <ChartContainer
       config={{
-        turbidez:   { label: "Turbidez (NTU)",    color: "hsl(var(--chart-3))" },
-        secchiVert: { label: "Secchi Vert. (m)",  color: "hsl(var(--chart-4))" },
-        secchiHoriz:{ label: "Secchi Horiz. (m)", color: "hsl(var(--chart-5))" },
-        chuva:      { label: "Chuva (mm)",        color: "hsl(var(--chart-2))" },
+        turbidez:   { label: "Turbidez (NTU)",    color: "var(--color-water)" },
+        secchiVert: { label: "Secchi Vert. (m)",  color: "var(--color-warn)" },
+        secchiHoriz:{ label: "Secchi Horiz. (m)", color: "var(--color-mineral)" },
+        chuva:      { label: "Chuva (mm)",        color: "var(--color-ok)" },
       }}
       className="h-[380px]"
     >
@@ -256,7 +256,7 @@ function ChartDeque({ data }: { data: DequePoint[] }) {
             yAxisId="turb"
             orientation="left"
             {...AXIS_STYLE}
-            stroke="hsl(var(--chart-3))"
+            stroke="var(--color-water)"
             domain={[0, (d: number) => Math.ceil(d * 1.15 || 20)]}
             tickFormatter={(v) => v.toFixed(0)}
             label={{ value: "Turbidez (NTU)", angle: -90, position: "insideLeft", offset: -2, style: LABEL_STYLE }}
@@ -267,7 +267,7 @@ function ChartDeque({ data }: { data: DequePoint[] }) {
             yAxisId="secchi"
             orientation="right"
             {...AXIS_STYLE}
-            stroke="hsl(var(--chart-4))"
+            stroke="var(--color-warn)"
             domain={[0, (d: number) => Math.ceil(d * 1.2 || 5)]}
             tickFormatter={(v) => v.toFixed(1)}
             label={{ value: "Secchi (m)", angle: 90, position: "insideRight", offset: 8, style: LABEL_STYLE }}
@@ -323,7 +323,7 @@ function ChartDeque({ data }: { data: DequePoint[] }) {
 
           <Tooltip
             content={<CustomTooltipDeque />}
-            cursor={{ stroke: "hsl(var(--muted-foreground))", strokeWidth: 1, strokeDasharray: "4 4" }}
+            cursor={{ stroke: "var(--color-muted-foreground)", strokeWidth: 1, strokeDasharray: "4 4" }}
           />
         </ComposedChart>
       </ResponsiveContainer>
@@ -335,8 +335,8 @@ function ChartPonte({ data }: { data: PontePoint[] }) {
   return (
     <ChartContainer
       config={{
-        nivel: { label: "Nível do Rio (m)", color: "hsl(var(--chart-1))" },
-        chuva: { label: "Chuva (mm)",       color: "hsl(var(--chart-2))" },
+        nivel: { label: "Nível do Rio (m)", color: "var(--color-crit)" },
+        chuva: { label: "Chuva (mm)",       color: "var(--color-ok)" },
       }}
       className="h-[380px]"
     >
@@ -351,7 +351,7 @@ function ChartPonte({ data }: { data: PontePoint[] }) {
             yAxisId="nivel"
             orientation="left"
             {...AXIS_STYLE}
-            stroke="hsl(var(--chart-1))"
+            stroke="var(--color-crit)"
             domain={[0, (d: number) => Math.ceil(d * 1.2 || 5)]}
             tickFormatter={(v) => v.toFixed(2)}
             label={{ value: "Nível (m)", angle: -90, position: "insideLeft", offset: -2, style: LABEL_STYLE }}
@@ -362,7 +362,7 @@ function ChartPonte({ data }: { data: PontePoint[] }) {
             yAxisId="chuva"
             orientation="right"
             {...AXIS_STYLE}
-            stroke="hsl(var(--chart-2))"
+            stroke="var(--color-ok)"
             domain={[0, (d: number) => Math.ceil(d * 1.2 || 50)]}
             tickFormatter={(v) => v.toFixed(0)}
             label={{ value: "Chuva (mm)", angle: 90, position: "insideRight", offset: 8, style: LABEL_STYLE }}
@@ -392,7 +392,7 @@ function ChartPonte({ data }: { data: PontePoint[] }) {
 
           <Tooltip
             content={<CustomTooltipPonte />}
-            cursor={{ stroke: "hsl(var(--muted-foreground))", strokeWidth: 1, strokeDasharray: "4 4" }}
+            cursor={{ stroke: "var(--color-muted-foreground)", strokeWidth: 1, strokeDasharray: "4 4" }}
           />
         </ComposedChart>
       </ResponsiveContainer>
@@ -404,9 +404,9 @@ function ChartBalneario({ data }: { data: BalnearioPoint[] }) {
   return (
     <ChartContainer
       config={{
-        turbidez:    { label: "Turbidez (NTU)",   color: "hsl(var(--chart-3))" },
-        secchiVert:  { label: "Secchi Vert. (m)", color: "hsl(var(--chart-4))" },
-        pluviometria:{ label: "Chuva (mm)",        color: "hsl(var(--chart-2))" },
+        turbidez:    { label: "Turbidez (NTU)",   color: "var(--color-water)" },
+        secchiVert:  { label: "Secchi Vert. (m)", color: "var(--color-warn)" },
+        pluviometria:{ label: "Chuva (mm)",        color: "var(--color-ok)" },
       }}
       className="h-[380px]"
     >
@@ -420,7 +420,7 @@ function ChartBalneario({ data }: { data: BalnearioPoint[] }) {
             yAxisId="turb"
             orientation="left"
             {...AXIS_STYLE}
-            stroke="hsl(var(--chart-3))"
+            stroke="var(--color-water)"
             domain={[0, (d: number) => Math.ceil(d * 1.15 || 20)]}
             tickFormatter={(v) => v.toFixed(0)}
             label={{ value: "Turbidez (NTU)", angle: -90, position: "insideLeft", offset: -2, style: LABEL_STYLE }}
@@ -430,7 +430,7 @@ function ChartBalneario({ data }: { data: BalnearioPoint[] }) {
             yAxisId="secchi"
             orientation="right"
             {...AXIS_STYLE}
-            stroke="hsl(var(--chart-4))"
+            stroke="var(--color-warn)"
             domain={[0, (d: number) => Math.ceil(d * 1.2 || 5)]}
             tickFormatter={(v) => v.toFixed(1)}
             label={{ value: "Secchi (m)", angle: 90, position: "insideRight", offset: 8, style: LABEL_STYLE }}
@@ -471,7 +471,7 @@ function ChartBalneario({ data }: { data: BalnearioPoint[] }) {
 
           <Tooltip
             content={<CustomTooltipBalneario />}
-            cursor={{ stroke: "hsl(var(--muted-foreground))", strokeWidth: 1, strokeDasharray: "4 4" }}
+            cursor={{ stroke: "var(--color-muted-foreground)", strokeWidth: 1, strokeDasharray: "4 4" }}
           />
         </ComposedChart>
       </ResponsiveContainer>
@@ -682,23 +682,23 @@ export function GraficoCombinado(): JSX.Element {
             <div className="flex flex-wrap gap-x-5 gap-y-2 mt-3 justify-center">
               {ponto === "deque" && (
                 <>
-                  <LegendaLinha  color="hsl(var(--chart-3))"  label="Turbidez (NTU)"    />
-                  <LegendaLinha  color="hsl(var(--chart-4))"  label="Secchi Vert. (m)"  />
-                  <LegendaLinha  color="hsl(var(--chart-5))"  label="Secchi Horiz. (m)" dashed />
-                  <LegendaBarra  color="hsl(var(--chart-2))"  label="Chuva (mm)"         />
+                  <LegendaLinha  color="var(--color-water)"  label="Turbidez (NTU)"    />
+                  <LegendaLinha  color="var(--color-warn)"  label="Secchi Vert. (m)"  />
+                  <LegendaLinha  color="var(--color-mineral)"  label="Secchi Horiz. (m)" dashed />
+                  <LegendaBarra  color="var(--color-ok)"  label="Chuva (mm)"         />
                 </>
               )}
               {ponto === "ponte" && (
                 <>
-                  <LegendaLinha  color="hsl(var(--chart-1))"  label="Nível do Rio (m)"  />
-                  <LegendaBarra  color="hsl(var(--chart-2))"  label="Chuva (mm)"         />
+                  <LegendaLinha  color="var(--color-crit)"  label="Nível do Rio (m)"  />
+                  <LegendaBarra  color="var(--color-ok)"  label="Chuva (mm)"         />
                 </>
               )}
               {ponto === "balneario" && (
                 <>
-                  <LegendaLinha  color="hsl(var(--chart-3))"  label="Turbidez (NTU)"    />
-                  <LegendaLinha  color="hsl(var(--chart-4))"  label="Secchi Vert. (m)"  />
-                  <LegendaBarra  color="hsl(var(--chart-2))"  label="Chuva (mm)"         />
+                  <LegendaLinha  color="var(--color-water)"  label="Turbidez (NTU)"    />
+                  <LegendaLinha  color="var(--color-warn)"  label="Secchi Vert. (m)"  />
+                  <LegendaBarra  color="var(--color-ok)"  label="Chuva (mm)"         />
                 </>
               )}
             </div>

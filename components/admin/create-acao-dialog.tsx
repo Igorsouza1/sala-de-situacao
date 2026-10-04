@@ -114,7 +114,7 @@ export function CreateAcaoDialog({ regionId, onCreated }: CreateAcaoDialogProps)
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" className="gap-1.5 bg-brand-primary hover:bg-blue-600 text-white">
+        <Button size="sm" className="gap-1.5 bg-primary hover:bg-blue-600 text-white">
           <Plus className="w-4 h-4" />
           Nova Ação
         </Button>
@@ -218,7 +218,7 @@ export function CreateAcaoDialog({ regionId, onCreated }: CreateAcaoDialogProps)
             <Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={loading}>
               Cancelar
             </Button>
-            <Button type="submit" className="bg-brand-primary hover:bg-blue-600 text-white" disabled={loading}>
+            <Button type="submit" className="bg-primary hover:bg-blue-600 text-white" disabled={loading}>
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Salvar
             </Button>
