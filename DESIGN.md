@@ -34,7 +34,8 @@ Responda antes de construir. Se uma resposta for "não sei", a coisa ainda não 
 | 4 | **Clareza.** Alguém entende sem pensar? Os textos são frases comuns, sem sigla, intervalo ou jargão? | Reescreva. O detalhe técnico vai para um tooltip. |
 | 5 | **Sensação.** O que o usuário deve sentir (precisão, calma, segurança, cuidado)? Isso é o que ele sente? | Ajuste forma, cor ou movimento. |
 | 6 | **Resposta.** Cada elemento clicável responde (movimento, som, estado)? Existem repouso, hover, pressionado, foco, carregando, sucesso, erro, desabilitado (com o porquê) e vazio? | Complete os estados. |
-| 7 | **Movimento.** Há motivo para mover? Só elementos clicáveis se movem; nada fica em loop. | Tire o movimento. |
+| 7 | **Movimento.** Há motivo para mover? Só elementos clicáveis se movem (a continuidade da 8.4 é a exceção); nada fica em loop. | Tire o movimento. |
+| 7b | **Caminho.** Se algo some, aparece, muda de lugar ou de texto, o usuário vê **para onde foi e de onde veio**? Ou "piscou" e ele ficou sem entender? | Desenhe o caminho (seção 8.4). |
 | 8 | **Som.** A interação tem o som certo da seção 9? Ação destrutiva tem som próprio? | Defina o som. |
 | 9 | **Acessibilidade.** Contraste mínimo de 4,5:1 para texto, foco visível, uso por teclado, `prefers-reduced-motion`, som desligável, cursor com alternativa? | Corrija antes de entregar. |
 | 10 | **Cor.** A cor significa algo? A moldura é neutra e quem tem cor é o conteúdo? | Troque por neutro. |
@@ -68,6 +69,38 @@ Regras:
 2. Estados iguais se parecem em toda a plataforma. O usuário aprende uma vez.
 3. Nunca deixar o usuário esperando em silêncio: se algo vai demorar, a interface diz.
 4. As mensagens falam do que **o usuário** pode fazer, não do que o sistema falhou em fazer.
+5. **Toda mudança de estado tem caminho** (seção 8.4): o usuário vê o que saiu, o que entrou e para onde a coisa foi.
+6. **Nova tentativa automática: no máximo uma.** Depois da primeira falha, o sistema tenta de novo sozinho uma vez, com a contagem à vista e o botão "Tentar agora" para adiantar. Se falhar de novo, a decisão volta ao usuário, só com "Tentar novamente". Motivo: uma tentativa cobre a queda curta de conexão; insistir sem parar esconde que o problema continua e tira o controle de quem usa.
+
+### 2.1.1 Como cada estado foi resolvido
+
+Avisar não basta: em cada estado, o Prisma usa **o que o sistema já sabe** para adiantar o próximo passo. Foi a lição do teste: a primeira versão tinha só ilustração, título, frase e botão iguais em todos os estados, e ficou "genérica, sem alma, sem intenção". Cada estado tem uma **sensação** que deve provocar e um **motivo** que cabe em uma frase.
+
+| Estado | O usuário deve sentir | O que o Prisma faz além de avisar | Motivo |
+|---|---|---|---|
+| **Vazio: sem propriedades** | começar é fácil | Pede o **número do CAR**, que o usuário já tem, e traz o contorno. O botão fica bloqueado até colar, com o motivo escrito | Montar tudo do zero é o primeiro obstáculo |
+| **Vazio: busca sem resultado** | a culpa não foi minha | Sugere o nome mais parecido ("Tem uma propriedade parecida: Faz. Lagoa Azul. Era essa?") | "Não encontrado" sem sugestão devolve o trabalho ao usuário |
+| **Vazio: filtro escondeu tudo** | alívio, com prova | Cita a propriedade mais perto de ficar crítica, com o número | "Nenhuma crítica" é uma conclusão; o usuário quer saber a distância |
+| **Vazio: período sem focos** | alívio, com prova | Diz **quando foi o último foco** e quantos dias de calma, com a fonte e a hora | "Boa notícia" sem fato não informa; sem a hora do dado, "nenhum foco" pode ser só dado velho |
+| **Erro** | segurança | O que foi preenchido fica guardado e **visível**; uma nova tentativa sozinha, com contagem (regra 6); depois só "Tentar novamente" | Quem perde o que digitou deixa de confiar |
+| **Carregando** | confiança de que anda | Esqueleto na hora; o andamento **de cada fonte**; a ilustração só depois de uns 3 s | "Buscando…" sem detalhe parece travado |
+| **Parcial** | útil desde já | O que chegou já é usável; só a parte que falta tem esqueleto, com botão para pedir só ela | Travar tudo por uma fonte lenta desperdiça o que já chegou |
+| **Bloqueado** | ninguém travado | O motivo fica ao lado do botão e o bloqueio se **resolve ali** (escolher a propriedade libera o botão). `aria-disabled` | Botão apagado sem resposta é uma pergunta |
+| **Sem permissão** | há um caminho | Diz **quem administra** a conta e deixa pedir a permissão com um clique | Negar sem indicar caminho deixa o usuário parado |
+| **Desatualizado** | sei até onde confiar | Diz até quando o dado vale **e o que isso significa** ("depois dele podem ter surgido novos focos") | Dado velho que parece novo leva a decisões erradas |
+| **Ação destrutiva** | peso e cuidado | Lista **o que vai junto** (focos, alertas, anotações), oferece **baixar o relatório antes**, som grave próprio e 8 s para **desfazer** | Apagar sem mostrar o que vai junto é o erro mais caro |
+| **Sucesso** | concluído, e sei o que mudou | Diz o que entrou, o que foi unido e o que merece atenção, e leva ao próximo passo ("Ver as 3 com foco ativo") | "Tudo certo!" não informa nada |
+
+Sons: erro toca o som de erro (cada falha); sucesso, o de sucesso; falha ao atualizar dado, o de atenção; remover, o grave descendente. **O vazio é silencioso**: aparece como resultado de digitar ou filtrar, e um som a cada tecla incomodaria; o som é da ação (ligar o filtro), não do resultado.
+
+### 2.1.2 Ilustração dos estados
+
+1. **Todo estado tem ilustração, sempre acima do texto**, centralizada. Motivo: sem arte o estado parece mensagem de sistema ("institucional"); com arte e uma frase pessoal, passa cuidado.
+2. **Estrutura fixa** (componente único): ilustração, título (o que está acontecendo), frase (por quê e o que fazer), conteúdo extra opcional, próximo passo (botão), no máximo uma linha de fonte. O usuário aprende uma vez.
+3. **Mesma altura** para todas as artes (224 px), para pesarem igual, qualquer que seja o formato.
+4. **A arte não tem animação própria** e a moldura não tem cor própria; ela entra e sai junto com o bloco (8.4). Motivo: só o que é clicável se move (seção 8).
+5. **Formato:** webp com **fundo transparente**, para assentar direto no cartão branco. Os scripts `scripts/to_webp.py` (converte e reduz) e `scripts/recortar_estados.py` (recorta a folha de 9 artes) refazem tudo. Medido: 240 KB no total para as 9 artes contra 494 KB sem perda; PSNR de 44 a 49 dB (sem diferença visível); o limite de nitidez é a folha de origem (uns 240 a 350 px de largura por arte).
+6. **Texto alternativo** descreve a cena; a mensagem fica no texto, não na imagem.
 
 ### 2.2 Simplicidade: a interface pensa pelo usuário
 
@@ -125,6 +158,7 @@ Regras:
 3. O detalhe técnico (período da média, fonte, método) fica no **tooltip**, nunca no texto principal.
 4. Termos que explicam a si mesmos. Se for preciso explicar, a explicação é uma legenda curta ("Como ler").
 5. O estado "info" **não** é um nível de severidade. Severidade tem três níveis: **crítico, atenção, normal**. "Info" só existe em toasts, como aviso neutro.
+6. **Nos estados (vazio, erro, sucesso…) fale como uma pessoa, de forma concreta.** "Ainda não temos nenhuma propriedade", "Não encontramos “Lagoa Verde”", "Quer adicionar a primeira?". Nada de "Nenhum dado para mostrar no momento" nem "Tudo certo!". Primeira pessoa do plural quando é o sistema agindo ("tentamos de novo"), segunda quando é a decisão do usuário. Motivo: o tom institucional foi a primeira reclamação nos testes dos estados; frase curta e clara continua valendo (regra 1), só que dita por alguém.
 
 ---
 
@@ -224,7 +258,7 @@ O destaque precisa de um **critério explícito e visível**, senão o usuário 
 
 ## 8. Movimento
 
-**Regra:** só **elementos clicáveis** se movem. Nada fica em loop (exceto indicador de carregamento). Cada movimento tem um motivo: confirmar, orientar ou dar sensação de qualidade.
+**Regra:** só **elementos clicáveis** se movem. Nada fica em loop (exceto indicador de carregamento). Cada movimento tem um motivo: confirmar, orientar ou dar sensação de qualidade. **Única exceção: a continuidade (8.4)**, em que o conteúdo se move para mostrar o que mudou e para onde foi.
 
 ### 8.1 Sistema "Tátil"
 
@@ -251,6 +285,30 @@ O destaque precisa de um **critério explícito e visível**, senão o usuário 
 ### 8.3 Acessibilidade
 
 `prefers-reduced-motion`: todas as animações e o degradê do cursor ficam paradas.
+
+### 8.4 Continuidade: se algo vai para algum lugar, o usuário vê para onde foi
+
+**Regra:** nenhuma troca de conteúdo acontece "de uma vez". O que sai **sai** de algum jeito visível, o que entra **chega**, a altura se acomoda em vez de dar um salto, e o que mudou fica marcado por um instante.
+
+**Motivo (teste do estado "Busca sem resultado"):** ao clicar em "Ver Faz. Lagoa Azul", a tela "piscou" e virou outra coisa. O usuário não entendeu o que aconteceu nem de onde veio o resultado. Sem caminho, o sistema parece instável, e o usuário perde a confiança de que entende o que ele faz.
+
+| Situação | Caminho | Tempo |
+|---|---|---|
+| Um bloco troca por outro (vazio → tabela, erro → sucesso, um estado → outro) | O antigo sobe e some, a **altura acompanha** (sem salto) e o novo sobe até o lugar | 170 ms saída, 320 ms altura, 300 ms entrada |
+| Só o **texto** do estado muda (1ª falha → 2ª falha) | A ilustração fica como âncora; só o texto troca | o mesmo |
+| Um botão muda o que há num campo (sugestão, "Limpar a busca") | O texto é **digitado no campo**, apagando e escrevendo até o novo | cerca de 400 ms no total |
+| Um item é achado, adicionado ou atualizado | A linha **pisca em verde claro e se apaga devagar** | 1,9 s |
+| Um item é removido | A linha **encolhe até sumir** e o aviso com "Desfazer" abre no lugar dela. Ao desfazer, ela expande de volta e pisca | 350 ms |
+| Um botão passa a funcionar (era bloqueado) | Sai de 45% de opacidade para 100% | 250 ms |
+| Um botão muda de rótulo (Salvar → Salvando → Salvo) | O novo rótulo aparece com fade, **no próprio botão**: ele é o destino da ação | 280 ms |
+| Uma lista aparece depois do vazio | As linhas entram em cascata | 45 ms entre elas |
+| Barras de gráfico entram | Crescem de baixo para cima, em cascata | 500 ms |
+
+Regras:
+1. O **destino da ação mostra a mudança no mesmo instante** em que o resultado aparece (o botão vira "Salvo" quando o bloco de erro some).
+2. Elementos que estão saindo ficam **inertes**: não recebem foco nem clique.
+3. `prefers-reduced-motion`: as trocas continuam acontecendo, sem animação, mas o destaque (verde claro) e o texto que explica o que mudou **permanecem**.
+4. Isso não permite animar à toa: se não há "de onde" e "para onde", não há movimento.
 
 > Para bibliotecas de animação (ex.: `motion`), a decisão fica em aberto. Qualquer uma entra **só** respeitando as regras desta seção.
 
@@ -367,6 +425,9 @@ Para ninguém recolocar sem motivo.
 | Basemap Dark Matter | Sem dark mode, perde o sentido |
 | Cursor de mão nativo como único | Queríamos uma marca também no cursor |
 | Mais de um verde "sem papel" (musgo `#2B4234`) | Lia como oliva escuro; ficou o Floresta |
+| Estados com ilustração, título, frase e botão **iguais** em todos | Genérico, "sem alma, sem intenção"; ver 2.1.1 |
+| Primeira folha de ilustrações dos estados (monocromática, só verdes) | Substituída por decisão do responsável de design pela folha colorida (`public/estados-novos.png`) |
+| Mudança de conteúdo "de uma vez" (o bloco troca sem caminho) | O usuário não entendia o que tinha acontecido; ver 8.4 |
 
 ---
 
@@ -392,8 +453,11 @@ Descobertas na prática; valem para quem implementar.
 5. **Segunda onda** (fora do escopo atual): impressão e PDF, e-mails, manifest do PWA, mapa em Leaflet legado, reescrita dos textos existentes no tom da seção 3, vetorização do logo.
 6. **Landing:** só troca de cores; layout e textos ficam como estão.
 7. **Teste existente falhando**, sem relação com design: `maplibre-layer.test.ts` (`resolveLayerType`).
-8. **Desenhar os estados que faltam** (seção 2.1). Nos protótipos só existem **carregando** (esqueleto) e **sucesso** (check no botão). Faltam, para cada tipo de interação do produto: **vazio** (com o porquê e o próximo passo), **erro** (com o que fazer e o que foi preservado), **parcial**, **sem permissão**, **bloqueado com explicação** e **confirmação destrutiva** (com o nome do item e o que será perdido). Isso vem antes de construir cada tela, não depois.
+8. **Estados: desenhados no laboratório (ticket #68), ver 2.1.1 e 2.1.2.** Falta: **conferir a acessibilidade em navegador** (leitor de tela, teclado, contraste de 4,5:1, `prefers-reduced-motion`; o código segue a seção 1.2, mas só foi checado por tipos, não por uso) e **migrar** os estados para as telas reais, uma tela por vez nos PRs de dashboard, mapa, admin e auth.
 9. **Auditar as telas atuais** com o checklist da seção 1.2 e a seção 2: onde há espera sem aviso, lista vazia sem explicação, erro sem saída, botão desabilitado sem motivo ou etapa que dá para eliminar.
+10. **Cor das ilustrações dos estados.** A folha atual é colorida (marrom do café e da madeira, laranja da placa e dos avisos, azul do passarinho). A seção 4 diz "cor quente só para o crítico", mas as artes são conteúdo, não moldura. Decidir se isso fica como regra ("a ilustração é conteúdo, pode ter cor") e registrar o motivo.
+11. **Ilustração do "não encontrado"** (teclado em tons de verde) está em estilo diferente do resto. Trocar por uma no estilo da folha atual.
+12. **Textos de exemplo** (nome do administrador, números, horários, "CAR") são fictícios. Os que dependem de dados reais (último foco, quem administra, o que vai junto ao remover) precisam vir do sistema.
 
 ---
 
