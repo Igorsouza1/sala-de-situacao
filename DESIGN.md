@@ -100,7 +100,9 @@ Sons: erro toca o som de erro (cada falha); sucesso, o de sucesso; falha ao atua
 3. **Mesma altura** para todas as artes (224 px), para pesarem igual, qualquer que seja o formato.
 4. **A arte não tem animação própria** e a moldura não tem cor própria; ela entra e sai junto com o bloco (8.4). Motivo: só o que é clicável se move (seção 8).
 5. **Formato:** webp com **fundo transparente**, para assentar direto no cartão branco. Os scripts `scripts/to_webp.py` (converte e reduz) e `scripts/recortar_estados.py` (recorta a folha de 9 artes) refazem tudo. Medido: 240 KB no total para as 9 artes contra 494 KB sem perda; PSNR de 44 a 49 dB (sem diferença visível); o limite de nitidez é a folha de origem (uns 240 a 350 px de largura por arte).
-6. **Texto alternativo** descreve a cena; a mensagem fica no texto, não na imagem.
+6. **A ilustração é decorativa:** `alt` vazio. Motivo: a mensagem inteira está no texto; descrever a cena de novo seria ruído para quem usa leitor de tela.
+7. **Acessibilidade do bloco:** o título é um `h4`; o conteúdo vive numa **região viva** (`aria-live="polite"`) que existe antes da troca, para o leitor de tela anunciar o texto novo (uma região criada junto com o conteúdo muitas vezes não é anunciada); erro usa `role="alert"`.
+8. **Foco:** se o elemento que tinha o foco sai de cena (o bloco troca ou encolhe), o foco vai para o primeiro controle do conteúdo novo ou para o próprio bloco, nunca para o início da página. Ao remover, o foco vai para "Desfazer".
 
 ### 2.2 Simplicidade: a interface pensa pelo usuário
 
@@ -158,7 +160,12 @@ Regras:
 3. O detalhe técnico (período da média, fonte, método) fica no **tooltip**, nunca no texto principal.
 4. Termos que explicam a si mesmos. Se for preciso explicar, a explicação é uma legenda curta ("Como ler").
 5. O estado "info" **não** é um nível de severidade. Severidade tem três níveis: **crítico, atenção, normal**. "Info" só existe em toasts, como aviso neutro.
-6. **Nos estados (vazio, erro, sucesso…) fale como uma pessoa, de forma concreta.** "Ainda não temos nenhuma propriedade", "Não encontramos “Lagoa Verde”", "Quer adicionar a primeira?". Nada de "Nenhum dado para mostrar no momento" nem "Tudo certo!". Primeira pessoa do plural quando é o sistema agindo ("tentamos de novo"), segunda quando é a decisão do usuário. Motivo: o tom institucional foi a primeira reclamação nos testes dos estados; frase curta e clara continua valendo (regra 1), só que dita por alguém.
+6. **Voz do produto: "Colega de campo".** Conversa de pessoa para pessoa, concreta, nunca institucional.
+   - **Pergunta quando oferece:** "Quer adicionar a primeira?", "Era essa?".
+   - **"Nós" quando o sistema age** ("tentamos de novo", "não encontramos"), **"você" quando a decisão é da pessoa** ("o que você preencheu continua aqui").
+   - **Frases de até 20 palavras.** Fato e número concretos no lugar de adjetivo ("Já são 8 dias de calma", não "Boa notícia").
+   - **Exemplos:** "Ainda não temos nenhuma propriedade" · "Não encontramos “Lagoa Verde”" · "Não conseguimos salvar" · "Estes dados são de ontem às 14:32".
+   - **Motivo da escolha:** a primeira reclamação nos testes dos estados foi o tom institucional ("genérico, frio, sem alma"). Entre as três direções testadas no laboratório (seção "Voz e tom", 14 situações), o responsável de design preferiu esta por ser a mais próxima de quem usa. Continua preciso e calmo (seção 3): frases curtas, sem sigla, sem código técnico, sempre o que a pessoa pode fazer.
 
 ---
 
@@ -174,7 +181,7 @@ Regras:
 | Fundo | Branco | `#FFFFFF` | Fundo da página e dos cards |
 | Divisórias, trilhos | Névoa | `#E5E7E4` | Só para separar; nunca para texto |
 | Texto secundário | Cinza-tinta | `#5C625D` | 6,25:1 sobre branco |
-| Elementos sem texto | Pedra | `#858B86` | 3,48:1: **nunca para texto** |
+| Elementos sem texto | Pedra | `#858B86` | 3,48:1: **nunca para texto**. Usada na **borda dos campos** e no trilho do toggle desligado (exigem 3:1) |
 | **Ação e foco** | **Floresta** | **`#1F4D3A`** | **9,63:1** com branco. Botão primário, card em foco, anel de foco. Hover `#1B4433`, pressionado `#183B2C` |
 | Assinatura em detalhes | Verde mineral | `#54705F` | Contorno de propriedade no mapa, estados selecionados, marcas pequenas |
 | Seleção e hover suave | Verde claro | `#DCE5DF` | Fundo de seleção, aba ativa, hover de linha |
@@ -217,7 +224,7 @@ Regras:
 | Raio | pequeno 4 px, médio 6 px, grande 10 px | Cantos suaves o bastante para ser acolhedor, retos o bastante para parecer preciso. Sem pílulas. |
 | Separação | Cards brancos com sombra suave (`0 1px 2px` + `0 4px 14px`, 6% e 5%) | Sombra separa sem a rigidez de borda em todo lugar |
 | Densidade | Confortável (padding 20 px, linha de tabela 44 px, corpo 15 px) | Leitura tranquila; informação densa já é a regra no conteúdo, não na moldura |
-| Campos de preenchimento | Fundo branco, borda 1 px `#CDD1CC`, foco com anel Floresta de 3 px | O fundo cinza anterior ficava "sujo" dentro do card branco |
+| Campos de preenchimento | Fundo branco, borda 1 px **Pedra `#858B86`**, foco com anel Floresta de 3 px | O fundo cinza anterior ficava "sujo" dentro do card branco. A borda era `#CDD1CC` (1,55:1) e falhava no contraste de componentes (3:1): o campo é identificado pela borda, então ela precisa ser vista |
 | Abas e toggle | Seguem o mesmo estilo dos campos (lista branca com borda, aba ativa em verde claro, trilho do toggle derivado) | Antes herdavam um cinza fixo que destoava do fundo |
 | Gradientes | **Só em pontos focais** (card em foco). Nunca em superfícies comuns | Gradiente em tudo vira decoração |
 
@@ -428,6 +435,10 @@ Para ninguém recolocar sem motivo.
 | Estados com ilustração, título, frase e botão **iguais** em todos | Genérico, "sem alma, sem intenção"; ver 2.1.1 |
 | Primeira folha de ilustrações dos estados (monocromática, só verdes) | Substituída por decisão do responsável de design pela folha colorida (`public/estados-novos.png`) |
 | Mudança de conteúdo "de uma vez" (o bloco troca sem caminho) | O usuário não entendia o que tinha acontecido; ver 8.4 |
+| Ilustração do teclado com a tecla ausente (no "não encontrado") | Estilo diferente do resto da folha; o "não encontrado" usa a caixa vazia, igual ao vazio |
+| `alt` descrevendo a ilustração | Ruído para o leitor de tela: a mensagem já está no texto |
+| Borda dos campos `#CDD1CC` e trilho do toggle `#CFD4CF` | 1,55:1 sobre branco; exigem 3:1. Trocados pela Pedra |
+| Direções de voz "Instrumento claro" (sóbrio, só afirma) e "Parceiro de trabalho" (liga o aviso ao relatório/laudo) | O responsável de design preferiu o "Colega de campo"; ver 3.2 |
 
 ---
 
@@ -453,11 +464,10 @@ Descobertas na prática; valem para quem implementar.
 5. **Segunda onda** (fora do escopo atual): impressão e PDF, e-mails, manifest do PWA, mapa em Leaflet legado, reescrita dos textos existentes no tom da seção 3, vetorização do logo.
 6. **Landing:** só troca de cores; layout e textos ficam como estão.
 7. **Teste existente falhando**, sem relação com design: `maplibre-layer.test.ts` (`resolveLayerType`).
-8. **Estados: desenhados no laboratório (ticket #68), ver 2.1.1 e 2.1.2.** Falta: **conferir a acessibilidade em navegador** (leitor de tela, teclado, contraste de 4,5:1, `prefers-reduced-motion`; o código segue a seção 1.2, mas só foi checado por tipos, não por uso) e **migrar** os estados para as telas reais, uma tela por vez nos PRs de dashboard, mapa, admin e auth.
+8. **Estados: desenhados e vistoriados no laboratório (ticket #68), ver 2.1.1 e 2.1.2.** Vistoria feita em três frentes: (a) **código e cálculo** (contrastes medidos, foco, avisos, movimento reduzido); (b) **verificador automático axe-core 4.13.0** (regras WCAG 2.0, 2.1 e 2.2 nível AA mais boas práticas) rodado em Chrome real, com movimento reduzido, em **24 telas e estados** (todos os vazios, erro antes e depois da falha, carregando em 3 momentos, parcial, bloqueado nos dois lados, sem permissão, desatualizado em 3 momentos, ação destrutiva com o toast, sucesso e "Voz e tom"): **0 violações**; (c) **foco por teclado**, medido: depois de uma troca de bloco o foco fica no bloco novo (não no início da página) e, ao remover, vai para "Desfazer". O axe só pega parte dos problemas: **falta um teste manual com leitor de tela** (anúncio das trocas e dos erros) e **migrar** os estados para as telas, uma por vez nos PRs de dashboard, mapa, admin e auth. Corrigido na vistoria: texto do chip no hover (4,47:1 passou a grafite), destaque que sumia com movimento reduzido, foco perdido quando o bloco sai de cena, região viva para o leitor de tela, `alt` das ilustrações, rótulo de placar que o leitor de tela ignorava. Limite conhecido: o "diálogo" de remoção do laboratório é um bloco em linha; no produto use o `Dialog` (que já devolve o foco a quem abriu).
 9. **Auditar as telas atuais** com o checklist da seção 1.2 e a seção 2: onde há espera sem aviso, lista vazia sem explicação, erro sem saída, botão desabilitado sem motivo ou etapa que dá para eliminar.
 10. **Cor das ilustrações dos estados.** A folha atual é colorida (marrom do café e da madeira, laranja da placa e dos avisos, azul do passarinho). A seção 4 diz "cor quente só para o crítico", mas as artes são conteúdo, não moldura. Decidir se isso fica como regra ("a ilustração é conteúdo, pode ter cor") e registrar o motivo.
-11. **Ilustração do "não encontrado"** (teclado em tons de verde) está em estilo diferente do resto. Trocar por uma no estilo da folha atual.
-12. **Textos de exemplo** (nome do administrador, números, horários, "CAR") são fictícios. Os que dependem de dados reais (último foco, quem administra, o que vai junto ao remover) precisam vir do sistema.
+11. **Textos de exemplo** (nome do administrador, números, horários, "CAR") são fictícios. Os que dependem de dados reais (último foco, quem administra, o que vai junto ao remover) precisam vir do sistema.
 
 ---
 
