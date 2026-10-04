@@ -4,7 +4,7 @@ import { getAllAcoesData, getAllAcoesForMap, createAcoesWithTrilha } from "@/lib
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { createAcoesSchema } from "@/lib/validations/acoes";
 import { requireAuthWithTenant, requireRole } from "@/lib/api/require-auth";
-import { getRegionIdForUser } from "@/lib/api/require-region";
+import { requireWriteRegion } from "@/lib/api/require-write-region";
 import { revalidatePath } from "next/cache";
 
 
@@ -41,6 +41,8 @@ export async function POST(request: Request) {
   if (response) return response;
   try {
     const formData = await request.formData();
+    const region = await requireWriteRegion(user!, tenantId!, formData.get("regiaoId"));
+    if (region.response) return region.response;
     const trilhaRaw = formData.get("trilha");
     const waypointsRaw = formData.get("waypoints");
 
@@ -73,8 +75,8 @@ export async function POST(request: Request) {
     const created = await createAcoesWithTrilha({
       trilha: parsed.data.trilha,
       waypoints,
-      tenantId: tenantId!,
-      regiaoId: await getRegionIdForUser(user!.id, tenantId!),
+      tenantId: region.tenantId,
+      regiaoId: region.regionId,
     });
 
     revalidatePath('/protected');

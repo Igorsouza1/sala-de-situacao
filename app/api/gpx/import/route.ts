@@ -4,7 +4,7 @@ import { gpxImportRequestSchema } from "@/lib/validators/gpx-import";
 import { importGpx } from "@/lib/service/gpxImportService";
 import { revalidatePath } from "next/cache";
 import { requireRole } from "@/lib/api/require-auth";
-import { getTenantIdForRegion } from "@/lib/api/scope";
+import { requireWriteRegion } from "@/lib/api/require-write-region";
 
 /**
  * POST /api/gpx/import
@@ -27,11 +27,8 @@ export async function POST(request: Request) {
     if (!regiaoId || !Number.isInteger(regiaoId) || regiaoId <= 0) {
       return apiError("regiaoId é obrigatório e deve ser um número inteiro positivo", 400);
     }
-    const regionTenantId = await getTenantIdForRegion(regiaoId);
-    if (!regionTenantId) return apiError("Região não encontrada.", 404);
-    if (regionTenantId !== tenantId && user?.app_metadata?.is_superadmin !== true) {
-      return apiError("Região pertence a outra Organização.", 403);
-    }
+    const region = await requireWriteRegion(user!, tenantId!, regiaoIdRaw);
+    if (region.response) return region.response;
 
     // Validar acoes (obrigatório)
     if (!acoesRaw || typeof acoesRaw !== "string") {
@@ -126,7 +123,7 @@ export async function POST(request: Request) {
     // Chamar serviço de importação
     const result = await importGpx({
       regiaoId: parsed.data.regiaoId,
-      tenantId: regionTenantId,
+      tenantId: region.tenantId,
       trilha: parsed.data.trilha,
       acoes: acoesComFotos,
     });

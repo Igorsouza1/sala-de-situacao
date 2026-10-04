@@ -3,7 +3,7 @@ import { db, sql } from "@/db"
 import { gpx as gpxToGeoJSON } from "@tmcw/togeojson"
 import { DOMParser } from "@xmldom/xmldom"
 import { requireRole } from "@/lib/api/require-auth"
-import { getRegionIdForUser } from "@/lib/api/require-region"
+import { requireWriteRegion } from "@/lib/api/require-write-region"
 
 import type {
   FeatureCollection,
@@ -38,9 +38,11 @@ export async function POST(request: Request) {
   const { user, tenantId, response } = await requireRole("editor")
   if (response) return response
   try {
-    const regiaoId = await getRegionIdForUser(user!.id, tenantId!)
     // ─── Recebe e valida o arquivo GPX ───
     const form = await request.formData()
+    const region = await requireWriteRegion(user!, tenantId!, form.get("regiaoId"))
+    if (region.response) return region.response
+    const regiaoId = region.regionId
     const file = form.get("file")
     if (!(file instanceof File))
       return NextResponse.json({ error: "Arquivo não enviado" }, { status: 400 })
@@ -82,7 +84,7 @@ export async function POST(request: Request) {
         ${dataFim},
         ${duracaoMinutos},
         ${regiaoId},
-        ${tenantId}::uuid
+        ${region.tenantId}::uuid
       )
       RETURNING id
     `)
@@ -102,7 +104,7 @@ export async function POST(request: Request) {
             ${ele ?? null},
             ${feat.properties?.time ?? null},
             ${regiaoId},
-            ${tenantId}::uuid
+            ${region.tenantId}::uuid
           )
         `)
       }

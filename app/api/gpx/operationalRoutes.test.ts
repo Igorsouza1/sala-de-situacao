@@ -11,6 +11,7 @@ import { findAllEstradasData } from "@/lib/repositories/estradasRepository";
 import { getAllExpedicoesData } from "@/lib/service/expedicoesService";
 import { importGpx } from "@/lib/service/gpxImportService";
 import { gpxImportRequestSchema } from "@/lib/validators/gpx-import";
+import { db } from "@/db";
 import { apiError } from "@/lib/api/responses";
 
 jest.mock("@/db", () => ({ db: { execute: jest.fn() }, sql: jest.requireActual("drizzle-orm").sql }));
@@ -37,6 +38,7 @@ function formRequest() {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  (db.execute as jest.Mock).mockResolvedValue({ rows: [{ ok: true }] });
   jest.mocked(requireRole).mockResolvedValue({ user, tenantId: orgA, response: null } as any);
   jest.mocked(requireAuthWithTenant).mockResolvedValue({ user, tenantId: orgA, response: null } as any);
   jest.mocked(getTenantIdForRegion).mockResolvedValue(orgA);
