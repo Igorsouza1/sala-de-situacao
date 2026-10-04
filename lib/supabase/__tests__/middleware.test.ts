@@ -1,4 +1,4 @@
-﻿import { NextRequest } from 'next/server';
+import { NextRequest } from 'next/server';
 import { updateSession } from '../middleware';
 import { createServerClient } from '@supabase/ssr';
 jest.mock('@supabase/ssr', () => ({ createServerClient: jest.fn() }));
@@ -32,4 +32,15 @@ it('fails closed on auth infrastructure errors', async () => {
   getUser.mockRejectedValue(new Error('unavailable'));
   expect((await updateSession(request('/api/acoes'))).status).toBe(401);
   expect((await updateSession(request('/print/map'))).headers.get('location')).toContain('/sign-in');
+});
+
+it('allows machine sync only with the configured secret', async () => {
+  process.env.CRON_SECRET = 'test-cron-secret';
+  const sync = new NextRequest('https://example.com/api/balneario-municipal/sync', {
+    method: 'POST', headers: { Authorization: 'Bearer test-cron-secret' },
+  });
+  expect((await updateSession(sync)).status).toBe(200);
+  expect((await updateSession(request('/api/balneario-municipal/sync', 'POST'))).status).toBe(401);
+  delete process.env.CRON_SECRET;
+  expect((await updateSession(sync)).status).toBe(401);
 });
