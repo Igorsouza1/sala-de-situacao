@@ -19,3 +19,15 @@ it('superadmin uses organization scope without requiring role rows', async () =>
   expect(await getAccessibleRegionIdsForUser('user', 'org-a', true)).toBeNull();
   expect(db.execute).not.toHaveBeenCalled();
 });
+it('does not revive a legacy region when current roles exist without regional grants', async () => {
+  (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [{ ok: false }] })
+    .mockResolvedValueOnce({ rows: [{ region_id: null }] });
+  expect(await getAccessibleRegionIdsForUser('user', 'org-a')).toEqual([]);
+  expect(db.execute).toHaveBeenCalledTimes(2);
+});
+it('uses a legacy region only for an account with no current roles', async () => {
+  (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [{ ok: false }] })
+    .mockResolvedValueOnce({ rows: [] })
+    .mockResolvedValueOnce({ rows: [{ regiao_id: 9 }] });
+  expect(await getAccessibleRegionIdsForUser('user', 'org-a')).toEqual([9]);
+});

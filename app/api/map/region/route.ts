@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAuthWithTenant } from "@/lib/api/require-auth";
-import { getRegionIdsForUser } from "@/lib/api/require-region";
+import { getAccessibleRegionIdsForUser, getRegionIdsForUser } from "@/lib/api/require-region";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
 
@@ -46,26 +46,14 @@ async function tenantRegionsBBox(tenantId: string): Promise<BBoxRow | null> {
   return r.rows[0] ?? null;
 }
 
-async function specificRegionsBBox(ids: number[]): Promise<BBoxRow | null> {
+async function specificRegionsBBox(ids: number[], tenantId?: string): Promise<BBoxRow | null> {
   if (ids.length === 0) return null;
   const idList = sql.join(ids.map(id => sql`${id}`), sql`, `);
   const r = await db.execute<BBoxRow>(sql`
     SELECT ${BBOX_COLS}
     FROM monitoramento.regioes
     WHERE id IN (${idList})
-  `);
-  return r.rows[0] ?? null;
-}
-
-async function firstTenantRegionBBox(tenantId: string): Promise<BBoxRow | null> {
-  const r = await db.execute<BBoxRow>(sql`
-    SELECT ${BBOX_COLS}
-    FROM (
-      SELECT * FROM monitoramento.regioes
-      WHERE organization_id::text = ${tenantId}
-      ORDER BY created_at DESC
-      LIMIT 1
-    ) sub
+      ${tenantId ? sql`AND organization_id = ${tenantId}::uuid` : sql``}
   `);
   return r.rows[0] ?? null;
 }
@@ -73,6 +61,7 @@ async function firstTenantRegionBBox(tenantId: string): Promise<BBoxRow | null> 
 export async function GET(request: Request) {
   const { user, tenantId, response: authResponse } = await requireAuthWithTenant();
   if (authResponse) return authResponse;
+  const isSuperAdmin = user?.app_metadata?.is_superadmin === true;
 
   // regiao_id explícito (admin navegando para uma região específica)
   const url = new URL(request.url)
@@ -80,7 +69,9 @@ export async function GET(request: Request) {
   if (regiaoIdOverride) {
     const id = parseInt(regiaoIdOverride, 10)
     if (!Number.isNaN(id)) {
-      const row = await specificRegionsBBox([id])
+      const allowed = await getAccessibleRegionIdsForUser(user!.id, tenantId!, isSuperAdmin);
+      if (allowed !== null && !allowed.includes(id)) return NextResponse.json(null, { status: 403 });
+      const row = await specificRegionsBBox([id], isSuperAdmin ? undefined : tenantId!)
       if (!row || row.count === 0) return NextResponse.json(null)
       return NextResponse.json({
         nome: row.nome,
@@ -92,8 +83,6 @@ export async function GET(request: Request) {
       }, { headers: { 'Cache-Control': 'private, no-store' } })
     }
   }
-
-  const isSuperAdmin = user?.app_metadata?.is_superadmin === true;
 
   let row: BBoxRow | null = null;
 
@@ -115,9 +104,9 @@ export async function GET(request: Request) {
     } else {
       const regionIds = await getRegionIdsForUser(user!.id, tenantId!);
       if (regionIds.length > 0) {
-        row = await specificRegionsBBox(regionIds);
+        row = await specificRegionsBBox(regionIds, tenantId!);
       } else {
-        row = await firstTenantRegionBBox(tenantId!);
+        return NextResponse.json(null, { headers: { "Cache-Control": "private, no-store" } });
       }
     }
   }

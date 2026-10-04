@@ -12,6 +12,7 @@ jest.mock('@/db', () => {
 import { resolveTableLayer } from '@/lib/service/layer-resolver';
 import { findAllFirmsData } from '@/lib/repositories/firmsRepository';
 import { findAllDesmatamentoData } from '@/lib/repositories/desmatamentoReposiroty';
+import { countPropriedades } from '@/lib/repositories/propriedadesRepository';
 import type { LayerScope } from '@/types/map-dto';
 const pool = require('@/db').integrationPool;
 const A = '00000000-0000-0000-0000-00000000000a';
@@ -91,4 +92,9 @@ it('properties follow owned spatial regions even when legacy tenant points elsew
   expect(await ids('propriedades',B,21)).toEqual([1]);
   expect(await ids('propriedades',A,22)).toEqual([]);
   expect(await ids('propriedades',A)).toEqual([1]);
+});
+it('property count uses the assigned regions rather than the legacy tenant column', async()=> {
+  expect(await countPropriedades(A,undefined,undefined,[11])).toBe(1);
+  expect(await countPropriedades(A,undefined,undefined,[])).toBe(0);
+  expect(await countPropriedades(B,undefined,undefined,[21,22])).toBe(2);
 });
