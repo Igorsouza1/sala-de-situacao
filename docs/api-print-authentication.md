@@ -1,4 +1,4 @@
-﻿# API and print authentication (#57, #66)
+# API and print authentication (#57, #66)
 
 API requests require a validated Supabase session and return JSON 401 when
 anonymous. Print pages redirect anonymous requests to `/sign-in`; their loaders
@@ -23,8 +23,9 @@ continue validating `CRON_SECRET` in `supabase/functions/_shared/edge.ts`.
 Print action dossiers resolve a tenant and return 404 for inaccessible actions.
 Property dossiers authorize base data by spatial overlap with regions owned by
 the resolved organization, narrowed to every region assigned to the user when
-assignments exist. Users without a regional assignment retain organization scope,
-matching the existing map scope convention. Related operational actions are also
+assignments exist. Owner and superadmin grants cover owned organization regions. Other users
+without a regional assignment receive 404 for property and map printing; an
+empty regional grant never expands to the whole organization. Related operational actions are also
 filtered by organization; global environmental base data remains shared.
 
 Map snapshots resolve organization and region before loading the catalog/data.
