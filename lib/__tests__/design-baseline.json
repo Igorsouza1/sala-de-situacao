@@ -59,14 +59,6 @@
     "paleta": 0,
     "hex": 28
   },
-  "app/print/dossie/[id]/page.tsx": {
-    "paleta": 3,
-    "hex": 0
-  },
-  "app/print/propriedade/[id]/page.tsx": {
-    "paleta": 3,
-    "hex": 0
-  },
   "components/admin/acoes-manager.tsx": {
     "paleta": 24,
     "hex": 0
@@ -136,7 +128,7 @@
     "hex": 3
   },
   "components/admin/users-admin.tsx": {
-    "paleta": 16,
+    "paleta": 41,
     "hex": 0
   },
   "components/alerts/AlertManagerModal.tsx": {
