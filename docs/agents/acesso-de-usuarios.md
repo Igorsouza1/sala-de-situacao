@@ -8,7 +8,7 @@ Este guia resume o comportamento implementado nas rotas e consultas atuais. O ac
 | --- | --- |
 | **Superadmin** | Papel global, verificado em `app_metadata.is_superadmin`. Pode atravessar organizações nas rotas que aceitam esse papel. Algumas operações, como gestão de organizações e importações, são exclusivas dele. |
 | **Owner** | Maior papel da organização. Passa pelas verificações de nível `editor` e tem acesso a todas as regiões da organização nas consultas que usam o escopo de regiões. |
-| **Editor** | Pode executar operações de escrita protegidas por `requireRole("editor")`, como criar ações e editar ações/fotos. |
+| **Editor** | Pode criar ou alterar ações, trilhas, estradas e fotos somente nas regiões em que tem papel Editor. |
 | **Viewer** | Papel de leitura nas rotas que verificam papel. |
 | **Auditor** | Tem o mesmo nível de leitura do Viewer nas verificações gerais. Acesso específico a auditoria depende de checagens próprias da rota. |
 
@@ -23,17 +23,18 @@ Rotas que aplicam escopo regional limitam resultados às regiões da organizaç�
 ## Dados e propriedade
 
 - **Estações legadas** — Balneário Municipal, Deque de Pedras e Ponte do Cure pertencem a uma organização cada. O código compara a organização resolvida do usuário com a organização configurada para a estação. Sem configuração inequívoca, a rota nega acesso. Leitura exige autenticação e escrita exige papel Editor ou superior.
-- **Ações** — São filtradas pelo `tenant_id` nas consultas e alterações; usuários de outra organização não recebem a ação. Criar, atualizar ou anexar fotos exige Editor ou superior nas rotas correspondentes.
+- **Ações, trilhas, waypoints e estradas** — Leituras exigem a organização e as regiões atribuídas. Uma ação de outra região não aparece no mapa, listagem, dossiê ou impressão. Escrita exige Editor naquela região, Owner da organização ou Superadmin; o tenant e a região são derivados da sessão e do vínculo verificado.
 - **Focos de calor (FIRMS) e detecções de desmatamento** — São dados de base compartilhados, sem isolamento por `tenant_id` do registro. A leitura das rotas ambientais usa as associações entre detecção e Região, e limita a consulta às regiões da organização e às regiões acessíveis ao usuário. Uma detecção não fica automaticamente visível para toda organização: precisa estar associada a uma de suas regiões.
-- **Propriedades** — No dossiê, uma propriedade é elegível quando sua geometria cruza (`ST_Intersects`) uma Região da organização; quando a consulta recebe regiões acessíveis, o filtro também as aplica. Ações, focos e desmatamento exibidos no dossiê são limitados à organização/regiões da consulta, e ações também são filtradas pelo tenant.
+- **Propriedades** — No mapa, na contagem e no dossiê, uma propriedade é elegível quando sua geometria cruza (`ST_Intersects`) uma Região permitida. Ações, focos e desmatamento exibidos no dossiê também seguem a organização e as regiões da consulta. Só Superadmin pode alterar o nome global de uma propriedade.
 
 ## Limitações conhecidas do comportamento atual
 
 - O nível de papel é verificado por rota. Várias rotas de leitura exigem sessão e organização resolvida, mas não chamam `requireRole`; portanto não se deve interpretar a tabela de papéis como uma matriz uniforme aplicada automaticamente a toda a aplicação.
 - O resolvedor de organização escolhe um único tenant para a requisição. Se a conta tiver vínculos em várias organizações, não há seletor geral implementado nesse resolvedor; a escolha parte dos metadados e, na ausência deles, do primeiro vínculo retornado.
 - Para usuários que não são Owner nem Superadmin, as consultas regionais usam os vínculos com `region_id` preenchido. Um vínculo com `region_id = NULL` não é tratado uniformemente como “todas as regiões”.
-- O limite por interseção descrito para propriedades é comprovado no dossiê. Outras rotas de propriedade podem aplicar filtros próprios; não presuma que todas usam a mesma consulta espacial.
+- A importação manual de propriedades ainda conserva `tenant_id`/`regiao_id` legados no registro físico. As consultas citadas acima usam interseção espacial; a canonização da importação e uma tabela de associações próprias para propriedades ainda estão pendentes.
 - O escopo das estações é por organização, não por região individual.
+- Contas revogadas antes da correção de limpeza do acesso legado podem conservar linha antiga em `user_access`. Elas exigem auditoria da base para distinguir esse resíduo de contas legadas válidas.
 
 ## Referências no código
 
