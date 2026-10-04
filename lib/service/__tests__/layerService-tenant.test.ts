@@ -33,3 +33,10 @@ it('does not expose action group names from another organization', async () => {
   expect(query.sql).toContain('tenant_id =');
   expect(query.params).toContain('org-a');
 });
+it('limits action group names to the selected accessible region', async () => {
+  (getLayerCatalog as jest.Mock).mockResolvedValue({ ...base, visualConfig: { groupByColumn: 'categoria' } });
+  await getLayer('acoes', 'org-a', undefined, undefined, undefined, undefined, 11);
+  const query = new PgDialect().sqlToQuery((db.execute as jest.Mock).mock.calls[0][0]);
+  expect(query.sql).toContain('regiao_id =');
+  expect(query.params).toEqual(['org-a', 11]);
+});
