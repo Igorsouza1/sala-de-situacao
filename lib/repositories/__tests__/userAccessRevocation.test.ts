@@ -38,6 +38,9 @@ test("assignment removed concurrently never deletes a surviving legacy grant", a
   expect(execute).toHaveBeenCalledTimes(2);
 });
 test("legacy cleanup failure rejects transaction instead of reporting successful revocation", async () => {
-  execute.mockRejectedValueOnce(new Error("cleanup failed"));
+  execute.mockReset()
+    .mockResolvedValueOnce({ rows: [{ user_id: "user-a", tenant_id: "org-a" }] })
+    .mockResolvedValueOnce({ rows: [] })
+    .mockRejectedValueOnce(new Error("cleanup failed"));
   await expect(deleteRoleAssignmentInDb(4)).rejects.toThrow("cleanup failed");
 });
