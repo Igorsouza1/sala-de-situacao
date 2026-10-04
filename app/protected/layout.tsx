@@ -1,12 +1,9 @@
 import { Navbar } from "@/components/Navbar";
 import "@/app/globals.css";
-import { Inter } from "next/font/google";
 import { MapProvider } from "@/context/GeoDataContext";
 import { AcoesProvider } from "@/context/AcoesContext";
 import { DequePedrasProvider } from "@/context/DequePedrasContext";
 import { RegionProvider } from "@/context/RegionContext";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
   title: "Instituto Homem Pantaneiro",
@@ -22,7 +19,7 @@ export default function ProtectedLayout({
 }) {
   return (
     <RegionProvider>
-      <div className="flex h-screen overflow-hidden bg-gray-50">
+      <div className="flex h-screen overflow-hidden bg-background">
         <Navbar />
         <MapProvider>
           <AcoesProvider>
