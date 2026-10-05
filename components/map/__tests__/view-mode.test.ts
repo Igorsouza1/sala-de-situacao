@@ -25,8 +25,8 @@ describe('cameraFor', () => {
 })
 
 describe('preferência salva', () => {
-  it('primeira visita abre em 3D', () => {
-    expect(readSavedMode(fakeStore())).toBe('3d')
+  it('primeira visita abre em 2D', () => {
+    expect(readSavedMode(fakeStore())).toBe('2d')
   })
 
   it('lembra o último modo escolhido', () => {
@@ -37,11 +37,11 @@ describe('preferência salva', () => {
     expect(readSavedMode(store)).toBe('3d')
   })
 
-  it('valor estranho ou armazenamento bloqueado cai em 3D, sem quebrar', () => {
-    expect(readSavedMode(fakeStore({ 'prisma:mapa:modo': 'xyz' }))).toBe('3d')
+  it('valor estranho ou armazenamento bloqueado cai em 2D, sem quebrar', () => {
+    expect(readSavedMode(fakeStore({ 'prisma:mapa:modo': 'xyz' }))).toBe('2d')
     const bloqueado = { getItem: () => { throw new Error('bloqueado') }, setItem: () => { throw new Error('bloqueado') } }
-    expect(readSavedMode(bloqueado)).toBe('3d')
+    expect(readSavedMode(bloqueado)).toBe('2d')
     expect(() => saveMode('2d', bloqueado)).not.toThrow()
-    expect(readSavedMode(null)).toBe('3d')
+    expect(readSavedMode(null)).toBe('2d')
   })
 })

@@ -44,6 +44,7 @@ import { getLayerLegendInfo } from './helpers/map-visuals'
 import { Button } from '@/components/ui/button'
 import { BasemapControl } from './BasemapControl'
 import { MapViewModeControl } from './MapViewModeControl'
+import { PrismCursor } from './PrismCursor'
 import {
   BASEMAP_MAX_ZOOM,
   DEFAULT_BASEMAP,
@@ -359,7 +360,7 @@ export default function MapLibreMap({
     if (fitBoundsDone.current || !mapLoaded || !regionBounds || !mapRef.current) return
     fitBoundsDone.current = true
     const [minLng, minLat, maxLng, maxLat] = regionBounds.bbox
-    // um movimento só: enquadra a região e inclina até o modo salvo (3D na primeira visita)
+    // um movimento só: enquadra a região e inclina até o modo salvo (2D na primeira visita)
     autoMoveRef.current = true
     mapRef.current.fitBounds(
       [[minLng, minLat], [maxLng, maxLat]],
@@ -931,6 +932,7 @@ export default function MapLibreMap({
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="w-full h-full relative">
+      <PrismCursor />
       <Map
         ref={mapRef}
         initialViewState={{

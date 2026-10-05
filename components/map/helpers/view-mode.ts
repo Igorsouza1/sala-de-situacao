@@ -24,12 +24,12 @@ const browserStore = (): Store | null => {
   }
 }
 
-// Primeira visita (ou armazenamento bloqueado): 3D.
+// Primeira visita (ou armazenamento bloqueado): 2D. O 3D pesa no aparelho, então só abre em 3D quem escolheu.
 export function readSavedMode(store: Store | null = browserStore()): ViewMode {
   try {
-    return store?.getItem(STORAGE_KEY) === '2d' ? '2d' : '3d'
+    return store?.getItem(STORAGE_KEY) === '3d' ? '3d' : '2d'
   } catch {
-    return '3d'
+    return '2d'
   }
 }
 

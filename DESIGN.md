@@ -381,6 +381,12 @@ Motivos: a marca se chama Prisma; o degradê que passa pela borda evoca luz atra
 - Por isso: o cursor nativo só é escondido **depois do primeiro movimento**; existem alternativas ("Prisma nativo", só muda de cor, e "Sistema"); com `prefers-reduced-motion` o degradê para.
 - O botão desabilitado do shadcn tem `pointer-events: none`; a detecção de "bloqueado" usa a geometria. Em UIs novas, prefira `aria-disabled` a `disabled`.
 
+**No código (mapa principal):** `components/map/PrismCursor.tsx`, montado dentro do `MapLibreMap`, com as regras em `app/globals.css`. Vale enquanto o mapa está na tela (a página inteira, não só o canvas) e o nativo volta ao sair. Decisões do porte:
+- **Mira de medir e de inspecionar coordenadas:** sobre o mapa, o cursor some e fica o `crosshair` do navegador. Motivo: a mira precisa de um ponto exato, e o prisma não tem centro.
+- **Feição clicável no mapa** (foco, propriedade) vira o estado clicável, igual a um botão: o MapLibre sinaliza por estilo do canvas, não por elemento, então o cursor lê esse estilo.
+- **Cores do degradê** vêm dos tokens, não dos hex do laboratório: ocre → `warn`, terracota → `crit`, verde → `mineral`, ardósia → `map-water-text`. Motivo: o `design-guard` barra hex novos; o ocre e o terracota ficam um pouco mais vivos que no laboratório.
+- Fora do mapa o cursor ainda é o do sistema (resto do site em 17.11).
+
 ---
 
 ## 11. Ícones
@@ -403,11 +409,11 @@ Cartão branco com sombra, ícone em círculo tingido, título e frase curta, **
 - **Bases no seletor:** Mineral (padrão), Satélite, Ruas e StreetMap. O Dark Matter saiu (seção 15). O seletor e o 2D/3D seguem este documento; os outros controles do mapa ainda não foram migrados (17.13).
 - **Se o Mineral não baixar:** o mapa cai sozinho para Ruas e o seletor avisa "Mineral indisponível agora. Mostrando Ruas." Ele **não volta sozinho**: o usuário escolhe o Mineral de novo. Motivo: trocar a base sem aviso, de novo, tira o controle de quem usa (2.1); e o mapa nunca fica sem fundo.
 - **Relevo:** sombreado médio **só no Mineral, no Ruas e no StreetMap**. O satélite não tem: a foto já traz as próprias sombras e o sombreado as duplicaria. A elevação é a gratuita da AWS.
-- **Abre em 3D:** o mapa enquadra a região e inclina até **50°, girado −14°, com relevo 3D (exagero 1,8)** num **único movimento de ~1,2 s**, cancelável pelo primeiro gesto (8.4: o usuário vê de onde a câmera veio e para onde foi). Com `prefers-reduced-motion`, ela já nasce no destino. Motivo: dá profundidade e faz o território parecer território.
+- **Abre em 2D na primeira visita** (o 3D pesava demais no aparelho). Quem escolhe 3D abre em 3D nas próximas: o mapa enquadra a região e inclina até **50°, girado −14°, com relevo 3D (exagero 1,8)** num **único movimento de ~1,2 s**, cancelável pelo primeiro gesto (8.4: o usuário vê de onde a câmera veio e para onde foi). Com `prefers-reduced-motion`, ela já nasce no destino. Motivo: dá profundidade e faz o território parecer território.
 - **Segmento 2D | 3D**, ao lado do seletor de bases. Motivo: nem sempre se quer 3D, e dois segmentos mostram o estado atual sem a pessoa pensar (2.2), ao contrário de um botão cujo rótulo é o destino.
   - O destaque troca no mesmo instante em que a câmera começa a se mover (8.4). Em 2D a câmera volta de cima e ao norte; o relevo 3D só desliga quando ela termina de achatar. O hillshade continua.
   - **O segmento segue a câmera:** inclinação acima de ~1° é 3D. Inclinar com o mouse ou clicar na bússola também troca o modo. Motivo: um segmento que diz "3D" com o mapa visto de cima mente.
-  - **O último modo escolhido fica salvo no navegador** (`localStorage`, chave `prisma:mapa:modo`), por botão ou gesto. **A animação automática da abertura não grava.** Primeira visita: 3D. Quem escolheu 2D abre em 2D, sem inclinar. Motivo: a escolha vale por navegador e aparelho, e não existe tabela de preferências do usuário no banco; criar uma migration por um valor só não compensa. Se surgirem mais preferências por usuário, migra-se tudo junto.
+  - **O último modo escolhido fica salvo no navegador** (`localStorage`, chave `prisma:mapa:modo`), por botão ou gesto. **A animação automática da abertura não grava.** Primeira visita: 2D. Quem escolheu 3D abre em 3D. Motivo: a escolha vale por navegador e aparelho, e não existe tabela de preferências do usuário no banco; criar uma migration por um valor só não compensa. Se surgirem mais preferências por usuário, migra-se tudo junto.
   - Sem som por enquanto (política de som em aberto, pendência 4).
 - **Camadas de dados:** focos (círculo crítico com contorno branco), desmatamento (âmbar a 55%), propriedade (contorno tracejado em verde mineral).
 
@@ -432,13 +438,13 @@ Atmosferas testadas, para registro: **Natureza** (terrosa: lia como papel, rejei
 | Já no código (PR 1) | Ainda só no laboratório |
 |---|---|
 | Tokens de cor, de dados, raio, sombra e fontes (`app/globals.css`, `@theme static`) | **Sons** (9): a política de som no produto está em aberto (pendência 4) |
-| Fontes IBM Plex Sans e Mono; Inter, JetBrains, Noto e Playfair removidas | **Cursor Prisma aurora** (10): só a regra de pointer foi portada |
+| Fontes IBM Plex Sans e Mono; Inter, JetBrains, Noto e Playfair removidas | **Cursor Prisma aurora** (10) fora do mapa (no mapa principal já está) |
 | Sem modo escuro (446 classes `dark:` removidas) e sem os tokens brand/pantaneiro | **Onda do clique, animação de menu, diálogo e abas** (8.1) |
 | Botão "Tátil", card branco com sombra, campo com borda Pedra e foco de 3 px, badge sem pílula, esqueleto com brilho, toast (12) | **Componente de estado** (`StateBlock`) e as transições `Swap` e `Collapse` (2.1.2, 8.4) |
 | Cursor de clicável, títulos 600, números em mono, movimento reduzido (globais) | **Critério de severidade, KPI em foco, gráfico "traço técnico"** (7) |
 | Nada pulsa em loop; "Sala de Situação" fora da interface | **Ícones Tabler** (11; hoje lucide) |
 | Teste `design-guard`: o design antigo não volta | |
-| **Mapa principal** (13): base Mineral, relevo, abertura em 3D, segmento 2D/3D com modo salvo e seletor de bases | O restante dos controles do mapa (filtros, camadas, medir, coordenadas, snapshot, hover e modal) e os estados de carregamento e erro do mapa |
+| **Mapa principal** (13): base Mineral, relevo, abertura em 2D (3D por escolha), segmento 2D/3D com modo salvo, seletor de bases e **cursor Prisma aurora** (10) | O restante dos controles do mapa (filtros, camadas, medir, coordenadas, snapshot, hover e modal) e os estados de carregamento e erro do mapa |
 
 ---
 
@@ -467,6 +473,7 @@ Para ninguém recolocar sem motivo.
 | Mapa topográfico (OpenTopoMap) como padrão | 50% bege e 46% verde de mata: lia como carta de natureza |
 | Satélite como mapa padrão | O mapa bonito é o principal; satélite é utilidade |
 | Basemap Dark Matter | Sem dark mode, perde o sentido |
+| Mapa abrindo em 3D por padrão | O relevo 3D pesava no aparelho; o padrão passou a 2D e o 3D ficou como escolha salva (13) |
 | Cursor de mão nativo como único | Queríamos uma marca também no cursor |
 | Mais de um verde "sem papel" (musgo `#2B4234`) | Lia como oliva escuro; ficou o Floresta |
 | Seletor de tema (`next-themes`) e a variante `dark` dos gráficos | Sem modo escuro; o seletor nunca foi usado |
@@ -513,7 +520,7 @@ Descobertas na prática; valem para quem implementar.
 8. **Estados: desenhados e vistoriados no laboratório (ticket #68), ver 2.1.1 e 2.1.2.** Vistoria feita em três frentes: (a) **código e cálculo** (contrastes medidos, foco, avisos, movimento reduzido); (b) **verificador automático axe-core 4.13.0** (regras WCAG 2.0, 2.1 e 2.2 nível AA mais boas práticas) rodado em Chrome real, com movimento reduzido, em **24 telas e estados** (todos os vazios, erro antes e depois da falha, carregando em 3 momentos, parcial, bloqueado nos dois lados, sem permissão, desatualizado em 3 momentos, ação destrutiva com o toast, sucesso e "Voz e tom"): **0 violações**; (c) **foco por teclado**, medido: depois de uma troca de bloco o foco fica no bloco novo (não no início da página) e, ao remover, vai para "Desfazer". O axe só pega parte dos problemas: **falta um teste manual com leitor de tela** (anúncio das trocas e dos erros) e **migrar** os estados para as telas, uma por vez nos PRs de dashboard, mapa, admin e auth. Corrigido na vistoria: texto do chip no hover (4,47:1 passou a grafite), destaque que sumia com movimento reduzido, foco perdido quando o bloco sai de cena, região viva para o leitor de tela, `alt` das ilustrações, rótulo de placar que o leitor de tela ignorava. Limite conhecido: o "diálogo" de remoção do laboratório é um bloco em linha; no produto use o `Dialog` (que já devolve o foco a quem abriu).
 9. **Auditar as telas atuais** com o checklist da seção 1.2 e a seção 2: onde há espera sem aviso, lista vazia sem explicação, erro sem saída, botão desabilitado sem motivo ou etapa que dá para eliminar.
 10. **Cor das ilustrações dos estados.** A folha atual é colorida (marrom do café e da madeira, laranja da placa e dos avisos, azul do passarinho). A seção 4 diz "cor quente só para o crítico", mas as artes são conteúdo, não moldura. Decidir se isso fica como regra ("a ilustração é conteúdo, pode ter cor") e registrar o motivo.
-11. **Ainda não portado do laboratório** (tabela da 14.1): sons, cursor animado, onda do clique, animação de menu, diálogo e abas, `StateBlock`, `Swap` e `Collapse`, critério de severidade e KPI em foco, ícones Tabler. O **mapa principal** já está no código (13); falta migrar os controles que flutuam sobre ele.
+11. **Ainda não portado do laboratório** (tabela da 14.1): sons, cursor animado fora do mapa, onda do clique, animação de menu, diálogo e abas, `StateBlock`, `Swap` e `Collapse`, critério de severidade e KPI em foco, ícones Tabler. O **mapa principal** já está no código (13); falta migrar os controles que flutuam sobre ele.
 12. **Dependência `next-themes`** continua no `package.json` sem uso. Remover junto com a atualização de `bun.lock` e `package-lock.json`.
 13. **Migração das telas.** A guarda registra o que falta: **118 arquivos, 1.438 classes de paleta e 455 cores hexadecimais**. Por área (classes / hex): admin 424 / 119, mapa 350 / 128, importação de GPX 219 / 0, dashboard e gráficos 191 / 131, outros 129 / 6, auth 106 / 0, landing 19 / 71. Os componentes base (`components/ui`) já estão zerados. Ordem do plano: PR 2 dashboard e gráficos, PR 3 mapa, PR 4 admin, PR 5 auth e landing; cada um zera o seu limite. Os neutros (slate, gray, neutral: 832 classes) viram tokens com pouca decisão; os tons de cor (azul 196, vermelho 141, verde 118, âmbar 113…) pedem decisão por tela (marca, água, severidade ou decoração), e em superfície escura o realce é `accent`, não `primary`.
 14. **Textos de exemplo** (nome do administrador, números, horários, "CAR") são fictícios. Os que dependem de dados reais (último foco, quem administra, o que vai junto ao remover) precisam vir do sistema.
