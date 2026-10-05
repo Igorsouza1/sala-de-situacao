@@ -50,6 +50,17 @@
   --color-destructive: #c8431a;
   --color-destructive-foreground: #ffffff;
 
+  /* Mapa Mineral (13): o MapLibre não lê var(), então components/map/helpers/basemaps.ts lê estes valores com getComputedStyle.
+     Aprovados no laboratório; não são tons de marca, só da base do mapa. */
+  --color-map-water: #c6d8de; /* azul-ardósia claro */
+  --color-map-water-text: #4f6f7b;
+  --color-map-forest: #cfddd2; /* mata */
+  --color-map-grass: #dde7de; /* parque, campo, uso do solo */
+  --color-map-urban: #eceeeb; /* área urbana */
+  --color-map-casing: #d9ddd8; /* contorno das ruas */
+  --color-map-shadow: #2f3d35; /* relevo sombreado */
+  --color-map-shadow-accent: #4b5d52;
+
   /* Forma (6): pequeno 4, médio 6, grande 10. Sem pílulas. */
   --radius-sm: 4px;
   --radius-md: 6px;
