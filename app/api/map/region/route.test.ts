@@ -28,3 +28,11 @@ it('constrains an assigned explicit region by the resolved organization', async 
   expect(query.sql).toContain('organization_id =');
   expect(query.params).toEqual(expect.arrayContaining([11, 'org-a']));
 });
+
+it.each(['11junk', '0', '9007199254740992', '11&regiao_id=22'])(
+  'rejects an invalid region parameter without querying geometry: %s', async (raw) => {
+    const response = await GET(new Request(`http://localhost/api/map/region?regiao_id=${raw}`));
+    expect(response.status).toBe(400);
+    expect(db.execute).not.toHaveBeenCalled();
+  },
+);

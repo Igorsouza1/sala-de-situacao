@@ -98,6 +98,13 @@ describe.each([
     expect(service).not.toHaveBeenCalled();
   });
 
+  test.each(["regiao_id=11oops", "regiao_id=11&regiao_id=22"])(
+    "ID de Região malformado é rejeitado sem consultar dados: %s", async (params) => {
+      expect((await handler(request(params))).status).toBe(400);
+      expect(service).not.toHaveBeenCalled();
+    },
+  );
+
   test("usuário sem Regiões atribuídas não consulta dados", async () => {
     accessibleRegions.mockResolvedValue([]);
     expect((await handler(request())).status).toBe(403);

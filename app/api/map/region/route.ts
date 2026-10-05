@@ -3,6 +3,7 @@ import { requireAuthWithTenant } from "@/lib/api/require-auth";
 import { getAccessibleRegionIdsForUser, getRegionIdsForUser } from "@/lib/api/require-region";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
+import { parseRegiaoIdParam } from "@/lib/api/region-id";
 
 type BBoxRow = {
   nome: string | null;
@@ -64,24 +65,22 @@ export async function GET(request: Request) {
   const isSuperAdmin = user?.app_metadata?.is_superadmin === true;
 
   // regiao_id explícito (admin navegando para uma região específica)
-  const url = new URL(request.url)
-  const regiaoIdOverride = url.searchParams.get('regiao_id')
-  if (regiaoIdOverride) {
-    const id = parseInt(regiaoIdOverride, 10)
-    if (!Number.isNaN(id)) {
-      const allowed = await getAccessibleRegionIdsForUser(user!.id, tenantId!, isSuperAdmin);
-      if (allowed !== null && !allowed.includes(id)) return NextResponse.json(null, { status: 403 });
-      const row = await specificRegionsBBox([id], isSuperAdmin ? undefined : tenantId!)
-      if (!row || row.count === 0) return NextResponse.json(null)
-      return NextResponse.json({
-        nome: row.nome,
-        municipio: row.municipio,
-        uf: row.uf,
-        brasaoUrl: row.brasao_url,
-        center: [row.centroid_lng, row.centroid_lat] as [number, number],
-        bbox: [row.bbox_min_lng, row.bbox_min_lat, row.bbox_max_lng, row.bbox_max_lat] as [number, number, number, number],
-      }, { headers: { 'Cache-Control': 'private, no-store' } })
-    }
+  const requested = parseRegiaoIdParam(new URL(request.url).searchParams)
+  if (!requested.ok) return NextResponse.json(null, { status: 400 })
+  if (requested.id !== null) {
+    const id = requested.id
+    const allowed = await getAccessibleRegionIdsForUser(user!.id, tenantId!, isSuperAdmin);
+    if (allowed !== null && !allowed.includes(id)) return NextResponse.json(null, { status: 403 });
+    const row = await specificRegionsBBox([id], isSuperAdmin ? undefined : tenantId!)
+    if (!row || row.count === 0) return NextResponse.json(null)
+    return NextResponse.json({
+      nome: row.nome,
+      municipio: row.municipio,
+      uf: row.uf,
+      brasaoUrl: row.brasao_url,
+      center: [row.centroid_lng, row.centroid_lat] as [number, number],
+      bbox: [row.bbox_min_lng, row.bbox_min_lat, row.bbox_max_lng, row.bbox_max_lat] as [number, number, number, number],
+    }, { headers: { 'Cache-Control': 'private, no-store' } })
   }
 
   let row: BBoxRow | null = null;
