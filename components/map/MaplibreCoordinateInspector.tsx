@@ -42,7 +42,7 @@ export function MaplibreCoordinateInspector({
   }
 
   return (
-    <div className="absolute top-80 right-4 z-[400] flex flex-col gap-2 items-end">
+    <div className="absolute top-96 right-4 z-[400] flex flex-col gap-2 items-end">
       <Button
         variant={isActive ? "default" : "outline"}
         size="icon"

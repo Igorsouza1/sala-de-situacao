@@ -5,7 +5,6 @@ import { LandPlot } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { FilterPopover } from "./FilterPopover"
 
 interface PropertyFilterControlProps {
   onFilterChange: (filters: { minArea?: number; maxArea?: number }) => void
@@ -25,9 +24,9 @@ export function PropertyFilterControl({ onFilterChange }: PropertyFilterControlP
     setCount(data.count ?? null)
   }
 
+  const close = () => {}
+
   return (
-    <FilterPopover icon={LandPlot} title="Filtros de Propriedade" count={count}>
-      {(close) => (
         <div className="space-y-4">
           <div className="space-y-2">
             <Label className="text-xs text-slate-600 font-medium">Tamanho da Área (Hectares)</Label>
@@ -92,7 +91,5 @@ export function PropertyFilterControl({ onFilterChange }: PropertyFilterControlP
             </Button>
           </div>
         </div>
-      )}
-    </FilterPopover>
   )
 }

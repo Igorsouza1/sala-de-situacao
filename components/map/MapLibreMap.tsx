@@ -3,7 +3,6 @@
 import Map, {
   Source,
   Layer,
-  NavigationControl,
   Popup,
   Marker,
 } from 'react-map-gl/maplibre'
@@ -43,7 +42,8 @@ import { useUserRole } from '@/hooks/useUserRole'
 import { getLayerLegendInfo } from './helpers/map-visuals'
 import { Button } from '@/components/ui/button'
 import { BasemapControl } from './BasemapControl'
-import { MapViewModeControl } from './MapViewModeControl'
+import { CameraControls } from './CameraControls'
+import { DockPanelButton, DockDivider, MapDock } from './MapDock'
 import { PrismCursor } from './PrismCursor'
 import {
   BASEMAP_MAX_ZOOM,
@@ -953,8 +953,6 @@ export default function MapLibreMap({
         onContextMenu={handleContextMenu}
         interactiveLayerIds={interactiveLayerIds}
       >
-        <NavigationControl position="top-right" visualizePitch />
-
         {/* ── Relevo (DEM): serve ao terreno 3D e, nas bases claras, ao sombreado. Primeiro filho: fica sob os dados. ── */}
         <Source id="dem" type="raster-dem" tiles={DEM_TILES} encoding="terrarium" tileSize={256} maxzoom={DEM_MAX_ZOOM}>
           {HILLSHADE_BASEMAPS.has(shownBasemap) && (
@@ -1250,16 +1248,16 @@ export default function MapLibreMap({
 
       {/* ── Controls overlay ─────────────────────────────────────────────── */}
 
-      {/* Base do mapa e ângulo (2D/3D) */}
-      <div className="absolute top-4 right-14 z-[400] flex items-start gap-2">
-        <MapViewModeControl value={viewMode} onChange={handleViewModeChange} />
+      {/* Câmera: zoom, bússola e 2D|3D */}
+      <CameraControls mapRef={mapRef} ready={mapLoaded} viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+
+      {/* Base do mapa (passa para dentro de Camadas no passo 2) */}
+      <div className="absolute top-4 right-[4.5rem] z-[400] flex items-start gap-2">
         <BasemapControl value={basemap} shown={shownBasemap} onChange={handleBasemapChange} />
       </div>
 
       {/* Left panel: filters */}
       <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-4">
-        <DateFilterControl onDateChange={setDateFilter} />
-        <PropertyFilterControl onFilterChange={setAreaFilter} />
         <MaplibreFaunaHeatmapControl
           isHeatmapActive={faunaHeatmapActive}
           isLocationsActive={faunaLocationsActive}
@@ -1278,7 +1276,7 @@ export default function MapLibreMap({
       </div>
 
       {/* Reload button */}
-      <div className="absolute top-44 right-4 z-[400]">
+      <div className="absolute top-56 right-4 z-[400]">
         <Button
           variant="outline"
           size="icon"
@@ -1320,12 +1318,6 @@ export default function MapLibreMap({
         coordinate={inspectedCoord}
       />
 
-      {/* Snapshot */}
-      <MaplibreSnapshotControl
-        activeLayers={visibleLayers}
-        mapRef={mapRef}
-      />
-
       {/* Shapefile uploader */}
       {/* <ShapefileUploader
         onPreview={(data, color) => setPreviewGeoJSON({ data, color })}
@@ -1341,17 +1333,32 @@ export default function MapLibreMap({
         }}
       /> */}
 
-      {/* Bottom-left: LayerManager */}
-      <div className="absolute bottom-4 left-4 z-[1000]">
-        <LayerManager
-          title="Camadas"
-          options={layerManagerOptions}
-          activeLayers={visibleLayers}
-          onLayerToggle={handleLayerToggle}
-          onToggleAll={handleToggleAll}
-          onGroupToggle={handleGroupToggle}
-        />
-      </div>
+      {/* Dock: Camadas, Filtros e Imprimir (Medir e Consultar entram no passo 4) */}
+      <MapDock>
+        <DockPanelButton id="layers" icon={LucideIcons.Layers} label="Camadas">
+          <LayerManager
+            options={layerManagerOptions}
+            activeLayers={visibleLayers}
+            onLayerToggle={handleLayerToggle}
+            onToggleAll={handleToggleAll}
+            onGroupToggle={handleGroupToggle}
+          />
+        </DockPanelButton>
+        <DockPanelButton id="filters" icon={LucideIcons.SlidersHorizontal} label="Filtros">
+          <div className="space-y-5">
+            <section>
+              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Período</h4>
+              <DateFilterControl onDateChange={setDateFilter} />
+            </section>
+            <section>
+              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Propriedade</h4>
+              <PropertyFilterControl onFilterChange={setAreaFilter} />
+            </section>
+          </div>
+        </DockPanelButton>
+        <DockDivider />
+        <MaplibreSnapshotControl activeLayers={visibleLayers} mapRef={mapRef} />
+      </MapDock>
 
       {/* Loading overlay */}
       {loadingLayers && (

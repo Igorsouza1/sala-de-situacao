@@ -14,7 +14,6 @@ import {
   endOfYear,
 } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { FilterPopover } from "./FilterPopover"
 
 interface DateFilterControlProps {
   onDateChange: (startDate: Date | null, endDate: Date | null) => void
@@ -38,8 +37,6 @@ export function DateFilterControl({ onDateChange }: DateFilterControlProps) {
       didInitialize.current = true
     }
   }, [onDateChange])
-
-  const isFilterActive = startDate !== null || endDate !== null
 
   const applyPreset = (preset: "today" | "week" | "month" | "year") => {
     const now = new Date()
@@ -81,14 +78,9 @@ export function DateFilterControl({ onDateChange }: DateFilterControlProps) {
     close()
   }
 
+  const close = () => {}
+
   return (
-    <FilterPopover
-      icon={CalendarIcon}
-      title="Filtro de Datas"
-      isActive={isFilterActive}
-      panelClassName="w-72"
-    >
-      {(close) => (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-1.5">
             {(["today", "week", "month", "year"] as const).map((preset) => (
@@ -175,7 +167,5 @@ export function DateFilterControl({ onDateChange }: DateFilterControlProps) {
             </Button>
           </div>
         </div>
-      )}
-    </FilterPopover>
   )
 }

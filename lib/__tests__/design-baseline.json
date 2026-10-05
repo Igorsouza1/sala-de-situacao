@@ -379,10 +379,6 @@
     "paleta": 0,
     "hex": 3
   },
-  "components/map/LayerManager.tsx": {
-    "paleta": 15,
-    "hex": 0
-  },
   "components/map/map.tsx": {
     "paleta": 6,
     "hex": 0
@@ -409,10 +405,6 @@
   },
   "components/map/MaplibreMeasureControl.tsx": {
     "paleta": 11,
-    "hex": 0
-  },
-  "components/map/MaplibreSnapshotControl.tsx": {
-    "paleta": 2,
     "hex": 0
   },
   "components/map/MapPlaceholder.tsx": {

@@ -1,12 +1,11 @@
 "use client"
 
 import { useState, useMemo } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { ChevronUp, ChevronDown, Globe, Eye, EyeOff, Layers } from "lucide-react"
+import { ChevronUp, ChevronDown, Layers } from "lucide-react"
 import * as LucideIcons from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 
@@ -26,7 +25,6 @@ export interface LayerManagerOption {
 }
 
 interface LayerManagerProps {
-  title?: string
   options: LayerManagerOption[]
   activeLayers: string[]
   onLayerToggle: (slug: string, isChecked: boolean) => void
@@ -68,8 +66,8 @@ function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { 
         transition={{ delay: index * 0.02 }}
         className={`group flex items-center justify-between rounded-md border transition-colors duration-150 px-2 py-1.5 ${
             isChecked
-            ? "bg-accent/10 border-accent/20"
-            : "bg-transparent border-transparent hover:bg-white/5"
+            ? "bg-secondary border-transparent"
+            : "bg-transparent border-transparent hover:bg-muted"
         }`}
         >
         <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -77,13 +75,13 @@ function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { 
             id={option.id}
             checked={isChecked}
             onCheckedChange={onToggle}
-            className="w-3.5 h-3.5 border-slate-600 data-[state=checked]:bg-primary data-[state=checked]:border-accent data-[state=checked]:text-white shrink-0"
+            className="shrink-0"
             />
 
             {legendType === 'point' && (
                 <div 
-                    className="h-5 w-5 rounded flex items-center justify-center shrink-0 bg-white/5 border border-white/10"
-                    style={{ borderColor: isChecked ? option.color : 'rgba(255,255,255,0.1)' }}
+                    className="h-5 w-5 rounded flex items-center justify-center shrink-0 bg-card border border-border"
+                    style={{ borderColor: isChecked ? option.color : undefined }}
                 >
                     <IconComponent 
                         size={12} 
@@ -121,7 +119,7 @@ function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { 
             {legendType === 'polygon' && (
                 <div className="h-5 w-5 flex items-center justify-center shrink-0">
                     <span
-                        className="h-3 w-3 rounded-[2px] shadow-xs ring-1 ring-white/20"
+                        className="h-3 w-3 rounded-[2px] shadow-xs ring-1 ring-border"
                         style={{ 
                             backgroundColor: option.fillColor || option.color, // Fill
                             borderColor: option.color
@@ -136,7 +134,7 @@ function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { 
                         className="h-3 w-3 rounded-sm shadow-xs"
                         style={{
                             background: `linear-gradient(135deg, ${option.color || 'red'} 0%, transparent 100%)`, 
-                            border: '1px solid rgba(255,255,255,0.2)'
+                            border: '1px solid var(--color-border)'
                         }}
                      />
                 </div>
@@ -144,8 +142,8 @@ function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { 
 
             {legendType === 'icon' && (
                 <div 
-                    className="h-5 w-5 rounded-full flex items-center justify-center shrink-0 bg-white/5 border border-white/10"
-                    style={{ borderColor: isChecked ? option.color : 'rgba(255,255,255,0.1)' }}
+                    className="h-5 w-5 rounded-full flex items-center justify-center shrink-0 bg-card border border-border"
+                    style={{ borderColor: isChecked ? option.color : undefined }}
                 >
                     <IconComponent 
                         size={12} 
@@ -156,7 +154,7 @@ function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { 
 
             <Label
             htmlFor={option.id}
-            className="text-xs text-slate-300 cursor-pointer select-none flex-1 truncate font-normal"
+            className="text-sm text-foreground cursor-pointer select-none flex-1 truncate font-normal"
             >
             {option.label}
             </Label>
@@ -166,14 +164,12 @@ function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { 
 }
 
 export function LayerManager({ 
-  title = "Camadas", 
   options, 
   activeLayers, 
   onLayerToggle,
   onToggleAll,
   onGroupToggle
 }: LayerManagerProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
   const [expandedCategories, setExpandedCategories] = useState<string[]>(DEFAULT_EXPANDED)
   const [expandedItems, setExpandedItems] = useState<string[]>([])
   
@@ -184,8 +180,6 @@ export function LayerManager({
         : [...prev, id]
     )
   }
-
-  const toggleExpand = () => setIsExpanded(!isExpanded)
 
   const toggleCategory = (category: string) => {
     setExpandedCategories(prev => 
@@ -223,66 +217,25 @@ export function LayerManager({
   }, [options]);
 
   return (
-    <Card className="w-80 max-w-sm bg-foreground/95 backdrop-blur-md shadow-2xl z-[1000] overflow-hidden border border-white/10 transition-all duration-300">
-      <CardHeader className="p-3 border-b border-white/10">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="h-8 w-8 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center shrink-0">
-              <Globe className="w-4 h-4 text-accent" />
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <CardTitle className="text-base font-semibold text-slate-100 flex items-center gap-2 truncate">
-                {title}
-              </CardTitle>
-            </div>
-          </div>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleExpand}
-            className="h-8 w-8 p-0 rounded-full text-slate-400 hover:bg-white/10 hover:text-white"
-            aria-expanded={isExpanded}
-            aria-label={isExpanded ? "Fechar camadas" : "Abrir camadas"}
-          >
-            {isExpanded ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-      </CardHeader>
-
-      <AnimatePresence initial={false}>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
-          >
-            <CardContent className="p-2.5">
-                  <div className="max-h-[65vh] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                
+    <div>
+      <div>
                 {groupedOptions.map(group => {
                     const isCatExpanded = expandedCategories.includes(group.name);
                     
                     return (
-                    <div key={group.name} className="mb-2 last:mb-0 border border-white/5 rounded-lg overflow-hidden bg-white/[0.02]">
+                    <div key={group.name} className="mb-2 last:mb-0 border border-border rounded-lg overflow-hidden">
                         {/* Accordion Header */}
                         <div 
-                            className="flex items-center justify-between p-2 cursor-pointer hover:bg-white/5 transition-colors select-none"
+                            className="flex items-center justify-between p-2 cursor-pointer hover:bg-muted transition-colors select-none"
                             onClick={() => toggleCategory(group.name)}
                         >
-                            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                            <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-2">
                                 {group.name}
-                                <Badge variant="secondary" className="bg-white/10 text-slate-300 text-[10px] h-4 px-1 rounded-sm">
+                                <Badge variant="secondary" className="text-[10px] h-4 px-1">
                                     {group.items.length}
                                 </Badge>
                             </h4>
-                            {isCatExpanded ? <ChevronUp className="h-3 w-3 text-slate-500" /> : <ChevronDown className="h-3 w-3 text-slate-500" />}
+                            {isCatExpanded ? <ChevronUp className="h-3 w-3 text-muted-foreground" /> : <ChevronDown className="h-3 w-3 text-muted-foreground" />}
                         </div>
 
                         <AnimatePresence>
@@ -294,7 +247,7 @@ export function LayerManager({
                                     transition={{ duration: 0.2 }}
                                     className="overflow-hidden"
                                 >
-                                    <div className="p-2 pt-0 space-y-1.5 border-t border-white/5">
+                                    <div className="p-2 pt-0 space-y-1.5 border-t border-border">
                                         {group.items.map((option, index) => {
                                         // CHECK FOR SUB-OPTIONS (NESTED LAYER)
                                         if (option.subOptions && option.subOptions.length > 0) {
@@ -324,9 +277,9 @@ export function LayerManager({
                                             };
 
                                             return (
-                                                <div key={option.id} className="rounded-md border border-white/5 bg-white/5 overflow-hidden">
+                                                <div key={option.id} className="rounded-md border border-border bg-muted overflow-hidden">
                                                     <div
-                                                        className="flex items-center justify-between p-2 cursor-pointer hover:bg-white/10 transition-colors"
+                                                        className="flex items-center justify-between p-2 cursor-pointer hover:bg-secondary transition-colors"
                                                         onClick={() => toggleItem(option.id)}
                                                     >
                                                         <div className="flex items-center gap-2 min-w-0">
@@ -336,28 +289,28 @@ export function LayerManager({
                                                                 checked={isAllSelected}
                                                                 // @ts-ignore
                                                                 onClick={handleGroupCheckbox}
-                                                                className={`w-3.5 h-3.5 border-slate-600 data-[state=checked]:bg-primary data-[state=checked]:border-accent data-[state=checked]:text-white shrink-0 ${!isAllSelected && !isNoneSelected ? 'opacity-50 bg-accent/50' : ''}`}
+                                                                className={`shrink-0 ${!isAllSelected && !isNoneSelected ? 'opacity-50' : ''}`}
                                                             />
 
                                                             {/* Optional: Icon for the group */}
                                                             {option.icon && (
-                                                                <div className="text-slate-400">
+                                                                <div className="text-muted-foreground">
                                                                    {(() => { const I = getLayerIcon(option.icon); return <I size={14} /> })()}
                                                                 </div>
                                                             )}
 
-                                                            <span className="text-xs font-medium text-slate-300 truncate">
+                                                            <span className="text-sm font-medium text-foreground truncate">
                                                                 {option.label}
                                                             </span>
 
                                                             {/* Badge if children active */}
                                                             {activeChildrenCount > 0 && (
-                                                                <Badge variant="secondary" className="bg-accent/20 text-accent text-[9px] h-3.5 px-1 rounded-sm">
+                                                                <Badge variant="secondary" className="text-[9px] h-3.5 px-1">
                                                                     {activeChildrenCount}/{allChildrenCount}
                                                                 </Badge>
                                                             )}
                                                         </div>
-                                                        {isItemExpanded ? <ChevronUp className="h-3 w-3 text-slate-500" /> : <ChevronDown className="h-3 w-3 text-slate-500" />}
+                                                        {isItemExpanded ? <ChevronUp className="h-3 w-3 text-muted-foreground" /> : <ChevronDown className="h-3 w-3 text-muted-foreground" />}
                                                     </div>
 
                                                     <AnimatePresence>
@@ -366,9 +319,9 @@ export function LayerManager({
                                                                 initial={{ height: 0 }}
                                                                 animate={{ height: "auto" }}
                                                                 exit={{ height: 0 }}
-                                                                className="overflow-hidden bg-black/20"
+                                                                className="overflow-hidden bg-card"
                                                             >
-                                                                <div className="p-2 space-y-1.5 border-t border-white/5">
+                                                                <div className="p-2 space-y-1.5 border-t border-border">
                                                                     {option.subOptions.map((sub, subIdx) => (
                                                                         <LayerOptionItem
                                                                             key={sub.id}
@@ -405,16 +358,16 @@ export function LayerManager({
                     </div>
                     )
                 })}
-              </div>
+      </div>
 
-              {/* Quick Actions */}
-              <div className="mt-3 pt-3 border-t border-white/10">
+      {/* Quick Actions */}
+      <div className="mt-3 pt-3 border-t border-border">
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => onToggleAll(true)}
-                    className="flex-1 text-xs border-white/10 text-slate-300 bg-white/5 hover:bg-accent/10 hover:text-accent hover:border-accent/20"
+                    className="flex-1 text-xs"
                   >
                     Mostrar Todas
                   </Button>
@@ -423,16 +376,12 @@ export function LayerManager({
                     variant="outline"
                     size="sm"
                     onClick={() => onToggleAll(false)}
-                    className="flex-1 text-xs border-white/10 text-slate-300 bg-white/5 hover:bg-accent/10 hover:text-accent hover:border-accent/20"
+                    className="flex-1 text-xs"
                   >
                     Ocultar Todas
                   </Button>
                 </div>
-              </div>
-            </CardContent>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </Card>
+      </div>
+    </div>
   )
 }

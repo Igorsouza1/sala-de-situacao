@@ -1,7 +1,7 @@
 "use client"
 
-import { Camera } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { Printer } from "lucide-react"
+import { DockButton } from "./MapDock"
 import { useMapContext } from "@/context/GeoDataContext"
 
 interface MaplibreSnapshotControlProps {
@@ -37,17 +37,5 @@ export function MaplibreSnapshotControl({
     window.open(`/print/map?${params.toString()}`, "_blank")
   }
 
-  return (
-    <div className="absolute top-[370px] right-4 z-[400]">
-      <Button
-        variant="outline"
-        size="icon"
-        className="bg-white hover:bg-gray-100 shadow-md text-slate-700"
-        onClick={handleSnapshot}
-        title="Imprimir Mapa (Snapshot)"
-      >
-        <Camera className="h-4 w-4" />
-      </Button>
-    </div>
-  )
+  return <DockButton icon={Printer} label="Imprimir" onClick={handleSnapshot} />
 }

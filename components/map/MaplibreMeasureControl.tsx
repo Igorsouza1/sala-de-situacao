@@ -52,7 +52,7 @@ export function MaplibreMeasureControl({
   }, [mode, isDrawing])
 
   return (
-    <div className="absolute top-60 right-4 z-[400] flex flex-col gap-2">
+    <div className="absolute top-[17rem] right-4 z-[400] flex flex-col gap-2">
       <div className="flex items-center gap-1 bg-white/90 backdrop-blur-xs p-1 rounded-md shadow-md border border-gray-200">
         <Button
           variant={mode === "distance" ? "default" : "ghost"}

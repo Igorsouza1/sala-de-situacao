@@ -500,14 +500,16 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
       <div className="absolute bottom-4 left-4 z-[1000] gap-3 flex flex-col">
         {/* <MapLayersCard ... /> Removido */ }
        
-        <LayerManager
-            title="Camadas"
-            options={dynamicLayerOptions}
-            activeLayers={visibleDynamicLayers}
-            onLayerToggle={handleDynamicLayerToggle}
-            onToggleAll={handleToggleAllDynamic}
-            onGroupToggle={handleGroupToggle}
-        />
+        {/* o LayerManager agora é só o conteúdo; o mapa legado dá a moldura (o novo usa o dock) */}
+        <div className="w-80 max-h-[70vh] overflow-y-auto rounded-lg border border-border bg-card p-3 shadow-control">
+          <LayerManager
+              options={dynamicLayerOptions}
+              activeLayers={visibleDynamicLayers}
+              onLayerToggle={handleDynamicLayerToggle}
+              onToggleAll={handleToggleAllDynamic}
+              onGroupToggle={handleGroupToggle}
+          />
+        </div>
       </div>
 
       {loadingLayers && (
