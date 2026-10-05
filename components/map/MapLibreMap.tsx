@@ -42,6 +42,29 @@ import { useMapContext } from '@/context/GeoDataContext'
 import { useUserRole } from '@/hooks/useUserRole'
 import { getLayerLegendInfo } from './helpers/map-visuals'
 import { Button } from '@/components/ui/button'
+import { BasemapControl } from './BasemapControl'
+import { MapViewModeControl } from './MapViewModeControl'
+import {
+  BASEMAP_MAX_ZOOM,
+  DEFAULT_BASEMAP,
+  DEM_TILES,
+  HILLSHADE_BASEMAPS,
+  STATIC_STYLES,
+  blankStyle,
+  hillshadePaint,
+  loadMineralStyle,
+  readMapTokens,
+  tintMineral,
+  type BasemapKey,
+} from './helpers/basemaps'
+import {
+  TERRAIN_EXAGGERATION,
+  cameraFor,
+  modeFromPitch,
+  readSavedMode,
+  saveMode,
+  type ViewMode,
+} from './helpers/view-mode'
 
 // ── Module-level cache — persists across SPA navigation within the same tab ──
 // Cleared only on hard reload. Shared by all MapLibreMap mounts.
@@ -64,51 +87,6 @@ const isIconLayer = (vc: LayerResponseDTO['visualConfig']): boolean => {
   if ((vc as any)?.maplibre?.type === 'icon-marker') return true
   const base = (vc?.baseStyle || vc) as any
   return base?.type === 'icon'
-}
-
-// ── Basemaps ────────────────────────────────────────────────────────────────
-const SATELLITE_STYLE = {
-  version: 8,
-  sources: {
-    'esri-satellite': {
-      type: 'raster',
-      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-      tileSize: 256,
-      attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP',
-      maxzoom: 19,
-    },
-  },
-  layers: [{ id: 'esri-satellite-layer', type: 'raster', source: 'esri-satellite' }],
-}
-
-const OSM_STYLE = {
-  version: 8,
-  sources: {
-    'osm': {
-      type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-      tileSize: 256,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxzoom: 19,
-    },
-  },
-  layers: [{ id: 'osm-layer', type: 'raster', source: 'osm' }],
-}
-
-type BasemapKey = 'satellite' | 'streets' | 'dark' | 'osm'
-
-const BASEMAPS: Record<BasemapKey, string | object> = {
-  satellite: SATELLITE_STYLE,
-  streets: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-  osm: OSM_STYLE,
-}
-
-const BASEMAP_LABELS: Record<BasemapKey, string> = {
-  satellite: 'Satélite',
-  streets: 'Ruas',
-  dark: 'Dark',
-  osm: 'StreetMap',
 }
 
 // ── Measure helpers ──────────────────────────────────────────────────────────
@@ -242,8 +220,39 @@ export default function MapLibreMap({
   } | null>(null)
 
   // ── Basemap ─────────────────────────────────────────────────────────────
-  const [basemap, setBasemap] = useState<BasemapKey>('satellite')
-  const [basemapOpen, setBasemapOpen] = useState(false)
+  const [basemap, setBasemap] = useState<BasemapKey>(DEFAULT_BASEMAP)
+  const [mineralRaw, setMineralRaw] = useState<any>(null)
+  const [mineralFailed, setMineralFailed] = useState(false)
+  const tokens = useMemo(() => readMapTokens(), [])
+
+  // Mineral indisponível: o mapa mostra Ruas e o seletor avisa; só volta quando o usuário escolher o Mineral de novo.
+  const shownBasemap: BasemapKey = basemap === 'mineral' && mineralFailed ? 'streets' : basemap
+
+  useEffect(() => {
+    if (basemap !== 'mineral' || mineralRaw || mineralFailed) return
+    let alive = true
+    loadMineralStyle()
+      .then((style) => alive && setMineralRaw(style))
+      .catch(() => alive && setMineralFailed(true))
+    return () => { alive = false }
+  }, [basemap, mineralRaw, mineralFailed])
+
+  const handleBasemapChange = useCallback((key: BasemapKey) => {
+    setBasemap(key)
+    if (key === 'mineral') setMineralFailed(false)
+  }, [])
+
+  const mapStyle = useMemo(() => {
+    if (shownBasemap !== 'mineral') return STATIC_STYLES[shownBasemap]
+    return mineralRaw ? tintMineral(mineralRaw, tokens) : blankStyle(tokens.bg)
+  }, [shownBasemap, mineralRaw, tokens])
+
+  // ── Modo 2D/3D (salvo no navegador) ─────────────────────────────────────
+  const [viewMode, setViewMode] = useState<ViewMode>(readSavedMode)
+  // O relevo só desliga quando a câmera termina de achatar: nada some do nada (DESIGN.md 8.4).
+  const [terrainOn, setTerrainOn] = useState(() => viewMode === '3d')
+  const viewModeRef = useRef(viewMode)
+  const autoMoveRef = useRef(false) // a animação de abertura não grava a preferência
 
   // ── Map ref & region bounds ─────────────────────────────────────────────
   const mapRef = useRef<any>(null)
@@ -349,11 +358,31 @@ export default function MapLibreMap({
     if (fitBoundsDone.current || !mapLoaded || !regionBounds || !mapRef.current) return
     fitBoundsDone.current = true
     const [minLng, minLat, maxLng, maxLat] = regionBounds.bbox
+    // um movimento só: enquadra a região e inclina até o modo salvo (3D na primeira visita)
+    autoMoveRef.current = true
     mapRef.current.fitBounds(
       [[minLng, minLat], [maxLng, maxLat]],
-      { padding: 60, duration: 1000 },
+      { padding: 60, duration: 1200, linear: true, ...cameraFor(viewMode) },
     )
+  // viewMode só vale na abertura; trocar o modo depois não reenquadra a região
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapLoaded, regionBounds])
+
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    viewModeRef.current = mode
+    setViewMode(mode)
+    saveMode(mode)
+    if (mode === '3d') setTerrainOn(true)
+    mapRef.current?.easeTo({ ...cameraFor(mode), duration: 1000 })
+  }, [])
+
+  // O segmento segue a câmera: inclinar com o mouse ou clicar na bússola também troca 2D/3D (e salva).
+  const handleMoveEnd = useCallback((e: { viewState: { pitch: number } }) => {
+    if (autoMoveRef.current) { autoMoveRef.current = false; return }
+    const next = modeFromPitch(e.viewState.pitch)
+    if (next !== viewModeRef.current) { viewModeRef.current = next; setViewMode(next); saveMode(next) }
+    setTerrainOn(next === '3d')
+  }, [])
 
   // Initialize all layers as visible once catalog arrives
   useEffect(() => {
@@ -909,7 +938,11 @@ export default function MapLibreMap({
           zoom,
         }}
         style={{ width: '100%', height: '100%' }}
-        mapStyle={BASEMAPS[basemap] as any}
+        mapStyle={mapStyle as any}
+        maxZoom={BASEMAP_MAX_ZOOM[shownBasemap]}
+        // null desliga o terreno (a prop tipada só aceita undefined, mas a biblioteca trata null como "sem terreno")
+        terrain={(terrainOn ? { source: 'dem', exaggeration: TERRAIN_EXAGGERATION } : null) as any}
+        onMoveEnd={handleMoveEnd}
         cursor={cursor}
         onLoad={() => setMapLoaded(true)}
         onClick={handleMapClick}
@@ -917,7 +950,14 @@ export default function MapLibreMap({
         onContextMenu={handleContextMenu}
         interactiveLayerIds={interactiveLayerIds}
       >
-        <NavigationControl position="top-right" />
+        <NavigationControl position="top-right" visualizePitch />
+
+        {/* ── Relevo (DEM): serve ao terreno 3D e, nas bases claras, ao sombreado. Primeiro filho: fica sob os dados. ── */}
+        <Source id="dem" type="raster-dem" tiles={DEM_TILES} encoding="terrarium" tileSize={256} maxzoom={14}>
+          {HILLSHADE_BASEMAPS.has(shownBasemap) && (
+            <Layer id="relevo" type="hillshade" paint={hillshadePaint(tokens) as any} />
+          )}
+        </Source>
 
         {/* ── Data layers (Source+Layer) ── */}
         {processedLayers.flatMap(({ layer, displayData, isIcon }) => {
@@ -1207,42 +1247,10 @@ export default function MapLibreMap({
 
       {/* ── Controls overlay ─────────────────────────────────────────────── */}
 
-      {/* Basemap dropdown */}
-      {basemapOpen && (
-        <div
-          className="fixed inset-0 z-[399]"
-          onClick={() => setBasemapOpen(false)}
-        />
-      )}
-      <div className="absolute top-4 right-14 z-[400]">
-        <div className="relative">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 px-3 text-xs bg-white/90 backdrop-blur-xs shadow-md border-gray-200 text-slate-700 gap-1"
-            onClick={() => setBasemapOpen((v) => !v)}
-          >
-            <LucideIcons.Layers className="h-3 w-3" />
-            {BASEMAP_LABELS[basemap]}
-            <LucideIcons.ChevronDown className={`h-3 w-3 transition-transform ${basemapOpen ? 'rotate-180' : ''}`} />
-          </Button>
-          {basemapOpen && (
-            <div className="absolute right-0 mt-1 w-36 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-10">
-              {(Object.keys(BASEMAPS) as BasemapKey[]).map((key) => (
-                <button
-                  key={key}
-                  className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-gray-50 transition-colors ${
-                    basemap === key ? 'text-accent font-semibold' : 'text-slate-700'
-                  }`}
-                  onClick={() => { setBasemap(key); setBasemapOpen(false) }}
-                >
-                  {BASEMAP_LABELS[key]}
-                  {basemap === key && <LucideIcons.Check className="h-3 w-3" />}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+      {/* Base do mapa e ângulo (2D/3D) */}
+      <div className="absolute top-4 right-14 z-[400] flex items-start gap-2">
+        <MapViewModeControl value={viewMode} onChange={handleViewModeChange} />
+        <BasemapControl value={basemap} shown={shownBasemap} onChange={handleBasemapChange} />
       </div>
 
       {/* Left panel: filters */}

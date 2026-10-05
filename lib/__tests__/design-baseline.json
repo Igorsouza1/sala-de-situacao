@@ -404,7 +404,7 @@
     "hex": 1
   },
   "components/map/MapLibreMap.tsx": {
-    "paleta": 12,
+    "paleta": 7,
     "hex": 9
   },
   "components/map/MaplibreMeasureControl.tsx": {
