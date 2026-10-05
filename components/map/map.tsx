@@ -10,6 +10,7 @@ import { CustomLayerControl } from "./CustomLayerControl"
 import { MapPlaceholder } from "./MapPlaceholder"
 import { DateFilterControl } from "./DateFilterControl"
 import { PropertyFilterControl } from "./PropertyFilterControl"
+import { FilterPopover } from "./FilterPopover"
 import { FaunaHeatmapControl } from "./FaunaHeatmapControl"
 import { MeasureControl } from "./MeasureControl"
 import { CoordinateInspector } from "./CoordinateInspector"
@@ -475,8 +476,12 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
         ))}
 
         <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-4">
-          <DateFilterControl onDateChange={setDateFilter} />
-          <PropertyFilterControl onFilterChange={setAreaFilter} />
+          <FilterPopover icon={LucideIcons.Calendar} title="Filtro de Datas" panelClassName="w-72" isActive>
+            {() => <DateFilterControl startDate={dateFilter.startDate} endDate={dateFilter.endDate} onChange={setDateFilter} />}
+          </FilterPopover>
+          <FilterPopover icon={LucideIcons.LandPlot} title="Filtros de Propriedade">
+            {() => <PropertyFilterControl value={areaFilter} onChange={setAreaFilter} />}
+          </FilterPopover>
           <FaunaHeatmapControl />
         </div>
       </MapContainer>

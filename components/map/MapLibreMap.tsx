@@ -25,8 +25,8 @@ import {
 } from './helpers/maplibre-layer'
 import type { LayerManagerOption, LayerStatus } from './LayerManager'
 import { LayersPanel } from './LayersPanel'
-import { DateFilterControl } from './DateFilterControl'
-import { PropertyFilterControl } from './PropertyFilterControl'
+import { FiltersPanel } from './FiltersPanel'
+import { activeFilterCount } from './helpers/filters'
 import { Modal } from './Modal'
 import { EditAcaoModal } from './EditAcaoModal'
 import { FeatureDetails } from './feature-details'
@@ -1397,17 +1397,14 @@ export default function MapLibreMap({
             loading={loadingLayers}
           />
         </DockPanelButton>
-        <DockPanelButton id="filters" icon={LucideIcons.SlidersHorizontal} label="Filtros">
-          <div className="space-y-5">
-            <section>
-              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Período</h4>
-              <DateFilterControl onDateChange={setDateFilter} />
-            </section>
-            <section>
-              <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Propriedade</h4>
-              <PropertyFilterControl onFilterChange={setAreaFilter} />
-            </section>
-          </div>
+        <DockPanelButton id="filters" icon={LucideIcons.SlidersHorizontal} label="Filtros" badge={activeFilterCount(dateFilter.startDate, dateFilter.endDate, areaFilter)}>
+          <FiltersPanel
+            startDate={dateFilter.startDate}
+            endDate={dateFilter.endDate}
+            onDateChange={setDateFilter}
+            area={areaFilter}
+            onAreaChange={setAreaFilter}
+          />
         </DockPanelButton>
         <DockDivider />
         <MaplibreSnapshotControl activeLayers={visibleLayers} mapRef={mapRef} />

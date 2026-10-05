@@ -347,10 +347,6 @@
     "paleta": 2,
     "hex": 0
   },
-  "components/map/DateFilterControl.tsx": {
-    "paleta": 11,
-    "hex": 0
-  },
   "components/map/dossie-map.tsx": {
     "paleta": 10,
     "hex": 0
@@ -418,10 +414,6 @@
   "components/map/Modal.tsx": {
     "paleta": 0,
     "hex": 2
-  },
-  "components/map/PropertyFilterControl.tsx": {
-    "paleta": 4,
-    "hex": 0
   },
   "components/map/PropertyInfoControl.tsx": {
     "paleta": 0,
