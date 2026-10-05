@@ -2,6 +2,7 @@ jest.mock('@/lib/api/require-auth', () => ({ requireAuthWithTenant: jest.fn() })
 jest.mock('@/lib/api/require-region', () => ({ getAccessibleRegionIdsForUser: jest.fn() }));
 jest.mock('@/db', () => ({ db: { execute: jest.fn() } }));
 import { resolveScope } from '../scope';
+import { parseRegiaoIdParam, parseRegionIdInput } from '../region-id';
 import { requireAuthWithTenant } from '../require-auth';
 import { getAccessibleRegionIdsForUser } from '../require-region';
 import { db } from '@/db';
@@ -14,6 +15,13 @@ beforeEach(() => {
 it('denies an unassigned region in the same organization', async () => {
   expect((await resolveScope({ regiaoId: 22 })).response?.status).toBe(403);
 });
+
+it.each([0, -1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1])(
+  'rejects invalid numeric region ID %s before database lookup', async (regiaoId) => {
+    expect((await resolveScope({ regiaoId })).response?.status).toBe(400);
+    expect(db.execute).not.toHaveBeenCalled();
+  },
+);
 it('allows an assigned region', async () => {
   expect(await resolveScope({ regiaoId: 11 })).toMatchObject({ tenantId: 'org-a', regiaoId: 11, response: null });
 });
@@ -38,4 +46,20 @@ it('allows superadmin to select another organization explicitly', async () => {
   (db.execute as jest.Mock).mockResolvedValue({ rows: [{ tenant_id: 'org-b' }] });
   (getAccessibleRegionIdsForUser as jest.Mock).mockResolvedValue(null);
   expect(await resolveScope({ regiaoId: 33 })).toMatchObject({ tenantId: 'org-b', regiaoId: 33, response: null });
+});
+
+it.each(['1abc', '1.5', '0', '-1', '', '9007199254740992', '01'])(
+  'rejects a malformed region ID: %s', (raw) => {
+    expect(parseRegionIdInput(raw)).toEqual({ ok: false });
+  },
+);
+
+it('distinguishes an absent region from a valid explicit region', () => {
+  expect(parseRegionIdInput(undefined)).toEqual({ ok: true, id: null });
+  expect(parseRegionIdInput('11')).toEqual({ ok: true, id: 11 });
+});
+
+it('rejects duplicate region IDs rather than choosing the first one', () => {
+  expect(parseRegionIdInput(['11', '22'])).toEqual({ ok: false });
+  expect(parseRegiaoIdParam(new URLSearchParams('regiao_id=11&regiao_id=22'))).toEqual({ ok: false });
 });

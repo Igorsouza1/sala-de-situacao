@@ -1,10 +1,13 @@
 import { apiError } from "@/lib/api/responses";
 import { getAccessibleRegionIdsForUser } from "@/lib/api/require-region";
-import { parseRegiaoIdParam, resolveScope } from "@/lib/api/scope";
+import { resolveScope } from "@/lib/api/scope";
+import { parseRegiaoIdParam } from "@/lib/api/region-id";
 
 /** Resolve tenant and every region granted to the user before querying base data. */
 export async function resolveEnvironmentalReadScope(request: Request) {
-  const requestedRegionId = parseRegiaoIdParam(new URL(request.url).searchParams);
+  const requested = parseRegiaoIdParam(new URL(request.url).searchParams);
+  if (!requested.ok) return { response: apiError("ID de região inválido.", 400) } as const;
+  const requestedRegionId = requested.id;
   const scope = await resolveScope({ regiaoId: requestedRegionId });
   if (scope.response) return { response: scope.response } as const;
 

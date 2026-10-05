@@ -1,10 +1,13 @@
 import { NextResponse, NextRequest } from "next/server";
 import { getAllLayers } from "@/lib/service/layerService";
-import { resolveScope, parseRegiaoIdParam } from "@/lib/api/scope";
+import { resolveScope } from "@/lib/api/scope";
+import { parseRegiaoIdParam } from "@/lib/api/region-id";
 
 export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams;
-    const scope = await resolveScope({ regiaoId: parseRegiaoIdParam(searchParams) });
+    const requested = parseRegiaoIdParam(searchParams);
+    if (!requested.ok) return NextResponse.json({ error: "ID de região inválido." }, { status: 400 });
+    const scope = await resolveScope({ regiaoId: requested.id });
     if (scope.response) return scope.response;
 
     try {

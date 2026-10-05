@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { resolveScope } from "@/lib/api/scope";
+import { parseRegiaoIdParam } from "@/lib/api/region-id";
 import { getRegionIdsForUser } from "@/lib/api/require-region";
 import { getLayerCatalog } from "@/lib/repositories/layerRepository";
 import { db } from "@/db";
@@ -12,11 +13,11 @@ export async function GET(
     request: NextRequest,
     { params }: { params: Promise<{ slug: string; z: string; x: string; y: string }> }
 ) {
-    const rawRegion = request.nextUrl.searchParams.get("regiao_id");
-    const requestedRegion = rawRegion === null ? null : Number(rawRegion);
-    if (requestedRegion !== null && (!Number.isInteger(requestedRegion) || requestedRegion <= 0)) {
+    const requested = parseRegiaoIdParam(request.nextUrl.searchParams);
+    if (!requested.ok) {
         return new Response('Invalid region', { status: 400 });
     }
+    const requestedRegion = requested.id;
     const scope = await resolveScope({ regiaoId: requestedRegion });
     if (scope.response) return scope.response;
     const { user, tenantId } = scope;

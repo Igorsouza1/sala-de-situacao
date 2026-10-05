@@ -73,6 +73,15 @@ test("explicit unassigned region returns 403", async () => {
   expect(resolveScope).toHaveBeenCalledWith({ regiaoId: 22 });
   expect((db.execute as jest.Mock).mock.calls).toHaveLength(1);
 });
+
+test.each(["?regiao_id=11oops", "?regiao_id=11&regiao_id=22"])(
+  "malformed tile region %s returns 400 before scope or data access", async (queryString) => {
+    expect((await GET(request(queryString), params)).status).toBe(400);
+    expect(resolveScope).not.toHaveBeenCalled();
+    expect(getLayerCatalog).not.toHaveBeenCalled();
+    expect(db.execute).not.toHaveBeenCalled();
+  },
+);
 test("explicit accessible region constrains junction query", async () => {
   await GET(request("?regiao_id=11"), params); expect(query().sql).toContain("r.id ="); expect(query().params).toContain(11);
 });

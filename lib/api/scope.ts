@@ -44,6 +44,9 @@ export async function resolveScope(
   }
 
   if (opts.regiaoId != null) {
+    if (!Number.isSafeInteger(opts.regiaoId) || opts.regiaoId <= 0) {
+      return denied(apiError("ID de região inválido.", 400));
+    }
     const regionTenant = await getTenantIdForRegion(opts.regiaoId);
     if (!regionTenant) {
       return denied(apiError(`Região ${opts.regiaoId} não possui Organização associada.`, 400));
@@ -62,12 +65,4 @@ export async function resolveScope(
   if (allowed?.length === 0) return denied(apiError("Região não acessível.", 403));
   const regiaoId = allowed === null ? null : allowed[0];
   return { user, tenantId, regiaoId, response: null };
-}
-
-/** Extrai e valida o query param `regiao_id` de uma URL. */
-export function parseRegiaoIdParam(searchParams: URLSearchParams): number | null {
-  const raw = searchParams.get("regiao_id");
-  if (!raw) return null;
-  const parsed = parseInt(raw, 10);
-  return Number.isNaN(parsed) ? null : parsed;
 }
