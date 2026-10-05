@@ -1,3 +1,4 @@
+import { parsePositiveId } from "@/lib/api/positive-id";
 import { requireRole } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";
@@ -11,8 +12,8 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     if (authResponse) return authResponse;
 
     const params = await context.params;
-    const layerId = parseInt(params.id, 10);
-    if (isNaN(layerId)) return apiError("ID da camada inválido.", 400);
+    const layerId = parsePositiveId(params.id);
+    if (layerId === null) return apiError("ID da camada inválido.", 400);
 
     // Get region ID before deleting for revalidation
     const layer = await db.select({ regiaoId: layerCatalogInMonitoramento.regiaoId })

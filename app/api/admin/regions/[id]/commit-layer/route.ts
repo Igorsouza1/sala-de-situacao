@@ -1,7 +1,8 @@
+import { parsePositiveId } from "@/lib/api/positive-id";
 export const maxDuration = 60;
 
 import { getTenantIdForRegion } from "@/lib/api/scope";
-import { requireAdmin } from "@/lib/api/require-auth";
+import { requireSuperadmin } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
@@ -11,12 +12,12 @@ import slugify from "slugify";
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
   try {
-    const { response: authResponse } = await requireAdmin();
+    const { response: authResponse } = await requireSuperadmin();
     if (authResponse) return authResponse;
 
     const params = await context.params;
-    const regionId = parseInt(params.id, 10);
-    if (isNaN(regionId)) return apiError("ID da região inválido.", 400);
+    const regionId = parsePositiveId(params.id);
+    if (regionId === null) return apiError("ID da região inválido.", 400);
 
     const formData = await request.formData().catch(() => null);
     if (!formData) return apiError("FormData é obrigatório.", 400);

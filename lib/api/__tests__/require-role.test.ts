@@ -24,7 +24,7 @@ jest.mock("@/db", () => ({
 
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
-import { requireRole, requireAdmin } from "../require-auth";
+import { requireRole, requireAdmin, requireSuperadmin } from "../require-auth";
 
 const TENANT = "tenant-uuid";
 
@@ -45,6 +45,26 @@ const superadmin = {
   app_metadata: { is_superadmin: true, tenant_id: TENANT },
 };
 const tenantUser = { id: "u1", app_metadata: { tenant_id: TENANT } };
+
+it("requireSuperadmin denies anonymous and tenant owner without database access", async () => {
+  mockSupabaseUser(null);
+  expect((await requireSuperadmin()).response?.status).toBe(401);
+  mockSupabaseUser(tenantUser);
+  expect((await requireSuperadmin()).response?.status).toBe(403);
+  expect(db.execute).not.toHaveBeenCalled();
+  expect(db.select).not.toHaveBeenCalled();
+});
+
+it("requireSuperadmin accepts trusted global metadata without a tenant", async () => {
+  mockSupabaseUser({ id: "sa", app_metadata: { is_superadmin: true } });
+  expect((await requireSuperadmin()).response).toBeNull();
+  expect(db.execute).not.toHaveBeenCalled();
+});
+
+it("does not trust editable user metadata as Superadmin proof", async () => {
+  mockSupabaseUser({ id: "attacker", app_metadata: {}, user_metadata: { is_superadmin: true } });
+  expect((await requireSuperadmin()).response?.status).toBe(403);
+});
 
 it("superadmin passa em requireRole('superadmin')", async () => {
   mockSupabaseUser(superadmin);

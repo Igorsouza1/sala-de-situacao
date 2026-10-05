@@ -1,3 +1,4 @@
+import { parsePositiveId } from "@/lib/api/positive-id";
 export const maxDuration = 60;
 
 import { getTenantIdForRegion } from "@/lib/api/scope";
@@ -13,8 +14,8 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
         if (authResponse) return authResponse;
 
         const params = await context.params;
-        const regionId = parseInt(params.id, 10);
-        if (isNaN(regionId)) return apiError("ID da região inválido.", 400);
+        const regionId = parsePositiveId(params.id);
+        if (regionId === null) return apiError("ID da região inválido.", 400);
 
         const formData = await request.formData().catch(() => null);
         if (!formData) return apiError("FormData é obrigatório.", 400);

@@ -1,3 +1,4 @@
+import { parsePositiveId } from "@/lib/api/positive-id";
 import { requireRole } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { z } from "zod";
@@ -17,8 +18,8 @@ export async function PUT(request: Request, context: { params: Promise<{ id: str
     if (authResponse) return authResponse;
 
     const params = await context.params;
-    const layerId = parseInt(params.id, 10);
-    if (isNaN(layerId)) return apiError("ID da camada inválido.", 400);
+    const layerId = parsePositiveId(params.id);
+    if (layerId === null) return apiError("ID da camada inválido.", 400);
 
     const json = await request.json().catch(() => null);
     if (!json) return apiError("Body JSON é obrigatório.", 400);

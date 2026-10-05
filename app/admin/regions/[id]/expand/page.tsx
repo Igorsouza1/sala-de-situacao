@@ -1,3 +1,5 @@
+import { parsePositiveId } from "@/lib/api/positive-id";
+import { requireSuperadminPage } from "@/lib/api/require-admin-page";
 import { getRegionById } from "@/lib/service/adminService";
 import { notFound } from "next/navigation";
 import { RegionExpandPreview } from "@/components/admin/region-expand-preview";
@@ -6,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft } from "lucide-react";
 
 export default async function RegionExpandPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireSuperadminPage();
   const { id } = await params;
-  const regionId = parseInt(id, 10);
-  if (isNaN(regionId)) return notFound();
+  const regionId = parsePositiveId(id);
+  if (regionId === null) return notFound();
 
   const region = await getRegionById(regionId);
   if (!region) return notFound();

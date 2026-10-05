@@ -3,7 +3,7 @@ import { apiError, apiSuccess } from "@/lib/api/responses";
 import { resendUserInvite, UserManagementError } from "@/lib/service/userManagementService";
 import { z } from "zod";
 
-const roleIdSchema = z.object({ roleId: z.coerce.number().int().positive("ID inválido.") });
+const roleIdSchema = z.object({ roleId: z.string().regex(/^[1-9]\d*$/).transform(Number).pipe(z.number().int().safe().positive()) });
 
 export async function POST(_: Request, context: { params: Promise<{ roleId: string }> }) {
   try {

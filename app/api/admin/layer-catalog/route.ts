@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requireAuthWithTenant } from "@/lib/api/require-auth";
+import { requireRole } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";
 import { layerCatalogInMonitoramento } from "@/db/schema";
@@ -9,7 +9,7 @@ import { z } from "zod";
 // GET /api/admin/layer-catalog
 // Lista todas as camadas do tenant ordenadas por ordering
 export async function GET() {
-  const { tenantId, response: authResponse } = await requireAuthWithTenant();
+  const { tenantId, response: authResponse } = await requireRole("superadmin");
   if (authResponse) return authResponse;
 
   try {
@@ -42,7 +42,7 @@ const createSchema = z.object({
 // POST /api/admin/layer-catalog
 // Cria uma nova camada no catalog (para camadas de upload/layer_data)
 export async function POST(request: NextRequest) {
-  const { tenantId, response: authResponse } = await requireAuthWithTenant();
+  const { tenantId, response: authResponse } = await requireRole("superadmin");
   if (authResponse) return authResponse;
 
   try {

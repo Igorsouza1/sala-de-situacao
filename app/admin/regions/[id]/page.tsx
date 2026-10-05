@@ -1,3 +1,5 @@
+import { parsePositiveId } from "@/lib/api/positive-id";
+import { requireSuperadminPage } from "@/lib/api/require-admin-page";
 import { getRegionById, listOrganizations, getBaseLayersByRegion, getPropertiesByRegion, getFocosByRegion, getDesmatamentoByRegion, listRegions, getAcoesByRegion } from "@/lib/service/adminService";
 import { RegionSimpleEdit } from "@/components/admin/region-simple-edit";
 import { RegionMapPreview } from "@/components/admin/region-map-preview";
@@ -9,9 +11,10 @@ import Link from "next/link";
 export const dynamic = "force-dynamic";
 
 export default async function RegionEditPage({ params }: { params: Promise<{ id: string }> }) {
+  await requireSuperadminPage();
   const { id } = await params;
-  const regionId = parseInt(id, 10);
-  if (isNaN(regionId)) return notFound();
+  const regionId = parsePositiveId(id);
+  if (regionId === null) return notFound();
 
   const [region, organizations, baseLayers, properties, focos, desmatamento, regioes, acoes] = await Promise.all([
     getRegionById(regionId),

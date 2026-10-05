@@ -1,4 +1,5 @@
 import { findAllLayersCatalog } from "@/lib/repositories/layerRepository";
+import { requireSuperadminPage } from "@/lib/api/require-admin-page";
 import { LayerCatalogViewer } from "@/components/admin/layer-catalog-viewer";
 import { Metadata } from "next";
 
@@ -8,6 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default async function AdminLayersPage() {
+  await requireSuperadminPage();
   const layers = await findAllLayersCatalog();
 
   return (
