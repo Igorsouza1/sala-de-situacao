@@ -1,10 +1,11 @@
 // Bases do mapa (DESIGN.md 13). O Mineral é o padrão: o estilo "positron" do OpenFreeMap baixado e recolorido na paleta.
-export type BasemapKey = 'mineral' | 'satellite' | 'streets' | 'osm'
+export type BasemapKey = 'mineral' | 'satellite-soft' | 'satellite' | 'streets' | 'osm'
 
 export const DEFAULT_BASEMAP: BasemapKey = 'mineral'
-export const BASEMAP_KEYS: BasemapKey[] = ['mineral', 'satellite', 'streets', 'osm']
+export const BASEMAP_KEYS: BasemapKey[] = ['mineral', 'satellite-soft', 'satellite', 'streets', 'osm']
 export const BASEMAP_LABELS: Record<BasemapKey, string> = {
   mineral: 'Mineral',
+  'satellite-soft': 'Satélite suave',
   satellite: 'Satélite',
   streets: 'Ruas',
   osm: 'StreetMap',
@@ -15,27 +16,31 @@ export const HILLSHADE_BASEMAPS: ReadonlySet<BasemapKey> = new Set(['mineral', '
 const HILLSHADE_EXAGGERATION = 0.7
 
 // Acima disso a imagem ampliada do satélite fica ruim demais.
-export const BASEMAP_MAX_ZOOM: Partial<Record<BasemapKey, number>> = { satellite: 19 }
+export const BASEMAP_MAX_ZOOM: Partial<Record<BasemapKey, number>> = { satellite: 19, 'satellite-soft': 19 }
 
 // Elevação gratuita da AWS: serve ao relevo sombreado e ao terreno 3D.
 // Zoom máximo do DEM: acima de 12 o terreno e o sombreado só ganham malha e tiles a mais, sem relevo visível a mais (planalto e planície).
 export const DEM_MAX_ZOOM = 12
 export const DEM_TILES = ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png']
 
-const raster = (id: string, tiles: string, attribution: string, maxzoom: number) => ({
+const raster = (id: string, tiles: string, attribution: string, maxzoom: number, paint?: object) => ({
   version: 8,
   sources: { [id]: { type: 'raster', tiles: [tiles], tileSize: 256, attribution, maxzoom } },
-  layers: [{ id: `${id}-layer`, type: 'raster', source: id }],
+  layers: [{ id: `${id}-layer`, type: 'raster', source: id, ...(paint ? { paint } : {}) }],
 })
+
+const ESRI_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
+const ESRI_ATTRIBUTION = 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP'
 
 export const STATIC_STYLES: Record<Exclude<BasemapKey, 'mineral'>, string | object> = {
   // maxzoom 17: último nível com dados na região (13). Acima, a Esri devolve o tile "Map data not yet available".
-  satellite: raster(
-    'esri-satellite',
-    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
-    'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP',
-    17,
-  ),
+  satellite: raster('esri-satellite', ESRI_TILES, ESRI_ATTRIBUTION, 17),
+  // mesma imagem com menos cor e um pouco menos de brilho: o fogo e o desmatamento aparecem mais e o dock branco se destaca
+  'satellite-soft': raster('esri-satellite-soft', ESRI_TILES, ESRI_ATTRIBUTION, 17, {
+    'raster-saturation': -0.5,
+    'raster-brightness-max': 0.88,
+    'raster-contrast': -0.15,
+  }),
   streets: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
   osm: raster(
     'osm',

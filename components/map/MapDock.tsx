@@ -41,24 +41,39 @@ interface DockButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
   icon: LucideIcon
   label: string
   active?: boolean
+  /** quantos filtros ou itens estão ligados: aparece como número no canto */
+  badge?: number
+  /** algo pede atenção dentro do painel (ponto âmbar no canto) */
+  alert?: boolean
 }
 
-export const DockButton = forwardRef<HTMLButtonElement, DockButtonProps>(function DockButton({ icon: Icon, label, active, className, ...props }, ref) {
+export const DockButton = forwardRef<HTMLButtonElement, DockButtonProps>(function DockButton({ icon: Icon, label, active, badge, alert, className, ...props }, ref) {
   return (
     <button
       ref={ref}
       type="button"
-      className={cn('flex min-w-16 flex-col items-center gap-0.5 px-3 py-1.5 text-xs font-medium', controlItem(active), className)}
+      className={cn('relative flex min-w-16 flex-col items-center gap-0.5 px-3 py-1.5 text-xs font-medium', controlItem(active), className)}
       {...props}
     >
       <Icon className="h-[18px] w-[18px]" aria-hidden />
       {label}
+      {!!badge && (
+        <span className="absolute right-1.5 top-1 flex h-4 min-w-4 items-center justify-center rounded-sm bg-primary px-1 font-mono text-[10px] font-semibold text-primary-foreground">
+          {badge}
+          <span className="sr-only"> ativo{badge > 1 ? 's' : ''}</span>
+        </span>
+      )}
+      {alert && (
+        <span className="absolute right-2.5 top-1.5 h-2 w-2 rounded-full bg-warn">
+          <span className="sr-only">Pede atenção</span>
+        </span>
+      )}
     </button>
   )
 })
 
 // Botão do dock que abre um painel. O conteúdo fica montado mesmo fechado: os filtros guardam o que a pessoa escolheu.
-export function DockPanelButton({ id, icon, label, children }: { id: string; icon: LucideIcon; label: string; children: ReactNode }) {
+export function DockPanelButton({ id, icon, label, badge, alert, children }: { id: string; icon: LucideIcon; label: string; badge?: number; alert?: boolean; children: ReactNode }) {
   const { open, setOpen } = useContext(DockContext)
   const isOpen = open === id
   const trigger = useRef<HTMLButtonElement>(null)
@@ -82,6 +97,8 @@ export function DockPanelButton({ id, icon, label, children }: { id: string; ico
         icon={icon}
         label={label}
         active={isOpen}
+        badge={badge}
+        alert={alert}
         aria-expanded={isOpen}
         aria-controls={panelId}
         onClick={() => setOpen(isOpen ? null : id)}

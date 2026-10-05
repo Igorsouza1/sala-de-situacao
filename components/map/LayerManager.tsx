@@ -30,6 +30,37 @@ interface LayerManagerProps {
   onLayerToggle: (slug: string, isChecked: boolean) => void
   onToggleAll: (isChecked: boolean) => void
   onGroupToggle?: (slugs: string[], isChecked: boolean) => void
+  /** andamento por camada, pela chave da camada-mãe (DESIGN.md 2.1: cada fonte mostra o seu) */
+  status?: Record<string, LayerStatus>
+  onRetry?: (slug: string) => void
+  /** o catálogo ainda está chegando */
+  loading?: boolean
+}
+
+export type LayerStatus = 'loading' | 'error'
+
+// Estado de uma camada ao lado do nome: esqueleto enquanto chega; frase e saída se falhou (2.1).
+function StatusHint({ status, slug, onRetry }: { status?: LayerStatus; slug: string; onRetry?: (slug: string) => void }) {
+  if (status === 'loading') {
+    return (
+      <span role="status" className="flex shrink-0 items-center">
+        <span className="bg-shimmer h-2 w-10 rounded-sm" aria-hidden />
+        <span className="sr-only">Carregando</span>
+      </span>
+    )
+  }
+  if (status === 'error') {
+    return (
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); onRetry?.(slug) }}
+        className="shrink-0 text-xs text-crit underline underline-offset-2 hover:text-crit/80"
+      >
+        Não carregou. Tentar de novo
+      </button>
+    )
+  }
+  return null
 }
 
 const toPascalCase = (str: string) => {
@@ -55,7 +86,7 @@ const getLayerIcon = (iconName?: string) => {
 const CATEGORY_ORDER = ['Operacional', 'Monitoramento', 'Base Territorial', 'Infraestrutura'];
 const DEFAULT_EXPANDED = ['Operacional', 'Monitoramento'];
 
-function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { option: LayerManagerOption, isChecked: boolean, onToggle: () => void, index: number, isSubOption?: boolean }) {
+function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption, status, onRetry }: { option: LayerManagerOption, isChecked: boolean, onToggle: () => void, index: number, isSubOption?: boolean, status?: LayerStatus, onRetry?: (slug: string) => void }) {
     const IconComponent = getLayerIcon(option.icon)
     const legendType = option.legendType || 'polygon'; 
     return (
@@ -158,6 +189,7 @@ function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { 
             >
             {option.label}
             </Label>
+            <StatusHint status={isChecked ? status : undefined} slug={option.slug} onRetry={onRetry} />
         </div>
         </motion.div>
     )
@@ -168,7 +200,10 @@ export function LayerManager({
   activeLayers, 
   onLayerToggle,
   onToggleAll,
-  onGroupToggle
+  onGroupToggle,
+  status,
+  onRetry,
+  loading,
 }: LayerManagerProps) {
   const [expandedCategories, setExpandedCategories] = useState<string[]>(DEFAULT_EXPANDED)
   const [expandedItems, setExpandedItems] = useState<string[]>([])
@@ -215,6 +250,17 @@ export function LayerManager({
         items: groups[cat]
     }));
   }, [options]);
+
+  if (options.length === 0) {
+    return loading ? (
+      <div role="status" className="space-y-2">
+        <p className="text-sm text-muted-foreground">Buscando as camadas…</p>
+        {[0, 1, 2, 3].map((i) => <div key={i} className="bg-shimmer h-7 rounded-md" aria-hidden />)}
+      </div>
+    ) : (
+      <p className="text-sm text-muted-foreground">Ainda não há camadas para esta região.</p>
+    )
+  }
 
   return (
     <div>
@@ -303,6 +349,8 @@ export function LayerManager({
                                                                 {option.label}
                                                             </span>
 
+                                                            <StatusHint status={activeChildrenCount > 0 ? status?.[option.slug] : undefined} slug={option.slug} onRetry={onRetry} />
+
                                                             {/* Badge if children active */}
                                                             {activeChildrenCount > 0 && (
                                                                 <Badge variant="secondary" className="text-[9px] h-3.5 px-1">
@@ -348,6 +396,8 @@ export function LayerManager({
                                                 isChecked={activeLayers.includes(option.slug)}
                                                 onToggle={() => onLayerToggle(option.slug, !activeLayers.includes(option.slug))}
                                                 index={index}
+                                                status={status?.[option.slug]}
+                                                onRetry={onRetry}
                                             />
                                         )
                                         })}

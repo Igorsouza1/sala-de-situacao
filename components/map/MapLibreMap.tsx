@@ -23,7 +23,8 @@ import {
   toLinePaint,
   type MapLibreLayerType,
 } from './helpers/maplibre-layer'
-import { LayerManager, type LayerManagerOption } from './LayerManager'
+import type { LayerManagerOption, LayerStatus } from './LayerManager'
+import { LayersPanel } from './LayersPanel'
 import { DateFilterControl } from './DateFilterControl'
 import { PropertyFilterControl } from './PropertyFilterControl'
 import { Modal } from './Modal'
@@ -33,7 +34,6 @@ import { ShapefileUploader } from './ShapefileUploader'
 import { MaplibreCoordinateInspector } from './MaplibreCoordinateInspector'
 import { MaplibreSnapshotControl } from './MaplibreSnapshotControl'
 import { MaplibreMeasureControl } from './MaplibreMeasureControl'
-import { MaplibreFaunaHeatmapControl } from './MaplibreFaunaHeatmapControl'
 import { MaplibreIconMarkers } from './MaplibreIconMarkers'
 import { AcaoHoverCard } from './AcaoHoverCard'
 import { PropertyInfoControl } from './PropertyInfoControl'
@@ -41,7 +41,6 @@ import { useMapContext } from '@/context/GeoDataContext'
 import { useUserRole } from '@/hooks/useUserRole'
 import { getLayerLegendInfo } from './helpers/map-visuals'
 import { Button } from '@/components/ui/button'
-import { BasemapControl } from './BasemapControl'
 import { CameraControls } from './CameraControls'
 import { DockPanelButton, DockDivider, MapDock } from './MapDock'
 import { PrismCursor } from './PrismCursor'
@@ -134,6 +133,10 @@ interface MapLibreMapProps {
 // Layers excluded from hover tooltip
 const EXCLUDED_HOVER = ['propriedades', 'banhado']
 
+// A Fauna entra no painel Camadas como camada, mas não vem do catálogo: tem busca e estado próprios
+const FAUNA_HEATMAP = 'fauna__heatmap'
+const FAUNA_LOCATIONS = 'fauna__locations'
+
 export default function MapLibreMap({
   center = [-21.327773, -56.694734],
   zoom = 11,
@@ -145,6 +148,7 @@ export default function MapLibreMap({
   const [visibleLayers, setVisibleLayers] = useState<string[]>([])
   const [loadingLayers, setLoadingLayers] = useState(_cache.layers.length === 0)
   const [error, setError] = useState<string | null>(null)
+  const [failedLayers, setFailedLayers] = useState<string[]>([])
   const [areaFilter, setAreaFilter] = useState<{
     minArea?: number
     maxArea?: number
@@ -210,6 +214,7 @@ export default function MapLibreMap({
   const [faunaLocationsActive, setFaunaLocationsActive] = useState(false)
   const [faunaLoading, setFaunaLoading] = useState(false)
   const [faunaFetched, setFaunaFetched] = useState(false)
+  const [faunaFailed, setFaunaFailed] = useState(false)
 
   // ── Property info mode ──────────────────────────────────────────────────
   const [propertyInfoActive, setPropertyInfoActive] = useState(false)
@@ -310,9 +315,13 @@ export default function MapLibreMap({
       if (response.ok) {
         const dto: LayerResponseDTO = await response.json()
         enqueueLayerData(slug, dto.data)
+        setFailedLayers((prev) => prev.filter((s) => s !== slug))
+      } else {
+        setFailedLayers((prev) => (prev.includes(slug) ? prev : [...prev, slug]))
       }
     } catch (e) {
       console.error(`Failed to load layer data for ${slug}:`, e)
+      setFailedLayers((prev) => (prev.includes(slug) ? prev : [...prev, slug]))
     } finally {
       fetchingRef.current.delete(slug)
     }
@@ -476,7 +485,8 @@ export default function MapLibreMap({
     if (
       (faunaHeatmapActive || faunaLocationsActive) &&
       !faunaFetched &&
-      !faunaLoading
+      !faunaLoading &&
+      !faunaFailed
     ) {
       setFaunaLoading(true)
       fetch('/api/map/heatmap/fauna-exotica')
@@ -485,12 +495,14 @@ export default function MapLibreMap({
           if (json.success && json.data) {
             setFaunaData(json.data)
             setFaunaFetched(true)
+          } else {
+            setFaunaFailed(true)
           }
         })
-        .catch(console.error)
+        .catch(() => setFaunaFailed(true))
         .finally(() => setFaunaLoading(false))
     }
-  }, [faunaHeatmapActive, faunaLocationsActive, faunaFetched, faunaLoading])
+  }, [faunaHeatmapActive, faunaLocationsActive, faunaFetched, faunaLoading, faunaFailed])
 
   // Clear property hover state when info mode is deactivated
   useEffect(() => {
@@ -521,6 +533,8 @@ export default function MapLibreMap({
 
   // ── Layer toggle handlers ─────────────────────────────────────────────────
   const handleLayerToggle = useCallback((slug: string, isChecked: boolean) => {
+    if (slug === FAUNA_HEATMAP) { setFaunaHeatmapActive(isChecked); return }
+    if (slug === FAUNA_LOCATIONS) { setFaunaLocationsActive(isChecked); return }
     setVisibleLayers((prev) =>
       isChecked ? [...prev, slug] : prev.filter((s) => s !== slug)
     )
@@ -528,6 +542,7 @@ export default function MapLibreMap({
 
   const handleGroupToggle = useCallback(
     (slugs: string[], isChecked: boolean) => {
+      if (slugs.includes(FAUNA_HEATMAP)) { setFaunaHeatmapActive(isChecked); setFaunaLocationsActive(isChecked); return }
       setVisibleLayers((prev) => {
         if (isChecked)
           return [...prev, ...slugs.filter((s) => !prev.includes(s))]
@@ -539,6 +554,8 @@ export default function MapLibreMap({
 
   const handleToggleAll = useCallback(
     (isChecked: boolean) => {
+      setFaunaHeatmapActive(isChecked)
+      setFaunaLocationsActive(isChecked)
       if (isChecked) {
         const all: string[] = []
         layers.forEach((l) => {
@@ -905,6 +922,70 @@ export default function MapLibreMap({
     })
   }, [layers])
 
+  // A Fauna fecha a lista, junto das camadas de monitoramento (a lista agrupa por categoria)
+  const panelOptions = useMemo((): LayerManagerOption[] => {
+    const n = faunaData.length
+    const total = faunaFetched ? ` · ${n === 0 ? 'sem registros' : `${n} registro${n === 1 ? '' : 's'}`}` : ''
+    return [
+      ...layerManagerOptions,
+      {
+        id: 'fauna',
+        slug: 'fauna',
+        label: `Fauna exótica (javali)${total}`,
+        color: 'var(--color-crit)',
+        icon: 'paw-print',
+        category: 'Monitoramento',
+        subOptions: [
+          { id: FAUNA_HEATMAP, slug: FAUNA_HEATMAP, label: 'Mapa de calor', color: 'var(--color-crit)', legendType: 'heatmap' },
+          { id: FAUNA_LOCATIONS, slug: FAUNA_LOCATIONS, label: 'Localizações pontuais', color: 'var(--color-crit)', legendType: 'circle' },
+        ],
+      },
+    ]
+  }, [layerManagerOptions, faunaData.length, faunaFetched])
+
+  const panelActiveLayers = useMemo(
+    () => [
+      ...visibleLayers,
+      ...(faunaHeatmapActive ? [FAUNA_HEATMAP] : []),
+      ...(faunaLocationsActive ? [FAUNA_LOCATIONS] : []),
+    ],
+    [visibleLayers, faunaHeatmapActive, faunaLocationsActive],
+  )
+
+  // Andamento de cada fonte (DESIGN.md 2.1): só as camadas ligadas mostram carregando ou erro
+  const layerStatus = useMemo(() => {
+    const st: Record<string, LayerStatus> = {}
+    new Set(visibleLayers.map((s) => s.split('__')[0])).forEach((slug) => {
+      if (failedLayers.includes(slug)) st[slug] = 'error'
+      else if (!layerData[slug]) st[slug] = 'loading'
+    })
+    if (faunaHeatmapActive || faunaLocationsActive) {
+      if (faunaFailed) st.fauna = 'error'
+      else if (!faunaFetched) st.fauna = 'loading'
+    }
+    return st
+  }, [visibleLayers, failedLayers, layerData, faunaHeatmapActive, faunaLocationsActive, faunaFailed, faunaFetched])
+
+  const refreshing = loadingLayers || Object.values(layerStatus).includes('loading')
+
+  const handleReload = useCallback(() => {
+    _cache.data = {}
+    pendingBatch.current = {}
+    if (batchTimer.current) { clearTimeout(batchTimer.current); batchTimer.current = null }
+    setLayerData({})
+    setFailedLayers([])
+    fetchingRef.current.clear()
+    setFaunaFetched(false)
+    setFaunaFailed(false)
+    fetchCatalog()
+  }, [fetchCatalog])
+
+  const handleRetryLayer = useCallback((slug: string) => {
+    if (slug === 'fauna') { setFaunaFailed(false); return }
+    setFailedLayers((prev) => prev.filter((s) => s !== slug))
+    fetchLayerData(slug)
+  }, [fetchLayerData])
+
   // ── Hover popup content ───────────────────────────────────────────────────
   const hoveredLayerConfig = useMemo(() => {
     if (!hoveredFeature) return null
@@ -1251,50 +1332,14 @@ export default function MapLibreMap({
       {/* Câmera: zoom, bússola e 2D|3D */}
       <CameraControls mapRef={mapRef} ready={mapLoaded} viewMode={viewMode} onViewModeChange={handleViewModeChange} />
 
-      {/* Base do mapa (passa para dentro de Camadas no passo 2) */}
-      <div className="absolute top-4 right-[4.5rem] z-[400] flex items-start gap-2">
-        <BasemapControl value={basemap} shown={shownBasemap} onChange={handleBasemapChange} />
-      </div>
-
       {/* Left panel: filters */}
       <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-4">
-        <MaplibreFaunaHeatmapControl
-          isHeatmapActive={faunaHeatmapActive}
-          isLocationsActive={faunaLocationsActive}
-          isLoading={faunaLoading}
-          hasFetched={faunaFetched}
-          dataCount={faunaData.length}
-          onToggleHeatmap={setFaunaHeatmapActive}
-          onToggleLocations={setFaunaLocationsActive}
-        />
         <PropertyInfoControl
           isActive={propertyInfoActive}
           onToggle={() => setPropertyInfoActive((v) => !v)}
           hoveredPropertyId={hoveredPropertyId}
           hoveredPropertyBasic={hoveredPropertyBasic}
         />
-      </div>
-
-      {/* Reload button */}
-      <div className="absolute top-56 right-4 z-[400]">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => {
-            _cache.data = {}
-            pendingBatch.current = {}
-            if (batchTimer.current) { clearTimeout(batchTimer.current); batchTimer.current = null }
-            setLayerData({})
-            fetchingRef.current.clear()
-            fetchCatalog()
-          }}
-          className="bg-white hover:bg-gray-100 shadow-md text-black border-input"
-          title="Atualizar dados"
-        >
-          <LucideIcons.RefreshCw
-            className={`h-4 w-4 ${loadingLayers ? 'animate-spin' : ''}`}
-          />
-        </Button>
       </div>
 
       {/* Measure control */}
@@ -1335,13 +1380,21 @@ export default function MapLibreMap({
 
       {/* Dock: Camadas, Filtros e Imprimir (Medir e Consultar entram no passo 4) */}
       <MapDock>
-        <DockPanelButton id="layers" icon={LucideIcons.Layers} label="Camadas">
-          <LayerManager
-            options={layerManagerOptions}
-            activeLayers={visibleLayers}
+        <DockPanelButton id="layers" icon={LucideIcons.Layers} label="Camadas" alert={basemap !== shownBasemap}>
+          <LayersPanel
+            basemap={basemap}
+            shownBasemap={shownBasemap}
+            onBasemapChange={handleBasemapChange}
+            refreshing={refreshing}
+            onRefresh={handleReload}
+            options={panelOptions}
+            activeLayers={panelActiveLayers}
             onLayerToggle={handleLayerToggle}
             onToggleAll={handleToggleAll}
             onGroupToggle={handleGroupToggle}
+            status={layerStatus}
+            onRetry={handleRetryLayer}
+            loading={loadingLayers}
           />
         </DockPanelButton>
         <DockPanelButton id="filters" icon={LucideIcons.SlidersHorizontal} label="Filtros">
@@ -1359,18 +1412,6 @@ export default function MapLibreMap({
         <DockDivider />
         <MaplibreSnapshotControl activeLayers={visibleLayers} mapRef={mapRef} />
       </MapDock>
-
-      {/* Loading overlay */}
-      {loadingLayers && (
-        <div className="absolute inset-0 z-[2000] bg-black/40 backdrop-blur-xs flex items-center justify-center pointer-events-none">
-          <div className="bg-foreground border border-white/10 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
-            <span className="text-slate-200 text-sm font-medium">
-              Atualizando dados...
-            </span>
-          </div>
-        </div>
-      )}
 
       {/* Modal */}
       <Modal
