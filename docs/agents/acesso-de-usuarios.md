@@ -16,6 +16,8 @@ O código não define um papel `admin` no verificador atual. As permissões de V
 
 ## Organização e regiões
 
+O painel `/admin`, todas as rotas `/api/admin` e as ações de servidor desse painel exigem Superadmin global. Owner administra sua organização nas operações próprias do produto; ele não recebe acesso ao painel global nem pode alterar outra organização por chamadas diretas à API.
+
 Uma requisição autenticada usa `tenant_id` dos metadados apenas como preferência e confirma o vínculo atual em `monitoramento.roles`. A tabela legada `monitoramento.user_access` não autoriza acesso. Sem papel atual, as rotas que exigem organização negam acesso.
 
 Rotas que aplicam escopo regional limitam resultados às regiões da organização e, quando aplicável, às regiões vinculadas ao usuário. Owner e Superadmin recebem acesso a todas as regiões dentro do escopo que a rota permite. Região pertencente a outra organização só pode ser consultada por Superadmin nas rotas que verificam esse vínculo.

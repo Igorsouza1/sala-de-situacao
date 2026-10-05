@@ -1,3 +1,4 @@
+import { parsePositiveId } from "@/lib/api/positive-id";
 import { requireRole } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";
@@ -14,9 +15,9 @@ export async function PATCH(
     if (authResponse) return authResponse;
 
     const params = await context.params;
-    const propertyId = parseInt(params.id, 10);
+    const propertyId = parsePositiveId(params.id);
 
-    if (isNaN(propertyId)) {
+    if (propertyId === null) {
       return apiError("ID de propriedade inválido.", 400);
     }
 

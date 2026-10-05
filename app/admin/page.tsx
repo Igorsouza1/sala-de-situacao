@@ -1,4 +1,5 @@
 import { fetchAdminDashboardData } from "@/lib/service/organizationService";
+import { requireSuperadminPage } from "@/lib/api/require-admin-page";
 import { Building2 } from "lucide-react";
 import Link from "next/link";
 import { RegionShape } from "@/components/admin/region-shape";
@@ -6,6 +7,7 @@ import { RegionShape } from "@/components/admin/region-shape";
 export const dynamic = 'force-dynamic';
 
 export default async function AdminDashboardPage() {
+  await requireSuperadminPage();
   const data = await fetchAdminDashboardData();
 
   return (

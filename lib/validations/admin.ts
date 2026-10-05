@@ -30,7 +30,7 @@ export const regionPayloadSchema = z.object({
 });
 
 export const regionIdSchema = z.object({
-  id: z.coerce.number().int().positive("ID de região inválido."),
+  id: z.string().regex(/^[1-9]\d*$/).transform(Number).pipe(z.number().int().safe().positive()),
 });
 
 export type OrganizationPayload = z.infer<typeof organizationPayloadSchema>;

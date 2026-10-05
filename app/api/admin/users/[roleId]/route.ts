@@ -4,7 +4,7 @@ import { updateUserAccessSchema } from "@/lib/validations/userManagement";
 import { revokeUserAccess, updateUserAccess, UserManagementError } from "@/lib/service/userManagementService";
 import { z } from "zod";
 
-const roleIdSchema = z.object({ roleId: z.coerce.number().int().positive("ID inválido.") });
+const roleIdSchema = z.object({ roleId: z.string().regex(/^[1-9]\d*$/).transform(Number).pipe(z.number().int().safe().positive()) });
 
 export async function PATCH(request: Request, context: { params: Promise<{ roleId: string }> }) {
   try {

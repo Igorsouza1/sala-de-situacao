@@ -1,5 +1,5 @@
 import { NextRequest } from "next/server";
-import { requireAuthWithTenant } from "@/lib/api/require-auth";
+import { requireRole } from "@/lib/api/require-auth";
 import { apiError, apiSuccess } from "@/lib/api/responses";
 import { db } from "@/db";
 import { layerCatalogInMonitoramento } from "@/db/schema";
@@ -25,7 +25,7 @@ const updateSchema = z.object({
 // Atualiza nome, ordering, scope e/ou visual_config.maplibre de uma camada.
 // A chave maplibre é mergeada no JSONB existente — baseStyle e rules do Leaflet são preservados.
 export async function PUT(request: NextRequest, { params }: RouteContext) {
-  const { tenantId, response: authResponse } = await requireAuthWithTenant();
+  const { tenantId, response: authResponse } = await requireRole("superadmin");
   if (authResponse) return authResponse;
 
   try {
@@ -83,7 +83,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
 // DELETE /api/admin/layer-catalog/[slug]
 // Remove uma camada. Não permite deletar scope=global de outro tenant.
 export async function DELETE(_request: NextRequest, { params }: RouteContext) {
-  const { tenantId, response: authResponse } = await requireAuthWithTenant();
+  const { tenantId, response: authResponse } = await requireRole("superadmin");
   if (authResponse) return authResponse;
 
   try {

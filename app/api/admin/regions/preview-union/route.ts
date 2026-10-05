@@ -1,3 +1,4 @@
+import { parsePositiveId } from "@/lib/api/positive-id";
 export const maxDuration = 60;
 
 import { requireRole } from "@/lib/api/require-auth";
@@ -23,7 +24,8 @@ export async function POST(request: Request) {
       return apiError("regionId e file são obrigatórios.", 400);
     }
 
-    const regionId = parseInt(regionIdStr.toString(), 10);
+    const regionId = parsePositiveId(regionIdStr);
+    if (regionId === null) return apiError("ID da regiao invalido.", 400);
     const isForUnion = isForUnionStr === "true";
 
     // Lendo o arquivo pesado direto no servidor
