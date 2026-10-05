@@ -18,6 +18,8 @@ const HILLSHADE_EXAGGERATION = 0.7
 export const BASEMAP_MAX_ZOOM: Partial<Record<BasemapKey, number>> = { satellite: 19 }
 
 // Elevação gratuita da AWS: serve ao relevo sombreado e ao terreno 3D.
+// Zoom máximo do DEM: acima de 12 o terreno e o sombreado só ganham malha e tiles a mais, sem relevo visível a mais (planalto e planície).
+export const DEM_MAX_ZOOM = 12
 export const DEM_TILES = ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png']
 
 const raster = (id: string, tiles: string, attribution: string, maxzoom: number) => ({

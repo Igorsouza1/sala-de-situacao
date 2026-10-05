@@ -7,6 +7,12 @@ import { useMemo } from 'react'
 import { resolveFeatureStyle, toPascalCase } from './helpers/map-visuals'
 import type { LayerResponseDTO, MapFeatureCollection } from '@/types/map-dto'
 
+// Com terreno 3D, cada Marker lê o framebuffer de profundidade (gl.readPixels: a GPU para e espera) a cada ~100 ms só para
+// esmaecer atrás de morro. Com dezenas de ícones o mapa cai para ~20 fps; sem a checagem, o ícone só não esmaece atrás do relevo.
+const skipOcclusionCheck = (marker: unknown) => {
+  if (marker) (marker as { _updateOpacity: () => void })._updateOpacity = () => {}
+}
+
 interface Props {
   layer: LayerResponseDTO
   data: MapFeatureCollection
@@ -47,6 +53,7 @@ export function MaplibreIconMarkers({ layer, data, onFeatureClick, onFeatureHove
         return (
           <Marker
             key={featureKey}
+            ref={skipOcclusionCheck}
             longitude={lng}
             latitude={lat}
             anchor="center"

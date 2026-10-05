@@ -47,6 +47,7 @@ import { MapViewModeControl } from './MapViewModeControl'
 import {
   BASEMAP_MAX_ZOOM,
   DEFAULT_BASEMAP,
+  DEM_MAX_ZOOM,
   DEM_TILES,
   HILLSHADE_BASEMAPS,
   STATIC_STYLES,
@@ -953,7 +954,7 @@ export default function MapLibreMap({
         <NavigationControl position="top-right" visualizePitch />
 
         {/* ── Relevo (DEM): serve ao terreno 3D e, nas bases claras, ao sombreado. Primeiro filho: fica sob os dados. ── */}
-        <Source id="dem" type="raster-dem" tiles={DEM_TILES} encoding="terrarium" tileSize={256} maxzoom={14}>
+        <Source id="dem" type="raster-dem" tiles={DEM_TILES} encoding="terrarium" tileSize={256} maxzoom={DEM_MAX_ZOOM}>
           {HILLSHADE_BASEMAPS.has(shownBasemap) && (
             <Layer id="relevo" type="hillshade" paint={hillshadePaint(tokens) as any} />
           )}
