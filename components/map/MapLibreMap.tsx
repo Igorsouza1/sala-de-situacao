@@ -31,12 +31,12 @@ import { Modal } from './Modal'
 import { EditAcaoModal } from './EditAcaoModal'
 import { FeatureDetails } from './feature-details'
 import { ShapefileUploader } from './ShapefileUploader'
-import { MaplibreCoordinateInspector } from './MaplibreCoordinateInspector'
 import { MaplibreSnapshotControl } from './MaplibreSnapshotControl'
-import { MaplibreMeasureControl } from './MaplibreMeasureControl'
 import { MaplibreIconMarkers } from './MaplibreIconMarkers'
 import { AcaoHoverCard } from './AcaoHoverCard'
-import { PropertyInfoControl } from './PropertyInfoControl'
+import { ToolFeedback } from './ToolFeedback'
+import { ToolMenu } from './ToolMenu'
+import { isMeasureTool, type Tool } from './helpers/tools'
 import { useMapContext } from '@/context/GeoDataContext'
 import { useUserRole } from '@/hooks/useUserRole'
 import { getLayerLegendInfo } from './helpers/map-visuals'
@@ -196,14 +196,16 @@ export default function MapLibreMap({
   const [hoverCoords, setHoverCoords] = useState<[number, number] | null>(null)
 
   // ── Coordinate inspector ────────────────────────────────────────────────
-  const [coordInspectorActive, setCoordInspectorActive] = useState(false)
+  const [activeTool, setActiveTool] = useState<Tool | null>(null)
+  const coordInspectorActive = activeTool === 'coords'
+  const propertyInfoActive = activeTool === 'property'
   const [inspectedCoord, setInspectedCoord] = useState<{
     lat: number
     lng: number
   } | null>(null)
 
   // ── Measure control ─────────────────────────────────────────────────────
-  const [measureMode, setMeasureMode] = useState<MeasureMode>(null)
+  const measureMode: MeasureMode = activeTool === 'measure-distance' ? 'distance' : activeTool === 'measure-area' ? 'area' : null
   const [measurePoints, setMeasurePoints] = useState<LngLat[]>([])
   const [measureDrawing, setMeasureDrawing] = useState(false)
   const [measureCursorPos, setMeasureCursorPos] = useState<LngLat | null>(null)
@@ -217,7 +219,6 @@ export default function MapLibreMap({
   const [faunaFailed, setFaunaFailed] = useState(false)
 
   // ── Property info mode ──────────────────────────────────────────────────
-  const [propertyInfoActive, setPropertyInfoActive] = useState(false)
   const [hoveredPropertyId, setHoveredPropertyId] = useState<number | null>(null)
   const [hoveredPropertyBasic, setHoveredPropertyBasic] = useState<{
     nome?: string
@@ -512,24 +513,28 @@ export default function MapLibreMap({
     }
   }, [propertyInfoActive])
 
+  // Só uma ferramenta ativa por vez: escolher outra (ou null) desliga a anterior e limpa o que ela deixou
+  const selectTool = useCallback((tool: Tool | null) => {
+    setActiveTool(tool)
+    setMeasurePoints([])
+    setMeasureCursorPos(null)
+    setMeasureDrawing(isMeasureTool(tool))
+    setInspectedCoord(null)
+  }, [])
+
+  const handleFinishMeasure = useCallback(() => {
+    setMeasureDrawing(false)
+    setMeasureCursorPos(null)
+  }, [])
+
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (measureMode) {
-          if (measureDrawing) {
-            setMeasureDrawing(false)
-            setMeasureCursorPos(null)
-          } else {
-            setMeasureMode(null)
-            setMeasurePoints([])
-          }
-        }
-      }
+      if (e.key === 'Escape' && activeTool) selectTool(null)
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [measureMode, measureDrawing])
+  }, [activeTool, selectTool])
 
   // ── Layer toggle handlers ─────────────────────────────────────────────────
   const handleLayerToggle = useCallback((slug: string, isChecked: boolean) => {
@@ -646,12 +651,31 @@ export default function MapLibreMap({
     []
   )
 
+  // Propriedade escolhida (por mouse ou toque): o cartão mostra o que o mapa já sabe e busca o resto
+  const selectProperty = useCallback((props: Record<string, any>) => {
+    setHoveredPropertyId(props.id ?? null)
+    setHoveredPropertyBasic({
+      nome: props.nome,
+      cod_imovel: props.cod_imovel,
+      municipio: props.municipio,
+      num_area: props.num_area,
+    })
+    setHoveredFeature(null)
+    setHoverCoords(null)
+  }, [])
+
   // ── Map event handlers ────────────────────────────────────────────────────
   const handleMapClick = useCallback(
     (e: any) => {
       // Coordinate inspector mode
       if (coordInspectorActive) {
         setInspectedCoord({ lat: e.lngLat.lat, lng: e.lngLat.lng })
+        return
+      }
+
+      // Propriedade: tocar numa propriedade mostra os dados dela, como passar o mouse
+      if (propertyInfoActive && e.features?.[0]?.layer.id.startsWith('propriedades-')) {
+        selectProperty(e.features[0].properties ?? {})
         return
       }
 
@@ -670,7 +694,7 @@ export default function MapLibreMap({
       const slug = feature.layer.id.replace(/-(fill|circle|line|hover-circle)$/, '')
       openFeatureModal(slug, feature.properties ?? {})
     },
-    [coordInspectorActive, measureMode, measureDrawing, openFeatureModal]
+    [coordInspectorActive, propertyInfoActive, selectProperty, measureMode, measureDrawing, openFeatureModal]
   )
 
   const handleMouseMove = useCallback(
@@ -699,16 +723,7 @@ export default function MapLibreMap({
 
       // Property info mode: intercept propriedades hover before exclusion check
       if (propertyInfoActive && slug === 'propriedades') {
-        const props = feature.properties ?? {}
-        setHoveredPropertyId(props.id ?? null)
-        setHoveredPropertyBasic({
-          nome: props.nome,
-          cod_imovel: props.cod_imovel,
-          municipio: props.municipio,
-          num_area: props.num_area,
-        })
-        setHoveredFeature(null)
-        setHoverCoords(null)
+        selectProperty(feature.properties ?? {})
         return
       }
 
@@ -726,15 +741,12 @@ export default function MapLibreMap({
       setHoveredFeature({ ...feature.properties, _slug: slug })
       setHoverCoords([e.lngLat.lng, e.lngLat.lat])
     },
-    [measureMode, measureDrawing, propertyInfoActive]
+    [measureMode, measureDrawing, propertyInfoActive, selectProperty]
   )
 
   const handleContextMenu = useCallback(() => {
-    if (measureMode && measureDrawing) {
-      setMeasureDrawing(false)
-      setMeasureCursorPos(null)
-    }
-  }, [measureMode, measureDrawing])
+    if (measureMode && measureDrawing) handleFinishMeasure()
+  }, [measureMode, measureDrawing, handleFinishMeasure])
 
   // ── Cursor style ──────────────────────────────────────────────────────────
   const cursor = useMemo(() => {
@@ -840,23 +852,6 @@ export default function MapLibreMap({
   )
 
   // ── Measure control handlers ───────────────────────────────────────────────
-  const handleToggleMeasureMode = useCallback(
-    (mode: 'distance' | 'area') => {
-      if (measureMode === mode) {
-        setMeasureMode(null)
-        setMeasurePoints([])
-        setMeasureCursorPos(null)
-        setMeasureDrawing(false)
-      } else {
-        setMeasureMode(mode)
-        setMeasurePoints([])
-        setMeasureCursorPos(null)
-        setMeasureDrawing(true)
-      }
-    },
-    [measureMode]
-  )
-
   const handleClearMeasure = useCallback(() => {
     setMeasurePoints([])
     setMeasureCursorPos(null)
@@ -1332,37 +1327,6 @@ export default function MapLibreMap({
       {/* Câmera: zoom, bússola e 2D|3D */}
       <CameraControls mapRef={mapRef} ready={mapLoaded} viewMode={viewMode} onViewModeChange={handleViewModeChange} />
 
-      {/* Left panel: filters */}
-      <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-4">
-        <PropertyInfoControl
-          isActive={propertyInfoActive}
-          onToggle={() => setPropertyInfoActive((v) => !v)}
-          hoveredPropertyId={hoveredPropertyId}
-          hoveredPropertyBasic={hoveredPropertyBasic}
-        />
-      </div>
-
-      {/* Measure control */}
-      <MaplibreMeasureControl
-        mode={measureMode}
-        isDrawing={measureDrawing}
-        hasPoints={measurePoints.length > 0}
-        distance={measureDistance}
-        area={measureArea}
-        onToggleMode={handleToggleMeasureMode}
-        onClear={handleClearMeasure}
-      />
-
-      {/* Coordinate inspector */}
-      <MaplibreCoordinateInspector
-        isActive={coordInspectorActive}
-        onToggle={() => {
-          setCoordInspectorActive((v) => !v)
-          if (coordInspectorActive) setInspectedCoord(null)
-        }}
-        coordinate={inspectedCoord}
-      />
-
       {/* Shapefile uploader */}
       {/* <ShapefileUploader
         onPreview={(data, color) => setPreviewGeoJSON({ data, color })}
@@ -1378,8 +1342,18 @@ export default function MapLibreMap({
         }}
       /> */}
 
-      {/* Dock: Camadas, Filtros e Imprimir (Medir e Consultar entram no passo 4) */}
-      <MapDock>
+      {/* Dock: o que o mapa mostra (Camadas, Filtros), ferramentas (Medir, Consultar) e Imprimir */}
+      <MapDock
+        above={activeTool && (
+          <ToolFeedback
+            tool={activeTool}
+            onExit={() => selectTool(null)}
+            measure={{ points: measurePoints.length, drawing: measureDrawing, distance: measureDistance, area: measureArea, onClear: handleClearMeasure, onFinish: handleFinishMeasure }}
+            coordinate={inspectedCoord}
+            property={{ id: hoveredPropertyId, basic: hoveredPropertyBasic }}
+          />
+        )}
+      >
         <DockPanelButton id="layers" icon={LucideIcons.Layers} label="Camadas" alert={basemap !== shownBasemap}>
           <LayersPanel
             basemap={basemap}
@@ -1406,6 +1380,21 @@ export default function MapLibreMap({
             onAreaChange={setAreaFilter}
           />
         </DockPanelButton>
+        <DockDivider />
+        <ToolMenu
+          icon={LucideIcons.Ruler}
+          label="Medir"
+          tools={[{ id: 'measure-distance', icon: LucideIcons.Ruler }, { id: 'measure-area', icon: LucideIcons.SquareDashed }]}
+          active={activeTool === 'measure-distance' || activeTool === 'measure-area' ? activeTool : null}
+          onSelect={selectTool}
+        />
+        <ToolMenu
+          icon={LucideIcons.Crosshair}
+          label="Consultar"
+          tools={[{ id: 'coords', icon: LucideIcons.Crosshair }, { id: 'property', icon: LucideIcons.Info }]}
+          active={activeTool === 'coords' || activeTool === 'property' ? activeTool : null}
+          onSelect={selectTool}
+        />
         <DockDivider />
         <MaplibreSnapshotControl activeLayers={visibleLayers} mapRef={mapRef} />
       </MapDock>

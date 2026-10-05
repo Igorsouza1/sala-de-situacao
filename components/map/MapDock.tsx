@@ -11,7 +11,9 @@ import { controlItem, controlSurface } from './helpers/control-style'
 
 const DockContext = createContext<{ open: string | null; setOpen: (id: string | null) => void }>({ open: null, setOpen: () => {} })
 
-export function MapDock({ children }: { children: ReactNode }) {
+export const useDock = () => useContext(DockContext)
+
+export function MapDock({ children, above }: { children: ReactNode; above?: ReactNode }) {
   const [open, setOpen] = useState<string | null>(null)
 
   useEffect(() => {
@@ -24,7 +26,9 @@ export function MapDock({ children }: { children: ReactNode }) {
   return (
     <DockContext.Provider value={{ open, setOpen }}>
       {/* o invólucro não captura clique: o mapa continua arrastável ao lado do dock */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-4 z-[1000] flex justify-center px-3">
+      <div className="pointer-events-none absolute inset-x-0 bottom-4 z-[1000] flex flex-col items-center gap-2 px-3">
+        {/* a faixa de modo some enquanto um painel está aberto: os dois disputariam o mesmo lugar */}
+        {above && !open && <div className="pointer-events-auto flex w-full max-w-xl justify-center">{above}</div>}
         <nav aria-label="Ferramentas do mapa" className={cn('pointer-events-auto flex items-stretch gap-0.5 rounded-md p-1', controlSurface)}>
           {children}
         </nav>

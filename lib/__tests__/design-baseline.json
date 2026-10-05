@@ -383,10 +383,6 @@
     "paleta": 8,
     "hex": 0
   },
-  "components/map/MaplibreCoordinateInspector.tsx": {
-    "paleta": 7,
-    "hex": 0
-  },
   "components/map/MaplibreIconMarkers.tsx": {
     "paleta": 0,
     "hex": 1
@@ -394,10 +390,6 @@
   "components/map/MapLibreMap.tsx": {
     "paleta": 5,
     "hex": 9
-  },
-  "components/map/MaplibreMeasureControl.tsx": {
-    "paleta": 11,
-    "hex": 0
   },
   "components/map/MapPlaceholder.tsx": {
     "paleta": 1,
@@ -414,10 +406,6 @@
   "components/map/Modal.tsx": {
     "paleta": 0,
     "hex": 2
-  },
-  "components/map/PropertyInfoControl.tsx": {
-    "paleta": 0,
-    "hex": 21
   },
   "components/map/propriedade-dossie-template.tsx": {
     "paleta": 74,
