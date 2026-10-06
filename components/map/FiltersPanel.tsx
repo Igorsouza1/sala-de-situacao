@@ -2,6 +2,7 @@
 
 import { Button } from '@/components/ui/button'
 import { DateFilterControl } from './DateFilterControl'
+import { PanelCard } from './PanelCard'
 import { PropertyFilterControl } from './PropertyFilterControl'
 import { activeFilterCount, filterSummary, type AreaFilter } from './helpers/filters'
 import { affectsLine } from './helpers/layers'
@@ -27,29 +28,20 @@ interface FiltersPanelProps {
   areaAffects: Affected
 }
 
-function Section({ title, affects, children }: { title: string; affects: Affected; children: React.ReactNode }) {
-  const line = affectsLine(affects.names, affects.anyOn)
-  return (
-    <section>
-      <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{title}</h4>
-      {line && <p className="mb-2 mt-0.5 text-xs text-muted-foreground">{line}</p>}
-      {!line && <div className="mb-2" />}
-      {children}
-    </section>
-  )
-}
-
 export function FiltersPanel({ startDate, endDate, onDateChange, area, onAreaChange, dateAffects, areaAffects }: FiltersPanelProps) {
   const count = activeFilterCount(startDate, endDate, area)
   return (
     <div className="space-y-4">
-      <p role="status" className="text-sm">{filterSummary(startDate, endDate, area)}</p>
-      <Section title="Período" affects={dateAffects}>
+      <p role="status" className="px-1 text-sm">{filterSummary(startDate, endDate, area)}</p>
+
+      <PanelCard title="Período" caption={affectsLine(dateAffects.names, dateAffects.anyOn, 'Período')}>
         <DateFilterControl startDate={startDate} endDate={endDate} onChange={onDateChange} />
-      </Section>
-      <Section title="Tamanho das propriedades" affects={areaAffects}>
+      </PanelCard>
+
+      <PanelCard title="Propriedades" caption={affectsLine(areaAffects.names, areaAffects.anyOn, 'Propriedades')}>
         <PropertyFilterControl value={area} onChange={onAreaChange} />
-      </Section>
+      </PanelCard>
+
       <Button
         variant="outline"
         size="sm"

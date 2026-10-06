@@ -253,11 +253,13 @@ export const getLayerLegendInfo = (visualConfig: any) => {
     // 3. Determine Colors
     const color = baseStyle?.color || visualConfig?.mapMarker?.color || visualConfig?.color || "#3388ff";
     const fillColor = baseStyle?.fillColor || visualConfig?.mapMarker?.fillColor; // Can be undefined
+    const fillOpacity: number | undefined = baseStyle?.fillOpacity ?? visualConfig?.mapMarker?.fillOpacity;
 
     return { 
         legendType, 
         iconName, 
         color, 
-        fillColor 
+        fillColor,
+        fillOpacity
     };
 }

@@ -53,12 +53,14 @@ export function PropertyFilterControl({ value, onChange }: PropertyFilterControl
   }, [min, max])
 
   return (
-    <div className="space-y-2">
-      <p className="text-xs text-muted-foreground">Em hectares</p>
-      <div className="flex items-center gap-2">
-        <Input type="number" min="0" inputMode="decimal" placeholder="Mínimo" aria-label="Tamanho mínimo, em hectares" value={min} onChange={(e) => setMin(e.target.value)} className="h-9 text-sm" />
-        <span className="text-muted-foreground" aria-hidden>até</span>
-        <Input type="number" min="0" inputMode="decimal" placeholder="Máximo" aria-label="Tamanho máximo, em hectares" value={max} onChange={(e) => setMax(e.target.value)} className="h-9 text-sm" />
+    <div className="space-y-3">
+      {/* lê-se como o filtro que é: "Área de [mínimo] a [máximo] ha" — sem título extra para decifrar */}
+      <div className="flex items-center gap-2 text-sm">
+        <span className="shrink-0">Área de</span>
+        <Input type="number" min="0" inputMode="decimal" placeholder="Mínimo" aria-label="Área mínima, em hectares" value={min} onChange={(e) => setMin(e.target.value)} className="h-9 min-w-0 flex-1 px-2.5 text-sm" />
+        <span className="shrink-0">a</span>
+        <Input type="number" min="0" inputMode="decimal" placeholder="Máximo" aria-label="Área máxima, em hectares" value={max} onChange={(e) => setMax(e.target.value)} className="h-9 min-w-0 flex-1 px-2.5 text-sm" />
+        <abbr title="hectares" className="shrink-0 no-underline">ha</abbr>
       </div>
       {count != null && (
         <p role="status" className="text-sm text-muted-foreground">

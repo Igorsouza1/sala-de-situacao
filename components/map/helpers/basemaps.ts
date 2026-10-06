@@ -1,8 +1,8 @@
-// Bases do mapa (DESIGN.md 13). O Mineral é o padrão: o estilo "positron" do OpenFreeMap baixado e recolorido na paleta.
+// Bases do mapa (DESIGN.md 13). O padrão é o Satélite suave; o Mineral é uma opção: o estilo "positron" do OpenFreeMap baixado e recolorido na paleta.
 export type BasemapKey = 'mineral' | 'satellite-soft' | 'satellite' | 'streets' | 'osm'
 
-export const DEFAULT_BASEMAP: BasemapKey = 'mineral'
-export const BASEMAP_KEYS: BasemapKey[] = ['mineral', 'satellite-soft', 'satellite', 'streets', 'osm']
+export const DEFAULT_BASEMAP: BasemapKey = 'satellite-soft'
+export const BASEMAP_KEYS: BasemapKey[] = ['satellite-soft', 'mineral', 'satellite', 'streets', 'osm']
 export const BASEMAP_LABELS: Record<BasemapKey, string> = {
   mineral: 'Mineral',
   'satellite-soft': 'Satélite suave',

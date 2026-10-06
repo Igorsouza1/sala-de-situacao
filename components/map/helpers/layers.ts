@@ -32,9 +32,13 @@ export function filterNoteFor(slug: string, dateOn: boolean, areaOn: boolean): F
 export const filterLine = (note: FilterNote, count: number | undefined) =>
   count === 0 ? `Nenhum resultado para o ${note} escolhido.` : `Filtrada pelo ${note}.`
 
-// "Vale para: A, B e C." e, se nenhuma delas está ligada, o que fazer.
-export function affectsLine(names: string[], anyOn: boolean): string | null {
+// "Vale para: A, B e C." e, se nenhuma delas está ligada, o que fazer. Quando o filtro vale para uma só camada, de mesmo nome
+// que o título (Propriedades), dizer "Vale para: Propriedades" seria ruído: só avisa se ela está desligada.
+export function affectsLine(names: string[], anyOn: boolean, title?: string): string | null {
   if (names.length === 0) return null
+  if (names.length === 1 && title && names[0].toLowerCase() === title.toLowerCase()) {
+    return anyOn ? null : 'Está desligada em Camadas: ligue para ver o efeito.'
+  }
   const list = new Intl.ListFormat('pt-BR', { style: 'long', type: 'conjunction' }).format(names)
   return `Vale para: ${list}.${anyOn ? '' : ' Nenhuma está ligada: ligue uma em Camadas para ver o efeito.'}`
 }

@@ -77,7 +77,7 @@ export const DockButton = forwardRef<HTMLButtonElement, DockButtonProps>(functio
 })
 
 // Botão do dock que abre um painel. O conteúdo fica montado mesmo fechado: os filtros guardam o que a pessoa escolheu.
-export function DockPanelButton({ id, icon, label, badge, alert, children }: { id: string; icon: LucideIcon; label: string; badge?: number; alert?: boolean; children: ReactNode }) {
+export function DockPanelButton({ id, icon, label, badge, alert, action, children }: { id: string; icon: LucideIcon; label: string; badge?: number; alert?: boolean; action?: ReactNode; children: ReactNode }) {
   const { open, setOpen } = useContext(DockContext)
   const isOpen = open === id
   const trigger = useRef<HTMLButtonElement>(null)
@@ -88,7 +88,7 @@ export function DockPanelButton({ id, icon, label, badge, alert, children }: { i
   // Foco (2.1.2, regra 8): ao abrir, vai para o painel; ao fechar com o foco dentro dele, volta ao botão.
   // Se o foco já saiu (abriu outro painel), não o tiramos de lá.
   useEffect(() => {
-    if (isOpen) panel.current?.focus()
+    if (isOpen) requestAnimationFrame(() => panel.current?.focus())
     else if (wasOpen.current && panel.current?.contains(document.activeElement)) trigger.current?.focus()
     wasOpen.current = isOpen
   }, [isOpen])
@@ -114,25 +114,32 @@ export function DockPanelButton({ id, icon, label, badge, alert, children }: { i
         aria-modal="false"
         aria-label={label}
         tabIndex={-1}
+        // fechado, o painel fica `inert` (sem foco nem clique, 8.4) e invisível; abre de baixo com leve subida e escala (200 ms) e fecha mais rápido (150 ms)
+        inert={!isOpen}
         className={cn(
-          'absolute z-10 max-h-[75vh] flex-col overflow-hidden rounded-lg outline-hidden',
-          'bottom-full mb-3 max-sm:inset-x-3 sm:left-1/2 sm:w-80 sm:-translate-x-1/2',
+          'absolute z-10 flex max-h-[75vh] origin-bottom flex-col overflow-hidden rounded-lg outline-hidden',
+          'bottom-full mb-3 max-sm:inset-x-3 sm:left-1/2 sm:w-[22rem] sm:-translate-x-1/2',
+          'transition-[opacity,translate,scale,visibility] ease-out',
           controlSurface,
-          isOpen ? 'flex' : 'hidden',
+          isOpen ? 'visible scale-100 opacity-100 duration-200' : 'invisible translate-y-2 scale-95 opacity-0 duration-150',
         )}
       >
-        <header className="flex items-center justify-between border-b border-border py-2 pl-4 pr-2">
-          <h3 className="text-sm font-semibold">{label}</h3>
-          <button
-            type="button"
-            aria-label={`Fechar ${label}`}
-            onClick={() => setOpen(null)}
-            className={cn('flex h-8 w-8 items-center justify-center', controlItem())}
-          >
-            <X className="h-4 w-4" aria-hidden />
-          </button>
+        <header className="flex items-center justify-between gap-2 border-b border-border py-2.5 pl-5 pr-3">
+          <h3 className="text-base font-semibold">{label}</h3>
+          <div className="flex items-center gap-1">
+            {action}
+            <button
+              type="button"
+              aria-label={`Fechar ${label}`}
+              onClick={() => setOpen(null)}
+              className={cn('flex h-8 w-8 items-center justify-center', controlItem())}
+            >
+              <X className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
         </header>
-        <div className="overflow-y-auto p-4">{children}</div>
+        {/* base em cinza suave: os cartões brancos de dentro mostram onde cada assunto começa e termina (6.2) */}
+        <div className="overflow-y-auto bg-muted/50 p-4">{children}</div>
       </div>
     </div>
   )

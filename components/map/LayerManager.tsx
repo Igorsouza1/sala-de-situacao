@@ -1,15 +1,17 @@
 "use client"
 
 import { useMemo, useState, type ReactNode } from "react"
-import { ChevronDown, ChevronUp, Layers } from "lucide-react"
+import { ChevronDown, Layers } from "lucide-react"
 import * as LucideIcons from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Collapse } from "@/components/ui/collapse"
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import { filterLine, type FilterNote } from "./helpers/layers"
 
-// Lista de camadas (DESIGN.md 13.1): plana, com rótulos de seção sempre visíveis (nada de acordeão: são poucas linhas).
-// Cada linha: amostra da cor (é a legenda) · nome · quantas feições há no mapa · interruptor. A linha toda liga e desliga.
+// Lista de camadas (DESIGN.md 13.1): um cartão por categoria, sem acordeão (são poucas linhas).
+// Cada linha: amostra (é a legenda, igual ao que o mapa desenha) · nome · quantas feições há no mapa · interruptor.
+// A linha inteira liga e desliga.
 
 export interface LayerManagerOption {
   id: string
@@ -17,6 +19,7 @@ export interface LayerManagerOption {
   color: string
   slug: string
   fillColor?: string
+  fillOpacity?: number
   icon?: string
   legendType?: 'point' | 'line' | 'polygon' | 'circle' | 'icon' | 'heatmap'
   category?: string
@@ -53,26 +56,37 @@ const getLayerIcon = (iconName?: string) => {
 
 const CATEGORY_ORDER = ['Operacional', 'Monitoramento', 'Base Territorial', 'Infraestrutura']
 
-// A amostra mostra a cor e a forma reais da camada; desligada, fica esmaecida.
+// Amostra fiel ao mapa: preenchimento, contorno e transparência da camada. Um fio escuro por fora garante que ela apareça
+// mesmo quando a cor da camada é clara (a linha das estradas é creme, o contorno das nascentes é branco): sem ele, a legenda
+// some no cartão branco e a pessoa precisa adivinhar o que a cor significa. Desligada, a amostra fica esmaecida.
 function Legend({ option, checked }: { option: LayerManagerOption; checked: boolean }) {
   const Icon = getLayerIcon(option.icon)
   const type = option.legendType || 'polygon'
+  const stroke = option.color
   const fill = option.fillColor || option.color
+  const fillOpacity = option.fillOpacity ?? 1
+  const hairline = 'ring-1 ring-foreground/25'
   return (
-    <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center transition-opacity duration-180', !checked && 'opacity-40')} aria-hidden>
+    <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center transition-opacity duration-200', !checked && 'opacity-40')} aria-hidden>
       {(type === 'point' || type === 'icon') && (
-        <span className={cn('flex h-6 w-6 items-center justify-center border bg-card', type === 'icon' ? 'rounded-full' : 'rounded-md')} style={{ borderColor: option.color }}>
-          <Icon size={14} style={{ color: option.color }} />
+        <span className={cn('flex h-6 w-6 items-center justify-center border bg-card', type === 'icon' ? 'rounded-full' : 'rounded-md')} style={{ borderColor: stroke }}>
+          <Icon size={14} style={{ color: stroke }} />
         </span>
       )}
       {type === 'line' && (
-        <svg width="22" height="22" viewBox="0 0 20 20">
-          <path d="M2 15 C 8 15, 12 5, 18 5" fill="none" stroke={option.color} strokeWidth="2.5" strokeLinecap="round" />
+        <svg width="24" height="24" viewBox="0 0 20 20" className="overflow-visible">
+          <path d="M2 15 C 8 15, 12 5, 18 5" fill="none" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round" className="text-foreground/25" />
+          <path d="M2 15 C 8 15, 12 5, 18 5" fill="none" stroke={stroke} strokeWidth="2.5" strokeLinecap="round" />
         </svg>
       )}
-      {type === 'circle' && <span className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: option.color }} />}
-      {type === 'polygon' && <span className="h-3.5 w-3.5 rounded-[3px] border" style={{ backgroundColor: fill, borderColor: option.color }} />}
-      {type === 'heatmap' && <span className="h-3.5 w-3.5 rounded-sm" style={{ background: `linear-gradient(135deg, ${option.color || 'red'} 0%, transparent 100%)` }} />}
+      {type === 'circle' && <span className={cn('h-4 w-4 rounded-full border-2', hairline)} style={{ backgroundColor: fill, borderColor: stroke }} />}
+      {type === 'polygon' && (
+        <span
+          className={cn('h-4 w-4 rounded-[3px] border-2', hairline)}
+          style={{ backgroundColor: `color-mix(in srgb, ${fill} ${Math.round(fillOpacity * 100)}%, transparent)`, borderColor: stroke }}
+        />
+      )}
+      {type === 'heatmap' && <span className={cn('h-4 w-4 rounded-sm', hairline)} style={{ background: `linear-gradient(135deg, ${option.color || 'red'} 0%, transparent 100%)` }} />}
     </span>
   )
 }
@@ -90,36 +104,39 @@ interface RowProps {
   sub?: boolean
 }
 
-// A linha inteira é um <label>: clicar em qualquer ponto aciona o interruptor (alvo de 44 px, bom para toque).
-// O que não é parte do alvo (frase do filtro, erro com saída) fica fora do <label>, senão o clique ligaria a camada.
+// A linha inteira é um <label>: clicar em qualquer ponto aciona o interruptor (alvo de 48 px, bom para toque).
+// A saída do erro é um botão e fica fora do <label>, senão o clique nela ligaria ou desligaria a camada.
 function LayerRow({ option, checked, onChange, count, status, note, onRetry, expander, sub }: RowProps) {
-  const showCount = !sub && status !== 'loading' && status !== 'error' && count !== undefined
+  const showCount = !sub && checked && status !== 'loading' && status !== 'error' && count !== undefined
+  const showNote = checked && !!note && status !== 'error'
   return (
-    <div className={cn(sub && 'ml-5 border-l border-border pl-2')}>
+    <div className={cn(sub && 'ml-6 border-l border-border pl-2')}>
       <div className="flex items-center">
-        <label className="flex min-h-11 flex-1 cursor-pointer items-center gap-3 rounded-md px-2 transition-colors duration-180 hover:bg-muted">
+        <label className="flex min-h-12 flex-1 cursor-pointer items-center gap-3 rounded-md px-2.5 py-2 transition-colors duration-200 hover:bg-muted">
           <Legend option={option} checked={checked} />
-          <span className={cn('min-w-0 flex-1 truncate text-sm', !checked && 'text-muted-foreground')}>{option.label}</span>
-          {status === 'loading' && checked && (
+          <span className="min-w-0 flex-1">
+            <span className={cn('block truncate text-sm', !checked && 'text-muted-foreground')}>{option.label}</span>
+            {showNote && <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{filterLine(note!, count)}</span>}
+          </span>
+          {checked && status === 'loading' && (
             <span role="status" className="flex shrink-0 items-center">
               <span className="bg-shimmer h-2 w-10 rounded-sm" aria-hidden />
               <span className="sr-only">Carregando</span>
             </span>
           )}
-          {showCount && checked && <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">{count}</span>}
+          {showCount && <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">{count}</span>}
           <Switch checked={checked} onCheckedChange={onChange} aria-label={option.label} />
         </label>
         {expander}
       </div>
       {checked && status === 'error' && (
-        <p className="px-2 pb-1 pl-11 text-xs text-crit">
+        <p className="pb-2 pl-12 pr-2.5 text-xs text-crit">
           Não carregou.{' '}
           <button type="button" onClick={() => onRetry?.(option.slug)} className="underline underline-offset-2 hover:text-crit/80">
             Tentar de novo
           </button>
         </p>
       )}
-      {checked && note && status !== 'error' && <p className="px-2 pb-1 pl-11 text-xs text-muted-foreground">{filterLine(note, count)}</p>}
     </div>
   )
 }
@@ -141,25 +158,29 @@ export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, 
   }, [options])
 
   if (options.length === 0) {
-    return loading ? (
-      <div role="status" className="space-y-2">
-        <p className="text-sm text-muted-foreground">Buscando as camadas…</p>
-        {[0, 1, 2, 3].map((i) => <div key={i} className="bg-shimmer h-9 rounded-md" aria-hidden />)}
+    return (
+      <div className="rounded-lg border border-border bg-card p-4">
+        {loading ? (
+          <div role="status" className="space-y-2">
+            <p className="text-sm text-muted-foreground">Buscando as camadas…</p>
+            {[0, 1, 2, 3].map((i) => <div key={i} className="bg-shimmer h-10 rounded-md" aria-hidden />)}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Ainda não há camadas para esta região.</p>
+        )}
       </div>
-    ) : (
-      <p className="text-sm text-muted-foreground">Ainda não há camadas para esta região.</p>
     )
   }
 
   const isOn = (slug: string) => activeLayers.includes(slug)
 
   return (
-    <div>
+    <div className="space-y-4">
       {sections.map((section, i) => (
-        <section key={section.name} aria-labelledby={`layers-${i}`}>
-          <h5 id={`layers-${i}`} className="px-2 pb-1 pt-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground first:pt-0">
+        <section key={section.name} aria-labelledby={`layers-${i}`} className="rounded-lg border border-border bg-card p-2">
+          <h4 id={`layers-${i}`} className="px-2.5 pb-1 pt-2 text-sm font-semibold">
             {section.name}
-          </h5>
+          </h4>
           {section.items.map((option) => {
             const subs = option.subOptions
             if (!subs?.length) {
@@ -196,14 +217,17 @@ export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, 
                       aria-expanded={open}
                       aria-label={`${open ? 'Esconder' : 'Mostrar'} os grupos de ${option.label}`}
                       onClick={() => toggleExpanded(option.id)}
-                      className="flex h-11 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-180 hover:bg-muted hover:text-foreground focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30"
+                      className="flex h-12 w-10 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-200 hover:bg-muted hover:text-foreground focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30"
                     >
-                      {open ? <ChevronUp className="h-4 w-4" aria-hidden /> : <ChevronDown className="h-4 w-4" aria-hidden />}
-                      <span className="sr-only">{onCount}/{slugs.length}</span>
+                      {/* o mesmo chevron gira: a pessoa vê o que mudou, em vez de um ícone trocar por outro (8.1) */}
+                      <ChevronDown className={cn('h-4 w-4 transition-transform duration-[320ms] ease-out', open && 'rotate-180')} aria-hidden />
+                      <span className="sr-only">{onCount} de {slugs.length} ligados</span>
                     </button>
                   }
                 />
-                {open && subs.map((sub) => <LayerRow key={sub.id} sub option={sub} checked={isOn(sub.slug)} onChange={(c) => onLayerToggle(sub.slug, c)} />)}
+                <Collapse open={open}>
+                  {subs.map((sub) => <LayerRow key={sub.id} sub option={sub} checked={isOn(sub.slug)} onChange={(c) => onLayerToggle(sub.slug, c)} />)}
+                </Collapse>
               </div>
             )
           })}
@@ -211,11 +235,9 @@ export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, 
       ))}
 
       {activeLayers.length > 0 && (
-        <div className="mt-3 border-t border-border pt-3">
-          <Button variant="outline" size="sm" className="w-full text-xs" onClick={onHideAll}>
-            Ocultar todas
-          </Button>
-        </div>
+        <Button variant="outline" size="sm" className="w-full text-xs" onClick={onHideAll}>
+          Ocultar todas
+        </Button>
       )}
     </div>
   )

@@ -506,7 +506,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
         {/* <MapLayersCard ... /> Removido */ }
        
         {/* o LayerManager agora é só o conteúdo; o mapa legado dá a moldura (o novo usa o dock) */}
-        <div className="w-80 max-h-[70vh] overflow-y-auto rounded-lg border border-border bg-card p-3 shadow-control">
+        <div className="w-80 max-h-[70vh] overflow-y-auto rounded-lg border border-border bg-muted/50 p-3 shadow-control">
           <LayerManager
               options={dynamicLayerOptions}
               activeLayers={visibleDynamicLayers}

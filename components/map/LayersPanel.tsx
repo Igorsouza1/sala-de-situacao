@@ -4,10 +4,12 @@ import { useEffect, useState } from 'react'
 import { Check, RefreshCw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BASEMAP_KEYS, BASEMAP_LABELS, type BasemapKey } from './helpers/basemaps'
+import { controlItem } from './helpers/control-style'
 import { LayerManager } from './LayerManager'
+import { PanelCard } from './PanelCard'
 
-// Painel Camadas (DESIGN.md 13): o mapa base em cima, as camadas de dados embaixo e o "Atualizar" ao lado delas.
-// A base é a camada de baixo da pilha, por isso mora aqui e não num botão à parte.
+// Painel Camadas (DESIGN.md 13.1): o mapa base primeiro (é a camada de baixo), depois um cartão por categoria de dados.
+// O "Atualizar" fica no cabeçalho do painel, porque vale para todas as camadas e não para um cartão só.
 
 // Miniaturas feitas só de tokens: lembram a base sem baixar imagem nenhuma.
 const SWATCH: Record<BasemapKey, string> = {
@@ -18,23 +20,8 @@ const SWATCH: Record<BasemapKey, string> = {
   osm: 'linear-gradient(135deg, var(--color-map-urban) 0 55%, var(--color-map-grass) 55%)',
 }
 
-type LayerManagerProps = React.ComponentProps<typeof LayerManager>
-
-interface LayersPanelProps extends LayerManagerProps {
-  /** base escolhida pelo usuário */
-  basemap: BasemapKey
-  /** base que está de fato na tela (difere da escolhida quando o Mineral não carregou) */
-  shownBasemap: BasemapKey
-  onBasemapChange: (key: BasemapKey) => void
-  /** alguma camada ainda está chegando */
-  refreshing: boolean
-  onRefresh: () => void
-}
-
-export function LayersPanel({ basemap, shownBasemap, onBasemapChange, refreshing, onRefresh, ...layerProps }: LayersPanelProps) {
-  const unavailable = basemap !== shownBasemap
-
-  // O rótulo muda no próprio botão (8.4): Atualizar → Atualizando… → Atualizado.
+// O rótulo muda no próprio botão (8.4): Atualizar → Atualizando… → Atualizado.
+export function RefreshButton({ refreshing, onRefresh }: { refreshing: boolean; onRefresh: () => void }) {
   const [clicked, setClicked] = useState(false)
   const [done, setDone] = useState(false)
   useEffect(() => {
@@ -46,10 +33,34 @@ export function LayersPanel({ basemap, shownBasemap, onBasemapChange, refreshing
   }, [clicked, refreshing])
 
   return (
-    <div className="space-y-5">
-      <section>
-        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Mapa base</h4>
-        <div role="radiogroup" aria-label="Mapa base" className="grid grid-cols-3 gap-2">
+    <button
+      type="button"
+      aria-disabled={refreshing}
+      onClick={() => { if (refreshing) return; setClicked(true); onRefresh() }}
+      className={cn('flex h-8 items-center gap-1.5 px-2.5 text-xs font-medium aria-disabled:opacity-45 aria-disabled:hover:bg-transparent', controlItem())}
+    >
+      {done ? <Check className="h-3.5 w-3.5 text-ok" aria-hidden /> : <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} aria-hidden />}
+      <span aria-live="polite">{refreshing ? 'Atualizando…' : done ? 'Atualizado' : 'Atualizar'}</span>
+    </button>
+  )
+}
+
+type LayerManagerProps = React.ComponentProps<typeof LayerManager>
+
+interface LayersPanelProps extends LayerManagerProps {
+  /** base escolhida pelo usuário */
+  basemap: BasemapKey
+  /** base que está de fato na tela (difere da escolhida quando o Mineral não carregou) */
+  shownBasemap: BasemapKey
+  onBasemapChange: (key: BasemapKey) => void
+}
+
+export function LayersPanel({ basemap, shownBasemap, onBasemapChange, ...layerProps }: LayersPanelProps) {
+  const unavailable = basemap !== shownBasemap
+  return (
+    <div className="space-y-4">
+      <PanelCard title="Mapa base">
+        <div role="radiogroup" aria-label="Mapa base" className="grid grid-cols-3 gap-2.5">
           {BASEMAP_KEYS.map((key) => {
             const selected = key === shownBasemap
             return (
@@ -61,38 +72,24 @@ export function LayersPanel({ basemap, shownBasemap, onBasemapChange, refreshing
                 aria-checked={selected}
                 onClick={() => onBasemapChange(key)}
                 className={cn(
-                  'flex flex-col items-center gap-1 rounded-md border p-1.5 text-xs transition-[background-color,border-color,transform] duration-180 ease-out active:scale-[0.96] focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30',
+                  'flex flex-col items-center gap-1.5 rounded-md border p-2 text-xs transition-[background-color,border-color,transform] duration-200 ease-out active:scale-[0.96] focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30',
                   selected ? 'border-primary bg-secondary font-medium text-secondary-foreground' : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',
                 )}
               >
-                <span className="h-8 w-full rounded-sm border border-border" style={{ background: SWATCH[key] }} aria-hidden />
+                <span className="h-9 w-full rounded-sm border border-border" style={{ background: SWATCH[key] }} aria-hidden />
                 {BASEMAP_LABELS[key]}
               </button>
             )
           })}
         </div>
         {unavailable && (
-          <p role="status" className="mt-2 text-xs text-muted-foreground">
+          <p role="status" className="mt-3 text-xs text-muted-foreground">
             {BASEMAP_LABELS[basemap]} indisponível agora. Mostrando {BASEMAP_LABELS[shownBasemap]}.
           </p>
         )}
-      </section>
+      </PanelCard>
 
-      <section>
-        <div className="mb-2 flex items-center justify-between">
-          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Camadas de dados</h4>
-          <button
-            type="button"
-            aria-disabled={refreshing}
-            onClick={() => { if (refreshing) return; setClicked(true); onRefresh() }}
-            className="group flex items-center gap-1.5 rounded-sm px-2 py-1 text-xs font-medium text-muted-foreground transition-[background-color,color,transform] duration-180 ease-out hover:bg-muted hover:text-foreground active:scale-[0.96] aria-disabled:opacity-45 aria-disabled:hover:bg-transparent focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30"
-          >
-            {done ? <Check className="h-3.5 w-3.5 text-ok" aria-hidden /> : <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} aria-hidden />}
-            <span aria-live="polite">{refreshing ? 'Atualizando…' : done ? 'Atualizado' : 'Atualizar'}</span>
-          </button>
-        </div>
-        <LayerManager {...layerProps} />
-      </section>
+      <LayerManager {...layerProps} />
     </div>
   )
 }

@@ -57,8 +57,8 @@ describe('tintMineral', () => {
 })
 
 describe('bases', () => {
-  it('Mineral é o padrão e todas as outras têm estilo', () => {
-    expect(DEFAULT_BASEMAP).toBe('mineral')
+  it('Satélite suave é o padrão e todas as outras têm estilo', () => {
+    expect(DEFAULT_BASEMAP).toBe('satellite-soft')
     for (const k of BASEMAP_KEYS.filter((k) => k !== 'mineral')) expect(STATIC_STYLES[k as keyof typeof STATIC_STYLES]).toBeTruthy()
   })
 

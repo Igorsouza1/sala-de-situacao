@@ -53,4 +53,10 @@ describe('affectsLine', () => {
     expect(affectsLine(['Propriedades'], false)).toBe('Vale para: Propriedades. Nenhuma está ligada: ligue uma em Camadas para ver o efeito.')
     expect(affectsLine([], false)).toBeNull()
   })
+
+  it('não repete o título quando o filtro vale para uma camada de mesmo nome', () => {
+    expect(affectsLine(['Propriedades'], true, 'Propriedades')).toBeNull()
+    expect(affectsLine(['Propriedades'], false, 'Propriedades')).toBe('Está desligada em Camadas: ligue para ver o efeito.')
+    expect(affectsLine(['Focos', 'Ações'], true, 'Período')).toBe('Vale para: Focos e Ações.')
+  })
 })

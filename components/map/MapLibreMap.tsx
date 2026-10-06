@@ -24,7 +24,7 @@ import {
   type MapLibreLayerType,
 } from './helpers/maplibre-layer'
 import type { LayerManagerOption, LayerStatus } from './LayerManager'
-import { LayersPanel } from './LayersPanel'
+import { LayersPanel, RefreshButton } from './LayersPanel'
 import { FiltersPanel } from './FiltersPanel'
 import { activeFilterCount } from './helpers/filters'
 import {
@@ -857,7 +857,7 @@ export default function MapLibreMap({
   // ── LayerManager options ───────────────────────────────────────────────────
   const layerManagerOptions = useMemo((): LayerManagerOption[] => {
     return layers.map((layer) => {
-      const { legendType, iconName, color: baseColor, fillColor: baseFill } =
+      const { legendType, iconName, color: baseColor, fillColor: baseFill, fillOpacity: baseFillOpacity } =
         getLayerLegendInfo(layer.visualConfig)
       const config = layer.visualConfig
       const firstRule = config?.rules?.[0]
@@ -885,6 +885,7 @@ export default function MapLibreMap({
             icon: iconName,
             legendType,
             fillColor: baseFill,
+            fillOpacity: baseFillOpacity,
             category: layer.visualConfig?.category,
             subOptions: groups.map((group) => ({
               id: `${layer.slug}__${group.id}`,
@@ -894,6 +895,7 @@ export default function MapLibreMap({
               icon: group.icon || iconName,
               legendType,
               fillColor: baseFill,
+              fillOpacity: baseFillOpacity,
               category: layer.visualConfig?.category,
             })),
           }
@@ -908,6 +910,7 @@ export default function MapLibreMap({
         icon: iconName,
         legendType,
         fillColor: baseFill,
+        fillOpacity: baseFillOpacity,
         category: layer.visualConfig?.category,
       }
     })
@@ -1379,13 +1382,17 @@ export default function MapLibreMap({
           />
         )}
       >
-        <DockPanelButton id="layers" icon={LucideIcons.Layers} label="Camadas" alert={basemap !== shownBasemap}>
+        <DockPanelButton
+          id="layers"
+          icon={LucideIcons.Layers}
+          label="Camadas"
+          alert={basemap !== shownBasemap}
+          action={<RefreshButton refreshing={refreshing} onRefresh={handleReload} />}
+        >
           <LayersPanel
             basemap={basemap}
             shownBasemap={shownBasemap}
             onBasemapChange={handleBasemapChange}
-            refreshing={refreshing}
-            onRefresh={handleReload}
             options={panelOptions}
             activeLayers={panelActiveLayers}
             onLayerToggle={handleLayerToggle}
