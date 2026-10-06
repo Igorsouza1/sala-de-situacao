@@ -5,6 +5,7 @@ import { Check, Pencil, RefreshCw, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BASEMAP_KEYS, BASEMAP_LABELS, type BasemapKey } from './helpers/basemaps'
 import { controlItem } from './helpers/control-style'
+import { ViewSwap } from '@/components/ui/view-swap'
 import { LayerManager } from './LayerManager'
 import { PanelCard } from './PanelCard'
 
@@ -48,15 +49,27 @@ export function RefreshButton({ refreshing, onRefresh }: { refreshing: boolean; 
 // Entrada da edição de camadas (13.3): UM botão com rótulo no cabeçalho, só para quem pode editar. A lista não ganha um ícone
 // em cada linha (apertava e pedia para decifrar um lápis sem texto). Ligado, a lista vira "escolha a camada".
 export function EditModeButton({ active, onToggle }: { active: boolean; onToggle: () => void }) {
+  // Os dois rótulos (e os dois ícones) ocupam o mesmo lugar e trocam em crossfade; a cor do botão passa do neutro ao verde cheio.
+  // A largura é a do maior rótulo, então o botão não pula de tamanho quando o texto muda (8.4).
+  const swap = (on: boolean) => cn('col-start-1 row-start-1 transition-[opacity,translate] duration-300 ease-out', on ? 'opacity-100' : 'translate-y-1 opacity-0')
   return (
     <button
       type="button"
       aria-pressed={active}
       onClick={onToggle}
-      className={cn('flex h-8 items-center gap-1.5 px-2.5 text-xs font-medium', active ? 'rounded-sm bg-primary text-primary-foreground transition-[background-color,scale] duration-200 ease-spring hover:bg-primary-hover active:scale-[0.96] focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30' : controlItem())}
+      className={cn(
+        'flex h-8 items-center gap-1.5 rounded-sm px-2.5 text-xs font-medium transition-[background-color,color,scale,translate] duration-300 ease-spring active:scale-[0.96] focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30',
+        active ? 'bg-primary text-primary-foreground hover:bg-primary-hover' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+      )}
     >
-      {active ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Pencil className="h-3.5 w-3.5" aria-hidden />}
-      <span>{active ? 'Concluir' : 'Editar'}</span>
+      <span className="grid" aria-hidden>
+        <Pencil className={cn(swap(!active), 'h-3.5 w-3.5')} />
+        <Check className={cn(swap(active), 'h-3.5 w-3.5')} />
+      </span>
+      <span className="grid">
+        <span className={swap(!active)} aria-hidden={active}>Editar</span>
+        <span className={swap(active)} aria-hidden={!active}>Concluir</span>
+      </span>
     </button>
   )
 }
@@ -107,29 +120,25 @@ export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, e
   // e a pessoa precisa voltar para onde estava (8.4)
   const [expanded, setExpanded] = useState<string[]>([])
   const toggleExpanded = (id: string) => setExpanded((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]))
-  // o editor entra pela direita e a lista volta pela esquerda: a pessoa vê que foi para dentro e que voltou
-  if (editing) return <div key="editor" className="animate-in fade-in-0 slide-in-from-right-4 duration-200">{editing}</div>
-  // escolher a camada: só a lista, em botões, com a instrução em cima (a tela diz o que fazer, a pessoa não adivinha)
-  if (layerProps.onPick) {
-    return (
-      <div key="pick" className="animate-in fade-in-0 slide-in-from-right-4 space-y-4 duration-200">
-        {/* O modo fica dito, em cor e em frase, mesmo depois de salvar ou cancelar: sem isso a lista parecia a lista normal e a pessoa
-            não sabia se ainda estava editando (2.1). A frase também diz o próximo passo. */}
-        <div className="flex items-start gap-3 rounded-lg border border-primary/30 bg-secondary p-4 text-secondary-foreground">
-          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground" aria-hidden>
-            <Pencil className="h-4 w-4" />
-          </span>
-          <div>
-            <p className="text-sm font-semibold">Você está editando as camadas</p>
-            <p className="mt-0.5 text-sm">Escolha a que quer mudar. Quando terminar, toque em Concluir.</p>
-          </div>
+  // Escolher o que editar: só a lista, em botões, com o aviso do modo em cima. O modo fica dito, em cor e em frase, mesmo depois de salvar
+  // ou cancelar: sem isso a lista parecia a lista normal e a pessoa não sabia se ainda estava editando (2.1). A frase diz o próximo passo.
+  const pickView = layerProps.onPick ? (
+    <div className="space-y-4">
+      <div className="flex items-start gap-3 rounded-lg border border-primary/30 bg-secondary p-4 text-secondary-foreground">
+        <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground" aria-hidden>
+          <Pencil className="h-4 w-4" />
+        </span>
+        <div>
+          <p className="text-sm font-semibold">Você está editando as camadas</p>
+          <p className="mt-0.5 text-sm">Escolha a que quer mudar. Quando terminar, toque em Concluir.</p>
         </div>
-        <LayerManager {...layerProps} expanded={expanded} onToggleExpanded={toggleExpanded} />
       </div>
-    )
-  }
-  return (
-    <div key="list" className="panel-rise animate-in fade-in-0 slide-in-from-left-4 space-y-4 duration-200">
+      <LayerManager {...layerProps} expanded={expanded} onToggleExpanded={toggleExpanded} />
+    </div>
+  ) : null
+
+  const listView = (
+    <div className="panel-rise space-y-4">
       <PanelCard title="Mapa base">
         <div role="radiogroup" aria-label="Mapa base" className="grid grid-cols-3 gap-2.5">
           {BASEMAP_KEYS.map((key) => {
@@ -165,4 +174,8 @@ export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, e
       <ResetButton onReset={onReset} />
     </div>
   )
+
+  // As três visões ficam no mesmo painel e trocam com a altura acompanhando (8.4): a lista, a escolha do que editar e o editor.
+  const view = editing ? 'editor' : layerProps.onPick ? 'pick' : 'list'
+  return <ViewSwap view={view} views={{ list: listView, pick: pickView, editor: editing ?? null }} />
 }

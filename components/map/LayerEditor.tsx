@@ -179,7 +179,7 @@ export function IconGrid({ value, onChange }: { value?: string; onChange: (iconN
 // e uma sombra leve que mostra que há conteúdo passando por baixo.
 export function EditorFooter({ saving, error, why, canSave, onSave, onCancel }: { saving: boolean; error: string | null; why: string | null; canSave: boolean; onSave: () => void; onCancel: () => void }) {
   return (
-    <div className="sticky bottom-0 -mx-4 -mb-4 mt-8 space-y-2 border-t border-border bg-card px-4 pb-5 pt-4 shadow-[0_-10px_14px_-12px_rgb(24_26_25/0.22)]">
+    <div className="sticky bottom-0 -mx-4 mt-8 space-y-2 border-t border-border bg-card px-4 pb-5 pt-4 shadow-[0_-10px_14px_-12px_rgb(24_26_25/0.22)]">
       <p className="text-xs text-muted-foreground">Vale para todos que veem esta região.</p>
       {error && <p role="alert" className="text-xs text-crit">{error} O que você editou continua aqui.</p>}
       {why && !error && <p className="text-xs text-muted-foreground">{why}</p>}

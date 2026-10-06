@@ -91,7 +91,7 @@ export const DockButton = forwardRef<HTMLButtonElement, DockButtonProps>(functio
 })
 
 // Botão do dock que abre um painel. O conteúdo fica montado mesmo fechado: os filtros guardam o que a pessoa escolheu.
-export function DockPanelButton({ id, icon, label, title, titleIcon: TitleIcon, accent, motion, badge, alert, action, children }: { id: string; icon: LucideIcon; label: string; /** título do painel quando difere do rótulo do botão (ex.: "Editar camadas") */ title?: string; titleIcon?: LucideIcon; /** o painel está num modo especial (ex.: editando): o cabeçalho ganha cor, para o modo ser visto sem ler */ accent?: boolean; motion?: DockMotion; badge?: number; alert?: boolean; action?: ReactNode; children: ReactNode }) {
+export function DockPanelButton({ id, icon, label, accentTitle, titleIcon: TitleIcon, accent, motion, badge, alert, action, children }: { id: string; icon: LucideIcon; label: string; /** título do painel no modo especial (ex.: "Editar camadas"): o título troca em crossfade, não de uma vez */ accentTitle?: string; titleIcon?: LucideIcon; /** o painel está num modo especial (ex.: editando): o cabeçalho ganha cor, para o modo ser visto sem ler */ accent?: boolean; motion?: DockMotion; badge?: number; alert?: boolean; action?: ReactNode; children: ReactNode }) {
   const { open, setOpen } = useContext(DockContext)
   const isOpen = open === id
   const trigger = useRef<HTMLButtonElement>(null)
@@ -142,10 +142,22 @@ export function DockPanelButton({ id, icon, label, title, titleIcon: TitleIcon, 
         )}
       >
         <header className={cn('flex items-center justify-between gap-2 border-b py-2.5 pl-5 pr-3 transition-colors duration-300', accent ? 'border-primary/30 bg-secondary text-secondary-foreground' : 'border-border')}>
-          {/* o título é refeito quando muda: a troca "Camadas" → "Editar camadas" aparece (fade), não some e volta de uma vez (8.4) */}
-          <h3 key={title ?? label} className="flex animate-in items-center gap-2 text-base font-semibold fade-in-0 duration-300">
-            {TitleIcon && <TitleIcon className="h-4 w-4" aria-hidden />}
-            {title ?? label}
+          {/* A troca "Camadas" → "Editar camadas" se VÊ acontecer (8.4): os dois títulos ocupam o mesmo lugar, um sobe e some enquanto o
+              outro sobe e aparece; o lápis cresce em largura em vez de pular. Nunca quebra em duas linhas. */}
+          <h3 className="flex items-center whitespace-nowrap text-base font-semibold">
+            {TitleIcon && (
+              <span aria-hidden className={cn('grid transition-[grid-template-columns,opacity] duration-300 ease-out', accent ? 'grid-cols-[1fr] opacity-100' : 'grid-cols-[0fr] opacity-0')}>
+                <span className="min-w-0 overflow-hidden"><TitleIcon className="mr-2 h-4 w-4" /></span>
+              </span>
+            )}
+            {accentTitle ? (
+              <span className="grid">
+                <span aria-hidden={accent} className={cn('col-start-1 row-start-1 transition-[opacity,translate] duration-300 ease-out', accent ? '-translate-y-1 opacity-0' : 'opacity-100')}>{label}</span>
+                <span aria-hidden={!accent} className={cn('col-start-1 row-start-1 transition-[opacity,translate] duration-300 ease-out', accent ? 'opacity-100' : 'translate-y-1 opacity-0')}>{accentTitle}</span>
+              </span>
+            ) : (
+              label
+            )}
           </h3>
           <div className="flex items-center gap-1">
             {action}
@@ -160,7 +172,7 @@ export function DockPanelButton({ id, icon, label, title, titleIcon: TitleIcon, 
           </div>
         </header>
         {/* base em cinza suave: os cartões brancos de dentro mostram onde cada assunto começa e termina (6.2) */}
-        <div className="overflow-y-auto bg-muted/50 p-4">{children}</div>
+        <div data-panel-scroll className="overflow-y-auto bg-muted/50 p-4">{children}</div>
       </div>
     </div>
   )

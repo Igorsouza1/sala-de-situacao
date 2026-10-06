@@ -26,6 +26,7 @@ import {
 import type { LayerManagerOption, LayerStatus } from './LayerManager'
 import { EditModeButton, LayersPanel, RefreshButton } from './LayersPanel'
 import { Notice, type NoticeData } from './Notice'
+import { Reveal } from '@/components/ui/collapse'
 import { LayerEditor } from './LayerEditor'
 import { GroupIconEditor } from './GroupIconEditor'
 import { applyEdit, readEdit, ruleIcon, type LayerEdit } from '@/lib/layer-style'
@@ -1589,7 +1590,7 @@ export default function MapLibreMap({
       >
         <DockPanelButton
           id="layers"
-          title={isAdmin && (picking || draft) ? 'Editar camadas' : undefined}
+          accentTitle={isAdmin ? 'Editar camadas' : undefined}
           titleIcon={isAdmin && (picking || draft) ? LucideIcons.Pencil : undefined}
           accent={!!(isAdmin && (picking || draft))}
           icon={LucideIcons.Layers}
@@ -1598,9 +1599,17 @@ export default function MapLibreMap({
           alert={basemap !== shownBasemap || !!draft}
           action={
             <>
-              {/* "Editar" só para quem pode, e some enquanto há um editor aberto (lá dentro já há Salvar e Cancelar) */}
-              {isAdmin && !draft && <EditModeButton active={picking} onToggle={() => setPicking((v) => !v)} />}
-              <RefreshButton refreshing={refreshing} onRefresh={handleReload} />
+              {/* "Editar" só para quem pode, e some enquanto há um editor aberto (lá dentro já há Salvar e Cancelar). O "Atualizar" sai do
+                  cabeçalho enquanto se edita: com o título "Editar camadas" e o "Concluir", o cabeçalho ficava pesado e o título quebrava.
+                  Quem sai encolhe e some, quem entra cresce (8.4): nada pula. */}
+              {isAdmin && (
+                <Reveal show={!draft}>
+                  <EditModeButton active={picking} onToggle={() => setPicking((v) => !v)} />
+                </Reveal>
+              )}
+              <Reveal show={!(isAdmin && (picking || !!draft))}>
+                <RefreshButton refreshing={refreshing} onRefresh={handleReload} />
+              </Reveal>
             </>
           }
         >
