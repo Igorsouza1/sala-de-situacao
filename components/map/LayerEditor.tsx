@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState, type KeyboardEvent } from 'react'
-import { ArrowLeft, Check, ChevronDown, Plus } from 'lucide-react'
+import { ArrowLeft, Check, ChevronDown } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Collapse } from '@/components/ui/collapse'
@@ -21,7 +21,8 @@ import {
   type LayerCategory,
   type LayerEdit,
 } from '@/lib/layer-style'
-import { LAYER_ICONS, colorName, readPalette, toSixDigits } from './helpers/layer-palette'
+import { LAYER_ICONS, colorName, readPalette } from './helpers/layer-palette'
+import { OtherColor } from './ColorPicker'
 import { controlItem } from './helpers/control-style'
 import { Legend, type LayerManagerOption } from './LayerManager'
 import { PanelCard } from './PanelCard'
@@ -132,18 +133,8 @@ function ColorField({ value, onChange }: { value: string; onChange: (hex: string
             </button>
           )
         })}
-        {/* "Outra cor": o seletor do navegador, por baixo de um quadrado igual aos outros */}
-        <label
-          title="Outra cor"
-          className={cn(
-            'relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-md ring-1 ring-foreground/25 transition-[scale,box-shadow] duration-200 ease-spring active:scale-95 focus-within:ring-[3px] focus-within:ring-ring/40',
-            !inPalette && 'ring-2 ring-primary ring-offset-2 ring-offset-card',
-          )}
-          style={!inPalette ? { backgroundColor: value } : undefined}
-        >
-          {inPalette ? <Plus className="h-4 w-4 text-muted-foreground" aria-hidden /> : <Check className="h-4 w-4 text-background mix-blend-difference" aria-hidden />}
-          <input type="color" aria-label="Outra cor" value={toSixDigits(value)} onChange={(e) => onChange(e.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0" />
-        </label>
+        {/* "Outra cor": um cartão da marca (matiz e tom), não o seletor do navegador (6.2, regra 6) */}
+        <OtherColor value={value} inPalette={inPalette} onChange={onChange} />
       </div>
     </div>
   )

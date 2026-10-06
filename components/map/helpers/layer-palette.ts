@@ -1,4 +1,5 @@
 import { isHexColor } from '@/lib/layer-style'
+import { describeColor } from './color'
 
 // Paleta do editor de camadas (DESIGN.md 13.3): as cores de dados e de marca do projeto, lidas dos tokens (sem hex no código).
 // Os nomes dizem a cor, não o significado: "Crítico" numa camada de estradas diria ao usuário que há algo crítico (4: cor quente é só para o crítico).
@@ -30,9 +31,9 @@ export function readPalette(): PaletteColor[] {
   })
 }
 
-// O nome da cor, para mostrar no lugar do código; fora da paleta é "Outra cor"
+// O nome da cor, para mostrar no lugar do código; fora da paleta, a família e o tom ("Azul escuro")
 export function colorName(hex: string): string {
-  return readPalette().find((p) => p.hex === hex.toLowerCase())?.name ?? 'Outra cor'
+  return readPalette().find((p) => p.hex === hex.toLowerCase())?.name ?? describeColor(hex)
 }
 
 // <input type="color"> só aceita #rrggbb

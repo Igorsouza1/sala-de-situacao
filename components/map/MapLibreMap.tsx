@@ -599,7 +599,7 @@ export default function MapLibreMap({
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && activeTool) selectTool(null)
+      if (e.key === 'Escape' && !e.defaultPrevented && activeTool) selectTool(null)
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)

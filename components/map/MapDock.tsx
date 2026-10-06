@@ -18,7 +18,8 @@ export function MapDock({ children, above }: { children: ReactNode; above?: Reac
 
   useEffect(() => {
     if (!open) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(null) }
+    // um seletor ou menu aberto por dentro já tratou este Esc (o Radix chama preventDefault): fecha só ele, não o painel inteiro
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !e.defaultPrevented) setOpen(null) }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open])

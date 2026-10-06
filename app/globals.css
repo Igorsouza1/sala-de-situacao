@@ -194,6 +194,19 @@
 }
 .animate-found { animation: found 1900ms ease-out both; }
 
+/* Cartões que abrem a partir de um botão (seletor de cor, 8.1): nascem pequenos no ponto do botão, com a mola do projeto (260 ms),
+   e saem mais rápido (150 ms). A origem vem do Radix, que sabe onde o botão está. */
+@keyframes popover-in {
+  from { opacity: 0; scale: 0.88; translate: 0 -6px; }
+  to { opacity: 1; scale: 1; translate: 0 0; }
+}
+@keyframes popover-out {
+  to { opacity: 0; scale: 0.95; translate: 0 -4px; }
+}
+.popover-spring { transform-origin: var(--radix-popover-content-transform-origin); }
+.popover-spring[data-state='open'] { animation: popover-in 260ms var(--ease-spring) both; }
+.popover-spring[data-state='closed'] { animation: popover-out 150ms ease-in forwards; }
+
 /* Aviso do mapa (12): entra de cima com mola e sai deslizando para cima, como o toast do laboratório */
 @keyframes notice-in {
   from { opacity: 0; translate: 0 -18px; scale: 0.96; }
