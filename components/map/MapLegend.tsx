@@ -97,14 +97,14 @@ function Row({ children, label, onClick, empty }: { children: React.ReactNode; l
 }
 
 /** a cor de um pino: um círculo cheio, na cor que o mapa usa, com o fio claro que o separa do cartão */
-const ColorSwatch = ({ color }: { color: string }) => (
+export const ColorSwatch = ({ color }: { color: string }) => (
   <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center">
     <span className="h-4 w-4 rounded-full ring-2 ring-white" style={{ backgroundColor: color, boxShadow: '0 0 0 3px color-mix(in srgb, var(--color-foreground) 22%, transparent)' }} />
   </span>
 )
 
 /** o ícone de uma área: o desenho do pino, em tom neutro (a cor é outro cartão) */
-const IconSwatch = ({ name }: { name: string }) => {
+export const IconSwatch = ({ name }: { name: string }) => {
   const Icon = resolveLayerIcon(name)
   return (
     <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-foreground ring-1 ring-foreground/20">

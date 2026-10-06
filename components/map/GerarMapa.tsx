@@ -7,11 +7,14 @@ import { ArrowLeft, Undo2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
+import { Collapse } from '@/components/ui/collapse'
 import { OverlayScroll } from '@/components/ui/overlay-scroll'
 import { useRegion } from '@/context/RegionContext'
 import type { LayerResponseDTO, MapFeatureCollection } from '@/types/map-dto'
 import { MaplibreIconMarkers } from './MaplibreIconMarkers'
-import { GridOverlay, NorthArrow, ScaleBlock, type MapView } from './SheetOverlays'
+import { GridOverlay, LegendBlock, LocationInset, NoteBlock, NorthArrow, ScaleBlock, type MapView } from './SheetOverlays'
+import { LegendEditor } from './LegendEditor'
+import type { LayerManagerOption } from './LayerManager'
 import { PanelCard } from './PanelCard'
 import { Segmented } from './Segmented'
 import { controlItem } from './helpers/control-style'
@@ -30,8 +33,10 @@ import {
   type BasemapKey,
 } from './helpers/basemaps'
 import { PRINT_BASEMAPS, autoTitle, composeSheetStyle, printBasemapFor } from './helpers/gerar-mapa'
-import { DEFAULT_SHEET, ORIENTATIONS, ORIENTATION_LABELS, PAPERS, PAPER_LABELS, sheetLayout, zoomToFit, type Orientation, type Paper } from './helpers/sheet'
+import { CORNERS, CORNER_LABELS, DEFAULT_LEGEND_CORNER, DEFAULT_SHEET, ORIENTATIONS, ORIENTATION_LABELS, PAPERS, PAPER_LABELS, placeCorners, sheetLayout, zoomToFit, type Corner, type Orientation, type Paper } from './helpers/sheet'
 import { datumLine, type GridFormat } from './helpers/grid'
+import { EMPTY_LEGEND_EDITS, applyLegendEdits, buildLegend, type LegendEdits } from './helpers/legend-sheet'
+import type { RuleLegendSection } from './helpers/legend-rules'
 import { useSmoothWheelZoom } from './helpers/use-smooth-wheel-zoom'
 
 // Gerar mapa (DESIGN.md 13.9): uma tela sobre o mapa, com a folha ao vivo no meio e os ajustes ao lado. A folha mostra o que vai
@@ -51,6 +56,8 @@ export interface GerarMapaSession {
   /** camadas de ícone: são marcadores HTML, não estão no estilo */
   iconLayers: { layer: LayerResponseDTO; data: MapFeatureCollection }[]
   layerNames: string[]
+  /** a legenda do mapa de agora: de onde a legenda da folha parte */
+  legend: { options: LayerManagerOption[]; activeLayers: string[]; ruleLegends: Record<string, RuleLegendSection[]> }
 }
 
 type Json = Record<string, any>
@@ -64,7 +71,7 @@ const SWATCH: Record<BasemapKey, string> = {
 }
 
 // o que a folha pode mostrar a mais: ligado por padrão, a pessoa desliga o que não quer (título, legenda e fonte dos dados não saem)
-type Part = 'north' | 'scale' | 'grid' | 'datum' | 'date' | 'logos'
+type Part = 'north' | 'scale' | 'grid' | 'datum' | 'date' | 'logos' | 'inset' | 'note'
 const PARTS: { id: Part; label: string }[] = [
   { id: 'north', label: 'Seta do norte' },
   { id: 'scale', label: 'Escala' },
@@ -72,6 +79,8 @@ const PARTS: { id: Part; label: string }[] = [
   { id: 'datum', label: 'Datum e fuso' },
   { id: 'date', label: 'Data de hoje' },
   { id: 'logos', label: 'Brasão e logo' },
+  { id: 'inset', label: 'Mapa de localização' },
+  { id: 'note', label: 'Texto livre' },
 ]
 const COORD_OPTIONS: { value: GridFormat; label: string }[] = [{ value: 'dms', label: 'Graus' }, { value: 'utm', label: 'UTM' }]
 const todayLabel = () => new Date().toLocaleDateString('pt-BR')
@@ -123,8 +132,14 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
   const [typed, setTyped] = useState<string | null>(null) // null: segue o título automático
   const title = typed ?? automatic
 
-  const [show, setShow] = useState<Record<Part, boolean>>({ north: true, scale: true, grid: true, datum: true, date: true, logos: true })
+  const [show, setShow] = useState<Record<Part, boolean>>({ north: true, scale: true, grid: true, datum: true, date: true, logos: true, inset: false, note: false })
   const [coords, setCoords] = useState<GridFormat>('dms')
+  const [note, setNote] = useState('')
+  const [legendCorner, setLegendCorner] = useState<Corner>(DEFAULT_LEGEND_CORNER)
+  const [legendEdits, setLegendEdits] = useState<LegendEdits>(EMPTY_LEGEND_EDITS)
+  const legendBase = useMemo(() => buildLegend(session.legend.options, session.legend.activeLayers, session.legend.ruleLegends), [session.legend])
+  const legendSections = useMemo(() => applyLegendEdits(legendBase, legendEdits), [legendBase, legendEdits])
+  const corners = useMemo(() => placeCorners(legendCorner), [legendCorner])
   // onde o mapa está quando assenta: o fuso do rodapé vem daqui (durante o arrasto o texto não muda)
   const [center, setCenter] = useState({ lng: session.camera.lng, lat: session.camera.lat })
   const today = useMemo(todayLabel, [])
@@ -246,6 +261,12 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
                     grid={show.grid ? coords : null}
                     north={show.north}
                     scale={show.scale}
+                    inset={show.inset}
+                    insetStyle={baseStyle}
+                    note={show.note ? note : ''}
+                    legend={{ title: legendEdits.title, sections: legendSections }}
+                    corners={corners}
+                    mapHeightMm={sheet.map.h}
                     onSettle={setCenter}
                   />
                 )}
@@ -304,6 +325,38 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
                     </li>
                   ))}
                 </ul>
+                <Collapse open={show.note} clip>
+                  <div className="pt-3">
+                    <Input aria-label="Texto livre da folha" value={note} placeholder="Escreva uma observação" maxLength={240} onChange={(e) => setNote(e.target.value)} />
+                  </div>
+                </Collapse>
+              </PanelCard>
+
+              <PanelCard title="Legenda" caption="Toque no nome para renomear, arraste a alça para mudar a ordem. Isto vale só para a folha: o mapa não muda.">
+                <LegendEditor sections={legendBase} edits={legendEdits} onChange={setLegendEdits} />
+              </PanelCard>
+
+              <PanelCard title="Onde fica a legenda">
+                <div role="radiogroup" aria-label="Canto da legenda" className="grid grid-cols-2 gap-2">
+                  {CORNERS.map((c) => {
+                    const selected = c === legendCorner
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        role="radio"
+                        aria-checked={selected}
+                        onClick={() => setLegendCorner(c)}
+                        className={cn(
+                          'flex min-h-12 items-center justify-center rounded-md border px-2 text-center text-sm transition-[background-color,border-color,color,translate,scale] duration-200 ease-spring active:scale-[0.96] focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30',
+                          selected ? 'border-primary bg-secondary font-medium text-secondary-foreground' : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',
+                        )}
+                      >
+                        {CORNER_LABELS[c]}
+                      </button>
+                    )
+                  })}
+                </div>
               </PanelCard>
 
               <PanelCard title="Coordenadas" caption={show.grid ? 'Em graus, minutos e segundos, ou em UTM. Datum SIRGAS 2000.' : 'Ligue a grade para escolher como as coordenadas aparecem.'}>
@@ -372,10 +425,17 @@ interface SheetMapProps {
   grid: GridFormat | null
   north: boolean
   scale: boolean
+  inset: boolean
+  insetStyle: Json | null
+  note: string
+  legend: { title: string; sections: ReturnType<typeof applyLegendEdits> }
+  corners: ReturnType<typeof placeCorners>
+  mapHeightMm: number
   onSettle: (center: { lng: number; lat: number }) => void
 }
 
-function SheetMap({ session, style, basemap, frame, frameMm, pxPerMm, grid, north, scale, onSettle }: SheetMapProps) {
+function SheetMap({ session, style, basemap, frame, frameMm, pxPerMm, grid, north, scale, inset, insetStyle, note, legend, corners, mapHeightMm, onSettle }: SheetMapProps) {
+  const [settled, setSettled] = useState({ lng: session.camera.lng, lat: session.camera.lat })
   const mapRef = useRef<any>(null)
   const [loaded, setLoaded] = useState(false)
   useSmoothWheelZoom(mapRef, loaded)
@@ -429,15 +489,18 @@ function SheetMap({ session, style, basemap, frame, frameMm, pxPerMm, grid, nort
       attributionControl={false}
       onLoad={(e) => { e.target.touchZoomRotate.disableRotation(); setLoaded(true) }}
       onMove={scheduleView}
-      onMoveEnd={() => { const c = mapRef.current?.getMap().getCenter(); if (c) onSettle({ lng: c.lng, lat: c.lat }) }}
+      onMoveEnd={() => { const c = mapRef.current?.getMap().getCenter(); if (c) { setSettled({ lng: c.lng, lat: c.lat }); onSettle({ lng: c.lng, lat: c.lat }) } }}
     >
       {session.iconLayers.map(({ layer, data }) => (
         <MaplibreIconMarkers key={layer.slug} layer={layer} data={data} onFeatureClick={() => {}} onFeatureHover={() => {}} />
       ))}
     </Map>
     {view && grid && <GridOverlay map={mapRef.current.getMap()} view={view} format={grid} frame={frame} pxPerMm={pxPerMm} />}
-    {view && north && <NorthArrow pxPerMm={pxPerMm} />}
-    {view && scale && <ScaleBlock view={view} frame={{ mm: frameMm, px: frame.w }} pxPerMm={pxPerMm} />}
+    {view && north && <NorthArrow pxPerMm={pxPerMm} corner={corners.north} />}
+    {view && scale && <ScaleBlock view={view} frame={{ mm: frameMm, px: frame.w }} pxPerMm={pxPerMm} corner={corners.scale} />}
+    <LegendBlock title={legend.title} sections={legend.sections} corner={corners.legend} pxPerMm={pxPerMm} mapHeightMm={mapHeightMm} />
+    {view && inset && insetStyle && <LocationInset style={insetStyle} view={view} center={settled} pxPerMm={pxPerMm} corner={corners.inset} />}
+    <NoteBlock text={note} pxPerMm={pxPerMm} />
     </div>
   )
 }

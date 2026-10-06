@@ -63,3 +63,43 @@ export function zoomToFit(zoom: number, screen: Size, frame: Size): number {
   if (!(screen.w > 0 && screen.h > 0 && frame.w > 0 && frame.h > 0)) return zoom
   return zoom + Math.log2(Math.min(frame.w / screen.w, frame.h / screen.h))
 }
+
+// ── Os cantos do mapa ──────────────────────────────────────────────────────────────────────────────────────────────
+// A legenda vai para o canto que a pessoa escolhe; seta do norte, escala e mapa de localização ocupam os outros três, de modo que
+// nenhum encosta no outro (cada canto tem um elemento só).
+export const CORNERS: Corner[] = ['top-left', 'top-right', 'bottom-left', 'bottom-right']
+export const CORNER_LABELS: Record<Corner, string> = {
+  'top-left': 'Em cima, à esquerda',
+  'top-right': 'Em cima, à direita',
+  'bottom-left': 'Embaixo, à esquerda',
+  'bottom-right': 'Embaixo, à direita',
+}
+export const DEFAULT_LEGEND_CORNER: Corner = 'bottom-right'
+
+/** a posição CSS (em mm) de um elemento encostado num canto, com `inset` de folga */
+export function cornerAnchor(corner: Corner, inset: number): { top?: number; bottom?: number; left?: number; right?: number } {
+  return {
+    [corner.startsWith('top') ? 'top' : 'bottom']: inset,
+    [corner.endsWith('left') ? 'left' : 'right']: inset,
+  }
+}
+
+// o canto que cada um prefere, na ordem; o primeiro livre vence (legenda escolhida primeiro, depois norte, escala e localização)
+const PREFERRED: Record<'north' | 'scale' | 'inset', Corner[]> = {
+  north: ['top-right', 'top-left', 'bottom-right', 'bottom-left'],
+  scale: ['bottom-left', 'bottom-right', 'top-left', 'top-right'],
+  inset: ['top-left', 'bottom-left', 'top-right', 'bottom-right'],
+}
+
+export function placeCorners(legend: Corner): { legend: Corner; north: Corner; scale: Corner; inset: Corner } {
+  const taken = new Set<Corner>([legend])
+  const pick = (who: 'north' | 'scale' | 'inset') => {
+    const corner = PREFERRED[who].find((c) => !taken.has(c)) ?? PREFERRED[who][0]
+    taken.add(corner)
+    return corner
+  }
+  const north = pick('north')
+  const scale = pick('scale')
+  const inset = pick('inset')
+  return { legend, north, scale, inset }
+}

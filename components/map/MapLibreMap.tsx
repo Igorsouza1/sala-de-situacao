@@ -1422,8 +1422,9 @@ export default function MapLibreMap({
       dataSourceIds: [...processedLayers.map(({ layer }) => layer.slug), ...(faunaData.length > 0 ? ['fauna'] : [])],
       iconLayers: drawn.filter(({ isIcon }) => isIcon).map(({ layer, displayData }) => ({ layer, data: displayData })),
       layerNames: drawn.map(({ layer }) => layer.name),
+      legend: { options: panelOptions, activeLayers: panelActiveLayers, ruleLegends },
     })
-  }, [processedLayers, shownBasemap, faunaData.length])
+  }, [processedLayers, shownBasemap, faunaData.length, panelOptions, panelActiveLayers, ruleLegends])
 
   // ── Error state ───────────────────────────────────────────────────────────
   if (error) {

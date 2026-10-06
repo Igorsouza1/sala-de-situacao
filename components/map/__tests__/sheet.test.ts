@@ -1,4 +1,4 @@
-import { PAPERS, PAPER_LABELS, DEFAULT_SHEET, cornerRect, sheetLayout, zoomToFit } from '../helpers/sheet'
+import { CORNERS, CORNER_LABELS, DEFAULT_LEGEND_CORNER, PAPERS, PAPER_LABELS, DEFAULT_SHEET, cornerAnchor, cornerRect, placeCorners, sheetLayout, zoomToFit } from '../helpers/sheet'
 
 describe('sheetLayout', () => {
   it('A4 paisagem tem 297 x 210 mm; A4 retrato inverte', () => {
@@ -87,5 +87,34 @@ describe('zoomToFit', () => {
   it('tela ou moldura sem tamanho não quebra: devolve o zoom de antes', () => {
     expect(zoomToFit(10, { w: 0, h: 0 }, { w: 500, h: 300 })).toBe(10)
     expect(zoomToFit(10, { w: 1000, h: 600 }, { w: 0, h: 0 })).toBe(10)
+  })
+})
+
+describe('cornerAnchor', () => {
+  it('encosta no canto pedido, com a folga', () => {
+    expect(cornerAnchor('top-left', 4)).toEqual({ top: 4, left: 4 })
+    expect(cornerAnchor('top-right', 4)).toEqual({ top: 4, right: 4 })
+    expect(cornerAnchor('bottom-left', 4)).toEqual({ bottom: 4, left: 4 })
+    expect(cornerAnchor('bottom-right', 4)).toEqual({ bottom: 4, right: 4 })
+  })
+})
+
+describe('placeCorners', () => {
+  it('com a legenda onde ela nasce (embaixo à direita), norte em cima à direita, escala embaixo à esquerda e localização em cima à esquerda', () => {
+    expect(placeCorners(DEFAULT_LEGEND_CORNER)).toEqual({ legend: 'bottom-right', north: 'top-right', scale: 'bottom-left', inset: 'top-left' })
+  })
+
+  it.each(CORNERS)('legenda em %s: cada um num canto diferente', (legend) => {
+    const p = placeCorners(legend)
+    expect(p.legend).toBe(legend)
+    expect(new Set([p.legend, p.north, p.scale, p.inset]).size).toBe(4)
+  })
+
+  it('a legenda tomando o canto do norte empurra o norte para outro canto', () => {
+    expect(placeCorners('top-right').north).not.toBe('top-right')
+  })
+
+  it('todo canto tem rótulo escrito', () => {
+    CORNERS.forEach((c) => expect(CORNER_LABELS[c]).toBeTruthy())
   })
 })
