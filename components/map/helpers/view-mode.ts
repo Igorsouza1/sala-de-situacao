@@ -16,7 +16,7 @@ export const cameraFor = (mode: ViewMode) =>
 
 type Store = Pick<Storage, 'getItem' | 'setItem'>
 
-const browserStore = (): Store | null => {
+const browserStore = (): Storage | null => {
   try {
     return typeof window === 'undefined' ? null : window.localStorage
   } catch {
@@ -30,6 +30,15 @@ export function readSavedMode(store: Store | null = browserStore()): ViewMode {
     return store?.getItem(STORAGE_KEY) === '3d' ? '3d' : '2d'
   } catch {
     return '2d'
+  }
+}
+
+// Esquece a escolha: a próxima abertura volta ao padrão (2D).
+export function clearMode(store: Pick<Storage, 'removeItem'> | null = browserStore()): void {
+  try {
+    store?.removeItem(STORAGE_KEY)
+  } catch {
+    /* sem armazenamento: nada a esquecer */
   }
 }
 

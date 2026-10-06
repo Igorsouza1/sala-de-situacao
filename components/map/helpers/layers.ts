@@ -11,10 +11,22 @@ const DEFAULT_ON_SLUGS = ['propriedades', 'raw_firms', 'desmatamento', 'acoes']
 
 type LayerLike = { slug: string; groups?: { id: string | number }[] | null }
 
+// Os identificadores de uma camada: os dos grupos dela e o dela mesma.
+const slugsOf = (l: LayerLike) => [...(l.groups ?? []).map((g) => `${l.slug}__${g.id}`), l.slug]
+
 // Se a região não tem nenhuma das camadas-padrão (ex.: uma região só com a Rede Amolar), liga todas: abrir em branco não ajuda.
 export function initialVisibleSlugs(layers: LayerLike[]): string[] {
   const wanted = layers.filter((l) => DEFAULT_ON_SLUGS.includes(l.slug))
-  return (wanted.length ? wanted : layers).flatMap((l) => [...(l.groups ?? []).map((g) => `${l.slug}__${g.id}`), l.slug])
+  return (wanted.length ? wanted : layers).flatMap(slugsOf)
+}
+
+// As camadas que a pessoa deixou ligadas, só as que ainda existem. Camada nova no catálogo abre desligada (a pessoa não a escolheu).
+// Se tudo o que estava salvo sumiu do catálogo, volta ao padrão; mas uma lista vazia salva (ela ocultou todas) é uma escolha, e vale.
+export function restoreVisibleSlugs(layers: LayerLike[], saved: string[] | undefined): string[] {
+  if (!saved) return initialVisibleSlugs(layers)
+  const known = new Set(layers.flatMap(slugsOf))
+  const valid = saved.filter((s) => known.has(s))
+  return saved.length > 0 && valid.length === 0 ? initialVisibleSlugs(layers) : valid
 }
 
 // Uma camada está "ligada" quando ela, ou algum grupo dela, está na lista de visíveis.

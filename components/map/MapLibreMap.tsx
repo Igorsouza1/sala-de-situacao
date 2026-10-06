@@ -26,13 +26,23 @@ import {
 import type { LayerManagerOption, LayerStatus } from './LayerManager'
 import { LayersPanel, RefreshButton } from './LayersPanel'
 import { FiltersPanel } from './FiltersPanel'
-import { activeFilterCount } from './helpers/filters'
+import { activeFilterCount, datesFromIntent, intentFromDates } from './helpers/filters'
+import {
+  clearBasemap,
+  clearRegionPrefs,
+  isInsideBounds,
+  readBasemap,
+  readRegionPrefs,
+  saveBasemap,
+  saveRegionPrefs,
+} from './helpers/map-prefs'
 import {
   AREA_SENSITIVE_SLUGS,
   DATE_SENSITIVE_SLUGS,
   filterNoteFor,
   initialVisibleSlugs,
   isLayerOn,
+  restoreVisibleSlugs,
   type FilterNote,
 } from './helpers/layers'
 import { Modal } from './Modal'
@@ -69,6 +79,7 @@ import {
 import {
   TERRAIN_EXAGGERATION,
   cameraFor,
+  clearMode,
   modeFromPitch,
   readSavedMode,
   saveMode,
@@ -145,6 +156,9 @@ export default function MapLibreMap({
   zoom = 11,
   regiaoId,
 }: MapLibreMapProps) {
+  // Preferências da pessoa para esta região (DESIGN.md 13.2): lidas uma vez ao abrir; gravadas a cada ação dela, nunca por conta própria
+  const [saved] = useState(() => readRegionPrefs(regiaoId))
+
   // ── Core layer state (initialized from module cache for instant return nav) ──
   const [layers, setLayers] = useState<LayerResponseDTO[]>(() => _cache.layers)
   const [layerData, setLayerData] = useState<Record<string, MapFeatureCollection>>(() => ({ ..._cache.data }))
@@ -155,7 +169,7 @@ export default function MapLibreMap({
   const [areaFilter, setAreaFilter] = useState<{
     minArea?: number
     maxArea?: number
-  }>({})
+  }>(() => saved.area ?? {})
   const fetchingRef = useRef<Set<string>>(new Set())
   const initializedRef = useRef(false)
 
@@ -184,6 +198,32 @@ export default function MapLibreMap({
   const { isAdmin } = useUserRole()
   const [selectedAcao, setSelectedAcao] = useState<any | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
+
+  // Período salvo: o contexto abre em "Este ano"; se a pessoa deixou outra escolha, ela volta a valer (recalculada para hoje)
+  useEffect(() => {
+    if (saved.date) {
+      const [s, e] = datesFromIntent(saved.date, new Date())
+      setDateFilter(s, e)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleDateChange = useCallback(
+    (start: Date | null, end: Date | null) => {
+      setDateFilter(start, end)
+      saveRegionPrefs(regiaoId, { date: intentFromDates(start, end, new Date()) })
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [regiaoId],
+  )
+
+  const handleAreaChange = useCallback(
+    (filter: { minArea?: number; maxArea?: number }) => {
+      setAreaFilter(filter)
+      saveRegionPrefs(regiaoId, { area: filter })
+    },
+    [regiaoId],
+  )
 
   // ── Shapefile preview ───────────────────────────────────────────────────
   const [previewGeoJSON, setPreviewGeoJSON] = useState<{
@@ -215,8 +255,8 @@ export default function MapLibreMap({
 
   // ── Fauna heatmap ───────────────────────────────────────────────────────
   const [faunaData, setFaunaData] = useState<[number, number, number][]>([])
-  const [faunaHeatmapActive, setFaunaHeatmapActive] = useState(false)
-  const [faunaLocationsActive, setFaunaLocationsActive] = useState(false)
+  const [faunaHeatmapActive, setFaunaHeatmapActive] = useState(() => saved.fauna?.heatmap ?? false)
+  const [faunaLocationsActive, setFaunaLocationsActive] = useState(() => saved.fauna?.locations ?? false)
   const [faunaLoading, setFaunaLoading] = useState(false)
   const [faunaFetched, setFaunaFetched] = useState(false)
   const [faunaFailed, setFaunaFailed] = useState(false)
@@ -231,7 +271,7 @@ export default function MapLibreMap({
   } | null>(null)
 
   // ── Basemap ─────────────────────────────────────────────────────────────
-  const [basemap, setBasemap] = useState<BasemapKey>(DEFAULT_BASEMAP)
+  const [basemap, setBasemap] = useState<BasemapKey>(() => readBasemap() ?? DEFAULT_BASEMAP)
   const [mineralRaw, setMineralRaw] = useState<any>(null)
   const [mineralFailed, setMineralFailed] = useState(false)
   const tokens = useMemo(() => readMapTokens(), [])
@@ -250,6 +290,7 @@ export default function MapLibreMap({
 
   const handleBasemapChange = useCallback((key: BasemapKey) => {
     setBasemap(key)
+    saveBasemap(key)
     if (key === 'mineral') setMineralFailed(false)
   }, [])
 
@@ -372,6 +413,8 @@ export default function MapLibreMap({
   useEffect(() => {
     if (fitBoundsDone.current || !mapLoaded || !regionBounds || !mapRef.current) return
     fitBoundsDone.current = true
+    // Abre onde a pessoa deixou, se ainda for dentro da região (a câmera já nasceu ali, em initialViewState): sem movimento.
+    if (saved.camera && isInsideBounds(saved.camera, regionBounds.bbox)) return
     const [minLng, minLat, maxLng, maxLat] = regionBounds.bbox
     // um movimento só: enquadra a região e inclina até o modo salvo (2D na primeira visita)
     autoMoveRef.current = true
@@ -392,19 +435,28 @@ export default function MapLibreMap({
   }, [])
 
   // O segmento segue a câmera: inclinar com o mouse ou clicar na bússola também troca 2D/3D (e salva).
-  const handleMoveEnd = useCallback((e: { viewState: { pitch: number } }) => {
-    if (autoMoveRef.current) { autoMoveRef.current = false; return }
+  const handleMoveEnd = useCallback((e: { viewState: { pitch: number; longitude: number; latitude: number; zoom: number } }) => {
+    if (autoMoveRef.current) { autoMoveRef.current = false; return } // o enquadramento automático da abertura não é escolha da pessoa
+    saveRegionPrefs(regiaoId, { camera: { lng: e.viewState.longitude, lat: e.viewState.latitude, zoom: e.viewState.zoom } })
     const next = modeFromPitch(e.viewState.pitch)
     if (next !== viewModeRef.current) { viewModeRef.current = next; setViewMode(next); saveMode(next) }
     setTerrainOn(next === '3d')
-  }, [])
+  }, [regiaoId])
+
+  // "Enquadrar a região": o mesmo movimento da abertura, a qualquer hora (a câmera nova fica salva, porque foi escolha da pessoa)
+  const handleFitRegion = useCallback(() => {
+    if (!regionBounds || !mapRef.current) return
+    const [minLng, minLat, maxLng, maxLat] = regionBounds.bbox
+    mapRef.current.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 60, duration: 1200, linear: true, ...cameraFor(viewModeRef.current) })
+  }, [regionBounds])
 
   // Initialize all layers as visible once catalog arrives
   useEffect(() => {
     if (!initializedRef.current && layers.length > 0) {
-      setVisibleLayers(initialVisibleSlugs(layers))
+      setVisibleLayers(restoreVisibleSlugs(layers, readRegionPrefs(regiaoId).layers))
       initializedRef.current = true
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layers])
 
   // Date filter: invalida apenas camadas date-sensitive (acoes, raw_firms, desmatamento).
@@ -532,8 +584,39 @@ export default function MapLibreMap({
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [activeTool, selectTool])
 
+  // Só grava depois de a pessoa mexer: abrir no padrão e sair não pode "congelar" o padrão como se fosse escolha dela
+  const prefsTouched = useRef(false)
+  useEffect(() => {
+    if (!prefsTouched.current) return
+    saveRegionPrefs(regiaoId, {
+      layers: visibleLayers,
+      fauna: { heatmap: faunaHeatmapActive, locations: faunaLocationsActive },
+    })
+  }, [regiaoId, visibleLayers, faunaHeatmapActive, faunaLocationsActive])
+
+  // "Voltar ao padrão do mapa" (DESIGN.md 13.2): esquece o que estava salvo e põe o mapa como na primeira visita
+  const handleResetPrefs = useCallback(() => {
+    clearRegionPrefs(regiaoId)
+    clearBasemap()
+    clearMode()
+    prefsTouched.current = false
+    setVisibleLayers(initialVisibleSlugs(layers))
+    setFaunaHeatmapActive(false)
+    setFaunaLocationsActive(false)
+    setBasemap(DEFAULT_BASEMAP)
+    setMineralFailed(false)
+    const [s, e] = datesFromIntent({ kind: 'preset', id: 'year' }, new Date())
+    setDateFilter(s, e)
+    setAreaFilter({})
+    viewModeRef.current = '2d'
+    setViewMode('2d')
+    handleFitRegion()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regiaoId, layers, handleFitRegion])
+
   // ── Layer toggle handlers ─────────────────────────────────────────────────
   const handleLayerToggle = useCallback((slug: string, isChecked: boolean) => {
+    prefsTouched.current = true
     if (slug === FAUNA_HEATMAP) { setFaunaHeatmapActive(isChecked); return }
     if (slug === FAUNA_LOCATIONS) { setFaunaLocationsActive(isChecked); return }
     setVisibleLayers((prev) =>
@@ -543,6 +626,7 @@ export default function MapLibreMap({
 
   const handleGroupToggle = useCallback(
     (slugs: string[], isChecked: boolean) => {
+      prefsTouched.current = true
       if (slugs.includes(FAUNA_HEATMAP)) { setFaunaHeatmapActive(isChecked); setFaunaLocationsActive(isChecked); return }
       setVisibleLayers((prev) => {
         if (isChecked)
@@ -555,6 +639,7 @@ export default function MapLibreMap({
 
   const handleToggleAll = useCallback(
     (isChecked: boolean) => {
+      prefsTouched.current = true
       setFaunaHeatmapActive(isChecked)
       setFaunaLocationsActive(isChecked)
       if (isChecked) {
@@ -1039,11 +1124,11 @@ export default function MapLibreMap({
       <PrismCursor />
       <Map
         ref={mapRef}
-        initialViewState={{
-          longitude: center[1],
-          latitude: center[0],
-          zoom,
-        }}
+        initialViewState={
+          saved.camera
+            ? { longitude: saved.camera.lng, latitude: saved.camera.lat, zoom: saved.camera.zoom, ...cameraFor(viewMode) }
+            : { longitude: center[1], latitude: center[0], zoom }
+        }
         style={{ width: '100%', height: '100%' }}
         mapStyle={mapStyle as any}
         maxZoom={BASEMAP_MAX_ZOOM[shownBasemap]}
@@ -1353,7 +1438,7 @@ export default function MapLibreMap({
       {/* ── Controls overlay ─────────────────────────────────────────────── */}
 
       {/* Câmera: zoom, bússola e 2D|3D */}
-      <CameraControls mapRef={mapRef} ready={mapLoaded} viewMode={viewMode} onViewModeChange={handleViewModeChange} />
+      <CameraControls mapRef={mapRef} ready={mapLoaded} viewMode={viewMode} onViewModeChange={handleViewModeChange} canFitRegion={!!regionBounds} onFitRegion={handleFitRegion} />
 
       {/* Shapefile uploader */}
       {/* <ShapefileUploader
@@ -1393,6 +1478,7 @@ export default function MapLibreMap({
             basemap={basemap}
             shownBasemap={shownBasemap}
             onBasemapChange={handleBasemapChange}
+            onReset={handleResetPrefs}
             options={panelOptions}
             activeLayers={panelActiveLayers}
             onLayerToggle={handleLayerToggle}
@@ -1409,9 +1495,9 @@ export default function MapLibreMap({
           <FiltersPanel
             startDate={dateFilter.startDate}
             endDate={dateFilter.endDate}
-            onDateChange={setDateFilter}
+            onDateChange={handleDateChange}
             area={areaFilter}
-            onAreaChange={setAreaFilter}
+            onAreaChange={handleAreaChange}
             dateAffects={dateAffects}
             areaAffects={areaAffects}
           />

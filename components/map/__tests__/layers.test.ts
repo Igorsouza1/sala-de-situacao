@@ -1,4 +1,4 @@
-import { affectsLine, filterLine, filterNoteFor, initialVisibleSlugs, isLayerOn } from '../helpers/layers'
+import { affectsLine, filterLine, filterNoteFor, initialVisibleSlugs, isLayerOn, restoreVisibleSlugs } from '../helpers/layers'
 
 describe('initialVisibleSlugs', () => {
   const bonito = [
@@ -58,5 +58,29 @@ describe('affectsLine', () => {
     expect(affectsLine(['Propriedades'], true, 'Propriedades')).toBeNull()
     expect(affectsLine(['Propriedades'], false, 'Propriedades')).toBe('Está desligada em Camadas: ligue para ver o efeito.')
     expect(affectsLine(['Focos', 'Ações'], true, 'Período')).toBe('Vale para: Focos e Ações.')
+  })
+})
+
+describe('restoreVisibleSlugs', () => {
+  const catalogo = [{ slug: 'propriedades' }, { slug: 'raw_firms' }, { slug: 'estradas' }, { slug: 'acoes', groups: [{ id: 'agua' }] }]
+
+  it('sem nada salvo, abre no padrão', () => {
+    expect(restoreVisibleSlugs(catalogo, undefined)).toEqual(initialVisibleSlugs(catalogo))
+  })
+
+  it('devolve o que a pessoa deixou ligado, sem ligar nada por conta própria', () => {
+    expect(restoreVisibleSlugs(catalogo, ['estradas', 'acoes__agua'])).toEqual(['estradas', 'acoes__agua'])
+  })
+
+  it('ignora o que saiu do catálogo e mantém o resto', () => {
+    expect(restoreVisibleSlugs(catalogo, ['estradas', 'camada-apagada'])).toEqual(['estradas'])
+  })
+
+  it('se tudo o que estava salvo sumiu, volta ao padrão', () => {
+    expect(restoreVisibleSlugs(catalogo, ['camada-apagada'])).toEqual(initialVisibleSlugs(catalogo))
+  })
+
+  it('lista vazia salva é uma escolha (ocultou todas) e vale', () => {
+    expect(restoreVisibleSlugs(catalogo, [])).toEqual([])
   })
 })

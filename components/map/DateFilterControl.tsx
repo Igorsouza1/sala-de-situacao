@@ -2,41 +2,19 @@
 
 import { useState } from "react"
 import { CalendarIcon, ChevronDown } from "lucide-react"
-import {
-  format,
-  isSameDay,
-  startOfDay,
-  endOfDay,
-  startOfWeek,
-  endOfWeek,
-  startOfMonth,
-  endOfMonth,
-  startOfYear,
-  endOfYear,
-} from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { format, isSameDay } from "date-fns"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Collapse } from "@/components/ui/collapse"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
+import { DATE_PRESETS, yearRange, type DateRange } from "./helpers/filters"
 
 // Período aplica na hora (DESIGN.md 2.2: cada etapa é um custo) e o escolhido fica marcado, para a pessoa ver o que
 // está valendo sem comparar datas de cabeça. Os atalhos cobrem o caso comum; anos antigos e datas livres vêm um passo
 // adiante. O seletor de ano e os calendários são os componentes do projeto (e não o `<select>` nativo), para abrir com
 // o mesmo estilo e o mesmo movimento do resto (8.1). Ficam acima do painel do dock (z-[1200]), que usa z-[1000].
-
-type Range = [Date, Date]
-
-const PRESETS: { label: string; range: (now: Date) => Range }[] = [
-  { label: "Hoje", range: (n) => [startOfDay(n), endOfDay(n)] },
-  { label: "Esta semana", range: (n) => [startOfWeek(n, { locale: ptBR }), endOfWeek(n, { locale: ptBR })] },
-  { label: "Este mês", range: (n) => [startOfMonth(n), endOfMonth(n)] },
-  { label: "Este ano", range: (n) => [startOfYear(n), endOfYear(n)] },
-]
-
-const yearRange = (year: number): Range => [new Date(year, 0, 1), new Date(year, 11, 31, 23, 59, 59, 999)]
 
 const selectedClass = "border-primary bg-secondary text-secondary-foreground"
 
@@ -68,18 +46,18 @@ export function DateFilterControl({ startDate, endDate, onChange }: DateFilterCo
 
   const now = new Date()
   const pastYears = Array.from({ length: 5 }, (_, i) => now.getFullYear() - 1 - i)
-  const matches = ([s, e]: Range) => !!startDate && !!endDate && isSameDay(startDate, s) && isSameDay(endDate, e)
+  const matches = ([s, e]: DateRange) => !!startDate && !!endDate && isSameDay(startDate, s) && isSameDay(endDate, e)
   const matchedYear = pastYears.find((y) => matches(yearRange(y)))
-  const choose = ([s, e]: Range) => onChange(s, e)
+  const choose = ([s, e]: DateRange) => onChange(s, e)
 
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        {PRESETS.map((p) => {
+        {DATE_PRESETS.map((p) => {
           const range = p.range(now)
           const selected = matches(range)
           return (
-            <Button key={p.label} size="sm" variant="outline" aria-pressed={selected} className={cn("h-9 px-3 text-xs", selected && selectedClass)} onClick={() => choose(range)}>
+            <Button key={p.id} size="sm" variant="outline" aria-pressed={selected} className={cn("h-9 px-3 text-xs", selected && selectedClass)} onClick={() => choose(range)}>
               {p.label}
             </Button>
           )

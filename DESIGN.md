@@ -435,11 +435,11 @@ Cartão branco com sombra, ícone em círculo tingido, título e frase curta, **
 - **Bases:** Satélite suave (padrão), Mineral, Satélite, Ruas e StreetMap, escolhidas dentro do painel Camadas (13.1). O Dark Matter saiu (seção 15). O **Satélite suave** é o mesmo satélite com `raster-saturation` −0,5, `raster-brightness-max` 0,88 e `raster-contrast` −0,15. Ele virou o padrão por decisão do responsável de design, **por agora** (17.15); se ele vencer de vez, o Satélite cru pode sair (uma base a mais é um controle sem motivo).
 - **Se o Mineral não baixar:** o mapa cai sozinho para Ruas, o painel Camadas avisa "Mineral indisponível agora. Mostrando Ruas." e **o botão Camadas do dock ganha um ponto âmbar** (com o painel fechado, a troca silenciosa deixaria a pessoa sem saber). Ele **não volta sozinho**: o usuário escolhe o Mineral de novo. Motivo: trocar a base sem aviso, de novo, tira o controle de quem usa (2.1); e o mapa nunca fica sem fundo.
 - **Relevo:** sombreado médio **só no Mineral, no Ruas e no StreetMap**. O satélite não tem: a foto já traz as próprias sombras e o sombreado as duplicaria. A elevação é a gratuita da AWS.
-- **Abre em 2D na primeira visita** (o 3D pesava demais no aparelho). Quem escolhe 3D abre em 3D nas próximas: o mapa enquadra a região e inclina até **50°, girado −14°, com relevo 3D (exagero 1,8)** num **único movimento de ~1,2 s**, cancelável pelo primeiro gesto (8.4: o usuário vê de onde a câmera veio e para onde foi). Com `prefers-reduced-motion`, ela já nasce no destino. Motivo: dá profundidade e faz o território parecer território.
+- **Abre em 2D na primeira visita** (o 3D pesava demais no aparelho). Quem escolhe 3D abre em 3D nas próximas: o mapa enquadra a região e inclina até **50°, girado −14°, com relevo 3D (exagero 1,8)** num **único movimento de ~1,2 s**, cancelável pelo primeiro gesto (8.4: o usuário vê de onde a câmera veio e para onde foi). Com `prefers-reduced-motion`, ela já nasce no destino. Motivo: dá profundidade e faz o território parecer território. **Quem já usou o mapa abre onde o deixou, sem esse movimento (13.2).**
 - **Segmento 2D | 3D**, dentro do cartão da câmera (13.1). Motivo: nem sempre se quer 3D, e dois segmentos mostram o estado atual sem a pessoa pensar (2.2), ao contrário de um botão cujo rótulo é o destino.
   - O destaque troca no mesmo instante em que a câmera começa a se mover (8.4). Em 2D a câmera volta de cima e ao norte; o relevo 3D só desliga quando ela termina de achatar. O hillshade continua.
   - **O segmento segue a câmera:** inclinação acima de ~1° é 3D. Inclinar com o mouse ou clicar na bússola também troca o modo. Motivo: um segmento que diz "3D" com o mapa visto de cima mente.
-  - **O último modo escolhido fica salvo no navegador** (`localStorage`, chave `prisma:mapa:modo`), por botão ou gesto. **A animação automática da abertura não grava.** Primeira visita: 2D. Quem escolheu 3D abre em 3D. Motivo: a escolha vale por navegador e aparelho, e não existe tabela de preferências do usuário no banco; criar uma migration por um valor só não compensa. Se surgirem mais preferências por usuário, migra-se tudo junto.
+  - **O último modo escolhido fica salvo no navegador** (`localStorage`, chave `prisma:mapa:modo`), por botão ou gesto. **A animação automática da abertura não grava.** Primeira visita: 2D. Quem escolheu 3D abre em 3D. Motivo: a escolha vale por navegador e aparelho, e não existe tabela de preferências do usuário no banco; criar uma migration por um valor só não compensa. Agora há mais preferências guardadas (13.2), e lá está por que elas seguem no navegador por ora.
   - Sem som por enquanto (política de som em aberto, pendência 4).
 - **Camadas de dados:** focos (círculo crítico com contorno branco), desmatamento (âmbar a 55%), propriedade (contorno tracejado em verde mineral).
 
@@ -472,6 +472,27 @@ Cartão branco com sombra, ícone em círculo tingido, título e frase curta, **
 - **Taxonomia (onde cada coisa nova entra):** uma camada nova vai em Camadas; um filtro novo em Filtros; uma ferramenta que muda o clique em Medir ou Consultar; uma ação que leva algo para fora (exportar) junto de Imprimir; uma coisa da câmera no cartão da câmera.
 
 ⚠️ **Limites de zoom por serviço** (medidos em Bonito/MS): acima do último nível com dados, a Esri devolve um tile-placeholder "Map data not yet available". Definir `maxzoom` da fonte em: NatGeo 12, Topo 16, Ruas 16, Satélite 17, Cinza 11. (No produto hoje: o Satélite usa 17 na fonte e 19 no zoom máximo do mapa.)
+
+
+### 13.2 Preferências do mapa
+
+**Regra:** o mapa abre como a pessoa o deixou. **Só se grava o que ela escolheu**: abrir no padrão e sair não "congela" o padrão como se fosse escolha dela.
+
+| O que fica salvo | Vale para | Como volta |
+|---|---|---|
+| **Camadas ligadas** (e as opções da Fauna) | cada região | Só as que ainda existem no catálogo. Camada nova abre desligada (a pessoa não a escolheu). Se tudo o que estava salvo sumiu, abre no padrão. Uma lista vazia salva ("Ocultar todas") é uma escolha e vale |
+| **Mapa base** | todas as regiões | Só se a base ainda existe |
+| **Filtros** | cada região | O período é salvo como **intenção** ("Hoje", "Esta semana", "Este mês", "Este ano", um ano, ou o intervalo livre) e recalculado a cada abertura; o tamanho, como foi digitado. "Limpar tudo" também é lembrado (abre sem filtro) |
+| **Posição e zoom** | cada região, em cada aparelho | Só se a posição ainda cai dentro da região; senão, o mapa enquadra a região como na primeira visita. Abre direto no lugar, sem o movimento de enquadrar (8.4 não se aplica: não há "de onde" nem "para onde") |
+| **2D \| 3D** | todas as regiões | Como em 13 |
+
+- **Por que a intenção, e não as datas:** "Hoje" salvo como data abriria, na semana seguinte, mostrando um dia que já passou, o que engana (2.1).
+- **Por que por região:** as camadas mudam de uma região para outra (e o admin troca por `?regiao_id=`); o zoom de uma não serve na outra. A base e o 2D\|3D não dependem do território.
+- **Onde fica:** `localStorage`, num único módulo (`helpers/map-prefs.ts`; chaves `prisma:mapa:regiao:<id>` e `prisma:mapa:base`). Cada campo é validado na leitura: um valor estranho (versão antiga, edição à mão) vira "não salvo", nunca um erro.
+- **Por que no navegador e não no banco:** (1) o zoom é **por aparelho** (o do celular não serve no computador); (2) abre sem esperar uma busca, então o mapa não pisca o padrão; (3) uma migration, um repository, um serviço, uma rota e as regras de tenant não compensam por ora. **Custo aceito:** as preferências não seguem a pessoa entre aparelhos, e num computador compartilhado quem usa o mesmo navegador divide as preferências. **Gatilho para migrar:** quando entrarem o modo do som (17.4) e a escolha do cursor (10), migra-se tudo junto para uma tabela por usuário; o mapa só troca o armazenamento do módulo.
+- **Voltar ao padrão do mapa** (rodapé do painel Camadas): apaga o que está salvo e devolve camadas, base, filtros, 2D e posição a como o Prisma abre na primeira visita. O rótulo muda no próprio botão ("Voltou ao padrão") e a frase de baixo diz exatamente o que volta. Motivo: quem guarda o estado do usuário precisa devolver o controle a ele (2.1); sem isso, uma camada esquecida desligada ou um filtro antigo prenderiam a pessoa.
+- **Enquadrar a região**, no cartão da câmera: devolve a vista da região inteira, no mesmo movimento da abertura. Fica bloqueado até a região carregar, com o motivo no tooltip. Motivo: o mapa agora abre onde a pessoa parou, e ela precisa de um caminho de volta.
+- **A pessoa vê o estado restaurado nos próprios controles** (o contador de filtros no dock, a frase de resumo, os interruptores das camadas), por isso não há aviso extra na abertura.
 
 ---
 
@@ -591,6 +612,7 @@ Descobertas na prática; valem para quem implementar.
 14. **Textos de exemplo** (nome do administrador, números, horários, "CAR") são fictícios. Os que dependem de dados reais (último foco, quem administra, o que vai junto ao remover) precisam vir do sistema.
 15. **Padrão do mapa: Satélite suave (por agora) ou Mineral** (13). O padrão passou a Satélite suave por decisão do responsável de design. Revisitar depois de uso real: se os dados e os controles seguirem em destaque, o Mineral pode ficar só como opção e o Satélite cru sair.
 16. **Controles do mapa: o que ficou para depois** (13.1). (a) **Movimento e som** do dock, dos painéis e da faixa: o painel (abre, fecha, cartões em cascata), o recolher, o contador e a frase de resumo já têm movimento (8.1); falta a entrada e a saída da faixa de modo (8.4), o movimento dos ícones do dock e os sons (9, política em 17.4). (b) **Ícones Tabler** com animação própria (11): o dock e a câmera ainda usam lucide. (c) **Hora do dado e nova tentativa automática** ("Dados da plataforma · atualizados às 14:32"; regra 6 de 2.1), cortadas por ora: hoje a falha mostra a frase e o "Tentar de novo". (d) **Hover e modal das feições**, a **tela de erro** do mapa inteiro (ainda `bg-gray-100`) e as **cores do desenho de medição** (azul e rosa fora da paleta). (e) **Teste manual com leitor de tela** do dock, dos painéis e da faixa de modo, e em celular de verdade. (f) **Exportar** ainda não existe; quando existir, entra junto de Imprimir.
+17. **Preferências do usuário no banco** (13.2). Hoje ficam no navegador: não seguem a pessoa entre aparelhos e, num computador compartilhado, são divididas. Migrar tudo junto (mapa, som em 17.4, cursor em 10) para uma tabela por usuário quando o segundo caso aparecer. A câmera deve continuar por aparelho.
 
 ---
 

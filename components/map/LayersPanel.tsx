@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Check, RefreshCw } from 'lucide-react'
+import { Check, RefreshCw, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BASEMAP_KEYS, BASEMAP_LABELS, type BasemapKey } from './helpers/basemaps'
 import { controlItem } from './helpers/control-style'
@@ -45,6 +45,33 @@ export function RefreshButton({ refreshing, onRefresh }: { refreshing: boolean; 
   )
 }
 
+// Devolve o controle a quem usa (2.1): o mapa lembra o que a pessoa deixou, e aqui ela desfaz tudo de uma vez.
+// O rótulo muda no próprio botão e a frase abaixo diz exatamente o que volta.
+function ResetButton({ onReset }: { onReset: () => void }) {
+  const [done, setDone] = useState(false)
+  useEffect(() => {
+    if (!done) return
+    const t = setTimeout(() => setDone(false), 2500)
+    return () => clearTimeout(t)
+  }, [done])
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => { onReset(); setDone(true) }}
+        className={cn('flex h-10 w-full items-center justify-center gap-2 text-sm font-medium', controlItem())}
+      >
+        {done ? <Check className="h-4 w-4 text-ok" aria-hidden /> : <RotateCcw className="h-4 w-4" aria-hidden />}
+        <span aria-live="polite">{done ? 'Voltou ao padrão' : 'Voltar ao padrão do mapa'}</span>
+      </button>
+      <p className="mt-1 px-2 text-center text-xs leading-snug text-muted-foreground">
+        Camadas, mapa base, filtros e posição voltam a como o Prisma abre pela primeira vez.
+      </p>
+    </div>
+  )
+}
+
 type LayerManagerProps = React.ComponentProps<typeof LayerManager>
 
 interface LayersPanelProps extends LayerManagerProps {
@@ -53,9 +80,10 @@ interface LayersPanelProps extends LayerManagerProps {
   /** base que está de fato na tela (difere da escolhida quando o Mineral não carregou) */
   shownBasemap: BasemapKey
   onBasemapChange: (key: BasemapKey) => void
+  onReset: () => void
 }
 
-export function LayersPanel({ basemap, shownBasemap, onBasemapChange, ...layerProps }: LayersPanelProps) {
+export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, ...layerProps }: LayersPanelProps) {
   const unavailable = basemap !== shownBasemap
   return (
     <div className="panel-rise space-y-4">
@@ -90,6 +118,8 @@ export function LayersPanel({ basemap, shownBasemap, onBasemapChange, ...layerPr
       </PanelCard>
 
       <LayerManager {...layerProps} />
+
+      <ResetButton onReset={onReset} />
     </div>
   )
 }

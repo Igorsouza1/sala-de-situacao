@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { Minus, Navigation2, Plus } from 'lucide-react'
+import { Frame, Minus, Navigation2, Plus } from 'lucide-react'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
 import { cn } from '@/lib/utils'
 import { controlItem, controlSurface } from './helpers/control-style'
@@ -37,9 +37,12 @@ interface CameraControlsProps {
   ready: boolean
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
+  /** a região já carregou: antes disso não há o que enquadrar */
+  canFitRegion: boolean
+  onFitRegion: () => void
 }
 
-export function CameraControls({ mapRef, ready, viewMode, onViewModeChange }: CameraControlsProps) {
+export function CameraControls({ mapRef, ready, viewMode, onViewModeChange, canFitRegion, onFitRegion }: CameraControlsProps) {
   const [bearing, setBearing] = useState(0)
 
   useEffect(() => {
@@ -75,6 +78,19 @@ export function CameraControls({ mapRef, ready, viewMode, onViewModeChange }: Ca
           </Tip>
           <Divider />
         </div>
+
+        {/* o mapa abre onde a pessoa deixou (13.2); este botão devolve a vista da região inteira. Bloqueado, diz por quê (2.1). */}
+        <Tip hint={canFitRegion ? 'Enquadrar a região' : 'Disponível quando a região carregar'}>
+          <button
+            type="button"
+            aria-label="Enquadrar a região"
+            aria-disabled={!canFitRegion}
+            onClick={() => canFitRegion && onFitRegion()}
+            className={cn(itemClass, controlItem(), !canFitRegion && 'opacity-45 hover:bg-transparent')}
+          >
+            <Frame className="h-4 w-4" aria-hidden />
+          </button>
+        </Tip>
 
         <Tip hint="Norte para cima">
           <button type="button" aria-label="Voltar o norte para cima" onClick={() => mapRef.current?.getMap().resetNorthPitch()} className={cn(itemClass, controlItem())}>
