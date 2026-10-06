@@ -47,7 +47,8 @@ function Mark({ item, kind, visualConfig, size = 36 }: { item: ConsultaItem; kin
 function Row({ item, kind, visualConfig, onSelect }: { item: ConsultaItem; kind: ConsultaKind; visualConfig?: LayerVisualConfig; onSelect: (s: ConsultaSelection) => void }) {
   const action = kind === 'acoes'
   const name = tidyText(item.nome)
-  const second = action ? areaText(item) || 'Ação' : placeText(item) || 'Município não informado'
+  const size = item.area != null ? `${item.area.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} hectares` : null
+  const second = action ? areaText(item) || 'Ação' : [placeText(item) || 'Município não informado', size].filter(Boolean).join(' · ')
   const date = dateText(item)
   const third = action ? (date ? `Registrada em ${date}` : null) : item.titular ? `Titular: ${tidyText(item.titular)}` : null
   return (
@@ -184,7 +185,7 @@ export function ExplorePanel({ regiaoId, regionName, actionVisualConfig, selecti
 
   const listView = (
     <div className="space-y-4">
-      <PanelCard title="Explorar" caption={regionName ? `Ações e propriedades de ${tidyText(regionName)}.` : 'Ações e propriedades da região.'}>
+      <PanelCard title="Buscar" caption={regionName ? `Ações e propriedades de ${tidyText(regionName)}.` : 'Ações e propriedades da região.'}>
         <div className="space-y-3">
           <div role="group" aria-label="O que explorar" className="grid grid-cols-2 gap-1 rounded-md border border-border bg-card p-1">
             {(['acoes', 'propriedades'] as const).map((tab) => (
@@ -222,9 +223,9 @@ export function ExplorePanel({ regiaoId, regionName, actionVisualConfig, selecti
           </form>
 
           <label className="flex min-h-12 cursor-pointer items-center justify-between gap-3">
-            <span>
+            <span className="min-w-0">
               <span className="block text-sm">Só nesta área do mapa</span>
-              <span className="block text-xs leading-snug text-muted-foreground">{bounds ? 'A área que estava na tela quando você ligou.' : 'Mostra a região inteira.'}</span>
+              <span className="block text-xs leading-snug text-muted-foreground">{bounds ? 'A área que estava na tela ao ligar. Para trocar, desligue e ligue de novo.' : 'Mostra a região inteira.'}</span>
             </span>
             <Switch checked={!!bounds} onCheckedChange={(on) => setBounds(on ? getBounds() : null)} aria-label="Só nesta área do mapa" />
           </label>
@@ -296,6 +297,16 @@ function Detail({ item, selection, regiaoId, visualConfig, onRelated, onFocus, o
         </div>
       </section>
 
+      {!action && (item.titular || item.car || item.area != null) && (
+        <PanelCard title="Sobre a propriedade">
+          <dl className="space-y-3">
+            {item.titular && <div><dt className="text-xs text-muted-foreground">Titular</dt><dd className="text-sm">{tidyText(item.titular)}</dd></div>}
+            {item.area != null && <div><dt className="text-xs text-muted-foreground">Tamanho</dt><dd className="text-sm">{item.area.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} hectares</dd></div>}
+            {item.car && <div><dt className="text-xs text-muted-foreground">Número do CAR</dt><dd className="break-all text-sm">{item.car}</dd></div>}
+          </dl>
+        </PanelCard>
+      )}
+
       <PanelCard title="Onde fica">
         <dl className="space-y-3">
           <div>
@@ -331,16 +342,6 @@ function Detail({ item, selection, regiaoId, visualConfig, onRelated, onFocus, o
           )}
         </dl>
       </PanelCard>
-
-      {!action && (item.titular || item.car || item.area != null) && (
-        <PanelCard title="Sobre a propriedade">
-          <dl className="space-y-3">
-            {item.titular && <div><dt className="text-xs text-muted-foreground">Titular</dt><dd className="text-sm">{tidyText(item.titular)}</dd></div>}
-            {item.area != null && <div><dt className="text-xs text-muted-foreground">Tamanho</dt><dd className="text-sm">{item.area.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} hectares</dd></div>}
-            {item.car && <div><dt className="text-xs text-muted-foreground">Número do CAR</dt><dd className="break-all text-sm">{item.car}</dd></div>}
-          </dl>
-        </PanelCard>
-      )}
 
       {action && item.descricao && (
         <PanelCard title="Sobre a ação">

@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils"
 
 // Recolher e expandir sem salto (DESIGN.md 8.4): a altura acompanha em 320 ms e o conteúdo some e volta junto.
 // Truque de CSS: a linha do grid vai de 0fr a 1fr, então não precisa medir a altura em JavaScript.
+// A coluna é `minmax(0, 1fr)`: sem isso a coluna do grid cresce até o texto mais largo (um nome comprido sem quebra) e o conteúdo passa
+// da largura do painel (caso C24).
 // Fechado, o conteúdo fica `inert`: não recebe foco nem clique, e o leitor de tela o ignora (8.4, regra 2).
 //
 // `clip`: corta só na vertical e com `overflow: clip`, que NÃO cria um contêiner de rolagem. É o que permite a um filho
@@ -11,7 +13,7 @@ import { cn } from "@/lib/utils"
 // e anéis de foco passarem dos lados.
 function Collapse({ open, clip, className, children }: { open: boolean; clip?: boolean; className?: string; children: React.ReactNode }) {
   return (
-    <div className={cn("grid transition-[grid-template-rows] duration-[320ms] ease-out", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]", className)}>
+    <div className={cn("grid grid-cols-[minmax(0,1fr)] transition-[grid-template-rows] duration-[320ms] ease-out", open ? "grid-rows-[1fr]" : "grid-rows-[0fr]", className)}>
       <div
         inert={!open}
         className={cn("min-h-0 transition-opacity duration-[320ms] ease-out", clip ? "overflow-x-visible overflow-y-clip" : "overflow-hidden", open ? "opacity-100" : "opacity-0")}

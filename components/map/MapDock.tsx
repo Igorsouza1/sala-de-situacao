@@ -176,7 +176,7 @@ export function DockPanelButton({ id, icon, label, accentTitle, titleIcon: Title
           </div>
         </header>
         {/* base em cinza suave: os cartões brancos de dentro mostram onde cada assunto começa e termina (6.2) */}
-        <div data-panel-scroll className="overflow-y-auto bg-muted/50 p-4">{children}</div>
+        <div data-panel-scroll className="overflow-y-auto overflow-x-hidden bg-muted/50 p-4">{children}</div>
       </div>
     </div>
   )
