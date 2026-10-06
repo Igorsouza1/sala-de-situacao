@@ -95,7 +95,7 @@ export const DockButton = forwardRef<HTMLButtonElement, DockButtonProps>(functio
 })
 
 // Botão do dock que abre um painel. O conteúdo fica montado mesmo fechado: os filtros guardam o que a pessoa escolheu.
-export function DockPanelButton({ id, icon, label, accentTitle, titleIcon: TitleIcon, accent, motion, badge, alert, action, children }: { id: string; icon: LucideIcon; label: string; /** título do painel no modo especial (ex.: "Editar camadas"): o título troca em crossfade, não de uma vez */ accentTitle?: string; titleIcon?: LucideIcon; /** o painel está num modo especial (ex.: editando): o cabeçalho ganha cor, para o modo ser visto sem ler */ accent?: boolean; motion?: DockMotion; badge?: number; alert?: boolean; action?: ReactNode; children: ReactNode }) {
+export function DockPanelButton({ id, icon, label, side, accentTitle, titleIcon: TitleIcon, accent, motion, badge, alert, action, children }: { id: string; /** o painel abre no canto esquerdo, e não centrado no botão: para o que mostra algo que precisa do mapa ao lado (Explorar, 13.5) */ side?: boolean; icon: LucideIcon; label: string; /** título do painel no modo especial (ex.: "Editar camadas"): o título troca em crossfade, não de uma vez */ accentTitle?: string; titleIcon?: LucideIcon; /** o painel está num modo especial (ex.: editando): o cabeçalho ganha cor, para o modo ser visto sem ler */ accent?: boolean; motion?: DockMotion; badge?: number; alert?: boolean; action?: ReactNode; children: ReactNode }) {
   const { open, setOpen } = useContext(DockContext)
   const isOpen = open === id
   const trigger = useRef<HTMLButtonElement>(null)
@@ -113,7 +113,7 @@ export function DockPanelButton({ id, icon, label, accentTitle, titleIcon: Title
 
   return (
     // no celular o painel ancora no dock inteiro (largura toda); a partir de sm, no próprio botão
-    <div className="sm:relative">
+    <div className={side ? undefined : 'sm:relative'}>
       <DockButton
         ref={trigger}
         icon={icon}
@@ -137,8 +137,10 @@ export function DockPanelButton({ id, icon, label, accentTitle, titleIcon: Title
         inert={!isOpen}
         data-open={isOpen}
         className={cn(
-          'absolute z-10 flex max-h-[75vh] origin-bottom flex-col overflow-hidden rounded-lg outline-hidden',
-          'bottom-full mb-3 max-sm:inset-x-3 sm:left-1/2 sm:w-[22rem] sm:-translate-x-1/2',
+          'absolute z-10 flex flex-col overflow-hidden rounded-lg outline-hidden',
+          'bottom-full mb-3 max-sm:inset-x-3 sm:w-[22rem]',
+          // centrado no botão (o padrão) ou no canto esquerdo, deixando o mapa livre ao lado (lateral); no celular o lateral é mais baixo
+          side ? 'origin-bottom-left max-h-[55svh] sm:left-3 sm:max-h-[calc(100svh-10rem)]' : 'origin-bottom max-h-[75vh] sm:left-1/2 sm:-translate-x-1/2',
           'transition-[opacity,translate,scale,visibility]',
           controlSurface,
           // abre com leve mola (a mesma curva dos botões); fecha mais rápido e sem mola, para não demorar a sair da frente (8.1)

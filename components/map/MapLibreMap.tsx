@@ -345,6 +345,8 @@ export default function MapLibreMap({
   const [dockOpen, setDockOpen] = useState<string | null>(null)
   const [exploreSelection, setExploreSelection] = useState<ConsultaSelection | null>(null)
   const [exploreFeature, setExploreFeature] = useState<ConsultaItem | null>(null)
+  const exploreOpen = useRef(false)
+  exploreOpen.current = dockOpen === 'explore'
   // abrir um registro (pela lista ou por um clique no mapa) abre o painel Explorar; voltar para a lista (null) só troca a visão
   const selectExplore = useCallback((selection: ConsultaSelection | null) => {
     setExploreSelection(selection)
@@ -360,8 +362,13 @@ export default function MapLibreMap({
     if (![w, s, e, n].every(Number.isFinite)) return
     const height = map.getContainer().clientHeight
     const width = map.getContainer().clientWidth
+    // o painel ocupa o lado esquerdo (no celular, a parte de baixo): o registro fica no espaço livre que sobra, não por trás dele
+    const panel = exploreOpen.current
+    const padding = width < 640
+      ? { top: 80, bottom: panel ? Math.round(height * 0.6) : 90, left: 40, right: 40 }
+      : { top: 80, bottom: 110, left: panel ? 400 : 40, right: 40 }
     map.fitBounds([[w, s], [e, n]], {
-      padding: { top: 80, bottom: Math.round(height * (width < 640 ? 0.6 : 0.45)), left: 40, right: 40 },
+      padding,
       maxZoom: item.geometry.type === 'Point' ? Math.min(16, map.getZoom() + 1.25) : 15,
       duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1200,
     })
@@ -1731,7 +1738,7 @@ export default function MapLibreMap({
             areaAffects={areaAffects}
           />
         </DockPanelButton>
-        <DockPanelButton id="explore" icon={LucideIcons.Search} label="Explorar" motion="grow">
+        <DockPanelButton id="explore" icon={LucideIcons.Search} label="Explorar" motion="grow" side>
           <ExplorePanel
             key={regiaoId ?? 'padrao'}
             regiaoId={regiaoId}
