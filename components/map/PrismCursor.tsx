@@ -96,16 +96,42 @@ export function PrismCursor() {
       setTimeout(() => ring.remove(), 520)
     }
     const release = () => { delete box.dataset.down }
-    const leave = (e: MouseEvent) => { if (!e.relatedTarget) delete box.dataset.visible }
+    // Só some quando o ponteiro saiu da janela de verdade: um mouseout sem destino também dispara quando o elemento sob o ponteiro
+    // desaparece ou é refeito (rolar um painel, por exemplo), e aí o prisma sumia com o ponteiro ainda na tela.
+    const leave = (e: MouseEvent) => {
+      if (e.relatedTarget) return
+      const outside = e.clientX <= 0 || e.clientY <= 0 || e.clientX >= window.innerWidth - 1 || e.clientY >= window.innerHeight - 1
+      if (outside) delete box.dataset.visible
+    }
     const enter = () => { if (ready) box.dataset.visible = '1' }
 
+    // Rolar com a roda não move o ponteiro: o navegador não manda pointermove e o que está sob o ponteiro muda. Sem tratar isso, o
+    // prisma ficava parado no estado de antes (e o cursor do sistema voltava a aparecer, porque o navegador só reavalia o cursor
+    // no próximo movimento). Durante e logo depois da rolagem, o estado é reconferido no ponto onde o ponteiro está.
+    let scrollRaf = 0
+    const refresh = () => {
+      scrollRaf = 0
+      if (!ready) return
+      box.dataset.visible = '1'
+      root.setAttribute('data-pc-ready', '')
+      const t = document.elementFromPoint(tx, ty)
+      lastTarget = t
+      setState(kind(t, blockedAt(tx, ty)))
+    }
+    const onScroll = () => { if (ready && !scrollRaf) scrollRaf = requestAnimationFrame(refresh) }
+
     document.addEventListener('pointermove', move, { passive: true })
+    document.addEventListener('wheel', onScroll, { passive: true })
+    document.addEventListener('scroll', onScroll, { passive: true, capture: true })
     document.addEventListener('pointerdown', press, { passive: true })
     document.addEventListener('pointerup', release, { passive: true })
     document.addEventListener('mouseout', leave)
     document.addEventListener('mouseover', enter)
     return () => {
       document.removeEventListener('pointermove', move)
+      document.removeEventListener('wheel', onScroll)
+      document.removeEventListener('scroll', onScroll, true)
+      if (scrollRaf) cancelAnimationFrame(scrollRaf)
       document.removeEventListener('pointerdown', press)
       document.removeEventListener('pointerup', release)
       document.removeEventListener('mouseout', leave)

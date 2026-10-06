@@ -249,6 +249,8 @@
 
 /* Cursor Prisma aurora (10, components/map/PrismCursor.tsx): o nativo só some depois do primeiro movimento;
    campo de texto mantém o I-beam e a mira de medir/inspecionar (data-pc-native) mantém o crosshair. */
+/* a própria raiz também esconde o cursor do sistema: enquanto se rola com a roda o navegador não reavalia o cursor e cai no da raiz */
+:root[data-pc-ready]:not([data-pc-native]) { cursor: none; }
 :root[data-pc-ready]:not([data-pc-native]) *:not(input:not([type='checkbox']):not([type='radio']):not([type='button'])):not(textarea):not(select):not([contenteditable='true']) {
   cursor: none !important;
 }
