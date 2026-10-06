@@ -10,7 +10,9 @@ import { ViewSwap } from '@/components/ui/view-swap'
 import { cn } from '@/lib/utils'
 import type { ConsultaBounds, ConsultaItem, ConsultaKind, ConsultaSelection } from '@/types/map-consulta'
 import type { LayerVisualConfig } from '@/types/map-dto'
+import { ConnectionProblem } from './ConnectionProblem'
 import { PanelCard } from './PanelCard'
+import { GENERIC_LIST_ERROR, GENERIC_OPEN_ERROR } from './helpers/network'
 import { areaText, dateText, listParams, placeText, propertyNames } from './helpers/explore'
 import { ICON_STROKE, resolveLayerIcon } from './helpers/layer-icons'
 import { resolveFeatureStyle } from './helpers/map-visuals'
@@ -92,13 +94,7 @@ function Results({ list, kind, visualConfig, onSelect, empty }: { list: ReturnTy
     <div aria-busy={list.loading}>
       {loadingFirst && <div role="status"><span className="sr-only">Buscando…</span><RowSkeleton /><RowSkeleton /><RowSkeleton /></div>}
       {list.items.length > 0 && <ul className="divide-y divide-border">{list.items.map((item) => <Row key={item.id} item={item} kind={kind} visualConfig={visualConfig} onSelect={onSelect} />)}</ul>}
-      {list.error && (
-        <div role="alert" className="p-4">
-          <p className="text-sm font-semibold">Não foi possível carregar a lista</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">O que você digitou continua aqui.</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={list.retry}>Tentar de novo</Button>
-        </div>
-      )}
+      {list.error && <ConnectionProblem offline={list.offline} what="a lista" detail={list.error === GENERIC_LIST_ERROR ? null : list.error} onRetry={list.retry} />}
       {!list.loading && !list.error && list.items.length === 0 && (
         <div className="p-4 text-center">
           <p className="text-sm font-semibold">{empty.title}</p>
@@ -160,7 +156,7 @@ export function ExplorePanel({ regiaoId, regionName, actionVisualConfig, selecti
   const trail = useRef<{ selection: ConsultaSelection; label: string }[]>([])
   const expected = useRef<string | null | undefined>(undefined)
   const keyOf = (s: ConsultaSelection | null) => (s ? `${s.kind}:${s.id}` : null)
-  const { item, error, retry } = useConsultaDetail(selection, regiaoId, onFocus)
+  const { item, error, offline, retry } = useConsultaDetail(selection, regiaoId, onFocus)
   const selectionKey = keyOf(selection)
   useEffect(() => {
     if (expected.current !== selectionKey) trail.current = []
@@ -250,11 +246,7 @@ export function ExplorePanel({ regiaoId, regionName, actionVisualConfig, selecti
         <span className="truncate">{backLabel}</span>
       </button>
       {error ? (
-        <section role="alert" className="rounded-lg border border-crit/40 bg-card p-4">
-          <p className="text-sm font-semibold">Não foi possível abrir o registro</p>
-          <p className="mt-0.5 text-xs text-muted-foreground">{error}</p>
-          <Button variant="outline" size="sm" className="mt-3" onClick={retry}>Tentar de novo</Button>
-        </section>
+        <ConnectionProblem card offline={offline} what="o registro" detail={error === GENERIC_OPEN_ERROR ? null : error} onRetry={retry} />
       ) : !item ? (
         <div role="status" className="space-y-4">
           <span className="sr-only">Abrindo o registro…</span>
