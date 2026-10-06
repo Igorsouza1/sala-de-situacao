@@ -366,7 +366,7 @@ export default function MapLibreMap({
     const panel = exploreOpen.current
     const padding = width < 640
       ? { top: 80, bottom: panel ? Math.round(height * 0.6) : 90, left: 40, right: 40 }
-      : { top: 80, bottom: 110, left: panel ? 400 : 40, right: 40 }
+      : { top: 80, bottom: 110, left: panel ? 440 : 40, right: 40 }
     map.fitBounds([[w, s], [e, n]], {
       padding,
       maxZoom: item.geometry.type === 'Point' ? Math.min(16, map.getZoom() + 1.25) : 15,

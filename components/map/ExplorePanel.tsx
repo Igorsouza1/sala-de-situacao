@@ -56,12 +56,12 @@ function Row({ item, kind, visualConfig, onSelect }: { item: ConsultaItem; kind:
       <button
         type="button"
         onClick={() => onSelect({ kind, id: item.id })}
-        className="group flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-200 hover:bg-muted focus-visible:bg-muted focus-visible:outline-hidden"
+        className="group flex min-h-16 w-full items-center gap-3.5 px-4 py-3.5 text-left transition-colors duration-200 hover:bg-muted focus-visible:bg-muted focus-visible:outline-hidden"
       >
-        <Mark item={item} kind={kind} visualConfig={visualConfig} />
+        <Mark item={item} kind={kind} visualConfig={visualConfig} size={40} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold leading-snug">{name}</span>
-          <span className="mt-0.5 block truncate text-xs leading-snug text-muted-foreground">{second}</span>
+          <span className="mt-1 block truncate text-xs leading-snug text-muted-foreground">{second}</span>
           {third && <span className="block truncate text-xs leading-snug text-muted-foreground">{third}</span>}
         </span>
         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-[translate] duration-200 ease-spring group-hover:translate-x-0.5" aria-hidden />
@@ -72,8 +72,8 @@ function Row({ item, kind, visualConfig, onSelect }: { item: ConsultaItem; kind:
 
 function RowSkeleton() {
   return (
-    <div aria-hidden className="flex min-h-14 items-center gap-3 px-4 py-3">
-      <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+    <div aria-hidden className="flex min-h-16 items-center gap-3.5 px-4 py-3.5">
+      <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
       <div className="flex-1 space-y-2">
         <Skeleton className="h-3.5 w-3/4" />
         <Skeleton className="h-3 w-1/2" />
