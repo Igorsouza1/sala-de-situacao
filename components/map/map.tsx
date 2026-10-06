@@ -511,7 +511,7 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
               options={dynamicLayerOptions}
               activeLayers={visibleDynamicLayers}
               onLayerToggle={handleDynamicLayerToggle}
-              onToggleAll={handleToggleAllDynamic}
+              onHideAll={() => handleToggleAllDynamic(false)}
               onGroupToggle={handleGroupToggle}
           />
         </div>

@@ -27,6 +27,14 @@ import type { LayerManagerOption, LayerStatus } from './LayerManager'
 import { LayersPanel } from './LayersPanel'
 import { FiltersPanel } from './FiltersPanel'
 import { activeFilterCount } from './helpers/filters'
+import {
+  AREA_SENSITIVE_SLUGS,
+  DATE_SENSITIVE_SLUGS,
+  filterNoteFor,
+  initialVisibleSlugs,
+  isLayerOn,
+  type FilterNote,
+} from './helpers/layers'
 import { Modal } from './Modal'
 import { EditAcaoModal } from './EditAcaoModal'
 import { FeatureDetails } from './feature-details'
@@ -75,11 +83,6 @@ const _cache: {
   dateFilterKey: string
   areaFilterKey: string
 } = { layers: [], data: {}, dateFilterKey: '', areaFilterKey: '' }
-
-// Slugs que dependem do filtro de datas — camadas estáticas (propriedades, rio, banhado, etc.) não são invalidadas
-const DATE_SENSITIVE_SLUGS = new Set(['acoes', 'raw_firms', 'desmatamento'])
-// Slugs que dependem do filtro de área — só propriedades
-const AREA_SENSITIVE_SLUGS = new Set(['propriedades'])
 
 // Detecta se um layer deve ser renderizado como HTML markers com ícones Lucide.
 // Condição 1: visual_config.maplibre.type === 'icon-marker'  (flag explícita MapLibre)
@@ -399,14 +402,7 @@ export default function MapLibreMap({
   // Initialize all layers as visible once catalog arrives
   useEffect(() => {
     if (!initializedRef.current && layers.length > 0) {
-      const slugs: string[] = []
-      layers.forEach((l) => {
-        if (l.groups?.length) {
-          l.groups.forEach((g) => slugs.push(`${l.slug}__${g.id}`))
-        }
-        slugs.push(l.slug)
-      })
-      setVisibleLayers(slugs)
+      setVisibleLayers(initialVisibleSlugs(layers))
       initializedRef.current = true
     }
   }, [layers])
@@ -919,14 +915,12 @@ export default function MapLibreMap({
 
   // A Fauna fecha a lista, junto das camadas de monitoramento (a lista agrupa por categoria)
   const panelOptions = useMemo((): LayerManagerOption[] => {
-    const n = faunaData.length
-    const total = faunaFetched ? ` · ${n === 0 ? 'sem registros' : `${n} registro${n === 1 ? '' : 's'}`}` : ''
-    return [
+          return [
       ...layerManagerOptions,
       {
         id: 'fauna',
         slug: 'fauna',
-        label: `Fauna exótica (javali)${total}`,
+        label: 'Fauna exótica (javali)',
         color: 'var(--color-crit)',
         icon: 'paw-print',
         category: 'Monitoramento',
@@ -936,7 +930,7 @@ export default function MapLibreMap({
         ],
       },
     ]
-  }, [layerManagerOptions, faunaData.length, faunaFetched])
+  }, [layerManagerOptions])
 
   const panelActiveLayers = useMemo(
     () => [
@@ -946,6 +940,37 @@ export default function MapLibreMap({
     ],
     [visibleLayers, faunaHeatmapActive, faunaLocationsActive],
   )
+
+  // Quantas feições cada camada tem no mapa, e quais estão sendo mexidas por um filtro (as duas coisas aparecem na linha)
+  const dateOn = !!(dateFilter.startDate || dateFilter.endDate)
+  const areaOn = areaFilter.minArea !== undefined || areaFilter.maxArea !== undefined
+
+  const layerCounts = useMemo(() => {
+    const c: Record<string, number> = {}
+    Object.entries(layerData).forEach(([slug, fc]) => { c[slug] = fc.features.length })
+    if (faunaFetched) c.fauna = faunaData.length
+    return c
+  }, [layerData, faunaFetched, faunaData.length])
+
+  const filterNotes = useMemo(() => {
+    const n: Record<string, FilterNote> = {}
+    layers.forEach((l) => {
+      const note = filterNoteFor(l.slug, dateOn, areaOn)
+      if (note) n[l.slug] = note
+    })
+    return n
+  }, [layers, dateOn, areaOn])
+
+  // Onde cada filtro vale, para o painel Filtros dizer (e avisar se nenhuma dessas camadas está ligada)
+  const dateAffects = useMemo(() => {
+    const hit = layers.filter((l) => l.visualConfig?.dateFilter === true || DATE_SENSITIVE_SLUGS.has(l.slug))
+    return { names: hit.map((l) => l.name.trim()), anyOn: hit.some((l) => isLayerOn(l.slug, visibleLayers)) }
+  }, [layers, visibleLayers])
+
+  const areaAffects = useMemo(() => {
+    const hit = layers.filter((l) => AREA_SENSITIVE_SLUGS.has(l.slug))
+    return { names: hit.map((l) => l.name.trim()), anyOn: hit.some((l) => isLayerOn(l.slug, visibleLayers)) }
+  }, [layers, visibleLayers])
 
   // Andamento de cada fonte (DESIGN.md 2.1): só as camadas ligadas mostram carregando ou erro
   const layerStatus = useMemo(() => {
@@ -1364,8 +1389,10 @@ export default function MapLibreMap({
             options={panelOptions}
             activeLayers={panelActiveLayers}
             onLayerToggle={handleLayerToggle}
-            onToggleAll={handleToggleAll}
+            onHideAll={() => handleToggleAll(false)}
             onGroupToggle={handleGroupToggle}
+            counts={layerCounts}
+            filterNotes={filterNotes}
             status={layerStatus}
             onRetry={handleRetryLayer}
             loading={loadingLayers}
@@ -1378,6 +1405,8 @@ export default function MapLibreMap({
             onDateChange={setDateFilter}
             area={areaFilter}
             onAreaChange={setAreaFilter}
+            dateAffects={dateAffects}
+            areaAffects={areaAffects}
           />
         </DockPanelButton>
         <DockDivider />

@@ -115,7 +115,7 @@ export function DockPanelButton({ id, icon, label, badge, alert, children }: { i
         aria-label={label}
         tabIndex={-1}
         className={cn(
-          'absolute z-10 max-h-[60vh] flex-col overflow-hidden rounded-lg outline-hidden',
+          'absolute z-10 max-h-[75vh] flex-col overflow-hidden rounded-lg outline-hidden',
           'bottom-full mb-3 max-sm:inset-x-3 sm:left-1/2 sm:w-80 sm:-translate-x-1/2',
           controlSurface,
           isOpen ? 'flex' : 'hidden',

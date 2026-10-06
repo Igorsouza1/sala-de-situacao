@@ -54,7 +54,7 @@ export function PropertyFilterControl({ value, onChange }: PropertyFilterControl
 
   return (
     <div className="space-y-2">
-      <p className="text-sm text-muted-foreground">Tamanho, em hectares</p>
+      <p className="text-xs text-muted-foreground">Em hectares</p>
       <div className="flex items-center gap-2">
         <Input type="number" min="0" inputMode="decimal" placeholder="Mínimo" aria-label="Tamanho mínimo, em hectares" value={min} onChange={(e) => setMin(e.target.value)} className="h-9 text-sm" />
         <span className="text-muted-foreground" aria-hidden>até</span>
