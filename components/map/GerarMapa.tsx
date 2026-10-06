@@ -1,27 +1,25 @@
 'use client'
 
-import Map from 'react-map-gl/maplibre'
-import 'maplibre-gl/dist/maplibre-gl.css'
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, Undo2 } from 'lucide-react'
+import { ArrowLeft, FileDown, Undo2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Switch } from '@/components/ui/switch'
 import { Collapse } from '@/components/ui/collapse'
 import { OverlayScroll } from '@/components/ui/overlay-scroll'
 import { useRegion } from '@/context/RegionContext'
 import type { LayerResponseDTO, MapFeatureCollection } from '@/types/map-dto'
-import { MaplibreIconMarkers } from './MaplibreIconMarkers'
-import { GridOverlay, LegendBlock, LocationInset, NoteBlock, NorthArrow, ScaleBlock, type MapView } from './SheetOverlays'
 import { LegendEditor } from './LegendEditor'
 import type { LayerManagerOption } from './LayerManager'
 import { PanelCard } from './PanelCard'
 import { Segmented } from './Segmented'
+import { SheetExport, type ExportJob } from './SheetExport'
+import { SheetPage, type Camera, type Json, type Part, type SheetSettings, type Size } from './SheetPage'
 import { controlItem } from './helpers/control-style'
 import { collectAttributions, parseAttribution } from './helpers/attribution'
 import {
   BASEMAP_LABELS,
-  BASEMAP_MAX_ZOOM,
   DEM_MAX_ZOOM,
   DEM_TILES,
   HILLSHADE_BASEMAPS,
@@ -32,12 +30,12 @@ import {
   tintMineral,
   type BasemapKey,
 } from './helpers/basemaps'
+import { exportFileName, exportSize, saveBlob, type ExportKind } from './helpers/export-sheet'
 import { PRINT_BASEMAPS, autoTitle, composeSheetStyle, printBasemapFor } from './helpers/gerar-mapa'
-import { CORNERS, CORNER_LABELS, DEFAULT_LEGEND_CORNER, DEFAULT_SHEET, ORIENTATIONS, ORIENTATION_LABELS, PAPERS, PAPER_LABELS, placeCorners, sheetLayout, zoomToFit, type Corner, type Orientation, type Paper } from './helpers/sheet'
-import { datumLine, type GridFormat } from './helpers/grid'
+import type { GridFormat } from './helpers/grid'
 import { EMPTY_LEGEND_EDITS, applyLegendEdits, buildLegend, type LegendEdits } from './helpers/legend-sheet'
 import type { RuleLegendSection } from './helpers/legend-rules'
-import { useSmoothWheelZoom } from './helpers/use-smooth-wheel-zoom'
+import { CORNERS, CORNER_LABELS, DEFAULT_LEGEND_CORNER, DEFAULT_SHEET, ORIENTATIONS, ORIENTATION_LABELS, PAPERS, PAPER_LABELS, placeCorners, sheetLayout, type Corner, type Orientation, type Paper } from './helpers/sheet'
 
 // Gerar mapa (DESIGN.md 13.9): uma tela sobre o mapa, com a folha ao vivo no meio e os ajustes ao lado. A folha mostra o que vai
 // para o papel: o mapa que a pessoa estava vendo, enquadrado na proporção do papel, com título e créditos.
@@ -60,8 +58,6 @@ export interface GerarMapaSession {
   legend: { options: LayerManagerOption[]; activeLayers: string[]; ruleLegends: Record<string, RuleLegendSection[]> }
 }
 
-type Json = Record<string, any>
-
 const SWATCH: Record<BasemapKey, string> = {
   mineral: 'linear-gradient(135deg, var(--color-map-grass) 0 55%, var(--color-map-water) 55%)',
   'satellite-soft': 'linear-gradient(135deg, color-mix(in oklab, var(--color-muted-foreground) 45%, var(--color-ok)) 0 55%, color-mix(in oklab, var(--color-muted-foreground) 55%, var(--color-water)) 55%)',
@@ -70,8 +66,6 @@ const SWATCH: Record<BasemapKey, string> = {
   osm: 'linear-gradient(135deg, var(--color-map-urban) 0 55%, var(--color-map-grass) 55%)',
 }
 
-// o que a folha pode mostrar a mais: ligado por padrão, a pessoa desliga o que não quer (título, legenda e fonte dos dados não saem)
-type Part = 'north' | 'scale' | 'grid' | 'datum' | 'date' | 'logos' | 'inset' | 'note'
 const PARTS: { id: Part; label: string }[] = [
   { id: 'north', label: 'Seta do norte' },
   { id: 'scale', label: 'Escala' },
@@ -99,7 +93,13 @@ async function loadBaseStyle(key: BasemapKey): Promise<Json> {
 
 const calmMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-interface Size { w: number; h: number }
+type ExportState =
+  | { status: 'idle' }
+  | { status: 'working'; kind: ExportKind }
+  | { status: 'done'; kind: ExportKind; name: string }
+  | { status: 'error' }
+
+const KIND_LABEL: Record<ExportKind, string> = { pdf: 'PDF', png: 'PNG' }
 
 export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onClose: () => void }) {
   const { region } = useRegion()
@@ -181,6 +181,11 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
     return parts.filter(Boolean).join(' · ')
   }, [sheetStyle])
 
+  const settings = useMemo<SheetSettings>(
+    () => ({ paper, orientation, title, show, coords, note, corners, legend: { title: legendEdits.title, sections: legendSections }, credits, today, brasaoUrl: region?.brasaoUrl ?? null, center }),
+    [paper, orientation, title, show, coords, note, corners, legendEdits.title, legendSections, credits, today, region?.brasaoUrl, center],
+  )
+
   // ── a folha cabe na área disponível; o mapa dentro dela acompanha ──
   const stage = useRef<HTMLDivElement>(null)
   const [room, setRoom] = useState<Size>({ w: 0, h: 0 })
@@ -197,10 +202,45 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
   const sheet = useMemo(() => sheetLayout(paper, orientation), [paper, orientation])
   const PAD = 24
   const px = Math.max(0, Math.min((room.w - PAD * 2) / sheet.width, (room.h - PAD * 2) / sheet.height)) // pixels por milímetro
-  const frame: Size = { w: Math.round(sheet.map.w * px), h: Math.round(sheet.map.h * px) }
-  const mm = (v: number) => v * px
+  const frameW = Math.round(sheet.map.w * px)
+
+  // ── baixar: a folha é desenhada fora da tela, no tamanho do papel e a 300 dpi, e fotografada ──
+  const cameraProbe = useRef<(() => Camera | null) | null>(null)
+  const [job, setJob] = useState<ExportJob | null>(null)
+  const [exportState, setExportState] = useState<ExportState>({ status: 'idle' })
+  const working = exportState.status === 'working'
+  const ready = !!sheetStyle && baseState.status === 'ready'
+
+  const download = (kind: ExportKind) => {
+    const cam = cameraProbe.current?.()
+    if (!cam || !sheetStyle || frameW <= 0) { setExportState({ status: 'error' }); return }
+    // o mapa da folha de exportação é maior que o da tela: o zoom sobe junto, para mostrar exatamente a mesma área
+    const target = exportSize(sheet.width, sheet.height)
+    const zoom = cam.zoom + Math.log2(Math.round(sheet.map.w * target.pxPerMm) / frameW)
+    setExportState({ status: 'working', kind })
+    setJob({
+      kind,
+      camera: { lng: cam.lng, lat: cam.lat, zoom },
+      page: { settings, session, style: sheetStyle, baseStyle, basemap: baseState.shown },
+    })
+  }
+  const onDone = (blob: Blob) => {
+    const kind = job?.kind ?? 'pdf'
+    const name = exportFileName(title, new Date(), kind)
+    saveBlob(blob, name)
+    setJob(null)
+    setExportState({ status: 'done', kind, name })
+  }
+  const onFail = () => { setJob(null); setExportState({ status: 'error' }) }
 
   const unavailable = basemap !== baseState.shown
+
+  const footerLine =
+    exportState.status === 'working' ? `Gerando o ${KIND_LABEL[exportState.kind]}. Pode levar alguns segundos.`
+    : exportState.status === 'done' ? `Pronto: ${KIND_LABEL[exportState.kind]} baixado. Procure ${exportState.name} na pasta de downloads.`
+    : exportState.status === 'error' ? 'Não conseguimos gerar o mapa. Veja se a internet está funcionando e tente de novo.'
+    : !ready ? 'Espere o mapa de fundo carregar para baixar.'
+    : `Sai em ${PAPER_LABELS[paper]}, ${ORIENTATION_LABELS[orientation].toLowerCase()}, pronto para imprimir.`
 
   return (
     <div
@@ -224,72 +264,26 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
       <div className="flex min-h-0 flex-1 flex-col md:flex-row">
         {/* A folha: o que se vê aqui é o que vai para o papel */}
         <div ref={stage} className="relative min-h-0 flex-1 overflow-clip">
-          {px > 0 && (
-            <div
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 overflow-clip rounded-sm bg-card shadow-control transition-[width,height] duration-[320ms] ease-spring"
-              style={{ width: mm(sheet.width), height: mm(sheet.height) }}
-            >
-              <div
-                className="absolute flex items-end"
-                style={{ left: mm(sheet.header.x), top: mm(sheet.header.y), width: mm(sheet.header.w), height: mm(sheet.header.h) }}
-              >
-                <h1 className="line-clamp-2 min-w-0 flex-1 font-semibold leading-tight text-foreground" style={{ fontSize: mm(6) }}>
-                  {title}
-                </h1>
-                {show.logos && (
-                  <div className="flex shrink-0 items-center" style={{ gap: mm(3), marginLeft: mm(4), height: mm(12) }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    {region?.brasaoUrl && <img src={region.brasaoUrl} alt="Brasão" className="h-full w-auto object-contain" />}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src="/prisma_logo_revert.png" alt="GEO PRISMA" className="h-full w-auto object-contain" />
-                  </div>
-                )}
-              </div>
-
-              <div
-                className="absolute overflow-clip border border-foreground bg-muted [&_.maplibregl-marker]:pointer-events-none"
-                style={{ left: mm(sheet.map.x), top: mm(sheet.map.y), width: mm(sheet.map.w), height: mm(sheet.map.h) }}
-              >
-                {sheetStyle && frame.w > 0 && frame.h > 0 && (
-                  <SheetMap
-                    session={session}
-                    style={sheetStyle}
-                    basemap={baseState.shown}
-                    frame={frame}
-                    frameMm={sheet.map.w}
-                    pxPerMm={px}
-                    grid={show.grid ? coords : null}
-                    north={show.north}
-                    scale={show.scale}
-                    inset={show.inset}
-                    insetStyle={baseStyle}
-                    note={show.note ? note : ''}
-                    legend={{ title: legendEdits.title, sections: legendSections }}
-                    corners={corners}
-                    mapHeightMm={sheet.map.h}
-                    onSettle={setCenter}
-                  />
-                )}
-              </div>
-
-              <div
-                className="absolute flex flex-col justify-start text-muted-foreground"
-                style={{ left: mm(sheet.footer.x), top: mm(sheet.footer.y), width: mm(sheet.footer.w), height: mm(sheet.footer.h), fontSize: mm(2.6), gap: mm(1) }}
-              >
-                <div className="flex items-start justify-between" style={{ gap: mm(4) }}>
-                  <p className="shrink-0">Dados: GEO PRISMA{show.date && ` · ${today}`}</p>
-                  {show.datum && <p className="min-w-0 text-right">{datumLine(coords, center.lng, center.lat)}</p>}
-                </div>
-                {credits && <p className="text-right">Mapa de fundo: {credits}</p>}
-              </div>
+          {px > 0 && sheetStyle && (
+            <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
+              <SheetPage
+                settings={settings}
+                session={session}
+                style={sheetStyle}
+                baseStyle={baseStyle}
+                basemap={baseState.shown}
+                px={px}
+                cameraProbe={cameraProbe}
+                onSettle={(c) => setCenter({ lng: c.lng, lat: c.lat })}
+              />
             </div>
           )}
         </div>
 
-        {/* Os ajustes: base cinza suave, um cartão por assunto (6.2) */}
+        {/* Os ajustes: base cinza suave, um cartão por assunto (6.2); embaixo, a ação de baixar (19.2) */}
         <aside aria-label="Ajustes do mapa" className="flex max-h-[45svh] min-h-0 shrink-0 flex-col border-t border-border bg-muted/50 md:max-h-none md:w-[24rem] md:border-l md:border-t-0">
-          <OverlayScroll data-panel-scroll className="p-4">
-            <div className="space-y-4">
+          <OverlayScroll data-panel-scroll className="min-h-0 flex-1 p-4">
+            <div className="space-y-4 pb-6">
               <PanelCard title="Título" caption="Aparece no alto da folha.">
                 <Input aria-label="Título do mapa" value={title} onChange={(e) => setTyped(e.target.value)} />
                 {typed !== null && typed !== automatic && (
@@ -405,102 +399,30 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
               </PanelCard>
             </div>
           </OverlayScroll>
+
+          <footer className="shrink-0 border-t border-border bg-card p-4 shadow-control">
+            <p
+              role="status"
+              aria-live="polite"
+              className={cn('mb-3 text-sm leading-snug', exportState.status === 'error' ? 'text-crit' : 'text-muted-foreground')}
+            >
+              {footerLine}
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <Button type="button" aria-disabled={!ready || working} onClick={() => { if (ready && !working) download('pdf') }}>
+                <FileDown className="h-4 w-4" aria-hidden />
+                {working && exportState.kind === 'pdf' ? 'Gerando…' : 'Baixar PDF'}
+              </Button>
+              <Button type="button" variant="secondary" aria-disabled={!ready || working} onClick={() => { if (ready && !working) download('png') }}>
+                <FileDown className="h-4 w-4" aria-hidden />
+                {working && exportState.kind === 'png' ? 'Gerando…' : 'Baixar PNG'}
+              </Button>
+            </div>
+          </footer>
         </aside>
       </div>
-    </div>
-  )
-}
 
-// O mapa dentro da moldura da folha. Quando a moldura muda de tamanho (outro papel, outra posição, janela maior), o zoom
-// acompanha: o que a pessoa via continua à vista, em vez de o mapa mostrar mais ou menos terra sem aviso.
-interface SheetMapProps {
-  session: GerarMapaSession
-  style: Json
-  basemap: BasemapKey
-  /** tamanho do mapa na tela (px) e no papel (mm de largura): a escala depende dos dois */
-  frame: Size
-  frameMm: number
-  pxPerMm: number
-  /** formato da grade; null: sem grade */
-  grid: GridFormat | null
-  north: boolean
-  scale: boolean
-  inset: boolean
-  insetStyle: Json | null
-  note: string
-  legend: { title: string; sections: ReturnType<typeof applyLegendEdits> }
-  corners: ReturnType<typeof placeCorners>
-  mapHeightMm: number
-  onSettle: (center: { lng: number; lat: number }) => void
-}
-
-function SheetMap({ session, style, basemap, frame, frameMm, pxPerMm, grid, north, scale, inset, insetStyle, note, legend, corners, mapHeightMm, onSettle }: SheetMapProps) {
-  const [settled, setSettled] = useState({ lng: session.camera.lng, lat: session.camera.lat })
-  const mapRef = useRef<any>(null)
-  const [loaded, setLoaded] = useState(false)
-  useSmoothWheelZoom(mapRef, loaded)
-
-  // a vista ao vivo: a escala e a grade se refazem a cada quadro do movimento (no máximo um por quadro de tela)
-  const [view, setView] = useState<MapView | null>(null)
-  const raf = useRef(0)
-  const readView = useCallback(() => {
-    raf.current = 0
-    const map = mapRef.current?.getMap()
-    if (!map) return
-    const b = map.getBounds()
-    setView({ lat: map.getCenter().lat, zoom: map.getZoom(), bounds: { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() } })
-  }, [])
-  const scheduleView = useCallback(() => { if (!raf.current) raf.current = requestAnimationFrame(readView) }, [readView])
-  useEffect(() => () => { if (raf.current) cancelAnimationFrame(raf.current) }, [])
-  // a moldura mudou de tamanho: a vista (limites e escala) muda junto
-  useEffect(() => { if (loaded) scheduleView() }, [frame.w, frame.h, loaded, scheduleView])
-
-  const initial = useMemo(
-    () => ({ longitude: session.camera.lng, latitude: session.camera.lat, zoom: zoomToFit(session.camera.zoom, session.viewport, frame), bearing: 0, pitch: 0 }),
-    // só o primeiro enquadramento: depois quem manda é a pessoa
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  )
-
-  const previous = useRef(frame)
-  useEffect(() => {
-    const map = mapRef.current?.getMap()
-    const before = previous.current
-    previous.current = frame
-    if (!map || !loaded || (before.w === frame.w && before.h === frame.h)) return
-    map.jumpTo({ zoom: zoomToFit(map.getZoom(), before, frame) })
-    scheduleView()
-  }, [frame, loaded, scheduleView])
-
-  return (
-    <div className="relative h-full w-full">
-    <Map
-      ref={mapRef}
-      initialViewState={initial}
-      style={{ width: '100%', height: '100%' }}
-      mapStyle={style as any}
-      maxZoom={BASEMAP_MAX_ZOOM[basemap]}
-      // a roda tem zoom próprio (13.7); a folha é sempre com o norte para cima (a seta do norte depende disso)
-      scrollZoom={false}
-      dragRotate={false}
-      pitchWithRotate={false}
-      touchPitch={false}
-      keyboard={false}
-      attributionControl={false}
-      onLoad={(e) => { e.target.touchZoomRotate.disableRotation(); setLoaded(true) }}
-      onMove={scheduleView}
-      onMoveEnd={() => { const c = mapRef.current?.getMap().getCenter(); if (c) { setSettled({ lng: c.lng, lat: c.lat }); onSettle({ lng: c.lng, lat: c.lat }) } }}
-    >
-      {session.iconLayers.map(({ layer, data }) => (
-        <MaplibreIconMarkers key={layer.slug} layer={layer} data={data} onFeatureClick={() => {}} onFeatureHover={() => {}} />
-      ))}
-    </Map>
-    {view && grid && <GridOverlay map={mapRef.current.getMap()} view={view} format={grid} frame={frame} pxPerMm={pxPerMm} />}
-    {view && north && <NorthArrow pxPerMm={pxPerMm} corner={corners.north} />}
-    {view && scale && <ScaleBlock view={view} frame={{ mm: frameMm, px: frame.w }} pxPerMm={pxPerMm} corner={corners.scale} />}
-    <LegendBlock title={legend.title} sections={legend.sections} corner={corners.legend} pxPerMm={pxPerMm} mapHeightMm={mapHeightMm} />
-    {view && inset && insetStyle && <LocationInset style={insetStyle} view={view} center={settled} pxPerMm={pxPerMm} corner={corners.inset} />}
-    <NoteBlock text={note} pxPerMm={pxPerMm} />
+      {job && <SheetExport job={job} onDone={onDone} onError={onFail} />}
     </div>
   )
 }
