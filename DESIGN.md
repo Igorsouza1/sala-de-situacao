@@ -14,6 +14,34 @@ Este documento vale para **toda UI que for criada daqui para a frente**. Se algo
 
 ---
 
+## Leia primeiro
+
+> **Para construir ou mexer em qualquer tela, leia esta página e a receita (seção 19) do que for construir. O resto do documento é consulta.**
+>
+> Esta página existe porque as mesmas correções foram pedidas várias vezes: *"faz o usuário pensar"*, *"está carregado"*, *"sem espaço"*, *"sem hierarquia"*, *"não faz movimento suave"*. Os princípios da seção 2 estavam certos, mas eram abstratos demais para se aplicar sozinhos: dá para responder "sim, está simples" a qualquer tela. Aqui cada princípio virou uma **regra com um teste** que se aplica olhando a tela, e cada regra aponta o **caso real** que a originou (seção 20).
+
+**Como trabalhar, nesta ordem:** (1) escolha a **receita** da seção 19 que mais se parece com o que vai construir; (2) construa com as **réguas** da 6.3; (3) rode a **auditoria** da 1.3 e **diga o resultado, regra por regra**; (4) se a pessoa repetir uma correção, **pare e registre a causa** (seção 20 e, se for geral, esta página) antes de corrigir a tela.
+
+| # | Regra | Como testar (passa ou não passa) | Detalhe e caso |
+|---|---|---|---|
+| 1 | **A tela pensa; a pessoa só escolhe.** | Conte as escolhas visíveis num cartão: **no máximo 3**. Procure número, unidade ou código na tela (px, %, hex): **nenhum**. O padrão certo já vem marcado. | 2.2, 13.3 · C4, C11, C13 |
+| 2 | **Tudo tem um motivo dito numa frase.** | Para cada elemento, complete "isto existe para ___". Sem frase, sai. | 1.2, 13.3 · C10 |
+| 3 | **Um tipo de controle, sempre no mesmo lugar.** | Desenhe as colunas da lista: o mesmo controle cai na **mesma coluna em todas as linhas**? O que só existe em algumas linhas toma o lugar de algo que existe em todas? | 6.2 regra 8 · C1, C9 |
+| 4 | **Hierarquia visível sem ler.** | Desfoque a tela: dá para ver onde cada assunto começa e termina? Base cinza suave, cartão branco **com título**, 3 tamanhos de texto. **Janela toda branca não passa.** | 6.2 · C2, C3 |
+| 5 | **Respiro por régua, não por impressão.** | Meça com a 6.3 (texto empilhado 2 a 4 px, entre cartões 16, antes de barra de ação 24 a 32, linha clicável ≥ 48). Margens verticais vizinhas **colapsam**: espaço novo tem que ser maior que o do vizinho, ou ser *padding*. | 6.3, 16 · C3, C16 |
+| 6 | **Cabeçalho leve.** | Título em **uma linha**, nunca quebra. No máximo **2 ações além de fechar**. Se não couber, tire uma ação do modo; não encolha o título. | 6.3, 19.2 · C17 |
+| 7 | **O modo e o estado são ditos, em cor e em frase, sempre.** | Depois de qualquer ação (salvar, cancelar, voltar), a tela ainda diz em que modo está? Quem voltou de uma subtela sabe que não saiu do modo? | 19.5 · C14 |
+| 8 | **O que abre algo diz que abre.** | Todo ícone tem rótulo escrito. O botão que abre uma escolha mantém o "+" e o rótulo **mesmo com um valor já escolhido**. | 6.2 regra 9, 11 · C10, C12 |
+| 9 | **Nada pisca, nada brota.** | O que entra **cresce**, o que sai **encolhe e some**; texto novo faz **crossfade**; numa troca de modo, título, botões e corpo **se movem** (nenhum troca de uma vez); **todo clicável responde ao mouse**. | 8.1, 8.4 · C6, C7, C18 |
+| 10 | **Tudo centralizado no eixo.** | Numa linha com ícone, texto, botão e contador, os **centros verticais coincidem**. Botão ao lado de texto de duas linhas fica no meio, não no topo. | 19.4 · C15 |
+| 11 | **Componente do projeto, nunca do navegador.** | Nada de `<select>`, `type="color"`, `alert()` ou `confirm()`. **O design-guard barra isso sozinho.** | 6.2 regra 6 · C5 |
+| 12 | **A amostra é o que o mapa desenha.** | Legenda com o mesmo preenchimento, contorno e transparência da camada; cor clara com fio escuro por fora; **branco sobre branco nunca**. | 6.2 regra 5 · C8 |
+| 13 | **Desfazer vale mais que confirmar.** | Ação que muda algo compartilhado mostra o **aviso no alto com contador de 10 s** em vez de perguntar "tem certeza?". | 12, 13.3 · C15 |
+| 14 | **Antes de entregar, auditar.** | A auditoria da 1.3 foi feita **e dita**, regra por regra. | 1.3 |
+
+**Em dúvida entre duas soluções**, fique com a que tem **menos coisas na tela e mais espaço**. Se uma regra precisar ser quebrada, registre a **exceção** antes (1.3). Se um caso novo não cabe em nenhuma regra, **a regra é que muda**.
+
+
 ## 1. Como usar este documento
 
 ### 1.1 O que fazemos quando uma coisa não funciona
@@ -24,7 +52,7 @@ Este documento vale para **toda UI que for criada daqui para a frente**. Se algo
 
 ### 1.2 Checklist obrigatório para qualquer UI nova
 
-Responda antes de construir. Se uma resposta for "não sei", a coisa ainda não está pronta.
+Responda antes de construir. Se uma resposta for "não sei", a coisa ainda não está pronta. **Este checklist é de antes. Depois de construir, vale a auditoria da 1.3**, que é objetiva (passa ou não passa) em vez de pedir uma opinião.
 
 | # | Pergunta | Se a resposta for ruim |
 |---|---|---|
@@ -41,6 +69,19 @@ Responda antes de construir. Se uma resposta for "não sei", a coisa ainda não 
 | 9 | **Acessibilidade.** Contraste mínimo de 4,5:1 para texto, foco visível, uso por teclado, `prefers-reduced-motion`, som desligável, cursor com alternativa? | Corrija antes de entregar. |
 | 10 | **Cor.** A cor significa algo? A moldura é neutra e quem tem cor é o conteúdo? | Troque por neutro. |
 | 11 | **Registro.** A decisão e o motivo estão neste documento? | Registre. |
+
+
+### 1.3 Auditoria antes de entregar
+
+O checklist da 1.2 pede opinião ("dá para ser mais simples?"), e uma opinião sempre responde "sim". A auditoria pede **evidência**.
+
+- **Quando:** depois de qualquer mudança de tela, **antes** de dizer "pronto". Não depois da correção de quem usa.
+- **Como:** percorra as 14 regras da página "Leia primeiro". Para cada uma, **passa**, **não se aplica** (e por quê) ou **falha** (e o que foi feito). Corrija as falhas antes de entregar.
+- **Como dizer:** a resposta final traz um bloco **"Auditoria"**, uma linha por regra que se aplica, com a evidência (a medida, a classe, a ordem das colunas). Em mudança trivial (um texto, uma cor), uma linha basta: "Auditoria: a estrutura não mudou; regras 4, 5 e 9 conferidas." **Nunca "está pronto" sem isso.**
+- **O que a auditoria não vê:** quem audita pelo código **não vê a tela**. Por isso as regras dizem **o que medir** (réguas, ordem dos elementos, classes) e o resultado é dito com honestidade: "conferido no código; falta olhar na tela". O teste visual final é de quem usa, e a auditoria reduz o que chega até ele.
+- **Exceção:** se uma regra precisar ser quebrada, registre **antes**, num caso da seção 20 ou na seção do componente: "Exceção à regra N: o quê, por quê, até quando". Exceção não registrada é falha.
+- **Trava automática:** o `design-guard` barra o que é mecânico (regra 11 e a armadilha do v4, seção 16). O resto, que é o que mais custou, só a auditoria pega.
+- **Repetiu uma correção?** Pare e registre, nesta ordem: (a) o **caso** na seção 20, com sintoma, causa e regra; (b) se a regra era vaga, **mude a regra** (ela é que falhou); (c) só então corrija a tela.
 
 ---
 
@@ -268,6 +309,30 @@ Foram testadas e **descartadas**: grão (a primeira versão alterava as cores; c
 7. **O texto se lê como o que é:** "Área de [mínimo] a [máximo] ha" no lugar de um rótulo e dois campos soltos; "Vale para…" só quando acrescenta algo que o título não diz.
 8. **Colunas alinhadas: cada controle fica sempre no mesmo lugar.** Numa lista de linhas parecidas, o mesmo tipo de controle ocupa a mesma coluna em todas (o interruptor é sempre o último, à direita). O que existe só em algumas linhas (a seta de expandir) **não toma o lugar do que existe em todas**: vai junto do nome, de onde se lê "isto abre", e as linhas-filhas recuam só o nome e a amostra. Motivo (teste da lista de camadas): a seta ao lado do interruptor empurrava o interruptor 40 px nas linhas com grupos, e onde a pessoa esperava um interruptor havia uma seta.
 9. **O que abre outro controle diz que abre, sempre.** Um botão que leva a uma escolha mantém o ícone e o rótulo à vista **mesmo depois de a pessoa já ter escolhido algo**. Motivo (teste do seletor de cor): com uma cor própria escolhida, o quadrado virava só mais uma cor, e a pessoa achava que não dava para escolher outra. Agora o botão traz um "+" e o rótulo ("Outra cor", e "Mudar" quando há uma cor própria).
+
+
+### 6.3 Réguas numéricas: o que "respirar" e "ser leve" medem
+
+"Respire" e "está carregado" não são medidas, e cada pessoa lê de um jeito. Estas são. **Meça antes de dizer que passou** (regras 4, 5, 6 e 10).
+
+| O que medir | Valor | Por quê (caso) |
+|---|---|---|
+| Texto empilhado (nome e frase de apoio) | **2 a 4 px** um do outro, nunca colados | Colados não têm hierarquia (C3) |
+| Linha clicável | altura **≥ 48 px**, com `py-2` por dentro | Alvo de toque e respiro (C3) |
+| Qualquer alvo de toque | **≥ 44 px** | Celular em campo |
+| Dentro do cartão | **16 px** de borda; **12 px** entre o título e o conteúdo | 6.2 |
+| Entre cartões | **16 px** | 6.2 (C2) |
+| Entre grupos de controles no mesmo cartão | **20 a 24 px** | Uma pergunta não pode encostar na outra (C11) |
+| Antes de uma barra de ação ou rodapé | **24 a 32 px**, mais uma sombra leve se ela for fixa (`sticky`) | O `mt-2` que não aparecia (C16) |
+| Cabeçalho de painel | **1 linha**; título com `whitespace-nowrap`; **no máximo 2 ações** além de fechar | O título que quebrava (C17) |
+| Escolhas visíveis por cartão | **no máximo 3** | O editor com 7 controles (C11) |
+| Amostras de cor visíveis | **no máximo 12** (a paleta mais "Outra cor") | C11 |
+| Menor texto | **12 px** (só apoio); corpo **14 a 15 px** | 5 |
+| Raios | **4 / 6 / 10 px** (campo e botão / controle / cartão e painel) | 6 |
+| Tempos de movimento | abrir **240 a 260 ms** com mola; fechar **150 ms**; recolher e crossfade **300 a 320 ms**; aviso entra **400** e sai **190**; contagem de desfazer **10 s** | 8.1 |
+| Alinhamento | **centros verticais coincidem**; botão ao lado de texto de 2 linhas fica **no meio** | O "Desfazer" colado no topo (C15) |
+
+**Duas regras de CSS que enganam a régua:** (1) **margens verticais vizinhas colapsam**: um `mt-2` dentro de um `space-y-4` some, porque o espaço que vale é o maior (16), e não a soma. Para espaço novo, use um valor **maior que o do vizinho** ou `padding`. (2) `overflow: hidden` num ancestral **quebra** o `sticky` (ele passa a grudar na caixa, não no painel): use `overflow: clip`.
 
 ---
 
@@ -631,6 +696,11 @@ Descobertas na prática; valem para quem implementar.
 - **`@source not`:** o Tailwind varre o projeto inteiro, inclusive `.agent`, `.claude` e `docs`, e gerava classes `dark:` a partir de documentação. O `globals.css` exclui essas pastas.
 - **Teste `design-guard`** (`lib/__tests__`): o limite de paleta e hexadecimais por arquivo só desce. Quem migrar uma tela roda `UPDATE_DESIGN_BASELINE=1 npx jest lib/__tests__/design-guard` para registrar o progresso.
 - **Transições no Tailwind v4:** `hover:-translate-y-px`, `-translate-x-1/2` e `active:scale-*` usam as propriedades CSS próprias `translate` e `scale`, **não** `transform`. Uma lista como `transition-[background-color,transform]` não as cobre e o movimento **estala** em vez de deslizar. Foi o motivo de o hover e o clique dos botões "não serem suaves". Use `transition-transform` (que no v4 cobre `transform, translate, scale, rotate`) ou liste `translate` e `scale`. Regras CSS fora de `@layer` (como `.panel-rise`) vencem as utilidades do Tailwind: não as aplique a um filho direto que tenha o próprio hover.
+- **Margens verticais colapsam.** Duas margens verticais vizinhas viram uma só (a maior). Um `mt-2` ao lado do `space-y-4` não somava nada; foi por isso que o espaço pedido "não aparecia" (C16). Use `padding` ou um valor maior que o do vizinho (6.3).
+- **`overflow: hidden` quebra `sticky`.** Ele cria um contêiner de rolagem, e a barra de salvar passava a grudar na caixa que recolhe, não no painel. Use `overflow: clip` (que não cria rolagem). Margens negativas também são cortadas pelo corte.
+- **O Esc dos componentes por dentro.** Um seletor ou menu aberto (Radix) trata o Esc e chama `preventDefault`. O ouvinte global do painel precisa checar `!e.defaultPrevented`, senão o Esc fecha o seletor **e** o painel inteiro (C19).
+- **Pop-ups por cima do painel.** O painel do dock usa `z-[1000]`; seletores, calendários e menus abertos por dentro precisam de `z-[1200]` ou ficam atrás dele.
+- **Trava `design-guard` dos erros mecânicos** (`design-mecanico-baseline.json`): `<select>`, `type="color"`, `alert()`, `confirm()` e `transition-[…transform]` com `translate-`/`scale-` na mesma linha. Mesmo regime do limite de paleta: só desce. Atualizar: `UPDATE_DESIGN_BASELINE=1 npx jest lib/__tests__/design-guard`. Arquivos em pastas `__tests__` ficam fora.
 - **Botão `aria-disabled`:** o variant `default` já trata `aria-disabled` (sem movimento, 45% de opacidade); `disabled` continua existindo mas esconde o cursor.
 - **Diálogo:** o v4 centraliza com a propriedade `translate`, não `transform`. Animações do diálogo não podem usar `translate(-50%, -50%)`.
 - **Recharts 2.15 com React 19:** não enxerga `<>…</>` como filho de gráfico (perde séries e o eixo Y). Use arrays com `key`. Ao criar um segundo `YAxis`, dê `yAxisId` explícito a **todas** as séries.
@@ -668,3 +738,85 @@ Descobertas na prática; valem para quem implementar.
 - Toda mudança de design **registra o motivo** aqui, na seção certa, e se algo foi removido, na seção 15.
 - Antes de criar UI nova, passe pelo checklist da seção 1.2.
 - Mudou uma decisão? Não apague a antiga: mova para a seção 15 com o motivo.
+- **Repetiu uma correção?** O documento falhou, não a pessoa: registre a causa na seção 20 e, se for geral, na página "Leia primeiro" **antes** de corrigir a tela (1.3). Se uma regra era vaga, mude a regra.
+- Antes de entregar uma tela, faça a auditoria da 1.3 e diga o resultado.
+
+---
+
+## 19. Receitas de componentes
+
+**Use a receita; não invente.** Cada receita é a anatomia pronta de um padrão que já foi construído e corrigido. Se o que você vai fazer parece com uma delas, comece por ela. Se não couber, registre a **exceção** (1.3) antes de inventar.
+
+### 19.1 Lista de linhas com controle (ex.: Camadas)
+
+- **Anatomia da linha:** `[amostra] [nome + apoio] [seta, se abre] ····· [contagem] [interruptor]`. O **interruptor é sempre a última coluna**; o que só existe em algumas linhas (a seta) vai **junto do nome** e nunca toma o lugar dele. As linhas-filhas recuam **só a amostra e o nome**, com uma linha-guia à esquerda.
+- **Medidas:** linha ≥ 48 px; nome e apoio a 2 px; cada categoria é **um cartão com título** (nada de acordeão aninhado); entre cartões 16 px.
+- **A linha toda liga e desliga** (um `<label>` amarrado ao interruptor). A saída de um erro é um botão e fica **fora** do label.
+- **Estados:** carregando (esqueleto no lugar da contagem), erro (frase + "Tentar de novo" embaixo da linha), vazio (frase com o motivo), desligada (amostra esmaecida, nome em cinza-tinta).
+- **Movimento:** a seta **gira** (um ícone só); os filhos **crescem em altura** (320 ms); a linha que acabou de mudar **pisca em verde claro** (1,9 s). **Hover** na linha toda.
+- **Foge de:** C3, C9, C10.
+
+### 19.2 Painel (cabeçalho, corpo, rodapé)
+
+- **Cabeçalho:** **uma linha**; título (16 px, 600, `nowrap`) à esquerda; **no máximo 2 ações** e o fechar à direita. Num modo especial ganha **cor** (verde claro) e o título faz crossfade; as ações que não servem ao modo **encolhem e somem** (nunca vão para uma segunda linha).
+- **Corpo:** base cinza suave (`muted` a 50%), 16 px de borda, **um cartão branco por assunto, com título**, 16 px entre cartões. Janela toda branca não passa.
+- **Rodapé de ação** (quando há): fixo (`sticky`) no fundo, **24 a 32 px abaixo** do último cartão, com borda em cima e sombra leve; a frase do que a ação afeta em cima dos botões; os botões em duas colunas (Cancelar, Salvar). **Sem margem negativa embaixo.**
+- **Movimento:** abre **de baixo, a partir do botão**, com mola (240 ms), fecha em 150 ms; os cartões entram em ordem de leitura (60 ms entre eles); trocar de visão dentro do painel usa o `ViewSwap` (a que sai some encolhendo, a que entra cresce, a altura acompanha).
+- **Foge de:** C2, C16, C17.
+
+### 19.3 Editor ou formulário (ex.: editar camada)
+
+- **Topo:** a **prévia ao vivo** do que está sendo editado (a amostra da legenda), com o nome ao lado, e uma frase do que ela mostra.
+- **No máximo 3 perguntas por tipo**, **em palavras** ("Fina, Média, Grossa"; "Só contorno, Suave, Cheio"), com o padrão certo já marcado. **Uma cor só**; a tela deriva o resto (o contorno vem da cor). Nada de px, % ou hex. Um valor salvo que não bate com nenhum degrau aparece marcado no mais próximo.
+- **O que quase nunca muda** vai para **"Mais opções"**, recolhido (a seta gira, a altura cresce).
+- **Só o que é editável aparece.** Se o que se edita são as partes de algo (os ícones das áreas de Ações), a tela abre as partes, não o todo.
+- **Rodapé:** "Vale para todos que veem esta região." sempre junto do Salvar; o botão bloqueado **diz por quê**; Salvando… no próprio botão; em erro, **o que foi editado continua na tela** e o motivo vem em frase.
+- **Depois de salvar:** aviso com desfazer (19.4); a linha editada pisca.
+- **Foge de:** C11, C13.
+
+### 19.4 Aviso com desfazer
+
+- **Onde:** **no alto e ao centro**. **Anatomia:** `[anel com contagem] [título + frase] [Desfazer] [X]`, **todos centralizados na vertical**.
+- **Tempo:** **10 s**, com o número dentro de um anel que se esvazia; **para** com o mouse ou o foco no aviso. O leitor de tela ouve a frase **uma vez**.
+- **Movimento:** entra **de cima com mola** (400 ms) e sai deslizando para cima (190 ms). Ao desfazer, o **mesmo cartão** troca o texto ("Desfeito"); não sai e volta.
+- **Texto (voz "colega de campo"):** título curto no "nós" ("Salvamos “Propriedades”"), uma frase de até 20 palavras. Erro: borda terracota, sem contagem, a saída em frase.
+- **Foge de:** C7, C15.
+
+### 19.5 Troca de modo ou de visão (ex.: Editar)
+
+- **O modo é dito em cor e em frase, e continua dito depois de salvar, cancelar ou voltar** (regra 7): título do cabeçalho muda ("Editar camadas") com lápis e fundo verde claro; o corpo abre com um aviso do modo e do **próximo passo**; o botão de sair vira **cheio em verde** ("Concluir").
+- **O "voltar" diz para onde leva** ("Editar camadas"), não "Camadas" (que sugeriria que a edição acabou).
+- **A troca se vê:** o título faz crossfade e o lápis cresce; o botão troca rótulo e ícone em crossfade e a cor passa de uma para a outra; o que não serve ao modo encolhe e some; o corpo troca por `ViewSwap`. **Nada troca de uma vez.**
+- **Foge de:** C7, C14, C17.
+
+### 19.6 Botão que abre outro controle (ex.: "Outra cor")
+
+- **Ícone e rótulo à vista, sempre.** Com um valor próprio já escolhido, o "+" vira um **selo** no canto e o rótulo passa a "Mudar". Quem escolheu não pode achar que o valor ficou fixo.
+- **O cartão que abre é nosso** (nunca o do navegador): nasce a partir do botão com mola (260 ms), sai em 150 ms; começa pelo modo **guiado** (matiz e tom) e tem um modo **livre** (quadrado, faixa e código) um segmento ao lado; o valor vale **na hora**; setas movem a escolha; o valor aparece **em palavras** ("Azul escuro"), não em código.
+- **Foge de:** C5, C12.
+
+## 20. Casos reais (o que deu errado e a regra que nasceu)
+
+Cada linha é uma correção que alguém precisou pedir. **Leia como "se eu estou prestes a fazer isto, pare".**
+
+| # | O que se viu | Causa | Regra e onde | Como ficou |
+|---|---|---|---|---|
+| C1 | Controles nos quatro cantos, uns redondos, outros quadrados, uns com borda e outros sem | Cada controle foi desenhado sozinho, sem plano | 3, 4 · 13.1 | Dock único embaixo e câmera num cartão, com um estilo só |
+| C2 | Painel escuro e janelas **todas brancas**: "dá até uma tontura" | Superfície única, sem base nem cartão | 4 · 6.2 | Base cinza suave, cartão branco com título |
+| C3 | Lista com acordeões aninhados, textos colados: "sufocado, sem espaço, sem hierarquia" | Três níveis de dobra e nenhuma régua de espaço | 4, 5 · 6.3 | Cartão por categoria, linha de 48 px, apoio a 2 px |
+| C4 | Filtro "Propriedade" abaixo da dobra; "Tamanho das propriedades" obrigava a **ler** para entender que era filtro | Período ocupava o painel; rótulo + linha de apoio + dois campos soltos | 1, 5 · 13.1 | Período compacto; frase "Área de [ ] a [ ] ha" |
+| C5 | `<select>` nativo que abria com outro estilo; datas em duas linhas empilhadas, "abruptas" | Componente do navegador; sem pensar no conjunto | 11, 9 · 6.2 | Select e calendário do projeto, datas lado a lado |
+| C6 | Hover e clique dos botões **estalavam**, sem suavidade | No Tailwind v4 `translate` e `scale` não entram em `transition-[…transform]` | 9 · 16 | Lista de transição corrigida; trava no `design-guard` |
+| C7 | Aviso que "brota"; ao trocar de modo, título, botões e corpo mudavam **de uma vez** | Troca sem caminho | 9 · 8.4 regra 5 | Crossfade, encolher e crescer, `ViewSwap` |
+| C8 | Pontos **brancos em fundo branco** na legenda (Nascentes, Estradas) | A legenda pintava o contorno como miolo; cor clara sem fio escuro | 12 · 6.2 regra 5 | Legenda lê o mesmo modelo do mapa, com fio por fora |
+| C9 | A seta de expandir **empurrava o interruptor**: "onde deveria ter um toggle tem uma seta" | A seta era irmã do interruptor | 3 · 6.2 regra 8 | Interruptor sempre na última coluna; seta junto do nome |
+| C10 | **Lápis em cada linha** da lista: feio, apertado, ícone sem texto | Entrada de edição repetida por linha | 2, 8 · 13.3 | Um botão "Editar" com rótulo no cabeçalho |
+| C11 | Editor em **px, %, hex** e com duas cores: "faz o usuário pensar" | Expôs a mecânica em vez de decidir | 1 · 13.3 | Uma cor, degraus em palavras, o resto derivado |
+| C12 | O quadrado de cor escolhida parecia **fixo**: não se via que dava para escolher outra | O "+" sumia quando havia uma cor própria | 8 · 6.2 regra 9 | "+" como selo e rótulo "Mudar" |
+| C13 | Clicar em "Ações" abria a edição de **Ações**, que não é o que se edita | Tratou o todo como editável | 1, 2 · 13.3 | A linha abre as áreas; cada área edita o seu ícone |
+| C14 | Depois de salvar, a lista de escolha **parecia a lista normal**: "não parece que ainda está editando" | O modo não era dito depois de voltar | 7 · 19.5 | Cabeçalho, aviso e botão dizem o modo o tempo todo |
+| C15 | Botão "Desfazer" **colado no topo** do aviso | Alinhamento no topo com texto de duas linhas | 10 · 19.4 | Tudo centralizado na vertical |
+| C16 | O espaço pedido acima da barra de salvar **"não foi feito"** | Margem vertical colapsou com a do vizinho | 5 · 6.3, 16 | 32 px, maior que o vizinho |
+| C17 | Cabeçalho "pesado": o título **quebrava** ao lado de "Concluir" e "Atualizar" | Ações demais no cabeçalho, título sem `nowrap` | 6 · 6.3 | Atualizar sai do cabeçalho no modo; título em uma linha |
+| C18 | Os botões do dock **não respondiam** ao mouse | Só o botão base tinha hover | 9 · 8.1 | Botão sobe 1 px; cada ícone se move do seu jeito |
+| C19 | O Esc de um seletor fechava **o painel inteiro** | O ouvinte global ignorava que o Esc já foi tratado | técnica · 16 | Checa `defaultPrevented` |

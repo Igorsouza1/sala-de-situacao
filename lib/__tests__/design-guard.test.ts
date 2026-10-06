@@ -7,6 +7,10 @@
  *    Cada arquivo tem um LIMITE em design-baseline.json, que só pode DESCER: aumentar falha, e diminuir também falha até o limite ser
  *    atualizado (assim o progresso fica registrado e ninguém volta atrás).
  *    Atualizar:  UPDATE_DESIGN_BASELINE=1 npx jest lib/__tests__/design-guard
+ * 3) Erros MECÂNICOS que já custaram correções repetidas (DESIGN.md, "Leia primeiro" e casos reais): componente do navegador no lugar do
+ *    do projeto (`<select>`, `type="color"`, `alert()`/`confirm()`) e a armadilha do Tailwind v4 (`transition-[…transform]` com
+ *    `translate-`/`scale-` na mesma linha). Mesmo regime: limite por arquivo em design-mecanico-baseline.json, que só desce.
+ *    O resto da auditoria (hierarquia, respiro, "faz pensar") não se mede por regex: fica na auditoria do DESIGN.md, seção 1.3.
  */
 import fs from "fs";
 import path from "path";
@@ -85,6 +89,68 @@ describe("design: migração tela a tela (limite que só desce)", () => {
     for (const [f, b] of Object.entries(base)) {
       const n = atual[f] ?? { paleta: 0, hex: 0 };
       if (n.paleta < b.paleta || n.hex < b.hex) desceu.push(`${f}: paleta ${b.paleta} → ${n.paleta}, hex ${b.hex} → ${n.hex}`);
+    }
+    expect(desceu).toEqual([]); // rode: UPDATE_DESIGN_BASELINE=1 npx jest lib/__tests__/design-guard
+  });
+});
+
+// ── 3) erros mecânicos ─────────────────────────────────────────────────────────────────────────────────────────────────────────
+type Mecanico = { selectNativo: number; corNativa: number; alertConfirm: number; transicaoV4: number };
+const MECANICO_FILE = path.join(__dirname, "design-mecanico-baseline.json");
+const SELECT_NATIVO = /<select[\s>]/g;
+const COR_NATIVA = /type=["']color["']/g;
+const ALERT_CONFIRM = /(?<![A-Za-z0-9_$.])(?:window\.)?(?:alert|confirm)\s*\(/g;
+
+// No Tailwind v4, `translate-*` e `scale-*` usam as propriedades CSS `translate` e `scale`; uma lista `transition-[…,transform]` não as cobre
+// e o movimento estala em vez de deslizar. Heurística por linha: lista com `transform` e sem `translate`/`scale`, na mesma linha de um utilitário translate-/scale-.
+function transicaoV4(text: string): number {
+  let n = 0;
+  for (const line of text.split("\n")) {
+    const m = line.match(/transition-\[([^\]]*)\]/);
+    if (!m || !/transform/.test(m[1]) || /(?:translate|scale)/.test(m[1])) continue;
+    if (/(?<![\w-])(?:[a-z-]+:)*-?(?:translate|scale)-/.test(line.replace(m[0], ""))) n++;
+  }
+  return n;
+}
+
+describe("design: erros mecânicos (limite que só desce)", () => {
+  const atual: Record<string, Mecanico> = {};
+  for (const f of files) {
+    const t = read(f);
+    const n: Mecanico = { selectNativo: count(t, SELECT_NATIVO), corNativa: count(t, COR_NATIVA), alertConfirm: count(t, ALERT_CONFIRM), transicaoV4: transicaoV4(t) };
+    if (n.selectNativo || n.corNativa || n.alertConfirm || n.transicaoV4) atual[rel(f)] = n;
+  }
+  const ZERO: Mecanico = { selectNativo: 0, corNativa: 0, alertConfirm: 0, transicaoV4: 0 };
+  const DICA: Record<keyof Mecanico, string> = {
+    selectNativo: "<select> nativo abre com o visual do sistema: use o Select do projeto (components/ui/select)",
+    corNativa: 'type="color" abre com o visual do sistema e sem movimento: use o OtherColor (components/map/ColorPicker)',
+    alertConfirm: "alert()/confirm() travam a página e não seguem o design: use o aviso com desfazer ou o Dialog",
+    transicaoV4: "transition-[…transform] não cobre translate-/scale- no Tailwind v4: use transition-transform ou liste translate e scale",
+  };
+
+  if (process.env.UPDATE_DESIGN_BASELINE) {
+    it("atualiza o limite dos erros mecânicos", () => {
+      fs.writeFileSync(MECANICO_FILE, JSON.stringify(Object.fromEntries(Object.entries(atual).sort(([a], [b]) => a.localeCompare(b))), null, 2) + "\n");
+    });
+    return;
+  }
+
+  const base: Record<string, Mecanico> = JSON.parse(fs.readFileSync(MECANICO_FILE, "utf8"));
+
+  it("nenhum arquivo ganhou um erro mecânico", () => {
+    const subiu: string[] = [];
+    for (const [f, n] of Object.entries(atual)) {
+      const b = base[f] ?? ZERO;
+      for (const k of Object.keys(ZERO) as (keyof Mecanico)[]) if (n[k] > b[k]) subiu.push(`${f}: ${k} ${b[k]} → ${n[k]} (${DICA[k]})`);
+    }
+    expect(subiu).toEqual([]);
+  });
+
+  it("o limite dos erros mecânicos está atualizado (quem corrigiu, registra)", () => {
+    const desceu: string[] = [];
+    for (const [f, b] of Object.entries(base)) {
+      const n = atual[f] ?? ZERO;
+      for (const k of Object.keys(ZERO) as (keyof Mecanico)[]) if (n[k] < b[k]) desceu.push(`${f}: ${k} ${b[k]} → ${n[k]}`);
     }
     expect(desceu).toEqual([]); // rode: UPDATE_DESIGN_BASELINE=1 npx jest lib/__tests__/design-guard
   });

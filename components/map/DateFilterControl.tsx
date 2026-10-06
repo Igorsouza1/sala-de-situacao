@@ -13,7 +13,7 @@ import { DATE_PRESETS, yearRange, type DateRange } from "./helpers/filters"
 
 // Período aplica na hora (DESIGN.md 2.2: cada etapa é um custo) e o escolhido fica marcado, para a pessoa ver o que
 // está valendo sem comparar datas de cabeça. Os atalhos cobrem o caso comum; anos antigos e datas livres vêm um passo
-// adiante. O seletor de ano e os calendários são os componentes do projeto (e não o `<select>` nativo), para abrir com
+// adiante. O seletor de ano e os calendários são os componentes do projeto (e não o seletor nativo do navegador), para abrir com
 // o mesmo estilo e o mesmo movimento do resto (8.1). Ficam acima do painel do dock (z-[1200]), que usa z-[1000].
 
 const selectedClass = "border-primary bg-secondary text-secondary-foreground"

@@ -36,10 +36,6 @@ export function colorName(hex: string): string {
   return readPalette().find((p) => p.hex === hex.toLowerCase())?.name ?? describeColor(hex)
 }
 
-// <input type="color"> só aceita #rrggbb
-export const toSixDigits = (hex: string) =>
-  /^#[0-9a-f]{3}$/i.test(hex) ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}` : hex.toLowerCase()
-
 // Ícones para camadas de ponto: poucos, de significado claro (DESIGN.md 11: ícone com rótulo quando não for óbvio)
 export const LAYER_ICONS: { name: string; label: string }[] = [
   { name: 'map-pin', label: 'Local' },
