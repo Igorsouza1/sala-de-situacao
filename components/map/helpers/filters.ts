@@ -29,11 +29,12 @@ export function filterSummary(start: Date | null, end: Date | null, area: AreaFi
 export type DateRange = [Date, Date]
 export type PresetId = 'today' | 'week' | 'month' | 'year'
 
-export const DATE_PRESETS: { id: PresetId; label: string; range: (now: Date) => DateRange }[] = [
-  { id: 'today', label: 'Hoje', range: (n) => [startOfDay(n), endOfDay(n)] },
-  { id: 'week', label: 'Esta semana', range: (n) => [startOfWeek(n, { locale: ptBR }), endOfWeek(n, { locale: ptBR })] },
-  { id: 'month', label: 'Este mês', range: (n) => [startOfMonth(n), endOfMonth(n)] },
-  { id: 'year', label: 'Este ano', range: (n) => [startOfYear(n), endOfYear(n)] },
+// `short` é o que cabe numa linha só dos quatro atalhos; `label` (completo) vai no aria-label e no tooltip.
+export const DATE_PRESETS: { id: PresetId; label: string; short: string; range: (now: Date) => DateRange }[] = [
+  { id: 'today', label: 'Hoje', short: 'Hoje', range: (n) => [startOfDay(n), endOfDay(n)] },
+  { id: 'week', label: 'Esta semana', short: 'Semana', range: (n) => [startOfWeek(n, { locale: ptBR }), endOfWeek(n, { locale: ptBR })] },
+  { id: 'month', label: 'Este mês', short: 'Mês', range: (n) => [startOfMonth(n), endOfMonth(n)] },
+  { id: 'year', label: 'Este ano', short: 'Ano', range: (n) => [startOfYear(n), endOfYear(n)] },
 ]
 
 export const yearRange = (year: number): DateRange => [new Date(year, 0, 1), new Date(year, 11, 31, 23, 59, 59, 999)]

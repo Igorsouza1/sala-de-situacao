@@ -52,13 +52,13 @@ export function DateFilterControl({ startDate, endDate, onChange }: DateFilterCo
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap gap-2">
+      <div className="grid grid-cols-4 gap-2">
         {DATE_PRESETS.map((p) => {
           const range = p.range(now)
           const selected = matches(range)
           return (
-            <Button key={p.id} size="sm" variant="outline" aria-pressed={selected} className={cn("h-9 px-3 text-xs", selected && selectedClass)} onClick={() => choose(range)}>
-              {p.label}
+            <Button key={p.id} size="sm" variant="outline" aria-pressed={selected} aria-label={p.label} title={p.label} className={cn("h-9 min-w-0 px-1 text-xs", selected && selectedClass)} onClick={() => choose(range)}>
+              {p.short}
             </Button>
           )
         })}
