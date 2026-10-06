@@ -1,17 +1,18 @@
 import { isHexColor } from '@/lib/layer-style'
 
-// Paleta do editor de camadas (DESIGN.md 13.3): as cores de dados e de marca do projeto, lidas dos tokens (sem hex no código)
+// Paleta do editor de camadas (DESIGN.md 13.3): as cores de dados e de marca do projeto, lidas dos tokens (sem hex no código).
+// Os nomes dizem a cor, não o significado: "Crítico" numa camada de estradas diria ao usuário que há algo crítico (4: cor quente é só para o crítico).
 // mais "Outra cor…" para o caso raro. O catálogo guarda hex (o MapLibre não lê var()), então os tokens são lidos já resolvidos.
 // Cores livres foram o que deixou o mapa com tons fora da paleta; a paleta guia sem trancar.
 const TOKENS: { name: string; token: string }[] = [
-  { name: 'Crítico', token: '--color-crit' },
-  { name: 'Atenção', token: '--color-warn' },
-  { name: 'Normal', token: '--color-ok' },
-  { name: 'Água', token: '--color-water' },
-  { name: 'Mineral', token: '--color-mineral' },
-  { name: 'Floresta', token: '--color-primary' },
+  { name: 'Terracota', token: '--color-crit' },
+  { name: 'Âmbar', token: '--color-warn' },
+  { name: 'Verde', token: '--color-ok' },
+  { name: 'Azul', token: '--color-water' },
+  { name: 'Verde mineral', token: '--color-mineral' },
+  { name: 'Verde floresta', token: '--color-primary' },
   { name: 'Grafite', token: '--color-foreground' },
-  { name: 'Pedra', token: '--color-stone' },
+  { name: 'Cinza', token: '--color-stone' },
   { name: 'Branco', token: '--color-background' },
 ]
 
@@ -27,6 +28,11 @@ export function readPalette(): PaletteColor[] {
     const hex = style.getPropertyValue(token).trim().toLowerCase()
     return isHexColor(hex) ? [{ name, hex }] : []
   })
+}
+
+// O nome da cor, para mostrar no lugar do código; fora da paleta é "Outra cor"
+export function colorName(hex: string): string {
+  return readPalette().find((p) => p.hex === hex.toLowerCase())?.name ?? 'Outra cor'
 }
 
 // <input type="color"> só aceita #rrggbb

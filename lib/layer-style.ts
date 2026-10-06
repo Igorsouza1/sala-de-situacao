@@ -201,3 +201,57 @@ export function editableFields(shape: LayerShape): EditableFields {
 
 // A cor deve ser #rgb ou #rrggbb: é o que o mapa, a legenda e o Leaflet entendem.
 export const isHexColor = (v: unknown): v is string => typeof v === 'string' && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(v)
+
+// ── O editor fala em palavras, não em números (DESIGN.md 2.2 e 13.3) ─────────────────────────────────────────────
+// A tela decide os números: a pessoa escolhe "Fina", "Suave", "Pequeno", e o editor traduz. Um valor que já está no catálogo e
+// não bate com nenhum degrau (ex.: espessura 1,5) aparece marcado no degrau mais próximo e só muda se a pessoa escolher outro.
+export interface Level {
+  label: string
+  value: number
+}
+
+export const FILL_LEVELS: Level[] = [
+  { label: 'Só contorno', value: 0 },
+  { label: 'Suave', value: 0.25 },
+  { label: 'Cheio', value: 0.6 },
+]
+export const LINE_WEIGHTS: Level[] = [
+  { label: 'Fina', value: 1 },
+  { label: 'Média', value: 2 },
+  { label: 'Grossa', value: 4 },
+]
+export const POINT_SIZES: Level[] = [
+  { label: 'Pequeno', value: 4 },
+  { label: 'Médio', value: 7 },
+  { label: 'Grande', value: 11 },
+]
+
+export const nearestLevel = (levels: Level[], value: number): Level =>
+  levels.reduce((best, l) => (Math.abs(l.value - value) < Math.abs(best.value - value) ? l : best), levels[0])
+
+// O contorno acompanha a cor escolhida, um tom mais escuro: a pessoa escolhe UMA cor e a tela cuida do resto.
+export function deriveOutline(hex: string): string {
+  const h = hex.length === 4 ? `#${hex[1]}${hex[1]}${hex[2]}${hex[2]}${hex[3]}${hex[3]}` : hex
+  const channel = (i: number) => Math.round(parseInt(h.slice(i, i + 2), 16) * 0.65).toString(16).padStart(2, '0')
+  return `#${channel(1)}${channel(3)}${channel(5)}`
+}
+
+/** A cor que a pessoa vê e escolhe: o miolo do polígono e do ponto, a linha, o ícone. */
+export function mainColor(style: LayerStyle): string {
+  return style.shape === 'fill' || style.shape === 'circle' ? style.fillColor : style.color
+}
+
+export function withMainColor(style: LayerStyle, color: string): LayerStyle {
+  switch (style.shape) {
+    case 'fill':
+      return { ...style, fillColor: color, color: deriveOutline(color) }
+    case 'circle':
+      // a borda do ponto fica como está (a das nascentes é branca), a não ser que ela só seguisse o miolo
+      return { ...style, fillColor: color, color: style.color === style.fillColor ? color : style.color }
+    case 'line':
+    case 'icon':
+      return { ...style, color, fillColor: color }
+    default:
+      return style
+  }
+}

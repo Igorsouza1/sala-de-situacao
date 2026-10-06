@@ -24,10 +24,9 @@ import {
   type MapLibreLayerType,
 } from './helpers/maplibre-layer'
 import type { LayerManagerOption, LayerStatus } from './LayerManager'
-import { LayersPanel, RefreshButton } from './LayersPanel'
+import { EditModeButton, LayersPanel, RefreshButton } from './LayersPanel'
+import { Notice, type NoticeData } from './Notice'
 import { LayerEditor } from './LayerEditor'
-import { ToastAction } from '@/components/ui/toast'
-import { toast } from '@/hooks/use-toast'
 import { applyEdit, readEdit, type LayerEdit } from '@/lib/layer-style'
 import { FiltersPanel } from './FiltersPanel'
 import { activeFilterCount, datesFromIntent, intentFromDates } from './helpers/filters'
@@ -163,6 +162,21 @@ export default function MapLibreMap({
 }: MapLibreMapProps) {
   // Preferências da pessoa para esta região (DESIGN.md 13.2): lidas uma vez ao abrir; gravadas a cada ação dela, nunca por conta própria
   const [saved] = useState(() => readRegionPrefs(regiaoId))
+
+  // ── Edição de camada (DESIGN.md 13.3): o estado fica aqui em cima porque o mapa e a busca de dados também o leem ──
+  // O rascunho vale só na tela até a pessoa salvar: o mapa e a lista desenham a camada com ele (pré-visualização ao vivo).
+  const [draft, setDraft] = useState<{ slug: string; initial: LayerEdit; edit: LayerEdit } | null>(null)
+  const [savingLayer, setSavingLayer] = useState(false)
+  const [saveLayerError, setSaveLayerError] = useState<string | null>(null)
+  const [picking, setPicking] = useState(false) // "Editar": a lista vira "escolha a camada"
+  const [notice, setNotice] = useState<NoticeData | null>(null)
+  const [flashSlug, setFlashSlug] = useState<string | null>(null) // a linha da camada recém-editada pisca em verde claro (8.4)
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const flash = useCallback((slug: string) => {
+    setFlashSlug(slug)
+    if (flashTimer.current) clearTimeout(flashTimer.current)
+    flashTimer.current = setTimeout(() => setFlashSlug(null), 2000)
+  }, [])
 
   // ── Core layer state (initialized from module cache for instant return nav) ──
   const [layers, setLayers] = useState<LayerResponseDTO[]>(() => _cache.layers)
@@ -526,6 +540,7 @@ export default function MapLibreMap({
       const slug = sv.includes('__') ? sv.split('__')[0] : sv
       parentSlugs.add(slug)
     })
+    if (draft) parentSlugs.add(draft.slug)
     parentSlugs.forEach((slug) => {
       if (!layerData[slug] && !fetchingRef.current.has(slug)) {
         fetchLayerData(slug)
@@ -533,7 +548,7 @@ export default function MapLibreMap({
     })
   // layerData intentionally in deps: after cache clear, re-fetches visible slugs
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleLayers, layerData, fetchLayerData])
+  }, [visibleLayers, layerData, fetchLayerData, draft])
 
   // ── Fauna data fetch ─────────────────────────────────────────────────────
   useEffect(() => {
@@ -670,11 +685,6 @@ export default function MapLibreMap({
   )
 
   // ── Edição de camada (DESIGN.md 13.3) ────────────────────────────────────
-  // O rascunho vale só na tela até a pessoa salvar: o mapa e a lista desenham a camada com ele (pré-visualização ao vivo).
-  const [draft, setDraft] = useState<{ slug: string; initial: LayerEdit; edit: LayerEdit } | null>(null)
-  const [savingLayer, setSavingLayer] = useState(false)
-  const [saveLayerError, setSaveLayerError] = useState<string | null>(null)
-
   const renderLayers = useMemo(
     () =>
       draft
@@ -719,26 +729,26 @@ export default function MapLibreMap({
       patchLayer(saved.slug, saved.name, saved.visualConfig)
       const previous = draft.initial
       setDraft(null)
-      toast({
-        title: 'Camada salva',
-        description: `“${saved.name}” mudou para todos que veem esta região. Quem está com o mapa aberto vê ao atualizar.`,
-        duration: 8000,
-        action: (
-          <ToastAction
-            altText={`Desfazer a edição de ${saved.name}`}
-            onClick={async () => {
-              try {
-                const back = await putLayer(saved.slug, previous)
-                patchLayer(back.slug, back.name, back.visualConfig)
-                toast({ title: 'Edição desfeita', description: `“${back.name}” voltou a ser como era.` })
-              } catch {
-                toast({ title: 'Não conseguimos desfazer', description: 'Abra a camada e edite de novo.', variant: 'destructive' })
-              }
-            }}
-          >
-            Desfazer
-          </ToastAction>
-        ),
+      flash(saved.slug)
+      // Aviso no alto, com 10 s para desfazer (o modelo do laboratório). Desfazer também avisa o que aconteceu, no mesmo cartão.
+      setNotice({
+        id: Date.now(),
+        tone: 'success',
+        title: `Salvamos “${saved.name}”`,
+        body: 'Quem atualizar o mapa já vê a mudança.',
+        undo: {
+          seconds: 10,
+          onUndo: async () => {
+            try {
+              const back = await putLayer(saved.slug, previous)
+              patchLayer(back.slug, back.name, back.visualConfig)
+              flash(back.slug)
+              setNotice({ id: Date.now(), tone: 'success', title: 'Desfeito', body: `“${back.name}” voltou a ser como era.` })
+            } catch {
+              setNotice({ id: Date.now(), tone: 'error', title: 'Não conseguimos desfazer', body: 'Abra a camada e edite de novo.' })
+            }
+          },
+        },
       })
     } catch (e) {
       // o que a pessoa editou fica na tela (o rascunho não é descartado) e o motivo vem em frase
@@ -746,7 +756,7 @@ export default function MapLibreMap({
     } finally {
       setSavingLayer(false)
     }
-  }, [draft, putLayer, patchLayer])
+  }, [draft, putLayer, patchLayer, flash])
 
   // ── Processed layers (ordering-stable: all visible layers, data or empty) ──
   // Iterates `layers` in catalog order — Source/Layer components are registered in
@@ -770,6 +780,8 @@ export default function MapLibreMap({
         isVisible = visibleLayers.includes(layer.slug)
       }
 
+      // em edição, a camada aparece mesmo desligada: a pré-visualização é para ver a mudança (o editor avisa isso)
+      if (draft?.slug === layer.slug) isVisible = true
       if (!isVisible) return null
 
       // Use loaded data or empty collection — either way Source is registered in order
@@ -785,7 +797,7 @@ export default function MapLibreMap({
 
       return { layer, displayData, isIcon: isIconLayer(layer.visualConfig) }
     }).filter((item): item is NonNullable<typeof item> => item !== null)
-  }, [renderLayers, visibleLayers, layerData, EMPTY_FC])
+  }, [renderLayers, visibleLayers, layerData, EMPTY_FC, draft?.slug])
 
   // ── interactiveLayerIds for click/hover ───────────────────────────────────
   const interactiveLayerIds = useMemo(
@@ -1558,14 +1570,21 @@ export default function MapLibreMap({
           icon={LucideIcons.Layers}
           label="Camadas"
           alert={basemap !== shownBasemap || !!draft}
-          action={<RefreshButton refreshing={refreshing} onRefresh={handleReload} />}
+          action={
+            <>
+              {/* "Editar" só para quem pode, e some enquanto há um editor aberto (lá dentro já há Salvar e Cancelar) */}
+              {isAdmin && !draft && <EditModeButton active={picking} onToggle={() => setPicking((v) => !v)} />}
+              <RefreshButton refreshing={refreshing} onRefresh={handleReload} />
+            </>
+          }
         >
           <LayersPanel
             basemap={basemap}
             shownBasemap={shownBasemap}
             onBasemapChange={handleBasemapChange}
             onReset={handleResetPrefs}
-            onEdit={isAdmin ? handleEditLayer : undefined}
+            onPick={isAdmin && picking ? handleEditLayer : undefined}
+            flashSlug={flashSlug}
             editing={
               draft && (
                 <LayerEditor
@@ -1578,6 +1597,7 @@ export default function MapLibreMap({
                   saving={savingLayer}
                   error={saveLayerError}
                   iconLocked={!!(layers.find((l) => l.slug === draft.slug)?.visualConfig as any)?.rules?.length}
+                  hiddenOnMap={!isLayerOn(draft.slug, visibleLayers)}
                 />
               )
             }
@@ -1622,6 +1642,11 @@ export default function MapLibreMap({
         <DockDivider />
         <MaplibreSnapshotControl activeLayers={visibleLayers} mapRef={mapRef} />
       </MapDock>
+
+      {/* Aviso (salvou, desfazer): no alto e ao centro, com contador (DESIGN.md 12) */}
+      <div className="pointer-events-none absolute inset-x-3 top-4 z-[2000] flex justify-center">
+        <Notice notice={notice} onClose={() => setNotice(null)} />
+      </div>
 
       {/* Modal */}
       <Modal

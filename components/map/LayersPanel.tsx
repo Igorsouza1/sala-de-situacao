@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, type ReactNode } from 'react'
-import { Check, RefreshCw, RotateCcw } from 'lucide-react'
+import { Check, Pencil, RefreshCw, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BASEMAP_KEYS, BASEMAP_LABELS, type BasemapKey } from './helpers/basemaps'
 import { controlItem } from './helpers/control-style'
@@ -41,6 +41,22 @@ export function RefreshButton({ refreshing, onRefresh }: { refreshing: boolean; 
     >
       {done ? <Check className="h-3.5 w-3.5 text-ok" aria-hidden /> : <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} aria-hidden />}
       <span aria-live="polite">{refreshing ? 'Atualizando…' : done ? 'Atualizado' : 'Atualizar'}</span>
+    </button>
+  )
+}
+
+// Entrada da edição de camadas (13.3): UM botão com rótulo no cabeçalho, só para quem pode editar. A lista não ganha um ícone
+// em cada linha (apertava e pedia para decifrar um lápis sem texto). Ligado, a lista vira "escolha a camada".
+export function EditModeButton({ active, onToggle }: { active: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      aria-pressed={active}
+      onClick={onToggle}
+      className={cn('flex h-8 items-center gap-1.5 px-2.5 text-xs font-medium', controlItem(active))}
+    >
+      {active ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Pencil className="h-3.5 w-3.5" aria-hidden />}
+      <span>{active ? 'Concluir' : 'Editar'}</span>
     </button>
   )
 }
@@ -89,6 +105,15 @@ export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, e
   const unavailable = basemap !== shownBasemap
   // o editor entra pela direita e a lista volta pela esquerda: a pessoa vê que foi para dentro e que voltou
   if (editing) return <div key="editor" className="animate-in fade-in-0 slide-in-from-right-4 duration-200">{editing}</div>
+  // escolher a camada: só a lista, em botões, com a instrução em cima (a tela diz o que fazer, a pessoa não adivinha)
+  if (layerProps.onPick) {
+    return (
+      <div key="pick" className="animate-in fade-in-0 slide-in-from-right-4 space-y-4 duration-200">
+        <p className="px-1 text-sm">Escolha a camada que você quer editar.</p>
+        <LayerManager {...layerProps} />
+      </div>
+    )
+  }
   return (
     <div key="list" className="panel-rise animate-in fade-in-0 slide-in-from-left-4 space-y-4 duration-200">
       <PanelCard title="Mapa base">

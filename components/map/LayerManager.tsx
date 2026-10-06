@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useRef, useState, type ReactNode } from "react"
-import { ChevronDown, Layers, Pencil } from "lucide-react"
+import { ChevronDown, ChevronRight, Layers } from "lucide-react"
 import * as LucideIcons from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Collapse } from "@/components/ui/collapse"
@@ -45,8 +45,10 @@ interface LayerManagerProps {
   counts?: Record<string, number>
   /** camadas que um filtro está mexendo, e qual */
   filterNotes?: Record<string, FilterNote>
-  /** quem pode editar camadas passa isto: aparece um lápis em cada linha editável (13.3) */
-  onEdit?: (slug: string) => void
+  /** modo "escolher a camada para editar" (13.3): cada linha vira um botão que abre o editor. Sem lápis em cada linha. */
+  onPick?: (slug: string) => void
+  /** a camada acabou de ser editada: a linha pisca em verde claro (8.4) */
+  flashSlug?: string | null
 }
 
 const toPascalCase = (str: string) =>
@@ -63,7 +65,7 @@ const CATEGORY_ORDER = ['Operacional', 'Monitoramento', 'Base Territorial', 'Inf
 // Amostra fiel ao mapa: preenchimento, contorno e transparência da camada. Um fio escuro por fora garante que ela apareça
 // mesmo quando a cor da camada é clara (a linha das estradas é creme, o contorno das nascentes é branco): sem ele, a legenda
 // some no cartão branco e a pessoa precisa adivinhar o que a cor significa. Desligada, a amostra fica esmaecida.
-function Legend({ option, checked }: { option: LayerManagerOption; checked: boolean }) {
+export function Legend({ option, checked }: { option: LayerManagerOption; checked: boolean }) {
   const Icon = getLayerIcon(option.icon)
   const type = option.legendType || 'polygon'
   const stroke = option.color
@@ -106,19 +108,19 @@ interface RowProps {
   /** botão de expandir, quando a camada tem grupos */
   expander?: ReactNode
   sub?: boolean
-  onEdit?: () => void
+  flashed?: boolean
 }
 
 // A linha inteira é um <label>: clicar em qualquer ponto aciona o interruptor (alvo de 48 px, bom para toque).
 // A saída do erro é um botão e fica fora do <label>, senão o clique nela ligaria ou desligaria a camada.
-function LayerRow({ option, checked, onChange, count, status, note, onRetry, expander, sub, onEdit }: RowProps) {
+function LayerRow({ option, checked, onChange, count, status, note, onRetry, expander, sub, flashed }: RowProps) {
   const showCount = !sub && checked && status !== 'loading' && status !== 'error' && count !== undefined
   const showNote = checked && !!note && status !== 'error'
   // a frase fica guardada: ao sumir, a altura encolhe com o texto ainda lá, em vez de o texto sumir e a linha pular
   const lastNote = useRef('')
   if (showNote) lastNote.current = filterLine(note!, count)
   return (
-    <div className={cn(sub && 'ml-6 border-l border-border pl-2')}>
+    <div className={cn(sub && 'ml-6 border-l border-border pl-2', flashed && 'animate-found rounded-md')}>
       <div className="flex items-center">
         <label className="flex min-h-12 flex-1 cursor-pointer items-center gap-3 rounded-md px-2.5 py-2 transition-colors duration-200 hover:bg-muted">
           <Legend option={option} checked={checked} />
@@ -137,17 +139,6 @@ function LayerRow({ option, checked, onChange, count, status, note, onRetry, exp
           {showCount && <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">{count}</span>}
           <Switch checked={checked} onCheckedChange={onChange} aria-label={option.label} />
         </label>
-        {onEdit && (
-          <button
-            type="button"
-            onClick={onEdit}
-            aria-label={`Editar ${option.label}`}
-            title="Editar a camada"
-            className="flex h-12 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-200 hover:bg-muted hover:text-foreground focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30"
-          >
-            <Pencil className="h-3.5 w-3.5" aria-hidden />
-          </button>
-        )}
         {expander}
       </div>
       {checked && status === 'error' && (
@@ -162,7 +153,7 @@ function LayerRow({ option, checked, onChange, count, status, note, onRetry, exp
   )
 }
 
-export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, onGroupToggle, status, onRetry, loading, counts, filterNotes, onEdit }: LayerManagerProps) {
+export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, onGroupToggle, status, onRetry, loading, counts, filterNotes, onPick, flashSlug }: LayerManagerProps) {
   const [expanded, setExpanded] = useState<string[]>([])
   const toggleExpanded = (id: string) => setExpanded((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]))
 
@@ -195,6 +186,40 @@ export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, 
 
   const isOn = (slug: string) => activeLayers.includes(slug)
 
+  // Modo "escolher a camada para editar": uma lista limpa, em que cada linha é um botão com rótulo e seta. Sem interruptor, sem
+  // contagem e sem lápis em cada linha (13.3): a intenção de editar é uma só, no cabeçalho do painel, e a lista não fica apertada.
+  if (onPick) {
+    return (
+      <div className="space-y-4">
+        {sections.map((section, i) => {
+          const items = section.items.filter((o) => o.editable !== false)
+          if (items.length === 0) return null
+          return (
+            <section key={section.name} aria-labelledby={`pick-${i}`} className="rounded-lg border border-border bg-card p-2">
+              <h4 id={`pick-${i}`} className="px-2.5 pb-1 pt-2 text-sm font-semibold">{section.name}</h4>
+              {items.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => onPick(option.slug)}
+                  className={cn(
+                    'flex min-h-12 w-full items-center gap-3 rounded-md px-2.5 py-2 text-left transition-colors duration-200 hover:bg-muted focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30',
+                    flashSlug === option.slug && 'animate-found',
+                  )}
+                >
+                  <Legend option={option} checked />
+                  <span className="min-w-0 flex-1 truncate text-sm">{option.label}</span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                </button>
+              ))}
+            </section>
+          )
+        })}
+      </div>
+    )
+  }
+
+
   return (
     <div className="space-y-4">
       {sections.map((section, i) => (
@@ -215,7 +240,7 @@ export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, 
                   status={status?.[option.slug]}
                   note={filterNotes?.[option.slug]}
                   onRetry={onRetry}
-                  onEdit={onEdit && option.editable !== false ? () => onEdit(option.slug) : undefined}
+                  flashed={flashSlug === option.slug}
                 />
               )
             }
@@ -233,7 +258,7 @@ export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, 
                   status={status?.[option.slug]}
                   note={filterNotes?.[option.slug]}
                   onRetry={onRetry}
-                  onEdit={onEdit && option.editable !== false ? () => onEdit(option.slug) : undefined}
+                  flashed={flashSlug === option.slug}
                   expander={
                     <button
                       type="button"

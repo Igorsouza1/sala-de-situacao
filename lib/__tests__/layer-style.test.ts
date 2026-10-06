@@ -1,4 +1,4 @@
-import { applyEdit, applyStyle, editableFields, isHexColor, layerShape, readEdit, readStyle, type LayerEdit } from '../layer-style'
+import { FILL_LEVELS, LINE_WEIGHTS, POINT_SIZES, applyEdit, applyStyle, deriveOutline, editableFields, isHexColor, layerShape, mainColor, nearestLevel, readEdit, readStyle, withMainColor, type LayerEdit } from '../layer-style'
 
 // As camadas abaixo são cópias reduzidas das reais do catálogo (região 1, Bonito).
 const propriedades = {
@@ -178,5 +178,54 @@ describe('isHexColor', () => {
     expect(isHexColor('#12345')).toBe(false)
     expect(isHexColor('url(javascript:alert(1))')).toBe(false)
     expect(isHexColor(undefined)).toBe(false)
+  })
+})
+
+describe('degraus em palavras', () => {
+  it('um valor que não bate com nenhum degrau aparece no mais próximo', () => {
+    expect(nearestLevel(FILL_LEVELS, 0.2).label).toBe('Suave') // Propriedades: 0,2
+    expect(nearestLevel(FILL_LEVELS, 0).label).toBe('Só contorno')
+    expect(nearestLevel(FILL_LEVELS, 1).label).toBe('Cheio')
+    expect(nearestLevel(LINE_WEIGHTS, 1.5).label).toBe('Fina')
+    expect(nearestLevel(LINE_WEIGHTS, 3.5).label).toBe('Grossa')
+    expect(nearestLevel(LINE_WEIGHTS, 3).label).toBe('Média') // no meio do caminho, fica o degrau de baixo
+    expect(nearestLevel(POINT_SIZES, 8).label).toBe('Médio') // Nascentes: 8
+  })
+})
+
+describe('uma cor só: a tela deriva o resto', () => {
+  it('o contorno é a mesma cor, um tom mais escuro', () => {
+    expect(deriveOutline('#c8431a')).toBe('#822c11')
+    expect(deriveOutline('#fff')).toBe('#a6a6a6')
+    expect(deriveOutline('#000000')).toBe('#000000')
+  })
+
+  it('a cor principal é a que a pessoa vê: miolo (polígono, ponto), linha, ícone', () => {
+    expect(mainColor(readStyle(propriedades))).toBe('#32a852')
+    expect(mainColor(readStyle(nascentes))).toBe('#0ea5e9')
+    expect(mainColor(readStyle(estradas))).toBe('#fef3c7')
+    expect(mainColor(readStyle(acoes))).toBe('#64748b')
+  })
+
+  it('polígono: muda o preenchimento e escurece o contorno junto', () => {
+    const s = withMainColor(readStyle(propriedades), '#2a7da6')
+    expect(s.fillColor).toBe('#2a7da6')
+    expect(s.color).toBe(deriveOutline('#2a7da6'))
+  })
+
+  it('ponto com borda própria mantém a borda (a branca das nascentes); sem borda própria, a borda segue o miolo', () => {
+    expect(withMainColor(readStyle(nascentes), '#2e7d5b')).toMatchObject({ fillColor: '#2e7d5b', color: '#ffffff' })
+    const sem = readStyle({ baseStyle: { type: 'circle', color: '#111111' } })
+    expect(withMainColor(sem, '#2e7d5b')).toMatchObject({ fillColor: '#2e7d5b', color: '#2e7d5b' })
+  })
+
+  it('linha e ícone: só a cor', () => {
+    expect(withMainColor(readStyle(estradas), '#2a7da6').color).toBe('#2a7da6')
+    expect(withMainColor(readStyle(acoes), '#2a7da6').color).toBe('#2a7da6')
+  })
+
+  it('o que a tela deriva grava e lê de volta igual', () => {
+    const style = withMainColor(readStyle(propriedades), '#2a7da6')
+    expect(readStyle(applyStyle(propriedades, style))).toEqual(style)
   })
 })

@@ -194,6 +194,17 @@
 }
 .animate-found { animation: found 1900ms ease-out both; }
 
+/* Aviso do mapa (12): entra de cima com mola e sai deslizando para cima, como o toast do laboratório */
+@keyframes notice-in {
+  from { opacity: 0; translate: 0 -18px; scale: 0.96; }
+  to { opacity: 1; translate: 0 0; scale: 1; }
+}
+@keyframes notice-out {
+  to { opacity: 0; translate: 0 -14px; scale: 0.96; }
+}
+.animate-notice-in { animation: notice-in 400ms var(--ease-spring) both; }
+.animate-notice-out { animation: notice-out 190ms ease-in forwards; }
+
 /* Movimento reduzido (8.3): as trocas acontecem, sem animação. O destaque do que mudou fica fixo (8.4, regra 3). */
 @media (prefers-reduced-motion: reduce) {
   *,
