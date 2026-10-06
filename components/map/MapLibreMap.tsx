@@ -1355,6 +1355,8 @@ export default function MapLibreMap({
         keyboard={false}
         // a roda e a pinça do trackpad têm zoom próprio (13.7): o do MapLibre fica desligado
         scrollZoom={false}
+        // os créditos moram no controle de canto (13.7): o botão do MapLibre abria expandido e ficava por baixo da legenda
+        attributionControl={false}
         onLoad={() => setMapLoaded(true)}
         onClick={handleMapClick}
         onMouseMove={handleMouseMove}

@@ -215,24 +215,6 @@
 }
 .animate-hover-card { transform-origin: bottom center; animation: hover-card-in 240ms var(--ease-spring) 120ms both; }
 
-/* Atribuição do mapa (obrigatória pelos provedores): o botão compacto do MapLibre no estilo dos controles do projeto e alinhado ao canto
-   (16 px, como a câmera e a legenda), em vez do "i" com cantos e sombra próprios (13.7) */
-.maplibregl-ctrl-bottom-right { right: 1rem; bottom: 1rem; }
-.maplibregl-ctrl-bottom-right .maplibregl-ctrl { margin: 0; }
-.maplibregl-ctrl-attrib.maplibregl-compact {
-  min-height: 2.25rem; min-width: 2.25rem; margin: 0; border-radius: 6px; border: 1px solid var(--color-border);
-  background: var(--color-card); box-shadow: var(--shadow-control); color: var(--color-muted-foreground); font-size: 12px;
-}
-.maplibregl-ctrl-attrib.maplibregl-compact .maplibregl-ctrl-attrib-button {
-  width: 2.25rem; height: 2.25rem; background-image: none; background-color: var(--color-muted-foreground); border-radius: 6px;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5'/%3E%3Cpath d='M12 8h.01'/%3E%3C/svg%3E") center / 20px no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5'/%3E%3Cpath d='M12 8h.01'/%3E%3C/svg%3E") center / 20px no-repeat;
-}
-.maplibregl-ctrl-attrib.maplibregl-compact:hover .maplibregl-ctrl-attrib-button { background-color: var(--color-foreground); }
-.maplibregl-ctrl-attrib.maplibregl-compact-show { padding: 0.5rem 2.5rem 0.5rem 0.75rem; background: var(--color-card); }
-.maplibregl-ctrl-attrib.maplibregl-compact-show .maplibregl-ctrl-attrib-button { background-color: var(--color-foreground); }
-.maplibregl-ctrl-attrib a { color: var(--color-foreground); }
-
 /* Pino das ações (13.6): ao passar do ponto para o pino (zoom 13), ele cresce a partir da ponta, com a mola do projeto */
 @keyframes pin-in {
   from { opacity: 0; scale: 0.4; }
