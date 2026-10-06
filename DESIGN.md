@@ -494,6 +494,28 @@ Cartão branco com sombra, ícone em círculo tingido, título e frase curta, **
 - **Enquadrar a região**, no cartão da câmera: devolve a vista da região inteira, no mesmo movimento da abertura. Fica bloqueado até a região carregar, com o motivo no tooltip. Motivo: o mapa agora abre onde a pessoa parou, e ela precisa de um caminho de volta.
 - **A pessoa vê o estado restaurado nos próprios controles** (o contador de filtros no dock, a frase de resumo, os interruptores das camadas), por isso não há aviso extra na abertura.
 
+
+### 13.3 Edição de camadas
+
+**Regra:** quem cuida do território acerta, no próprio mapa, como cada camada aparece. A mudança é vista **antes** de gravar, vale para todos que veem a região, e dá para desfazer.
+
+- **Quem edita:** o `owner` da organização dona da camada, ou o superadmin. Camada global (sem organização) só o superadmin. Quem não pode não vê o lápis, e o servidor confere o papel de novo. Motivo: quem cuida do território sabe como a camada deve aparecer, e uma das rotas antigas nem checava o papel.
+- **Onde:** um lápis na linha da camada abre o editor **dentro do painel Camadas**, com o mapa à vista: ele entra pela direita e a lista volta pela esquerda (8.4). A tela de admin deve usar o mesmo editor depois (17.18).
+- **Pré-visualização ao vivo:** cada mudança aparece no mapa na hora e só é gravada em **Salvar**. Motivo: cor e espessura se decidem olhando o mapa, não um formulário. Enquanto há edição não salva, o botão Camadas do dock mostra o ponto âmbar.
+- **A frase que não sai de vista:** "Vale para todos que veem esta região." fica junto do Salvar (a barra acompanha a rolagem). O Salvar bloqueado diz por quê ("Dê um nome à camada.", "Nada mudou ainda."), e o rótulo muda no próprio botão (Salvando…).
+- **Depois de salvar:** aviso com **Desfazer por 8 s**, no padrão das ações que mudam algo compartilhado (2.1). O aviso diz que quem está com o mapa aberto vê a mudança ao atualizar. Se a gravação falha, o rascunho **continua na tela**, com o motivo em frase ("O que você editou continua aqui.").
+- **O que dá para editar (v1):** nome (sem espaços nas pontas, até 60 caracteres), seção da lista, "abre ligada", cor do contorno ou da linha ou da borda ou do ícone, preenchimento, **cobertura do preenchimento** (0% = só o contorno), espessura, tamanho do ponto e ícone (18 opções). **Só aparecem os controles que fazem sentido para o tipo da camada** (um ponto não tem cobertura; uma linha não tem preenchimento). O **slug nunca muda** (o código decide comportamento por ele: `propriedades`, `acoes`, `raw_firms`) e o tipo da camada também não.
+- **Ícone das Ações travado, com o motivo escrito:** o ícone vem do eixo temático de cada ação (regra por valor), então não há um ícone único para trocar. A edição por eixo fica para depois (17.18).
+- **Cores: paleta curada.** Crítico, Atenção, Normal, Água, Mineral, Floresta, Grafite, Pedra e Branco, lidos dos tokens (o catálogo guarda hex, mas o código não tem nenhum), mais "Outra cor…" para o caso raro. Motivo: cores livres deixaram o mapa com tons fora da paleta; a paleta guia sem trancar. Cada amostra tem um fio escuro por fora para o Branco e as cores claras aparecerem (6.2).
+- **"Abre ligada" manda:** `true` ou `false` no catálogo valem; sem valor, vale a lista do código (Propriedades, Focos, Desmatamento e Ações, 13.1). Se nada ficou ligado, o mapa só liga tudo quando ninguém decidiu nada (uma região só com a Rede Amolar não tem as camadas-padrão); se alguém desligou tudo de propósito, abre vazio. As preferências salvas da pessoa (13.2) valem por cima. Nada mudou ao entrar no ar, exceto o **Município de Bonito, que já estava `true` no banco e passou a abrir ligado**.
+
+**Por que a edição tinha que mexer na raiz (a aparência vivia em dois lugares):** o catálogo guarda a aparência no `baseStyle` (que o Leaflet e a legenda liam) **e** no `maplibre.paint` (que o mapa principal usa quando existe: 13 das 15 camadas). Editar só um não mudava o outro. A prova: a legenda de Propriedades dizia `#22c55e` e o mapa desenhava `#32a852`; e o editor antigo do admin gravava só o `baseStyle`, então a edição **não aparecia** no mapa principal.
+
+- **Fonte única:** `lib/layer-style.ts`. Lê com a **mesma precedência do mapa** (`maplibre.paint` e `outlinePaint`, depois `baseStyle`), grava no `baseStyle` sempre e no `maplibre` **quando ele existe** (sem criar um que não havia), e preserva tudo o que não é aparência (`rules`, `popupFields`, `groupByColumn`…). Servidor, editor e legenda usam o mesmo código; a legenda passou a mostrar o que o mapa desenha (Nascentes deixou de aparecer branca: o miolo é azul e a borda é branca).
+- **Rota única e validada:** `PUT /api/admin/layer-catalog/[slug]` (repository → service → rota fina). Valida cores hex, transparências, espessura, ícone e seção; devolve o `visual_config` novo para o mapa se atualizar **sem buscar de novo**. A rota `layers/[id]/visual`, que aceitava qualquer JSON, saiu.
+- **Cache:** a API do catálogo é guardada por 2 minutos no navegador. Por isso o "Atualizar" ignora o cache; senão traria a versão de antes da edição.
+- **Limite conhecido:** não há registro de quem editou e quando (17.18).
+
 ---
 
 ## 14. Referência viva e escolha final
@@ -557,6 +579,9 @@ Para ninguém recolocar sem motivo.
 | Véu escuro "Atualizando dados…" sobre o mapa | Travava o que a pessoa queria ver; o andamento agora é por camada (13.1) |
 | Acordeões aninhados, caixa de seleção pequena e "Mostrar todas" na lista de camadas | Três níveis para umas 12 linhas; a lista plana com interruptor mostra tudo e liga na hora (13.1). Ligar tudo de uma vez travava o mapa |
 | Botão "Aplicar" nos filtros | Etapa a mais; os filtros aplicam na hora (2.2) |
+| Editor de camada do admin que gravava só o `baseStyle` | O mapa principal desenha com o `maplibre.paint`: a edição não aparecia. Substituído pelo editor único no mapa (13.3) |
+| Rota de edição visual de camada que aceitava qualquer JSON (`z.any()`) e exigia só superadmin | Sem validação e sem a regra de quem pode editar; substituída pela rota única `layer-catalog/[slug]` (13.3) |
+| Legenda de camada lida só do `baseStyle` | Divergia do mapa (cor de Propriedades) e pintava o contorno branco de Nascentes como miolo; ver 13.3 |
 | Seletor de bases solto no topo e botão Atualizar solto | Passaram para dentro de Camadas, onde a pessoa os procura (13.1) |
 | Mapa abrindo em 3D por padrão | O relevo 3D pesava no aparelho; o padrão passou a 2D e o 3D ficou como escolha salva (13) |
 | Cursor de mão nativo como único | Queríamos uma marca também no cursor |
@@ -613,6 +638,7 @@ Descobertas na prática; valem para quem implementar.
 15. **Padrão do mapa: Satélite suave (por agora) ou Mineral** (13). O padrão passou a Satélite suave por decisão do responsável de design. Revisitar depois de uso real: se os dados e os controles seguirem em destaque, o Mineral pode ficar só como opção e o Satélite cru sair.
 16. **Controles do mapa: o que ficou para depois** (13.1). (a) **Movimento e som** do dock, dos painéis e da faixa: o painel (abre, fecha, cartões em cascata), o recolher, o contador e a frase de resumo já têm movimento (8.1); falta a entrada e a saída da faixa de modo (8.4), o movimento dos ícones do dock e os sons (9, política em 17.4). (b) **Ícones Tabler** com animação própria (11): o dock e a câmera ainda usam lucide. (c) **Hora do dado e nova tentativa automática** ("Dados da plataforma · atualizados às 14:32"; regra 6 de 2.1), cortadas por ora: hoje a falha mostra a frase e o "Tentar de novo". (d) **Hover e modal das feições**, a **tela de erro** do mapa inteiro (ainda `bg-gray-100`) e as **cores do desenho de medição** (azul e rosa fora da paleta). (e) **Teste manual com leitor de tela** do dock, dos painéis e da faixa de modo, e em celular de verdade. (f) **Exportar** ainda não existe; quando existir, entra junto de Imprimir.
 17. **Preferências do usuário no banco** (13.2). Hoje ficam no navegador: não seguem a pessoa entre aparelhos e, num computador compartilhado, são divididas. Migrar tudo junto (mapa, som em 17.4, cursor em 10) para uma tabela por usuário quando o segundo caso aparecer. A câmera deve continuar por aparelho.
+18. **Edição de camadas: o que ficou para depois** (13.3). (a) **Regras por valor**: ícone e cor de cada eixo temático das Ações (hoje o ícone fica travado). (b) **Campos do popup** (o que aparece ao passar o mouse e no modal). (c) **Ordem** das camadas por arrastar. (d) A tela `/admin/layers` ainda só mostra o JSON; deve usar o mesmo editor. (e) O `BaseLayersManager` do admin passou a gravar pela rota nova, mas segue com o visual antigo e com `confirm()` e `alert()` do navegador. (f) **Trilha de auditoria**: quem editou, quando e o que mudou. (g) Criar e excluir camada pela interface. (h) Nomes no banco com acento faltando ("Municipio de Bonito", "Focos Incêndio") a pessoa ajusta pelo próprio editor. (i) Teste visual e com leitor de tela do editor (hoje só a lógica, a rota e o serviço têm teste automático).
 
 ---
 
