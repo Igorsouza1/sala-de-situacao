@@ -57,7 +57,7 @@ export const WHEEL_ZOOM_PER_PX = 0.0028
 /** o gesto de pinça no trackpad manda deltas pequenos com ctrlKey */
 export const PINCH_ZOOM_PER_PX = 0.012
 /** quanto o zoom demora a alcançar o destino (ms): menos é mais seco, mais é mais solto */
-export const ZOOM_SMOOTH_TAU = 110
+export const ZOOM_SMOOTH_TAU = 150
 
 interface WheelLike { deltaY: number; deltaMode: number; ctrlKey: boolean }
 
