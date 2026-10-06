@@ -382,6 +382,13 @@ export default function MapLibreMap({
     const b = mapRef.current?.getBounds()
     return b ? [Math.max(-180, b.getWest()), Math.max(-90, b.getSouth()), Math.min(180, b.getEast()), Math.min(90, b.getNorth())] : null
   }, [])
+  // Fechar o Explorar solta a seleção (o registro aberto e o destaque no mapa): a pessoa vê que acabou. Espera a saída do painel (200 ms)
+  // para o conteúdo não trocar de visão enquanto ele some, e não solta se o painel voltou a abrir nesse meio-tempo.
+  useEffect(() => {
+    if (dockOpen === 'explore') return
+    const t = setTimeout(() => { setExploreSelection(null); setExploreFeature(null) }, 200)
+    return () => clearTimeout(t)
+  }, [dockOpen])
   // outra região, outro contexto: o registro aberto não vale mais
   useEffect(() => { setExploreSelection(null); setExploreFeature(null) }, [regiaoId])
 
