@@ -62,7 +62,7 @@ export const DockButton = forwardRef<HTMLButtonElement, DockButtonProps>(functio
       <Icon className="h-[18px] w-[18px]" aria-hidden />
       {label}
       {!!badge && (
-        <span className="absolute right-1.5 top-1 flex h-4 min-w-4 items-center justify-center rounded-sm bg-primary px-1 font-mono text-[10px] font-semibold text-primary-foreground">
+        <span key={badge} className="animate-pop absolute right-1.5 top-1 flex h-4 min-w-4 items-center justify-center rounded-sm bg-primary px-1 font-mono text-[10px] font-semibold text-primary-foreground">
           {badge}
           <span className="sr-only"> ativo{badge > 1 ? 's' : ''}</span>
         </span>
@@ -116,12 +116,14 @@ export function DockPanelButton({ id, icon, label, badge, alert, action, childre
         tabIndex={-1}
         // fechado, o painel fica `inert` (sem foco nem clique, 8.4) e invisível; abre de baixo com leve subida e escala (200 ms) e fecha mais rápido (150 ms)
         inert={!isOpen}
+        data-open={isOpen}
         className={cn(
           'absolute z-10 flex max-h-[75vh] origin-bottom flex-col overflow-hidden rounded-lg outline-hidden',
           'bottom-full mb-3 max-sm:inset-x-3 sm:left-1/2 sm:w-[22rem] sm:-translate-x-1/2',
-          'transition-[opacity,translate,scale,visibility] ease-out',
+          'transition-[opacity,translate,scale,visibility]',
           controlSurface,
-          isOpen ? 'visible scale-100 opacity-100 duration-200' : 'invisible translate-y-2 scale-95 opacity-0 duration-150',
+          // abre com leve mola (a mesma curva dos botões); fecha mais rápido e sem mola, para não demorar a sair da frente (8.1)
+          isOpen ? 'visible scale-100 opacity-100 duration-[240ms] ease-spring' : 'invisible translate-y-2 scale-95 opacity-0 duration-150 ease-in',
         )}
       >
         <header className="flex items-center justify-between gap-2 border-b border-border py-2.5 pl-5 pr-3">

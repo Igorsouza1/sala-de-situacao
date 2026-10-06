@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
   // Tátil (8.1): hover sobe 1 px e ganha sombra; pressionado afunda. Foco: anel Floresta de 3 px (6). Bloqueado: prefira aria-disabled (10).
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[background-color,box-shadow,transform,opacity] duration-200 ease-out hover:-translate-y-px hover:shadow-[0_8px_16px_-8px_rgb(24_26_25/0.4)] active:translate-y-0 active:scale-[0.96] active:shadow-none focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30 aria-disabled:opacity-45 aria-disabled:hover:translate-y-0 aria-disabled:hover:shadow-none aria-disabled:active:scale-100 disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[background-color,border-color,color,box-shadow,translate,scale,opacity] duration-[260ms] ease-spring hover:-translate-y-px hover:shadow-[0_8px_16px_-8px_rgb(24_26_25/0.4)] active:translate-y-0 active:scale-[0.96] active:shadow-none focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30 aria-disabled:opacity-45 aria-disabled:hover:translate-y-0 aria-disabled:hover:shadow-none aria-disabled:active:scale-100 disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0",
   {
     variants: {
       variant: {

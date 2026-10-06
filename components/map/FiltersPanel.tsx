@@ -31,8 +31,9 @@ interface FiltersPanelProps {
 export function FiltersPanel({ startDate, endDate, onDateChange, area, onAreaChange, dateAffects, areaAffects }: FiltersPanelProps) {
   const count = activeFilterCount(startDate, endDate, area)
   return (
-    <div className="space-y-4">
-      <p role="status" className="px-1 text-sm">{filterSummary(startDate, endDate, area)}</p>
+    <div className="panel-rise space-y-4">
+      {/* key: ao mudar o texto, o <p> é refeito e pisca em verde claro, para a pessoa ver o que o clique dela mudou (8.4) */}
+      <p key={filterSummary(startDate, endDate, area)} role="status" className="animate-found rounded-md px-2 py-1.5 text-sm">{filterSummary(startDate, endDate, area)}</p>
 
       <PanelCard title="Período" caption={affectsLine(dateAffects.names, dateAffects.anyOn, 'Período')}>
         <DateFilterControl startDate={startDate} endDate={endDate} onChange={onDateChange} />
@@ -42,15 +43,18 @@ export function FiltersPanel({ startDate, endDate, onDateChange, area, onAreaCha
         <PropertyFilterControl value={area} onChange={onAreaChange} />
       </PanelCard>
 
-      <Button
-        variant="outline"
-        size="sm"
-        className="w-full"
-        aria-disabled={count === 0}
-        onClick={() => { if (count === 0) return; onDateChange(null, null); onAreaChange({}) }}
-      >
-        Limpar tudo
-      </Button>
+      {/* numa div: o movimento de entrada do painel (.panel-rise) não pode pisar no hover do botão */}
+      <div>
+        <Button
+          variant="outline"
+          size="sm"
+          className="w-full"
+          aria-disabled={count === 0}
+          onClick={() => { if (count === 0) return; onDateChange(null, null); onAreaChange({}) }}
+        >
+          Limpar tudo
+        </Button>
+      </div>
     </div>
   )
 }

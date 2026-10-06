@@ -73,6 +73,7 @@
 
   --animate-accordion-down: accordion-down 0.2s ease-out;
   --animate-accordion-up: accordion-up 0.2s ease-out;
+  --ease-spring: cubic-bezier(0.34, 1.32, 0.64, 1); /* leve mola (8.1): passa uns 3% do destino e volta */
   --animate-shimmer: shimmer 1.3s linear infinite; /* esqueleto (8.1): o único movimento em loop permitido */
 
   @keyframes accordion-down {
@@ -161,6 +162,38 @@
   }
 }
 
+/* Painéis do mapa (8.1): os cartões entram em ordem de leitura, 60 ms entre eles, logo depois de o painel abrir.
+   `data-open` fica no painel; fechado, tudo volta junto e sem espera. */
+.panel-rise > * {
+  opacity: 0;
+  translate: 0 8px;
+  transition: opacity 260ms ease-out, translate 300ms var(--ease-spring);
+}
+[data-open='true'] .panel-rise > * {
+  opacity: 1;
+  translate: 0 0;
+  transition-delay: calc(var(--rise, 0) * 60ms + 90ms);
+}
+.panel-rise > :nth-child(2) { --rise: 1; }
+.panel-rise > :nth-child(3) { --rise: 2; }
+.panel-rise > :nth-child(4) { --rise: 3; }
+.panel-rise > :nth-child(n + 5) { --rise: 4; }
+
+/* Número que surge ou muda (o contador de filtros do dock): nasce pequeno, passa um pouco e assenta */
+@keyframes pop {
+  0% { opacity: 0; scale: 0.5; }
+  60% { opacity: 1; scale: 1.2; }
+  100% { opacity: 1; scale: 1; }
+}
+.animate-pop { animation: pop 320ms var(--ease-spring) both; }
+
+/* Texto que foi trocado em cima do que a pessoa estava vendo: pisca em verde claro e se apaga devagar (8.4, 1,9 s) */
+@keyframes found {
+  from { background-color: var(--color-secondary); }
+  to { background-color: transparent; }
+}
+.animate-found { animation: found 1900ms ease-out both; }
+
 /* Movimento reduzido (8.3): as trocas acontecem, sem animação. O destaque do que mudou fica fixo (8.4, regra 3). */
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -170,6 +203,9 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
   }
+  /* os cartões já estão no lugar, sem espera; a frase trocada não pisca (a própria frase diz o que mudou) */
+  .panel-rise > * { transition-delay: 0s !important; translate: none; }
+  .animate-found { animation: none; }
 }
 
 /* Cursor Prisma aurora (10, components/map/PrismCursor.tsx): o nativo só some depois do primeiro movimento;

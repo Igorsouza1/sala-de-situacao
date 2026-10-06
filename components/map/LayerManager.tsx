@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState, type ReactNode } from "react"
+import { useMemo, useRef, useState, type ReactNode } from "react"
 import { ChevronDown, Layers } from "lucide-react"
 import * as LucideIcons from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -109,6 +109,9 @@ interface RowProps {
 function LayerRow({ option, checked, onChange, count, status, note, onRetry, expander, sub }: RowProps) {
   const showCount = !sub && checked && status !== 'loading' && status !== 'error' && count !== undefined
   const showNote = checked && !!note && status !== 'error'
+  // a frase fica guardada: ao sumir, a altura encolhe com o texto ainda lá, em vez de o texto sumir e a linha pular
+  const lastNote = useRef('')
+  if (showNote) lastNote.current = filterLine(note!, count)
   return (
     <div className={cn(sub && 'ml-6 border-l border-border pl-2')}>
       <div className="flex items-center">
@@ -116,7 +119,9 @@ function LayerRow({ option, checked, onChange, count, status, note, onRetry, exp
           <Legend option={option} checked={checked} />
           <span className="min-w-0 flex-1">
             <span className={cn('block truncate text-sm', !checked && 'text-muted-foreground')}>{option.label}</span>
-            {showNote && <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{filterLine(note!, count)}</span>}
+            <Collapse open={showNote}>
+              <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{lastNote.current}</span>
+            </Collapse>
           </span>
           {checked && status === 'loading' && (
             <span role="status" className="flex shrink-0 items-center">

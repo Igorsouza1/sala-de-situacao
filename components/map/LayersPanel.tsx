@@ -58,7 +58,7 @@ interface LayersPanelProps extends LayerManagerProps {
 export function LayersPanel({ basemap, shownBasemap, onBasemapChange, ...layerProps }: LayersPanelProps) {
   const unavailable = basemap !== shownBasemap
   return (
-    <div className="space-y-4">
+    <div className="panel-rise space-y-4">
       <PanelCard title="Mapa base">
         <div role="radiogroup" aria-label="Mapa base" className="grid grid-cols-3 gap-2.5">
           {BASEMAP_KEYS.map((key) => {
@@ -72,7 +72,7 @@ export function LayersPanel({ basemap, shownBasemap, onBasemapChange, ...layerPr
                 aria-checked={selected}
                 onClick={() => onBasemapChange(key)}
                 className={cn(
-                  'flex flex-col items-center gap-1.5 rounded-md border p-2 text-xs transition-[background-color,border-color,transform] duration-200 ease-out active:scale-[0.96] focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30',
+                  'flex flex-col items-center gap-1.5 rounded-md border p-2 text-xs transition-[background-color,border-color,color,translate,scale] duration-200 ease-spring active:scale-[0.96] focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30',
                   selected ? 'border-primary bg-secondary font-medium text-secondary-foreground' : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',
                 )}
               >

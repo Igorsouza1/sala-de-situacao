@@ -63,7 +63,7 @@ export function PropertyFilterControl({ value, onChange }: PropertyFilterControl
         <abbr title="hectares" className="shrink-0 no-underline">ha</abbr>
       </div>
       {count != null && (
-        <p role="status" className="text-sm text-muted-foreground">
+        <p key={count} role="status" className="animate-in fade-in-0 text-sm text-muted-foreground duration-200">
           <span className="font-mono font-semibold tabular-nums text-foreground">{count}</span> propriedade{count !== 1 ? "s" : ""} encontrada{count !== 1 ? "s" : ""}
         </p>
       )}
