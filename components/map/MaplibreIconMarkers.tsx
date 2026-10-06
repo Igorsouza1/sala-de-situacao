@@ -1,7 +1,6 @@
 'use client'
 
 import { Marker, Popup, useMap } from 'react-map-gl/maplibre'
-import { Check } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { cn } from '@/lib/utils'
 import { ICON_STROKE, resolveLayerIcon } from './helpers/layer-icons'
@@ -13,7 +12,7 @@ import type { LayerResponseDTO, MapFeatureCollection } from '@/types/map-dto'
 // Marcadores das camadas de ícone (DESIGN.md 13.6). Longe do zoom 13, cada ação é um PONTO pequeno na cor da área, sem número nem
 // bolha: a distribuição se lê de relance. Perto, o ponto vira um PINO com o ícone da área (a ponta fica no local exato). Ações
 // exatamente no mesmo lugar dividem um pino, com o selo "+N"; passar o mouse mostra a lista e clicar a deixa aberta para escolher.
-// O status (quando a feição tem) vira um selo no canto do pino.
+// A cor do marcador já diz a situação (regra do catálogo): não há um segundo selo de status, que repetiria a informação com outra paleta (C29).
 
 // Com terreno 3D, cada Marker lê o framebuffer de profundidade (gl.readPixels: a GPU para e espera) a cada ~100 ms só para
 // esmaecer atrás de morro. Com dezenas de ícones o mapa cai para ~20 fps; sem a checagem, o ícone só não esmaece atrás do relevo.
@@ -24,13 +23,6 @@ const skipOcclusionCheck = (marker: unknown) => {
 const PIN_ZOOM = 13 // a partir daqui o ponto vira pino (um limite só: a pessoa aprende uma regra)
 const PIN_HEIGHT = 44 // px: onde o cartão de hover ancora acima do pino
 const DOT_HEIGHT = 14
-
-// Selo de status: cor e forma dizem o estado (o concluído leva um check). Cores só dos tokens.
-const STATUS_BADGE: Record<string, { label: string; className: string; check?: boolean }> = {
-  'Identificado': { label: 'Identificado', className: 'bg-warn' },
-  'Em Recuperação': { label: 'Em recuperação', className: 'bg-water' },
-  'Concluído': { label: 'Concluído', className: 'bg-ok', check: true },
-}
 
 // translate e scale precisam estar na lista da transição (no Tailwind v4 não entram em transition-transform: caso C6)
 const motion = 'transition-[translate,scale,box-shadow] duration-300 ease-spring active:scale-95 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/40'
@@ -141,8 +133,7 @@ export function MaplibreIconMarkers({ layer, data, onFeatureClick, onFeatureHove
         const first = spot.entries[0]
         const extra = spot.entries.length - 1
         const Icon = resolveLayerIcon(first.iconName)
-        const badge = extra === 0 ? STATUS_BADGE[first.status as string] : undefined
-        const label = extra > 0 ? `${spot.entries.length} ações neste ponto. Clique para ver a lista.` : badge ? `${first.name}. ${badge.label}.` : first.name
+        const label = extra > 0 ? `${spot.entries.length} ações neste ponto. Clique para ver a lista.` : first.status ? `${first.name}. ${first.status}.` : first.name
         const open = () => (extra > 0 ? setStack({ spot, pinned: true }) : onFeatureClick(layer.slug, first.props))
         const enter = () => (extra > 0 ? setStack((s) => (s?.pinned ? s : { spot, pinned: false })) : onFeatureHover({ ...first.props, _slug: layer.slug, _h: asPin ? PIN_HEIGHT : DOT_HEIGHT }, [spot.lng, spot.lat]))
         const leave = () => (extra > 0 ? setStack((s) => (s?.pinned ? s : null)) : onFeatureHover(null, null))
@@ -168,11 +159,6 @@ export function MaplibreIconMarkers({ layer, data, onFeatureClick, onFeatureHove
                 <span className="absolute left-1/2 top-[16px] -translate-x-1/2 -translate-y-1/2" aria-hidden>
                   <Icon size={16} color="white" stroke={ICON_STROKE} />
                 </span>
-                {badge && (
-                  <span aria-hidden className={cn('absolute -right-1 top-0 flex h-3 w-3 items-center justify-center rounded-full ring-2 ring-white', badge.className)}>
-                    {badge.check && <Check className="h-2 w-2 text-white" strokeWidth={4} />}
-                  </span>
-                )}
                 {extra > 0 && (
                   <span aria-hidden className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-foreground px-1 text-[10px] font-semibold leading-none text-background ring-2 ring-white">
                     +{extra}

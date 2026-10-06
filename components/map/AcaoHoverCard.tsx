@@ -9,12 +9,6 @@ import { tidyText } from './helpers/text'
 // MESMO eixo: nome, área, status e data. Hierarquia: nome (14, 600) → status (14) → área e data (12, cinza-tinta).
 // O que é técnico (tipo técnico, caráter, mês, atuação) fica no modal. O texto de gente passa por tidyText (6.2, regra 11).
 
-const STATUS_DOT: Record<string, string> = {
-  'Identificado': 'bg-warn',
-  'Em Recuperação': 'bg-water',
-  'Concluído': 'bg-ok',
-}
-
 // dd/mm/aaaa: o serviço já manda pronto (time_formatado); sem ele, lê a data do campo bruto
 function readDate(timeFormatado?: string, rawTime?: string): string | undefined {
   const ready = timeFormatado?.split(' ')[0]
@@ -51,7 +45,7 @@ export function AcaoHoverCard({ properties, color = 'var(--color-primary)', icon
             <p className="mt-3 flex items-center gap-2 text-sm">
               {status}
               {/* o ponto vem depois da palavra: assim o texto fica no mesmo eixo do título (6.2, regra 10) */}
-              <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${STATUS_DOT[status] ?? 'bg-muted-foreground'}`} />
+              <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
             </p>
           )}
           {date && <p className="mt-0.5 text-xs leading-snug text-muted-foreground">Registrada em {date}</p>}

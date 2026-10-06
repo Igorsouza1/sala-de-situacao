@@ -59,6 +59,7 @@ import { MaplibreSnapshotControl } from './MaplibreSnapshotControl'
 import { MaplibreIconMarkers } from './MaplibreIconMarkers'
 import { ExplorePanel } from './ExplorePanel'
 import { MapLegend } from './MapLegend'
+import { buildRuleLegend } from './helpers/legend-rules'
 import { DRAG_PAN, KEY_MOVE_MS, mapKeyAction } from './helpers/map-feel'
 import { useSmoothWheelZoom } from './helpers/use-smooth-wheel-zoom'
 import { ExploreHighlight } from './ExploreHighlight'
@@ -337,7 +338,7 @@ export default function MapLibreMap({
   // ── Map ref & region bounds ─────────────────────────────────────────────
   const mapRef = useRef<any>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
-  useSmoothWheelZoom(mapRef, mapLoaded)
+  const zoomBy = useSmoothWheelZoom(mapRef, mapLoaded)
   const fitBoundsDone = useRef(false)
   const [regionBounds, setRegionBounds] = useState<{
     nome?: string | null
@@ -664,12 +665,12 @@ export default function MapLibreMap({
       if (!action || !map) return
       e.preventDefault()
       if (action.type === 'pan') map.panBy([action.dx, action.dy], { duration: KEY_MOVE_MS })
-      else if (action.type === 'zoom') map.zoomTo(map.getZoom() + action.delta, { duration: KEY_MOVE_MS })
+      else if (action.type === 'zoom') zoomBy(action.delta)
       else handleFitRegion()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [activeTool, selectTool, modalData.isOpen, handleFitRegion])
+  }, [activeTool, selectTool, modalData.isOpen, handleFitRegion, zoomBy])
 
   // Só grava depois de a pessoa mexer: abrir no padrão e sair não pode "congelar" o padrão como se fosse escolha dela
   const prefsTouched = useRef(false)
@@ -1213,6 +1214,18 @@ export default function MapLibreMap({
     ]
   }, [layerManagerOptions])
 
+  // A legenda das camadas de pinos (Ações), das regras do catálogo e do que está no mapa agora: a cor e o ícone dizem coisas diferentes
+  const ruleLegends = useMemo(() => {
+    const out: Record<string, ReturnType<typeof buildRuleLegend>> = {}
+    for (const { layer, displayData, isIcon } of processedLayers) {
+      if (!isIcon) continue
+      const vc = layer.visualConfig
+      const sections = buildRuleLegend({ baseStyle: (vc?.baseStyle || vc) as any, rules: vc?.rules as any }, displayData.features)
+      if (sections.length > 0) out[layer.slug] = sections
+    }
+    return out
+  }, [processedLayers])
+
   const panelActiveLayers = useMemo(
     () => [
       ...visibleLayers,
@@ -1647,8 +1660,8 @@ export default function MapLibreMap({
       {/* ── Controls overlay ─────────────────────────────────────────────── */}
 
       {/* Câmera: zoom, bússola e 2D|3D */}
-      <MapLegend mapRef={mapRef} ready={mapLoaded} options={panelOptions} activeLayers={panelActiveLayers} />
-      <CameraControls mapRef={mapRef} ready={mapLoaded} viewMode={viewMode} onViewModeChange={handleViewModeChange} canFitRegion={!!regionBounds} onFitRegion={handleFitRegion} />
+      <MapLegend mapRef={mapRef} ready={mapLoaded} options={panelOptions} activeLayers={panelActiveLayers} ruleLegends={ruleLegends} />
+      <CameraControls mapRef={mapRef} onZoom={zoomBy} ready={mapLoaded} viewMode={viewMode} onViewModeChange={handleViewModeChange} canFitRegion={!!regionBounds} onFitRegion={handleFitRegion} />
 
       {/* Shapefile uploader */}
       {/* <ShapefileUploader

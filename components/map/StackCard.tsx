@@ -18,7 +18,6 @@ export interface StackEntry {
   opacity: number
 }
 
-const STATUS_DOT: Record<string, string> = { 'Identificado': 'bg-warn', 'Em Recuperação': 'bg-water', 'Concluído': 'bg-ok' }
 const MAX_ROWS = 6
 
 export function StackCard({ entries, interactive, onPick }: { entries: StackEntry[]; interactive: boolean; onPick: (entry: StackEntry) => void }) {
@@ -42,7 +41,7 @@ export function StackCard({ entries, interactive, onPick }: { entries: StackEntr
                 {entry.status && (
                   <span className="mt-0.5 flex items-center gap-2 text-xs leading-snug text-muted-foreground">
                     {entry.status}
-                    <span aria-hidden className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_DOT[entry.status] ?? 'bg-muted-foreground')} />
+                    <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: entry.color }} />
                   </span>
                 )}
               </span>

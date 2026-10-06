@@ -22,7 +22,10 @@ import { useConsultaList } from './useConsultaList'
 // registro aberto, com o desenho no mapa. Segue a receita 19.1 (linhas) e 19.2 (painel): base cinza, um cartão por assunto, linha
 // de 48 px ou mais, e a troca de visão por ViewSwap. O marcador de cada ação é o do mapa (mesma cor e mesmo ícone, 6.2 regra 5).
 
-const STATUS_DOT: Record<string, string> = { 'Identificado': 'bg-warn', 'Em Recuperação': 'bg-water', 'Concluído': 'bg-ok' }
+/** a cor e o ícone que o mapa desenha para esta ação (as regras do catálogo): o ponto de status usa a mesma cor do marcador (C29) */
+function actionStyle(item: ConsultaItem, visualConfig?: LayerVisualConfig) {
+  return resolveFeatureStyle({ baseStyle: visualConfig?.baseStyle || visualConfig, rules: visualConfig?.rules }, { properties: item }) as { color?: string; iconName?: string }
+}
 
 /** o marcador do mapa: círculo com o ícone da área, na cor da regra do catálogo */
 function Mark({ item, kind, visualConfig, size = 36 }: { item: ConsultaItem; kind: ConsultaKind; visualConfig?: LayerVisualConfig; size?: number }) {
@@ -33,7 +36,7 @@ function Mark({ item, kind, visualConfig, size = 36 }: { item: ConsultaItem; kin
       </span>
     )
   }
-  const style = resolveFeatureStyle({ baseStyle: visualConfig?.baseStyle || visualConfig, rules: visualConfig?.rules }, { properties: item }) as { color?: string; iconName?: string }
+  const style = actionStyle(item, visualConfig)
   const Icon = resolveLayerIcon(style.iconName)
   return (
     <span aria-hidden style={{ width: size, height: size, backgroundColor: style.color || 'var(--color-primary)' }} className="flex shrink-0 items-center justify-center rounded-full ring-2 ring-white">
@@ -287,7 +290,7 @@ function Detail({ item, selection, regiaoId, visualConfig, onRelated, onFocus, o
             {action && item.status && (
               <p className="mt-3 flex items-center gap-2 text-sm">
                 {item.status}
-                <span aria-hidden className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_DOT[item.status] ?? 'bg-muted-foreground')} />
+                <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: actionStyle(item, visualConfig).color || 'var(--color-primary)' }} />
               </p>
             )}
             {action && date && <p className="mt-0.5 text-xs leading-snug text-muted-foreground">Registrada em {date}</p>}
