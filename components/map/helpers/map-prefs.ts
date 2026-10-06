@@ -1,5 +1,8 @@
 import { BASEMAP_KEYS, type BasemapKey } from './basemaps'
 import type { AreaFilter, DateIntent, PresetId } from './filters'
+import { DEFAULT_SHOW, PART_IDS, PRINT_BASEMAPS, type Part } from './gerar-mapa'
+import type { GridFormat } from './grid'
+import { CORNERS, DEFAULT_LEGEND_CORNER, DEFAULT_SHEET, ORIENTATIONS, PAPERS, type Corner, type Orientation, type Paper } from './sheet'
 
 // Preferências do mapa, guardadas no navegador (DESIGN.md 13.2): a mesma pessoa, no mesmo aparelho, abre o mapa como o deixou.
 // Fica tudo neste módulo de propósito: quando as preferências do usuário forem para o banco (junto com som e cursor, 17.4),
@@ -136,3 +139,75 @@ export function clearBasemap(store: Store | null = browserStore()): void {
 // não deve abrir longe do território.
 export const isInsideBounds = (c: Camera, bbox: [number, number, number, number]) =>
   c.lng >= bbox[0] && c.lng <= bbox[2] && c.lat >= bbox[1] && c.lat <= bbox[3]
+
+// ── Gerar mapa ─────────────────────────────────────────────────────────────────────────────────────────────────────
+// Quem faz o mesmo mapa toda semana não refaz as escolhas: papel, posição, coordenadas, canto da legenda, o que aparece e (se a pessoa
+// escolheu um) o fundo voltam como ficaram. Título e textos da legenda NÃO ficam: dependem das camadas de cada dia e partem do automático.
+// Vale para a pessoa neste aparelho, em todas as regiões (o papel e o gosto não mudam de uma região para outra).
+
+export interface GerarPrefs {
+  paper?: Paper
+  orientation?: Orientation
+  basemap?: BasemapKey
+  coords?: GridFormat
+  legendCorner?: Corner
+  /** só as partes que a pessoa mexeu; o resto vem do padrão */
+  show?: Partial<Record<Part, boolean>>
+}
+
+const GERAR_KEY = 'prisma:mapa:gerar'
+const COORD_FORMATS: GridFormat[] = ['dms', 'utm']
+
+export function readGerarPrefs(store: Store | null = browserStore()): GerarPrefs {
+  try {
+    const raw = store?.getItem(GERAR_KEY)
+    if (!raw) return {}
+    const json = JSON.parse(raw)
+    if (json?.v !== VERSION) return {}
+    const prefs: GerarPrefs = {}
+    if (PAPERS.includes(json.paper)) prefs.paper = json.paper
+    if (ORIENTATIONS.includes(json.orientation)) prefs.orientation = json.orientation
+    if (PRINT_BASEMAPS.includes(json.basemap)) prefs.basemap = json.basemap
+    if (COORD_FORMATS.includes(json.coords)) prefs.coords = json.coords
+    if (CORNERS.includes(json.legendCorner)) prefs.legendCorner = json.legendCorner
+    if (json.show && typeof json.show === 'object') {
+      const show: Partial<Record<Part, boolean>> = {}
+      for (const id of PART_IDS) if (typeof json.show[id] === 'boolean') show[id] = json.show[id]
+      if (Object.keys(show).length > 0) prefs.show = show
+    }
+    return prefs
+  } catch {
+    return {}
+  }
+}
+
+// Junta o que mudou ao que já estava salvo; só os campos conhecidos são gravados (título e textos nunca).
+export function saveGerarPrefs(patch: GerarPrefs, store: Store | null = browserStore()): void {
+  try {
+    const known: GerarPrefs = {}
+    for (const k of ['paper', 'orientation', 'basemap', 'coords', 'legendCorner', 'show'] as const) {
+      if (patch[k] !== undefined) (known as any)[k] = patch[k]
+    }
+    store?.setItem(GERAR_KEY, JSON.stringify({ v: VERSION, ...readGerarPrefs(store), ...known }))
+  } catch {
+    /* sem armazenamento: o gerador funciona igual, só não lembra */
+  }
+}
+
+export function clearGerarPrefs(store: Store | null = browserStore()): void {
+  try {
+    store?.removeItem(GERAR_KEY)
+  } catch {
+    /* idem */
+  }
+}
+
+/** alguma escolha lembrada difere do padrão? É o que decide se a tela diz "usando suas últimas escolhas" */
+export function isCustomGerar(p: GerarPrefs): boolean {
+  if (p.paper !== undefined && p.paper !== DEFAULT_SHEET.paper) return true
+  if (p.orientation !== undefined && p.orientation !== DEFAULT_SHEET.orientation) return true
+  if (p.basemap !== undefined) return true
+  if (p.coords !== undefined && p.coords !== 'dms') return true
+  if (p.legendCorner !== undefined && p.legendCorner !== DEFAULT_LEGEND_CORNER) return true
+  return PART_IDS.some((id) => p.show?.[id] !== undefined && p.show[id] !== DEFAULT_SHOW[id])
+}

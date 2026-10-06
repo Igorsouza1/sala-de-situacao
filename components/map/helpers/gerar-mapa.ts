@@ -59,3 +59,9 @@ export function composeSheetStyle(
 
   return { ...base, sources, layers }
 }
+
+// O que a folha pode mostrar a mais: ligado por padrão, a pessoa desliga o que não quer (título, legenda e fonte dos dados não saem).
+// O mapa de localização e o texto livre começam desligados.
+export const PART_IDS = ['north', 'scale', 'grid', 'datum', 'date', 'logos', 'inset', 'note'] as const
+export type Part = (typeof PART_IDS)[number]
+export const DEFAULT_SHOW: Record<Part, boolean> = { north: true, scale: true, grid: true, datum: true, date: true, logos: true, inset: false, note: false }

@@ -8,6 +8,7 @@ import type { GerarMapaSession } from './GerarMapa'
 import { MaplibreIconMarkers } from './MaplibreIconMarkers'
 import { GridOverlay, LegendBlock, LocationInset, NoteBlock, NorthArrow, ScaleBlock, type MapView } from './SheetOverlays'
 import { BASEMAP_MAX_ZOOM, type BasemapKey } from './helpers/basemaps'
+import type { Part } from './helpers/gerar-mapa'
 import { datumLine, type GridFormat } from './helpers/grid'
 import type { LegendSection } from './helpers/legend-sheet'
 import { sheetLayout, zoomToFit, type Corner, type Orientation, type Paper, type placeCorners } from './helpers/sheet'
@@ -20,8 +21,7 @@ export type Json = Record<string, any>
 export interface Size { w: number; h: number }
 export interface Camera { lng: number; lat: number; zoom: number }
 
-/** o que a folha pode mostrar a mais: ligado por padrão, a pessoa desliga o que não quer (título, legenda e fonte dos dados não saem) */
-export type Part = 'north' | 'scale' | 'grid' | 'datum' | 'date' | 'logos' | 'inset' | 'note'
+export type { Part }
 
 export interface SheetSettings {
   paper: Paper
