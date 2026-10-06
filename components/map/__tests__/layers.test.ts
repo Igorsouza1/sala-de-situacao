@@ -13,6 +13,24 @@ describe('initialVisibleSlugs', () => {
     expect(initialVisibleSlugs(bonito)).toEqual(['propriedades', 'raw_firms', 'acoes__agua', 'acoes__7', 'acoes'])
   })
 
+  it('o catálogo manda: `true` liga uma camada fora da lista e `false` desliga uma da lista', () => {
+    const catalogo = [
+      { slug: 'propriedades', visualConfig: { defaultVisibility: false } },
+      { slug: 'raw_firms' },
+      { slug: 'estradas', visualConfig: { defaultVisibility: true } },
+      { slug: 'banhado', visualConfig: { defaultVisibility: false } },
+    ]
+    expect(initialVisibleSlugs(catalogo)).toEqual(['raw_firms', 'estradas'])
+  })
+
+  it('se alguém desligou tudo de propósito, abre vazio (não liga tudo)', () => {
+    expect(initialVisibleSlugs([{ slug: 'a', visualConfig: { defaultVisibility: false } }, { slug: 'b' }])).toEqual([])
+  })
+
+  it('valor que não é booleano no catálogo é ignorado', () => {
+    expect(initialVisibleSlugs([{ slug: 'propriedades', visualConfig: { defaultVisibility: 'sim' } }, { slug: 'x' }])).toEqual(['propriedades'])
+  })
+
   it('região sem nenhuma camada-padrão liga todas, em vez de abrir em branco', () => {
     expect(initialVisibleSlugs([{ slug: 'rede-amolar' }, { slug: 'rios' }])).toEqual(['rede-amolar', 'rios'])
   })

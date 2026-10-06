@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useRef, useState, type ReactNode } from "react"
-import { ChevronDown, Layers } from "lucide-react"
+import { ChevronDown, Layers, Pencil } from "lucide-react"
 import * as LucideIcons from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Collapse } from "@/components/ui/collapse"
@@ -24,6 +24,8 @@ export interface LayerManagerOption {
   legendType?: 'point' | 'line' | 'polygon' | 'circle' | 'icon' | 'heatmap'
   category?: string
   subOptions?: LayerManagerOption[]
+  /** false: não é uma camada do catálogo (ex.: a Fauna) e não tem lápis */
+  editable?: boolean
 }
 
 export type LayerStatus = 'loading' | 'error'
@@ -43,6 +45,8 @@ interface LayerManagerProps {
   counts?: Record<string, number>
   /** camadas que um filtro está mexendo, e qual */
   filterNotes?: Record<string, FilterNote>
+  /** quem pode editar camadas passa isto: aparece um lápis em cada linha editável (13.3) */
+  onEdit?: (slug: string) => void
 }
 
 const toPascalCase = (str: string) =>
@@ -102,11 +106,12 @@ interface RowProps {
   /** botão de expandir, quando a camada tem grupos */
   expander?: ReactNode
   sub?: boolean
+  onEdit?: () => void
 }
 
 // A linha inteira é um <label>: clicar em qualquer ponto aciona o interruptor (alvo de 48 px, bom para toque).
 // A saída do erro é um botão e fica fora do <label>, senão o clique nela ligaria ou desligaria a camada.
-function LayerRow({ option, checked, onChange, count, status, note, onRetry, expander, sub }: RowProps) {
+function LayerRow({ option, checked, onChange, count, status, note, onRetry, expander, sub, onEdit }: RowProps) {
   const showCount = !sub && checked && status !== 'loading' && status !== 'error' && count !== undefined
   const showNote = checked && !!note && status !== 'error'
   // a frase fica guardada: ao sumir, a altura encolhe com o texto ainda lá, em vez de o texto sumir e a linha pular
@@ -132,6 +137,17 @@ function LayerRow({ option, checked, onChange, count, status, note, onRetry, exp
           {showCount && <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">{count}</span>}
           <Switch checked={checked} onCheckedChange={onChange} aria-label={option.label} />
         </label>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            aria-label={`Editar ${option.label}`}
+            title="Editar a camada"
+            className="flex h-12 w-9 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-200 hover:bg-muted hover:text-foreground focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30"
+          >
+            <Pencil className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        )}
         {expander}
       </div>
       {checked && status === 'error' && (
@@ -146,7 +162,7 @@ function LayerRow({ option, checked, onChange, count, status, note, onRetry, exp
   )
 }
 
-export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, onGroupToggle, status, onRetry, loading, counts, filterNotes }: LayerManagerProps) {
+export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, onGroupToggle, status, onRetry, loading, counts, filterNotes, onEdit }: LayerManagerProps) {
   const [expanded, setExpanded] = useState<string[]>([])
   const toggleExpanded = (id: string) => setExpanded((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]))
 
@@ -199,6 +215,7 @@ export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, 
                   status={status?.[option.slug]}
                   note={filterNotes?.[option.slug]}
                   onRetry={onRetry}
+                  onEdit={onEdit && option.editable !== false ? () => onEdit(option.slug) : undefined}
                 />
               )
             }
@@ -216,6 +233,7 @@ export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, 
                   status={status?.[option.slug]}
                   note={filterNotes?.[option.slug]}
                   onRetry={onRetry}
+                  onEdit={onEdit && option.editable !== false ? () => onEdit(option.slug) : undefined}
                   expander={
                     <button
                       type="button"

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Check, RefreshCw, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BASEMAP_KEYS, BASEMAP_LABELS, type BasemapKey } from './helpers/basemaps'
@@ -81,12 +81,16 @@ interface LayersPanelProps extends LayerManagerProps {
   shownBasemap: BasemapKey
   onBasemapChange: (key: BasemapKey) => void
   onReset: () => void
+  /** o editor de uma camada: quando existe, ocupa o painel no lugar da lista (a pessoa vê de onde veio: 8.4) */
+  editing?: ReactNode
 }
 
-export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, ...layerProps }: LayersPanelProps) {
+export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, editing, ...layerProps }: LayersPanelProps) {
   const unavailable = basemap !== shownBasemap
+  // o editor entra pela direita e a lista volta pela esquerda: a pessoa vê que foi para dentro e que voltou
+  if (editing) return <div key="editor" className="animate-in fade-in-0 slide-in-from-right-4 duration-200">{editing}</div>
   return (
-    <div className="panel-rise space-y-4">
+    <div key="list" className="panel-rise animate-in fade-in-0 slide-in-from-left-4 space-y-4 duration-200">
       <PanelCard title="Mapa base">
         <div role="radiogroup" aria-label="Mapa base" className="grid grid-cols-3 gap-2.5">
           {BASEMAP_KEYS.map((key) => {

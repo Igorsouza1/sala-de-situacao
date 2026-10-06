@@ -9,15 +9,24 @@ export const AREA_SENSITIVE_SLUGS = new Set(['propriedades'])
 // (propriedades chega a demorar uns 10 s) antes de ela decidir o que quer ver.
 const DEFAULT_ON_SLUGS = ['propriedades', 'raw_firms', 'desmatamento', 'acoes']
 
-type LayerLike = { slug: string; groups?: { id: string | number }[] | null }
+type LayerLike = { slug: string; groups?: { id: string | number }[] | null; visualConfig?: { defaultVisibility?: unknown } | null }
 
 // Os identificadores de uma camada: os dos grupos dela e o dela mesma.
 const slugsOf = (l: LayerLike) => [...(l.groups ?? []).map((g) => `${l.slug}__${g.id}`), l.slug]
 
-// Se a região não tem nenhuma das camadas-padrão (ex.: uma região só com a Rede Amolar), liga todas: abrir em branco não ajuda.
+// O padrão do código para uma camada que o catálogo não decide (sem `defaultVisibility`): o editor mostra este valor.
+export const isDefaultOnSlug = (slug: string) => DEFAULT_ON_SLUGS.includes(slug)
+
+// "Abre ligada" é do catálogo (`visual_config.defaultVisibility`, editável no mapa, 13.3): `true` ou `false` valem. Sem valor,
+// vale a lista do código. Se nada ficou ligado, só liga tudo quando ninguém decidiu nada (uma região só com a Rede Amolar não
+// tem as camadas-padrão): abrir em branco não ajuda. Se alguém desligou tudo de propósito, vale o vazio.
+const catalogDecides = (l: LayerLike) => typeof l.visualConfig?.defaultVisibility === 'boolean'
+const opensOn = (l: LayerLike) => (catalogDecides(l) ? l.visualConfig!.defaultVisibility === true : DEFAULT_ON_SLUGS.includes(l.slug))
+
 export function initialVisibleSlugs(layers: LayerLike[]): string[] {
-  const wanted = layers.filter((l) => DEFAULT_ON_SLUGS.includes(l.slug))
-  return (wanted.length ? wanted : layers).flatMap(slugsOf)
+  const wanted = layers.filter(opensOn)
+  if (wanted.length > 0) return wanted.flatMap(slugsOf)
+  return layers.some(catalogDecides) ? [] : layers.flatMap(slugsOf)
 }
 
 // As camadas que a pessoa deixou ligadas, só as que ainda existem. Camada nova no catálogo abre desligada (a pessoa não a escolheu).

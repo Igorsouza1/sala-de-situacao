@@ -25,6 +25,10 @@ import {
 } from './helpers/maplibre-layer'
 import type { LayerManagerOption, LayerStatus } from './LayerManager'
 import { LayersPanel, RefreshButton } from './LayersPanel'
+import { LayerEditor } from './LayerEditor'
+import { ToastAction } from '@/components/ui/toast'
+import { toast } from '@/hooks/use-toast'
+import { applyEdit, readEdit, type LayerEdit } from '@/lib/layer-style'
 import { FiltersPanel } from './FiltersPanel'
 import { activeFilterCount, datesFromIntent, intentFromDates } from './helpers/filters'
 import {
@@ -41,6 +45,7 @@ import {
   DATE_SENSITIVE_SLUGS,
   filterNoteFor,
   initialVisibleSlugs,
+  isDefaultOnSlug,
   isLayerOn,
   restoreVisibleSlugs,
   type FilterNote,
@@ -316,14 +321,15 @@ export default function MapLibreMap({
   } | null>(null)
 
   // ── Fetch catalog metadata (lightweight, no GeoJSON) ────────────────────
-  const fetchCatalog = useCallback(async () => {
+  // `fresh`: o Atualizar ignora o cache do navegador (a API guarda o catálogo por 2 minutos), senão traria a versão de antes da edição
+  const fetchCatalog = useCallback(async (fresh = false) => {
     if (_cache.layers.length === 0) setLoadingLayers(true)
     setError(null)
     try {
       const catalogUrl = regiaoId
         ? `/api/map/layers?metadataOnly=true&regiao_id=${regiaoId}`
         : '/api/map/layers?metadataOnly=true'
-      const response = await fetch(catalogUrl)
+      const response = await fetch(catalogUrl, fresh ? { cache: 'reload' } : undefined)
       if (response.ok) {
         const data: LayerResponseDTO[] = await response.json()
         const sorted = data.sort((a, b) => (a.ordering || 0) - (b.ordering || 0))
@@ -663,12 +669,91 @@ export default function MapLibreMap({
     []
   )
 
+  // ── Edição de camada (DESIGN.md 13.3) ────────────────────────────────────
+  // O rascunho vale só na tela até a pessoa salvar: o mapa e a lista desenham a camada com ele (pré-visualização ao vivo).
+  const [draft, setDraft] = useState<{ slug: string; initial: LayerEdit; edit: LayerEdit } | null>(null)
+  const [savingLayer, setSavingLayer] = useState(false)
+  const [saveLayerError, setSaveLayerError] = useState<string | null>(null)
+
+  const renderLayers = useMemo(
+    () =>
+      draft
+        ? layers.map((l) => (l.slug === draft.slug ? { ...l, name: draft.edit.name, visualConfig: applyEdit(l.visualConfig as any, draft.edit) as any } : l))
+        : layers,
+    [layers, draft],
+  )
+
+  const handleEditLayer = useCallback(
+    (slug: string) => {
+      const layer = layers.find((l) => l.slug === slug)
+      if (!layer) return
+      // o tipo da camada pode depender da geometria dos dados (camada sem tipo no catálogo): o editor olha a primeira feição
+      const geometryType = (layerData[slug]?.features[0]?.geometry as any)?.type ?? null
+      const initial = readEdit(layer as any, { geometryType, defaultVisibleFallback: isDefaultOnSlug(slug) })
+      setSaveLayerError(null)
+      setDraft({ slug, initial, edit: initial })
+    },
+    [layers, layerData],
+  )
+
+  // O mesmo applyEdit do servidor: o mapa fica igual ao que foi gravado sem precisar buscar o catálogo de novo
+  const patchLayer = useCallback((slug: string, name: string, visualConfig: any) => {
+    const patch = (l: LayerResponseDTO) => (l.slug === slug ? { ...l, name, visualConfig } : l)
+    _cache.layers = _cache.layers.map(patch)
+    setLayers((prev) => prev.map(patch))
+  }, [])
+
+  const putLayer = useCallback(async (slug: string, edit: LayerEdit) => {
+    const res = await fetch(`/api/admin/layer-catalog/${slug}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(edit) })
+    const json = await res.json().catch(() => null)
+    if (!res.ok || !json?.success) throw new Error(json?.error?.message ?? 'Não conseguimos salvar.')
+    return json.data as { slug: string; name: string; visualConfig: any }
+  }, [])
+
+  const handleSaveLayer = useCallback(async () => {
+    if (!draft) return
+    setSavingLayer(true)
+    setSaveLayerError(null)
+    try {
+      const saved = await putLayer(draft.slug, draft.edit)
+      patchLayer(saved.slug, saved.name, saved.visualConfig)
+      const previous = draft.initial
+      setDraft(null)
+      toast({
+        title: 'Camada salva',
+        description: `“${saved.name}” mudou para todos que veem esta região. Quem está com o mapa aberto vê ao atualizar.`,
+        duration: 8000,
+        action: (
+          <ToastAction
+            altText={`Desfazer a edição de ${saved.name}`}
+            onClick={async () => {
+              try {
+                const back = await putLayer(saved.slug, previous)
+                patchLayer(back.slug, back.name, back.visualConfig)
+                toast({ title: 'Edição desfeita', description: `“${back.name}” voltou a ser como era.` })
+              } catch {
+                toast({ title: 'Não conseguimos desfazer', description: 'Abra a camada e edite de novo.', variant: 'destructive' })
+              }
+            }}
+          >
+            Desfazer
+          </ToastAction>
+        ),
+      })
+    } catch (e) {
+      // o que a pessoa editou fica na tela (o rascunho não é descartado) e o motivo vem em frase
+      setSaveLayerError(e instanceof Error ? e.message : 'Não conseguimos salvar.')
+    } finally {
+      setSavingLayer(false)
+    }
+  }, [draft, putLayer, patchLayer])
+
   // ── Processed layers (ordering-stable: all visible layers, data or empty) ──
   // Iterates `layers` in catalog order — Source/Layer components are registered in
   // the correct MapLibre stack position from the first render, so late-arriving
   // data (e.g. propriedades at 10s) does not push layers to the top of the stack.
   const processedLayers = useMemo(() => {
-    return layers.map((layer) => {
+    return renderLayers.map((layer) => {
       const data = layerData[layer.slug]
       const vc = layer.visualConfig
       const ruleField = vc?.rules?.[0]?.field
@@ -700,7 +785,7 @@ export default function MapLibreMap({
 
       return { layer, displayData, isIcon: isIconLayer(layer.visualConfig) }
     }).filter((item): item is NonNullable<typeof item> => item !== null)
-  }, [layers, visibleLayers, layerData, EMPTY_FC])
+  }, [renderLayers, visibleLayers, layerData, EMPTY_FC])
 
   // ── interactiveLayerIds for click/hover ───────────────────────────────────
   const interactiveLayerIds = useMemo(
@@ -941,7 +1026,7 @@ export default function MapLibreMap({
 
   // ── LayerManager options ───────────────────────────────────────────────────
   const layerManagerOptions = useMemo((): LayerManagerOption[] => {
-    return layers.map((layer) => {
+    return renderLayers.map((layer) => {
       const { legendType, iconName, color: baseColor, fillColor: baseFill, fillOpacity: baseFillOpacity } =
         getLayerLegendInfo(layer.visualConfig)
       const config = layer.visualConfig
@@ -999,7 +1084,7 @@ export default function MapLibreMap({
         category: layer.visualConfig?.category,
       }
     })
-  }, [layers])
+  }, [renderLayers])
 
   // A Fauna fecha a lista, junto das camadas de monitoramento (a lista agrupa por categoria)
   const panelOptions = useMemo((): LayerManagerOption[] => {
@@ -1008,6 +1093,7 @@ export default function MapLibreMap({
       {
         id: 'fauna',
         slug: 'fauna',
+        editable: false,
         label: 'Fauna exótica (javali)',
         color: 'var(--color-crit)',
         icon: 'paw-print',
@@ -1085,7 +1171,7 @@ export default function MapLibreMap({
     fetchingRef.current.clear()
     setFaunaFetched(false)
     setFaunaFailed(false)
-    fetchCatalog()
+    fetchCatalog(true)
   }, [fetchCatalog])
 
   const handleRetryLayer = useCallback((slug: string) => {
@@ -1471,7 +1557,7 @@ export default function MapLibreMap({
           id="layers"
           icon={LucideIcons.Layers}
           label="Camadas"
-          alert={basemap !== shownBasemap}
+          alert={basemap !== shownBasemap || !!draft}
           action={<RefreshButton refreshing={refreshing} onRefresh={handleReload} />}
         >
           <LayersPanel
@@ -1479,6 +1565,22 @@ export default function MapLibreMap({
             shownBasemap={shownBasemap}
             onBasemapChange={handleBasemapChange}
             onReset={handleResetPrefs}
+            onEdit={isAdmin ? handleEditLayer : undefined}
+            editing={
+              draft && (
+                <LayerEditor
+                  savedName={layers.find((l) => l.slug === draft.slug)?.name ?? draft.initial.name}
+                  edit={draft.edit}
+                  initial={draft.initial}
+                  onChange={(edit) => setDraft((d) => (d ? { ...d, edit } : d))}
+                  onSave={handleSaveLayer}
+                  onCancel={() => { setDraft(null); setSaveLayerError(null) }}
+                  saving={savingLayer}
+                  error={saveLayerError}
+                  iconLocked={!!(layers.find((l) => l.slug === draft.slug)?.visualConfig as any)?.rules?.length}
+                />
+              )
+            }
             options={panelOptions}
             activeLayers={panelActiveLayers}
             onLayerToggle={handleLayerToggle}

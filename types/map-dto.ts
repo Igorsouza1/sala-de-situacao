@@ -63,6 +63,8 @@ export interface LayerVisualConfig extends VisualStyle { // Allow direct propert
     dateFilter?: boolean;
     mapMarker?: MapMarkerConfig; // Deprecated but kept for compatibility
     groupByColumn?: string;
+    /** Abre ligada quando alguém abre o mapa pela primeira vez; sem valor, vale a lista do código (components/map/helpers/layers.ts) */
+    defaultVisibility?: boolean;
 
     // New Structure
     baseStyle?: VisualStyle;
