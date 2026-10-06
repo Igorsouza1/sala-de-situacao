@@ -174,11 +174,12 @@ export function IconGrid({ value, onChange }: { value?: string; onChange: (iconN
   )
 }
 
-// A barra de salvar acompanha a rolagem: a frase de "vale para todos" e os botões nunca saem de vista. Respiro (6.2): afastada do
-// cartão de cima, com uma sombra leve que mostra que há conteúdo passando por baixo.
+// A barra de salvar acompanha a rolagem: a frase de "vale para todos" e os botões nunca saem de vista. Respiro (6.2): 32 px de
+// distância do cartão de cima (as margens verticais colapsam, então um mt-2 sobrava dentro dos 16 px do space-y e não aparecia),
+// e uma sombra leve que mostra que há conteúdo passando por baixo.
 export function EditorFooter({ saving, error, why, canSave, onSave, onCancel }: { saving: boolean; error: string | null; why: string | null; canSave: boolean; onSave: () => void; onCancel: () => void }) {
   return (
-    <div className="sticky bottom-0 -mx-4 -mb-4 mt-2 space-y-2 border-t border-border bg-card px-4 pb-4 pt-4 shadow-[0_-10px_14px_-12px_rgb(24_26_25/0.22)]">
+    <div className="sticky bottom-0 -mx-4 -mb-4 mt-8 space-y-2 border-t border-border bg-card px-4 pb-5 pt-4 shadow-[0_-10px_14px_-12px_rgb(24_26_25/0.22)]">
       <p className="text-xs text-muted-foreground">Vale para todos que veem esta região.</p>
       {error && <p role="alert" className="text-xs text-crit">{error} O que você editou continua aqui.</p>}
       {why && !error && <p className="text-xs text-muted-foreground">{why}</p>}
