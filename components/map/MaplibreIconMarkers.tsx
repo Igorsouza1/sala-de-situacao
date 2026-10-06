@@ -10,7 +10,8 @@ import { resolveFeatureStyle, toPascalCase } from './helpers/map-visuals'
 import { ClusterHoverCard, type ClusterGroup } from './ClusterHoverCard'
 import { tidyText } from './helpers/text'
 import { clusterFootprint } from './helpers/footprint'
-import { DEFAULT_BASEMAP, overlayInk, type BasemapKey } from './helpers/basemaps'
+import { DEFAULT_BASEMAP, type BasemapKey } from './helpers/basemaps'
+import { useOverlayInk } from './helpers/use-overlay-ink'
 import type { Feature, MultiPolygon, Polygon } from 'geojson'
 import type { LayerResponseDTO, MapFeatureCollection } from '@/types/map-dto'
 
@@ -95,15 +96,7 @@ export function MaplibreIconMarkers({ layer, data, onFeatureClick, onFeatureHove
   // A mancha: o contorno do que as ações do grupo ocupam, com uma folga em volta de cada ponto. Fica a última calculada, e só a
   // opacidade muda (o MapLibre faz a transição), então ela aparece e some suave em vez de brotar (8.4).
   const [footprint, setFootprint] = useState<Feature<Polygon | MultiPolygon> | null>(null)
-  // Cores da mancha, dos tokens (o MapLibre não lê var()), escolhidas pela base: claro com fio escuro no satélite, verde da marca
-  // com fio claro nas bases claras (6.2, regra 5: a cor tem de se ver no fundo em que está).
-  const ink = overlayInk(basemap)
-  const [tokens, setTokens] = useState<Record<string, string>>({})
-  useEffect(() => {
-    const css = getComputedStyle(document.documentElement)
-    setTokens(Object.fromEntries([ink.fill, ink.line, ink.casing].map((t) => [t, css.getPropertyValue(t).trim()])))
-  }, [ink.fill, ink.line, ink.casing])
-  const color = (token: string) => tokens[token] || 'rgb(31, 77, 58)'
+  const ink = useOverlayInk(basemap)
   useEffect(() => {
     if (!hoveredCluster) return
     const zoom = mapRef?.getMap().getZoom() ?? view?.zoom ?? 10
@@ -135,9 +128,9 @@ export function MaplibreIconMarkers({ layer, data, onFeatureClick, onFeatureHove
   return (
     <>
       <Source id={`${layer.slug}-grupo-mancha`} type="geojson" data={footprint ?? { type: 'FeatureCollection', features: [] }}>
-        <Layer id={`${layer.slug}-grupo-mancha-fill`} type="fill" paint={{ 'fill-color': color(ink.fill), 'fill-opacity': hoveredCluster ? ink.fillOpacity : 0, 'fill-opacity-transition': { duration: 300 }, 'fill-color-transition': { duration: 300 } }} />
-        <Layer id={`${layer.slug}-grupo-mancha-casing`} type="line" paint={{ 'line-color': color(ink.casing), 'line-width': 5, 'line-opacity': hoveredCluster ? ink.casingOpacity : 0, 'line-opacity-transition': { duration: 300 } }} />
-        <Layer id={`${layer.slug}-grupo-mancha-line`} type="line" paint={{ 'line-color': color(ink.line), 'line-width': 2.5, 'line-opacity': hoveredCluster ? 1 : 0, 'line-opacity-transition': { duration: 300 } }} />
+        <Layer id={`${layer.slug}-grupo-mancha-fill`} type="fill" paint={{ 'fill-color': ink.fillColor, 'fill-opacity': hoveredCluster ? ink.fillOpacity : 0, 'fill-opacity-transition': { duration: 300 }, 'fill-color-transition': { duration: 300 } }} />
+        <Layer id={`${layer.slug}-grupo-mancha-casing`} type="line" paint={{ 'line-color': ink.casingColor, 'line-width': 5, 'line-opacity': hoveredCluster ? ink.casingOpacity : 0, 'line-opacity-transition': { duration: 300 } }} />
+        <Layer id={`${layer.slug}-grupo-mancha-line`} type="line" paint={{ 'line-color': ink.lineColor, 'line-width': 2.5, 'line-opacity': hoveredCluster ? 1 : 0, 'line-opacity-transition': { duration: 300 } }} />
       </Source>
       {items.map((item) => {
         const [lng, lat] = item.geometry.coordinates as [number, number]

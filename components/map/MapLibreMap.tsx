@@ -57,6 +57,10 @@ import { FeatureDetails } from './feature-details'
 import { ShapefileUploader } from './ShapefileUploader'
 import { MaplibreSnapshotControl } from './MaplibreSnapshotControl'
 import { MaplibreIconMarkers } from './MaplibreIconMarkers'
+import { ExplorePanel } from './ExplorePanel'
+import { ExploreHighlight } from './ExploreHighlight'
+import type { ConsultaBounds, ConsultaItem, ConsultaSelection } from '@/types/map-consulta'
+import bbox from '@turf/bbox'
 import { AcaoHoverCard } from './AcaoHoverCard'
 import { ToolFeedback } from './ToolFeedback'
 import { ToolMenu } from './ToolMenu'
@@ -332,9 +336,42 @@ export default function MapLibreMap({
   const [mapLoaded, setMapLoaded] = useState(false)
   const fitBoundsDone = useRef(false)
   const [regionBounds, setRegionBounds] = useState<{
+    nome?: string | null
     center: [number, number]
     bbox: [number, number, number, number]
   } | null>(null)
+
+  // ── Explorar (DESIGN.md 13.5): o registro aberto no painel e o que ele desenha no mapa ──────────────────────────
+  const [dockOpen, setDockOpen] = useState<string | null>(null)
+  const [exploreSelection, setExploreSelection] = useState<ConsultaSelection | null>(null)
+  const [exploreFeature, setExploreFeature] = useState<ConsultaItem | null>(null)
+  // abrir um registro (pela lista ou por um clique no mapa) abre o painel Explorar; voltar para a lista (null) só troca a visão
+  const selectExplore = useCallback((selection: ConsultaSelection | null) => {
+    setExploreSelection(selection)
+    setExploreFeature(null)
+    if (selection) setDockOpen('explore')
+  }, [])
+  // leva o mapa até o registro, deixando-o fora do painel que abre embaixo (no celular o painel ocupa a largura toda)
+  const focusExplore = useCallback((item: ConsultaItem) => {
+    setExploreFeature(item)
+    const map = mapRef.current
+    if (!map || !item.geometry) return
+    const [w, s, e, n] = bbox(item.geometry)
+    if (![w, s, e, n].every(Number.isFinite)) return
+    const height = map.getContainer().clientHeight
+    const width = map.getContainer().clientWidth
+    map.fitBounds([[w, s], [e, n]], {
+      padding: { top: 80, bottom: Math.round(height * (width < 640 ? 0.6 : 0.45)), left: 40, right: 40 },
+      maxZoom: item.geometry.type === 'Point' ? Math.min(16, map.getZoom() + 1.25) : 15,
+      duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1200,
+    })
+  }, [])
+  const getExploreBounds = useCallback((): ConsultaBounds | null => {
+    const b = mapRef.current?.getBounds()
+    return b ? [Math.max(-180, b.getWest()), Math.max(-90, b.getSouth()), Math.min(180, b.getEast()), Math.min(90, b.getNorth())] : null
+  }, [])
+  // outra região, outro contexto: o registro aberto não vale mais
+  useEffect(() => { setExploreSelection(null); setExploreFeature(null) }, [regiaoId])
 
   // ── Fetch catalog metadata (lightweight, no GeoJSON) ────────────────────
   // `fresh`: o Atualizar ignora o cache do navegador (a API guarda o catálogo por 2 minutos), senão traria a versão de antes da edição
@@ -836,11 +873,16 @@ export default function MapLibreMap({
   // ── Shared feature-click handler (usado por layers MapLibre E por icon markers) ──
   const openFeatureModal = useCallback(
     (slug: string, props: Record<string, any>) => {
+      // ação e propriedade abrem no painel Explorar (o dossiê completo está lá, em "Abrir dossiê"); o resto segue no modal
+      if ((slug === 'acoes' || slug === 'propriedades') && props.id) {
+        selectExplore({ kind: slug, id: Number(props.id) })
+        return
+      }
       if (slug === 'acoes') setSelectedAcao(props)
       else setSelectedAcao(null)
       openModal('', <FeatureDetails layerType={slug} properties={props} />)
     },
-    [openModal]
+    [openModal, selectExplore]
   )
 
   // ── Hover handler para icon markers (HTML Markers não disparam onMouseMove do Map) ──
@@ -1377,6 +1419,8 @@ export default function MapLibreMap({
           ]
         })}
 
+        {exploreFeature?.geometry && <ExploreHighlight geometry={exploreFeature.geometry} basemap={shownBasemap} />}
+
         {/* ── Icon layers (HTML Markers com ícones Lucide por feature) ── */}
         {processedLayers
           .filter(({ isIcon, displayData }) => isIcon && displayData.features.length > 0)
@@ -1590,6 +1634,8 @@ export default function MapLibreMap({
 
       {/* Dock: o que o mapa mostra (Camadas, Filtros), ferramentas (Medir, Consultar) e Imprimir */}
       <MapDock
+        open={dockOpen}
+        onOpenChange={setDockOpen}
         above={activeTool && (
           <ToolFeedback
             tool={activeTool}
@@ -1683,6 +1729,22 @@ export default function MapLibreMap({
             onAreaChange={handleAreaChange}
             dateAffects={dateAffects}
             areaAffects={areaAffects}
+          />
+        </DockPanelButton>
+        <DockPanelButton id="explore" icon={LucideIcons.Search} label="Explorar" motion="grow">
+          <ExplorePanel
+            key={regiaoId ?? 'padrao'}
+            regiaoId={regiaoId}
+            regionName={regionBounds?.nome ?? undefined}
+            actionVisualConfig={layers.find((l) => l.slug === 'acoes')?.visualConfig}
+            selection={exploreSelection}
+            onSelect={selectExplore}
+            onFocus={focusExplore}
+            getBounds={getExploreBounds}
+            onDossie={(selection) => {
+              setSelectedAcao(selection.kind === 'acoes' ? { id: selection.id } : null)
+              openModal('', <FeatureDetails layerType={selection.kind} properties={{ id: selection.id }} />)
+            }}
           />
         </DockPanelButton>
         <DockDivider />

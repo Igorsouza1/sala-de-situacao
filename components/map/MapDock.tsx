@@ -13,8 +13,11 @@ const DockContext = createContext<{ open: string | null; setOpen: (id: string | 
 
 export const useDock = () => useContext(DockContext)
 
-export function MapDock({ children, above }: { children: ReactNode; above?: ReactNode }) {
-  const [open, setOpen] = useState<string | null>(null)
+// `open` e `onOpenChange` são opcionais: com eles o mapa abre um painel por fora (clicar numa ação abre o Explorar no registro).
+export function MapDock({ children, above, open: controlled, onOpenChange }: { children: ReactNode; above?: ReactNode; open?: string | null; onOpenChange?: (id: string | null) => void }) {
+  const [inner, setInner] = useState<string | null>(null)
+  const open = controlled !== undefined ? controlled : inner
+  const setOpen = (id: string | null) => { setInner(id); onOpenChange?.(id) }
 
   useEffect(() => {
     if (!open) return
@@ -43,14 +46,15 @@ export function DockDivider() {
 }
 
 // Cada ícone se move do seu jeito quando o mouse passa no botão (8.1): camadas sobem, o filtro desliza, a régua se inclina,
-// a mira gira um quarto de volta, a folha da impressora desce. É o ícone que se move (o botão inteiro só sobe 1 px), com a mola do projeto.
-export type DockMotion = 'rise' | 'slide' | 'tilt' | 'spin' | 'drop'
+// a mira gira um quarto de volta, a folha da impressora desce, a lupa cresce. É o ícone que se move (o botão inteiro só sobe 1 px), com a mola do projeto.
+export type DockMotion = 'rise' | 'slide' | 'tilt' | 'spin' | 'drop' | 'grow'
 const MOTION: Record<DockMotion, string> = {
   rise: 'group-hover:-translate-y-[3px]',
   slide: 'group-hover:translate-x-[3px]',
   tilt: 'group-hover:-rotate-[18deg]',
   spin: 'group-hover:rotate-90',
   drop: 'group-hover:translate-y-[3px]',
+  grow: 'group-hover:scale-[1.18] group-hover:-translate-x-px',
 }
 
 interface DockButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
