@@ -230,20 +230,20 @@ export function MapLegend({ mapRef, ready, options, activeLayers, ruleLegends }:
         </CornerPanel>
 
         <div role="group" aria-label="Escala, legenda e créditos" className={cn('flex items-stretch gap-0.5 rounded-md p-1', controlSurface)}>
+          {hasLegend && (
+            <>
+              <button type="button" aria-expanded={panel === 'legend'} onClick={() => choose(panel === 'legend' ? null : 'legend')} className={cn('flex h-9 items-center gap-2 px-3 text-sm font-medium', controlItem(panel === 'legend'))}>
+                <ListChecks className="h-4 w-4" aria-hidden />
+                Legenda
+              </button>
+              {bar && <div role="separator" aria-orientation="vertical" className="mx-0.5 my-1.5 w-px bg-border" />}
+            </>
+          )}
           {bar && (
             <div className="flex items-center gap-2 px-3" role="img" aria-label={`Escala: o traço vale ${bar.label}`}>
               <span aria-hidden style={{ width: bar.width }} className="h-1.5 shrink-0 border-x border-b border-foreground/60 transition-[width] duration-150 ease-out" />
               <span className="text-xs text-muted-foreground">{bar.label}</span>
             </div>
-          )}
-          {hasLegend && (
-            <>
-              <div role="separator" aria-orientation="vertical" className="mx-0.5 my-1.5 w-px bg-border" />
-              <button type="button" aria-expanded={panel === 'legend'} onClick={() => choose(panel === 'legend' ? null : 'legend')} className={cn('flex h-9 items-center gap-2 px-3 text-sm font-medium', controlItem(panel === 'legend'))}>
-                <ListChecks className="h-4 w-4" aria-hidden />
-                Legenda
-              </button>
-            </>
           )}
           <div role="separator" aria-orientation="vertical" className="mx-0.5 my-1.5 w-px bg-border" />
           <button type="button" aria-expanded={panel === 'credits'} aria-label="Créditos do mapa" title="Créditos do mapa" onClick={() => choose(panel === 'credits' ? null : 'credits')} className={cn('flex h-9 w-9 items-center justify-center', controlItem(panel === 'credits'))}>
