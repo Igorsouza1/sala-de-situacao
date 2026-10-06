@@ -1,11 +1,12 @@
 'use client'
 
-import { CalendarRange, LandPlot, RotateCcw, SlidersHorizontal } from 'lucide-react'
+import { BarChart3, CalendarRange, LandPlot, RotateCcw, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { DateFilterControl } from './DateFilterControl'
 import { PanelCard } from './PanelCard'
 import { PropertyFilterControl } from './PropertyFilterControl'
+import { TimelineCard } from './TimelineCard'
 import { activeFilterCount, filterSummary, type AreaFilter } from './helpers/filters'
 import { affectsLine } from './helpers/layers'
 
@@ -29,9 +30,11 @@ interface FiltersPanelProps {
   onAreaChange: (filter: AreaFilter) => void
   dateAffects: Affected
   areaAffects: Affected
+  /** a região, para a linha do tempo buscar o histórico dela */
+  regiaoId?: number
 }
 
-export function FiltersPanel({ startDate, endDate, onDateChange, area, onAreaChange, dateAffects, areaAffects }: FiltersPanelProps) {
+export function FiltersPanel({ startDate, endDate, onDateChange, area, onAreaChange, dateAffects, areaAffects, regiaoId }: FiltersPanelProps) {
   const count = activeFilterCount(startDate, endDate, area)
   const dateActive = !!(startDate || endDate)
   const areaActive = area.minArea !== undefined || area.maxArea !== undefined
@@ -55,6 +58,10 @@ export function FiltersPanel({ startDate, endDate, onDateChange, area, onAreaCha
           <p key={sentence} className="animate-found -mx-1 mt-0.5 rounded-sm px-1 text-xs leading-snug text-muted-foreground">{sentence}</p>
         </div>
       </section>
+
+      <PanelCard title="Quando aconteceu" icon={BarChart3} caption="Escolher uma faixa filtra Focos, Desmatamento e Ações.">
+        <TimelineCard regiaoId={regiaoId} startDate={startDate} endDate={endDate} onDateChange={onDateChange} />
+      </PanelCard>
 
       <PanelCard title="Período" icon={CalendarRange} active={dateActive} caption={affectsLine(dateAffects.names, dateAffects.anyOn, 'Período')}>
         <DateFilterControl startDate={startDate} endDate={endDate} onChange={onDateChange} />
