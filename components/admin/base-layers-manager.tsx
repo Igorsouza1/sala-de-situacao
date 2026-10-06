@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Trash2, Edit2, Check, Layers, EyeOff, Eye } from "lucide-react";
 import { Label } from "@/components/ui/label";
+import { readEdit } from "@/lib/layer-style";
 
 export interface BaseLayerDto {
   id: number;
@@ -44,30 +45,33 @@ export function BaseLayersManager({
     setEditingId(null);
   };
 
+  // Grava pela rota única de edição de camada (valida, confere papel e organização, e põe a aparência nos dois lugares
+  // do catálogo: antes só o baseStyle era gravado, e o mapa principal desenha com o maplibre.paint, então a edição não aparecia).
+  const saveLayer = async (layer: BaseLayerDto, patch: { name?: string; color?: string; weight?: number; fillOpacity?: number; defaultVisibility?: boolean }) => {
+    const current = readEdit({ name: layer.name, visualConfig: layer.visualConfig });
+    const edit = {
+      ...current,
+      name: patch.name ?? current.name,
+      defaultVisibility: patch.defaultVisibility ?? current.defaultVisibility,
+      style: {
+        ...current.style,
+        color: patch.color ?? current.style.color,
+        weight: patch.weight ?? current.style.weight,
+        fillOpacity: patch.fillOpacity ?? current.style.fillOpacity,
+      },
+    };
+    const res = await fetch(`/api/admin/layer-catalog/${layer.slug}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(edit),
+    });
+    if (!res.ok) throw new Error("Failed to update layer");
+  };
+
   const handleSaveEdit = async (layer: BaseLayerDto) => {
     setIsSaving(true);
     try {
-      const updatedVisualConfig = {
-        ...layer.visualConfig,
-        baseStyle: {
-          ...layer.visualConfig?.baseStyle,
-          color: editColor,
-          weight: editWeight,
-          fillOpacity: editOpacity
-        }
-      };
-
-      const res = await fetch(`/api/admin/layers/${layer.id}/visual`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: editName,
-          visualConfig: updatedVisualConfig
-        })
-      });
-
-      if (!res.ok) throw new Error("Failed to update layer");
-
+      await saveLayer(layer, { name: editName, color: editColor, weight: editWeight, fillOpacity: editOpacity });
       onLayerUpdate();
       setEditingId(null);
     } catch (e) {
@@ -80,19 +84,7 @@ export function BaseLayersManager({
 
   const handleToggleVisibility = async (layer: BaseLayerDto, checked: boolean) => {
     try {
-      const updatedVisualConfig = {
-        ...layer.visualConfig,
-        defaultVisibility: checked
-      };
-
-      await fetch(`/api/admin/layers/${layer.id}/visual`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: layer.name,
-          visualConfig: updatedVisualConfig
-        })
-      });
+      await saveLayer(layer, { defaultVisibility: checked });
       onLayerUpdate();
     } catch (e) {
       console.error(e);

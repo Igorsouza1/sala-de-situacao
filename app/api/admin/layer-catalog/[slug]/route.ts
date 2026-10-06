@@ -1,82 +1,35 @@
-import { NextRequest } from "next/server";
-import { requireAuthWithTenant } from "@/lib/api/require-auth";
-import { apiError, apiSuccess } from "@/lib/api/responses";
-import { db } from "@/db";
-import { layerCatalogInMonitoramento } from "@/db/schema";
-import { eq, and, sql } from "drizzle-orm";
-import { z } from "zod";
+import { NextRequest } from 'next/server'
+import { requireAuthWithTenant, requireRole } from '@/lib/api/require-auth'
+import { apiError, apiSuccess } from '@/lib/api/responses'
+import { LayerEditError, layerEditSchema, updateLayerEdit } from '@/lib/service/layerStyleService'
+import { db } from '@/db'
+import { layerCatalogInMonitoramento } from '@/db/schema'
+import { and, eq } from 'drizzle-orm'
 
-type RouteContext = { params: Promise<{ slug: string }> };
-
-const maplibreConfigSchema = z.object({
-  type:   z.enum(["fill", "line", "circle", "heatmap"]),
-  paint:  z.record(z.string(), z.union([z.string(), z.number()])),
-  layout: z.record(z.string(), z.union([z.string(), z.number()])).optional(),
-});
-
-const updateSchema = z.object({
-  name:           z.string().min(1).optional(),
-  ordering:       z.number().int().optional(),
-  scope:          z.enum(["tenant", "region", "global"]).optional(),
-  maplibreConfig: maplibreConfigSchema.optional(),
-}).refine(d => Object.keys(d).length > 0, { message: "Nenhum campo para atualizar." });
+type RouteContext = { params: Promise<{ slug: string }> }
 
 // PUT /api/admin/layer-catalog/[slug]
-// Atualiza nome, ordering, scope e/ou visual_config.maplibre de uma camada.
-// A chave maplibre é mergeada no JSONB existente — baseStyle e rules do Leaflet são preservados.
+// Edita a aparência de uma camada: nome, seção, "abre ligada", cores, espessura, tamanho do ponto e ícone.
+// Quem pode: owner da organização dona da camada, ou o superadmin (camada global só ele). O slug não muda.
+// O que não é aparência (rules, popupFields, groupByColumn…) passa intacto. Devolve o visual_config novo, para o mapa se atualizar sem buscar de novo.
 export async function PUT(request: NextRequest, { params }: RouteContext) {
-  const { tenantId, response: authResponse } = await requireAuthWithTenant();
-  if (authResponse) return authResponse;
+  const { user, tenantId, response } = await requireRole('owner')
+  if (response || !user || !tenantId) return response ?? apiError('Não autorizado.', 401)
+
+  const json = await request.json().catch(() => null)
+  if (!json) return apiError('Body JSON obrigatório.', 400)
+
+  const parsed = layerEditSchema.safeParse(json)
+  if (!parsed.success) return apiError(parsed.error.issues[0]?.message ?? 'Dados inválidos.', 400)
 
   try {
-    const { slug } = await params;
-
-    // Verifica existência e ownership
-    const [entry] = await db.select()
-      .from(layerCatalogInMonitoramento)
-      .where(eq(layerCatalogInMonitoramento.slug, slug))
-      .limit(1);
-
-    if (!entry) return apiError("Camada não encontrada.", 404);
-    if (tenantId && entry.tenantId !== tenantId) return apiError("Sem permissão para editar esta camada.", 403);
-
-    const json = await request.json().catch(() => null);
-    if (!json) return apiError("Body JSON obrigatório.", 400);
-
-    const parsed = updateSchema.safeParse(json);
-    if (!parsed.success) return apiError(parsed.error.issues[0].message, 400);
-
-    const { name, ordering, scope, maplibreConfig } = parsed.data;
-
-    // Campos escalares
-    const scalarUpdates: Record<string, unknown> = {};
-    if (name     !== undefined) scalarUpdates.name     = name;
-    if (ordering !== undefined) scalarUpdates.ordering = ordering;
-    if (scope    !== undefined) scalarUpdates.scope    = scope;
-
-    if (maplibreConfig !== undefined) {
-      // Merge visual_config.maplibre sem sobrescrever o restante do JSONB
-      await db.execute(sql`
-        UPDATE monitoramento.layer_catalog
-        SET visual_config = jsonb_set(
-          COALESCE(visual_config, '{}'::jsonb),
-          '{maplibre}',
-          ${JSON.stringify(maplibreConfig)}::jsonb
-        )
-        WHERE slug = ${slug}
-      `);
-    }
-
-    if (Object.keys(scalarUpdates).length > 0) {
-      await db.update(layerCatalogInMonitoramento)
-        .set(scalarUpdates as any)
-        .where(eq(layerCatalogInMonitoramento.slug, slug));
-    }
-
-    return apiSuccess({ message: "Camada atualizada." });
+    const { slug } = await params
+    const result = await updateLayerEdit(slug, parsed.data, { tenantId, isSuperadmin: user.app_metadata?.is_superadmin === true })
+    return apiSuccess(result)
   } catch (error) {
-    console.error("layer-catalog PUT error:", error);
-    return apiError("Falha ao atualizar camada.", 500);
+    if (error instanceof LayerEditError) return apiError(error.message, error.status)
+    console.error('layer-catalog PUT error:', error)
+    return apiError('Falha ao atualizar a camada.', 500)
   }
 }
 
