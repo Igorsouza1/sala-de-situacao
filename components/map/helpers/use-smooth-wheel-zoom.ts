@@ -61,8 +61,21 @@ export function useSmoothWheelZoom(mapRef: React.RefObject<any>, ready: boolean)
     }
     api.current = { zoomBy }
 
+    // Quem pega o mapa para arrastar assume o controle: o deslize do zoom PARA na hora, onde está. Sem isso, cada quadro do deslize
+    // (um easeTo) interrompia o arrasto que começava e o clique virava clique numa propriedade em vez de mover o mapa (C33).
+    const takeOver = () => {
+      if (raf) cancelAnimationFrame(raf)
+      raf = 0
+      if (idle) { clearTimeout(idle); idle = null }
+      target = map.getZoom()
+      current = target
+    }
+    const grabbing = ['pointerdown', 'mousedown', 'touchstart'] as const
+    grabbing.forEach((type) => el.addEventListener(type, takeOver, { capture: true, passive: true }))
+
     el.addEventListener('wheel', onWheel, { passive: false })
     return () => {
+      grabbing.forEach((type) => el.removeEventListener(type, takeOver, { capture: true }))
       api.current = null
       el.removeEventListener('wheel', onWheel)
       if (raf) cancelAnimationFrame(raf)
