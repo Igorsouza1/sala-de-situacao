@@ -1,0 +1,110 @@
+{
+  "app/avistamento-javali/page.tsx": {
+    "selectNativo": 0,
+    "corNativa": 0,
+    "alertConfirm": 2,
+    "transicaoV4": 0
+  },
+  "components/admin/acoes-manager.tsx": {
+    "selectNativo": 0,
+    "corNativa": 0,
+    "alertConfirm": 1,
+    "transicaoV4": 0
+  },
+  "components/admin/base-layers-manager.tsx": {
+    "selectNativo": 0,
+    "corNativa": 1,
+    "alertConfirm": 3,
+    "transicaoV4": 0
+  },
+  "components/admin/create-acao-dialog.tsx": {
+    "selectNativo": 0,
+    "corNativa": 0,
+    "alertConfirm": 1,
+    "transicaoV4": 0
+  },
+  "components/admin/desmatamento-manager.tsx": {
+    "selectNativo": 0,
+    "corNativa": 0,
+    "alertConfirm": 2,
+    "transicaoV4": 0
+  },
+  "components/admin/focos-manager.tsx": {
+    "selectNativo": 0,
+    "corNativa": 0,
+    "alertConfirm": 2,
+    "transicaoV4": 0
+  },
+  "components/admin/organizations-admin.tsx": {
+    "selectNativo": 0,
+    "corNativa": 0,
+    "alertConfirm": 1,
+    "transicaoV4": 0
+  },
+  "components/admin/properties-manager.tsx": {
+    "selectNativo": 0,
+    "corNativa": 0,
+    "alertConfirm": 2,
+    "transicaoV4": 0
+  },
+  "components/admin/property-edit-dialog.tsx": {
+    "selectNativo": 0,
+    "corNativa": 0,
+    "alertConfirm": 1,
+    "transicaoV4": 0
+  },
+  "components/admin/region-expand-preview.tsx": {
+    "selectNativo": 0,
+    "corNativa": 0,
+    "alertConfirm": 2,
+    "transicaoV4": 0
+  },
+  "components/admin/region-map-preview.tsx": {
+    "selectNativo": 0,
+    "corNativa": 1,
+    "alertConfirm": 2,
+    "transicaoV4": 0
+  },
+  "components/admin/regions-admin.tsx": {
+    "selectNativo": 0,
+    "corNativa": 0,
+    "alertConfirm": 1,
+    "transicaoV4": 0
+  },
+  "components/admin/users-admin.tsx": {
+    "selectNativo": 0,
+    "corNativa": 0,
+    "alertConfirm": 1,
+    "transicaoV4": 0
+  },
+  "components/alerts/AlertManagerModal.tsx": {
+    "selectNativo": 0,
+    "corNativa": 0,
+    "alertConfirm": 1,
+    "transicaoV4": 0
+  },
+  "components/contact-modal.tsx": {
+    "selectNativo": 0,
+    "corNativa": 0,
+    "alertConfirm": 1,
+    "transicaoV4": 0
+  },
+  "components/gpx-import/GpxImportTab.tsx": {
+    "selectNativo": 0,
+    "corNativa": 0,
+    "alertConfirm": 4,
+    "transicaoV4": 0
+  },
+  "components/map/dossie-template.tsx": {
+    "selectNativo": 2,
+    "corNativa": 0,
+    "alertConfirm": 0,
+    "transicaoV4": 0
+  },
+  "components/map/ShapefileUploader.tsx": {
+    "selectNativo": 0,
+    "corNativa": 1,
+    "alertConfirm": 0,
+    "transicaoV4": 0
+  }
+}

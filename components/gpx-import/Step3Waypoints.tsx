@@ -257,10 +257,10 @@ export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, 
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
+            <h3 className="text-2xl font-bold text-neutral-900">
               Classificação de Waypoints como Ações
             </h3>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400">
+            <p className="text-sm text-neutral-600">
               Etapa 3 de 3: Preencha os campos obrigatórios para cada ponto
             </p>
           </div>
@@ -272,8 +272,8 @@ export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, 
                 px-4 py-2 rounded-full text-sm font-bold
                 ${
                   allComplete
-                    ? "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400"
-                    : "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-amber-100 text-amber-700"
                 }
               `}
             >
@@ -293,9 +293,9 @@ export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, 
 
       {/* Removed Waypoint Toast */}
       {lastRemovedIndex !== null && (
-        <Alert className="bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700">
-          <AlertCircle className="w-4 h-4 text-neutral-600 dark:text-neutral-400" />
-          <AlertDescription className="text-neutral-700 dark:text-neutral-300">
+        <Alert className="bg-neutral-100 border-neutral-300">
+          <AlertCircle className="w-4 h-4 text-neutral-600" />
+          <AlertDescription className="text-neutral-700">
             Waypoint {lastRemovedIndex + 1} removido com sucesso
           </AlertDescription>
         </Alert>
@@ -334,7 +334,7 @@ export function Step3Waypoints({ waypoints, nomeImportacao, regiaoId, onSubmit, 
       </div>
 
       {/* Navigation Buttons */}
-      <div className="flex items-center justify-between pt-4 border-t border-neutral-200 dark:border-neutral-800">
+      <div className="flex items-center justify-between pt-4 border-t border-neutral-200">
         <Button
           type="button"
           variant="outline"

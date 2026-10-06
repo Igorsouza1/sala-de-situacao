@@ -56,8 +56,8 @@ export default function LandingPage() {
               priority
             />
             {/* Vinhetas suaves nas bordas */}
-            <div className="absolute inset-0 bg-gradient-to-b from-[#f5f5f7] via-transparent to-[#f5f5f7] opacity-80" />
-            <div className="absolute inset-0 bg-gradient-to-r from-[#f5f5f7] via-transparent to-[#f5f5f7] opacity-60" />
+            <div className="absolute inset-0 bg-linear-to-b from-[#f5f5f7] via-transparent to-[#f5f5f7] opacity-80" />
+            <div className="absolute inset-0 bg-linear-to-r from-[#f5f5f7] via-transparent to-[#f5f5f7] opacity-60" />
           </div>
 
           {/* Floating Weather Cards */}
@@ -117,7 +117,7 @@ export default function LandingPage() {
           </div>
 
           {/* Fade para a próxima seção */}
-          <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-white to-transparent pointer-events-none" />
+          <div className="absolute bottom-0 left-0 right-0 h-32 bg-linear-to-t from-white to-transparent pointer-events-none" />
         </section>
 
         {/* ── 3. Pain — giant quote ────────────────────────────────────────── */}

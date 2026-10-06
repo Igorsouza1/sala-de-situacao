@@ -52,7 +52,7 @@ export function ContactModal({ children }: ContactModalProps) {
             <Input
               id="name"
               placeholder="Seu nome completo"
-              className="bg-slate-950 border-white/10 text-white placeholder:text-slate-600 focus-visible:ring-brand-primary/50"
+              className="bg-slate-950 border-white/10 text-white placeholder:text-slate-600 focus-visible:ring-primary/50"
               required
             />
           </div>
@@ -64,7 +64,7 @@ export function ContactModal({ children }: ContactModalProps) {
               id="email"
               type="email"
               placeholder="seu@email.com"
-              className="bg-slate-950 border-white/10 text-white placeholder:text-slate-600 focus-visible:ring-brand-primary/50"
+              className="bg-slate-950 border-white/10 text-white placeholder:text-slate-600 focus-visible:ring-primary/50"
               required
             />
           </div>
@@ -75,12 +75,12 @@ export function ContactModal({ children }: ContactModalProps) {
             <Textarea
               id="message"
               placeholder="Como podemos ajudar?"
-              className="bg-slate-950 border-white/10 text-white placeholder:text-slate-600 focus-visible:ring-brand-primary/50 min-h-[100px]"
+              className="bg-slate-950 border-white/10 text-white placeholder:text-slate-600 focus-visible:ring-primary/50 min-h-[100px]"
               required
             />
           </div>
           <DialogFooter>
-            <Button type="submit" className="bg-brand-primary hover:bg-blue-600 text-white w-full sm:w-auto">
+            <Button type="submit" className="bg-primary hover:bg-blue-600 text-white w-full sm:w-auto">
               Enviar Mensagem
             </Button>
           </DialogFooter>

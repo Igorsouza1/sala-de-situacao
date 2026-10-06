@@ -66,12 +66,12 @@ function CustomTooltip({ active, payload }: any) {
       : "Precipitação intensa"
 
   return (
-    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-xl px-4 py-3 min-w-[170px]">
+    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-xs shadow-xl px-4 py-3 min-w-[170px]">
       <p className="text-[11px] font-medium text-muted-foreground mb-1">{capitalized}</p>
       <div className="flex items-baseline gap-1.5 mb-1">
         <span
           className="text-2xl font-bold tracking-tight"
-          style={{ color: barColor(value) === "hsl(210, 20%, 82%)" ? "hsl(var(--muted-foreground))" : barColor(value) }}
+          style={{ color: barColor(value) === "hsl(210, 20%, 82%)" ? "var(--color-muted-foreground)" : barColor(value) }}
         >
           {value.toFixed(1)}
         </span>
@@ -94,7 +94,7 @@ function CustomXTick({ x, y, payload }: any) {
     return (
       <g transform={`translate(${x},${y})`}>
         <text x={0} y={0} dy={14} textAnchor="middle"
-          fill="hsl(var(--foreground))" fontSize={11} fontWeight={700}>
+          fill="var(--color-foreground)" fontSize={11} fontWeight={700}>
           {yr}
         </text>
       </g>
@@ -105,7 +105,7 @@ function CustomXTick({ x, y, payload }: any) {
   return (
     <g transform={`translate(${x},${y})`}>
       <text x={0} y={0} dy={14} textAnchor="middle"
-        fill="hsl(var(--muted-foreground))" fontSize={10}>
+        fill="var(--color-muted-foreground)" fontSize={10}>
         {monthAbbr}
       </text>
     </g>
@@ -196,7 +196,7 @@ export function GraficoPluviometriaBalneario() {
   }
 
   return (
-    <Card className="border-border bg-card shadow-sm w-full">
+    <Card className="border-border bg-card shadow-xs w-full">
       <CardHeader className="pb-2 px-6 pt-6">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           {/* Title block */}
@@ -235,7 +235,7 @@ export function GraficoPluviometriaBalneario() {
 
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="hsl(var(--border))"
+                stroke="var(--color-border)"
                 strokeOpacity={0.5}
                 vertical={false}
               />
@@ -244,14 +244,14 @@ export function GraficoPluviometriaBalneario() {
                 <ReferenceLine
                   key={periodo}
                   x={periodo}
-                  stroke="hsl(var(--muted-foreground))"
+                  stroke="var(--color-muted-foreground)"
                   strokeOpacity={0.3}
                   strokeDasharray="4 3"
                   label={{
                     value: periodo.slice(0, 4),
                     position: "insideTopLeft",
                     fontSize: 10,
-                    fill: "hsl(var(--muted-foreground))",
+                    fill: "var(--color-muted-foreground)",
                     dy: -4,
                   }}
                 />
@@ -270,14 +270,14 @@ export function GraficoPluviometriaBalneario() {
                 domain={[0, yMax]}
                 tickLine={false}
                 axisLine={false}
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
                 width={42}
                 unit=" mm"
               />
 
               <Tooltip
                 content={<CustomTooltip />}
-                cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.4, radius: 4 }}
+                cursor={{ fill: "var(--color-muted)", fillOpacity: 0.4, radius: 4 }}
               />
 
               <Bar dataKey="pluviometria" radius={[3, 3, 0, 0]} maxBarSize={28}>

@@ -5,24 +5,27 @@ import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const buttonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+  // Tátil (8.1): hover sobe 1 px e ganha sombra; pressionado afunda. Foco: anel Floresta de 3 px (6). Bloqueado: prefira aria-disabled (10).
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-[background-color,border-color,color,box-shadow,translate,scale,opacity] duration-[260ms] ease-spring hover:-translate-y-px hover:shadow-[0_8px_16px_-8px_rgb(24_26_25/0.4)] active:translate-y-0 active:scale-[0.96] active:shadow-none focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30 aria-disabled:opacity-45 aria-disabled:hover:translate-y-0 aria-disabled:hover:shadow-none aria-disabled:active:scale-100 disabled:pointer-events-none disabled:opacity-50 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        default: "bg-primary text-primary-foreground hover:bg-primary-hover active:bg-primary-active",
         destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+          "bg-destructive text-destructive-foreground hover:bg-destructive/90 active:bg-destructive/80",
         outline:
-          "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+          "border border-input bg-card hover:bg-accent hover:text-accent-foreground",
+        // contorno Floresta: a ação secundária (DESIGN.md 8.1)
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+          "border border-primary bg-transparent text-primary hover:bg-secondary active:bg-secondary/80",
+        ghost:
+          "hover:bg-accent hover:text-accent-foreground hover:translate-y-0 hover:shadow-none active:scale-100",
+        link: "text-primary underline-offset-4 hover:underline hover:translate-y-0 hover:shadow-none active:scale-100",
       },
       size: {
         default: "h-10 px-4 py-2",
-        sm: "h-9 rounded-md px-3",
-        lg: "h-11 rounded-md px-8",
+        sm: "h-9 px-3",
+        lg: "h-11 px-8",
         icon: "h-10 w-10",
       },
     },

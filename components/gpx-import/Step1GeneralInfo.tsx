@@ -189,10 +189,10 @@ export function Step1GeneralInfo({ regionId, regioes, onNext, onCancel }: Step1P
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Header */}
       <div className="space-y-2">
-        <h3 className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
+        <h3 className="text-2xl font-bold text-neutral-900">
           Importar Ações via GPX
         </h3>
-        <p className="text-sm text-neutral-600 dark:text-neutral-400">
+        <p className="text-sm text-neutral-600">
           Etapa 1 de 3: Upload e Informações Gerais
         </p>
       </div>
@@ -206,10 +206,10 @@ export function Step1GeneralInfo({ regionId, regioes, onNext, onCancel }: Step1P
       )}
 
       {/* Upload Section */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 shadow-sm space-y-4">
+      <div className="bg-white border border-neutral-200 rounded-xl p-6 shadow-xs space-y-4">
         <div className="flex items-center gap-2 mb-4">
-          <FileText className="w-5 h-5 text-blue-600 dark:text-blue-400" />
-          <h4 className="font-semibold text-neutral-900 dark:text-neutral-50">
+          <FileText className="w-5 h-5 text-blue-600" />
+          <h4 className="font-semibold text-neutral-900">
             Arquivo GPX
           </h4>
         </div>
@@ -217,13 +217,13 @@ export function Step1GeneralInfo({ regionId, regioes, onNext, onCancel }: Step1P
         {!arquivo ? (
           <GpxUploader onUpload={handleFileUpload} isProcessing={isProcessing} />
         ) : (
-          <div className="flex items-center gap-3 p-4 bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/50 rounded-lg">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+          <div className="flex items-center gap-3 p-4 bg-emerald-50 border border-emerald-200 rounded-lg">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50 truncate">
+              <p className="text-sm font-semibold text-neutral-900 truncate">
                 {arquivo.name}
               </p>
-              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              <p className="text-xs text-neutral-500">
                 {(arquivo.size / 1024).toFixed(2)} KB
               </p>
             </div>
@@ -237,7 +237,7 @@ export function Step1GeneralInfo({ regionId, regioes, onNext, onCancel }: Step1P
                 setMetadata(null);
                 setNome("");
               }}
-              className="shrink-0 text-neutral-500 hover:text-red-600 dark:hover:text-red-400"
+              className="shrink-0 text-neutral-500 hover:text-red-600"
             >
               Trocar
             </Button>
@@ -247,55 +247,55 @@ export function Step1GeneralInfo({ regionId, regioes, onNext, onCancel }: Step1P
 
       {/* Metadata Display */}
       {metadata && (
-        <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 shadow-sm space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-          <h4 className="font-semibold text-neutral-900 dark:text-neutral-50 flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+        <div className="bg-white border border-neutral-200 rounded-xl p-6 shadow-xs space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+          <h4 className="font-semibold text-neutral-900 flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-blue-600" />
             Metadados Extraídos
           </h4>
 
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <div className="space-y-1">
-              <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
+              <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide">
                 Total de Pontos
               </p>
-              <p className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
+              <p className="text-xl font-bold text-neutral-900">
                 {metadata.totalPontos.toLocaleString("pt-BR")}
               </p>
             </div>
 
             <div className="space-y-1">
-              <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
+              <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide">
                 Distância Total
               </p>
-              <p className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
+              <p className="text-xl font-bold text-neutral-900">
                 {metadata.distanciaTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 })} km
               </p>
             </div>
 
             <div className="space-y-1">
-              <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
+              <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide">
                 Nº de Tracks
               </p>
-              <p className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
+              <p className="text-xl font-bold text-neutral-900">
                 {metadata.numTracks}
               </p>
             </div>
 
             <div className="space-y-1">
-              <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
+              <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide">
                 Nº de Waypoints
               </p>
-              <p className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
+              <p className="text-xl font-bold text-neutral-900">
                 {metadata.numWaypoints}
               </p>
             </div>
 
             {metadata.dataInicio && (
               <div className="space-y-1">
-                <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
+                <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide">
                   Data Início
                 </p>
-                <p className="text-sm font-bold text-neutral-900 dark:text-neutral-50">
+                <p className="text-sm font-bold text-neutral-900">
                   {new Date(metadata.dataInicio).toLocaleString("pt-BR")}
                 </p>
               </div>
@@ -303,10 +303,10 @@ export function Step1GeneralInfo({ regionId, regioes, onNext, onCancel }: Step1P
 
             {metadata.dataFim && (
               <div className="space-y-1">
-                <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
+                <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide">
                   Data Fim
                 </p>
-                <p className="text-sm font-bold text-neutral-900 dark:text-neutral-50">
+                <p className="text-sm font-bold text-neutral-900">
                   {new Date(metadata.dataFim).toLocaleString("pt-BR")}
                 </p>
               </div>
@@ -314,10 +314,10 @@ export function Step1GeneralInfo({ regionId, regioes, onNext, onCancel }: Step1P
 
             {metadata.duracao && (
               <div className="space-y-1">
-                <p className="text-xs font-medium text-neutral-500 dark:text-neutral-400 uppercase tracking-wide">
+                <p className="text-xs font-medium text-neutral-500 uppercase tracking-wide">
                   Duração
                 </p>
-                <p className="text-xl font-bold text-neutral-900 dark:text-neutral-50">
+                <p className="text-xl font-bold text-neutral-900">
                   {metadata.duracao}
                 </p>
               </div>
@@ -327,14 +327,14 @@ export function Step1GeneralInfo({ regionId, regioes, onNext, onCancel }: Step1P
       )}
 
       {/* Form Fields */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-xl p-6 shadow-sm space-y-5">
-        <h4 className="font-semibold text-neutral-900 dark:text-neutral-50">
+      <div className="bg-white border border-neutral-200 rounded-xl p-6 shadow-xs space-y-5">
+        <h4 className="font-semibold text-neutral-900">
           Informações da Importação
         </h4>
 
         {/* Nome */}
         <div className="space-y-2">
-          <Label htmlFor="gpx-nome" className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+          <Label htmlFor="gpx-nome" className="text-sm font-medium text-neutral-700">
             Nome da Importação <span className="text-red-500">*</span>
           </Label>
           <Input
@@ -345,14 +345,14 @@ export function Step1GeneralInfo({ regionId, regioes, onNext, onCancel }: Step1P
             className="h-11"
             disabled={!arquivo}
           />
-          <p className="text-xs text-neutral-500 dark:text-neutral-400">
+          <p className="text-xs text-neutral-500">
             Mínimo 3 caracteres. Este nome identificará o lote de ações importadas.
           </p>
         </div>
 
         {/* Região */}
         <div className="space-y-2">
-          <Label htmlFor="gpx-regiao" className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
+          <Label htmlFor="gpx-regiao" className="text-sm font-medium text-neutral-700">
             Região <span className="text-red-500">*</span>
           </Label>
           <Select value={regiaoId} onValueChange={setRegiaoId} disabled={regioes.length === 0}>
@@ -371,7 +371,7 @@ export function Step1GeneralInfo({ regionId, regioes, onNext, onCancel }: Step1P
       </div>
 
       {/* Navigation Buttons */}
-      <div className="flex items-center justify-between pt-4 border-t border-neutral-200 dark:border-neutral-800">
+      <div className="flex items-center justify-between pt-4 border-t border-neutral-200">
         <Button
           type="button"
           variant="outline"

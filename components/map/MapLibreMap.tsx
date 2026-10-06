@@ -3,7 +3,6 @@
 import Map, {
   Source,
   Layer,
-  NavigationControl,
   Popup,
   Marker,
 } from 'react-map-gl/maplibre'
@@ -24,24 +23,78 @@ import {
   toLinePaint,
   type MapLibreLayerType,
 } from './helpers/maplibre-layer'
-import { LayerManager, type LayerManagerOption } from './LayerManager'
-import { DateFilterControl } from './DateFilterControl'
-import { PropertyFilterControl } from './PropertyFilterControl'
+import type { LayerManagerOption, LayerStatus } from './LayerManager'
+import { EditModeButton, LayersPanel, RefreshButton } from './LayersPanel'
+import { Notice, type NoticeData } from './Notice'
+import { Reveal } from '@/components/ui/collapse'
+import { LayerEditor } from './LayerEditor'
+import { GroupIconEditor } from './GroupIconEditor'
+import { applyEdit, readEdit, ruleIcon, type LayerEdit } from '@/lib/layer-style'
+import { FiltersPanel } from './FiltersPanel'
+import { activeFilterCount, datesFromIntent, intentFromDates } from './helpers/filters'
+import {
+  clearBasemap,
+  clearRegionPrefs,
+  isInsideBounds,
+  readBasemap,
+  readRegionPrefs,
+  saveBasemap,
+  saveRegionPrefs,
+} from './helpers/map-prefs'
+import {
+  AREA_SENSITIVE_SLUGS,
+  DATE_SENSITIVE_SLUGS,
+  filterNoteFor,
+  initialVisibleSlugs,
+  isDefaultOnSlug,
+  isLayerOn,
+  restoreVisibleSlugs,
+  type FilterNote,
+} from './helpers/layers'
 import { Modal } from './Modal'
 import { EditAcaoModal } from './EditAcaoModal'
 import { FeatureDetails } from './feature-details'
 import { ShapefileUploader } from './ShapefileUploader'
-import { MaplibreCoordinateInspector } from './MaplibreCoordinateInspector'
 import { MaplibreSnapshotControl } from './MaplibreSnapshotControl'
-import { MaplibreMeasureControl } from './MaplibreMeasureControl'
-import { MaplibreFaunaHeatmapControl } from './MaplibreFaunaHeatmapControl'
 import { MaplibreIconMarkers } from './MaplibreIconMarkers'
+import { ExplorePanel } from './ExplorePanel'
+import { ExploreHighlight } from './ExploreHighlight'
+import type { ConsultaBounds, ConsultaItem, ConsultaSelection } from '@/types/map-consulta'
+import bbox from '@turf/bbox'
 import { AcaoHoverCard } from './AcaoHoverCard'
-import { PropertyInfoControl } from './PropertyInfoControl'
+import { ToolFeedback } from './ToolFeedback'
+import { ToolMenu } from './ToolMenu'
+import { isMeasureTool, type Tool } from './helpers/tools'
 import { useMapContext } from '@/context/GeoDataContext'
 import { useUserRole } from '@/hooks/useUserRole'
-import { getLayerLegendInfo } from './helpers/map-visuals'
+import { getLayerLegendInfo, resolveFeatureStyle } from './helpers/map-visuals'
 import { Button } from '@/components/ui/button'
+import { CameraControls } from './CameraControls'
+import { DockPanelButton, DockDivider, MapDock } from './MapDock'
+import { PrismCursor } from './PrismCursor'
+import {
+  BASEMAP_MAX_ZOOM,
+  DEFAULT_BASEMAP,
+  DEM_MAX_ZOOM,
+  DEM_TILES,
+  HILLSHADE_BASEMAPS,
+  STATIC_STYLES,
+  blankStyle,
+  hillshadePaint,
+  loadMineralStyle,
+  readMapTokens,
+  tintMineral,
+  type BasemapKey,
+} from './helpers/basemaps'
+import {
+  TERRAIN_EXAGGERATION,
+  cameraFor,
+  clearMode,
+  modeFromPitch,
+  readSavedMode,
+  saveMode,
+  type ViewMode,
+} from './helpers/view-mode'
 
 // ── Module-level cache — persists across SPA navigation within the same tab ──
 // Cleared only on hard reload. Shared by all MapLibreMap mounts.
@@ -52,11 +105,6 @@ const _cache: {
   areaFilterKey: string
 } = { layers: [], data: {}, dateFilterKey: '', areaFilterKey: '' }
 
-// Slugs que dependem do filtro de datas — camadas estáticas (propriedades, rio, banhado, etc.) não são invalidadas
-const DATE_SENSITIVE_SLUGS = new Set(['acoes', 'raw_firms', 'desmatamento'])
-// Slugs que dependem do filtro de área — só propriedades
-const AREA_SENSITIVE_SLUGS = new Set(['propriedades'])
-
 // Detecta se um layer deve ser renderizado como HTML markers com ícones Lucide.
 // Condição 1: visual_config.maplibre.type === 'icon-marker'  (flag explícita MapLibre)
 // Condição 2: visual_config.baseStyle.type === 'icon'         (compat com config Leaflet existente)
@@ -64,51 +112,6 @@ const isIconLayer = (vc: LayerResponseDTO['visualConfig']): boolean => {
   if ((vc as any)?.maplibre?.type === 'icon-marker') return true
   const base = (vc?.baseStyle || vc) as any
   return base?.type === 'icon'
-}
-
-// ── Basemaps ────────────────────────────────────────────────────────────────
-const SATELLITE_STYLE = {
-  version: 8,
-  sources: {
-    'esri-satellite': {
-      type: 'raster',
-      tiles: ['https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'],
-      tileSize: 256,
-      attribution: 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP',
-      maxzoom: 19,
-    },
-  },
-  layers: [{ id: 'esri-satellite-layer', type: 'raster', source: 'esri-satellite' }],
-}
-
-const OSM_STYLE = {
-  version: 8,
-  sources: {
-    'osm': {
-      type: 'raster',
-      tiles: ['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],
-      tileSize: 256,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-      maxzoom: 19,
-    },
-  },
-  layers: [{ id: 'osm-layer', type: 'raster', source: 'osm' }],
-}
-
-type BasemapKey = 'satellite' | 'streets' | 'dark' | 'osm'
-
-const BASEMAPS: Record<BasemapKey, string | object> = {
-  satellite: SATELLITE_STYLE,
-  streets: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
-  osm: OSM_STYLE,
-}
-
-const BASEMAP_LABELS: Record<BasemapKey, string> = {
-  satellite: 'Satélite',
-  streets: 'Ruas',
-  dark: 'Dark',
-  osm: 'StreetMap',
 }
 
 // ── Measure helpers ──────────────────────────────────────────────────────────
@@ -154,21 +157,44 @@ interface MapLibreMapProps {
 // Layers excluded from hover tooltip
 const EXCLUDED_HOVER = ['propriedades', 'banhado']
 
+// A Fauna entra no painel Camadas como camada, mas não vem do catálogo: tem busca e estado próprios
+const FAUNA_HEATMAP = 'fauna__heatmap'
+const FAUNA_LOCATIONS = 'fauna__locations'
+
 export default function MapLibreMap({
   center = [-21.327773, -56.694734],
   zoom = 11,
   regiaoId,
 }: MapLibreMapProps) {
+  // Preferências da pessoa para esta região (DESIGN.md 13.2): lidas uma vez ao abrir; gravadas a cada ação dela, nunca por conta própria
+  const [saved] = useState(() => readRegionPrefs(regiaoId))
+
+  // ── Edição de camada (DESIGN.md 13.3): o estado fica aqui em cima porque o mapa e a busca de dados também o leem ──
+  // O rascunho vale só na tela até a pessoa salvar: o mapa e a lista desenham a camada com ele (pré-visualização ao vivo).
+  const [draft, setDraft] = useState<{ slug: string; /** a área em edição (ex.: um eixo de Ações), quando o que se edita é o ícone dela */ groupKey?: string; initial: LayerEdit; edit: LayerEdit } | null>(null)
+  const [savingLayer, setSavingLayer] = useState(false)
+  const [saveLayerError, setSaveLayerError] = useState<string | null>(null)
+  const [picking, setPicking] = useState(false) // "Editar": a lista vira "escolha a camada"
+  const [notice, setNotice] = useState<NoticeData | null>(null)
+  const [flashSlug, setFlashSlug] = useState<string | null>(null) // a linha da camada recém-editada pisca em verde claro (8.4)
+  const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const flash = useCallback((slug: string) => {
+    setFlashSlug(slug)
+    if (flashTimer.current) clearTimeout(flashTimer.current)
+    flashTimer.current = setTimeout(() => setFlashSlug(null), 2000)
+  }, [])
+
   // ── Core layer state (initialized from module cache for instant return nav) ──
   const [layers, setLayers] = useState<LayerResponseDTO[]>(() => _cache.layers)
   const [layerData, setLayerData] = useState<Record<string, MapFeatureCollection>>(() => ({ ..._cache.data }))
   const [visibleLayers, setVisibleLayers] = useState<string[]>([])
   const [loadingLayers, setLoadingLayers] = useState(_cache.layers.length === 0)
   const [error, setError] = useState<string | null>(null)
+  const [failedLayers, setFailedLayers] = useState<string[]>([])
   const [areaFilter, setAreaFilter] = useState<{
     minArea?: number
     maxArea?: number
-  }>({})
+  }>(() => saved.area ?? {})
   const fetchingRef = useRef<Set<string>>(new Set())
   const initializedRef = useRef(false)
 
@@ -198,6 +224,32 @@ export default function MapLibreMap({
   const [selectedAcao, setSelectedAcao] = useState<any | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
 
+  // Período salvo: o contexto abre em "Este ano"; se a pessoa deixou outra escolha, ela volta a valer (recalculada para hoje)
+  useEffect(() => {
+    if (saved.date) {
+      const [s, e] = datesFromIntent(saved.date, new Date())
+      setDateFilter(s, e)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const handleDateChange = useCallback(
+    (start: Date | null, end: Date | null) => {
+      setDateFilter(start, end)
+      saveRegionPrefs(regiaoId, { date: intentFromDates(start, end, new Date()) })
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [regiaoId],
+  )
+
+  const handleAreaChange = useCallback(
+    (filter: { minArea?: number; maxArea?: number }) => {
+      setAreaFilter(filter)
+      saveRegionPrefs(regiaoId, { area: filter })
+    },
+    [regiaoId],
+  )
+
   // ── Shapefile preview ───────────────────────────────────────────────────
   const [previewGeoJSON, setPreviewGeoJSON] = useState<{
     data: any
@@ -212,27 +264,29 @@ export default function MapLibreMap({
   const [hoverCoords, setHoverCoords] = useState<[number, number] | null>(null)
 
   // ── Coordinate inspector ────────────────────────────────────────────────
-  const [coordInspectorActive, setCoordInspectorActive] = useState(false)
+  const [activeTool, setActiveTool] = useState<Tool | null>(null)
+  const coordInspectorActive = activeTool === 'coords'
+  const propertyInfoActive = activeTool === 'property'
   const [inspectedCoord, setInspectedCoord] = useState<{
     lat: number
     lng: number
   } | null>(null)
 
   // ── Measure control ─────────────────────────────────────────────────────
-  const [measureMode, setMeasureMode] = useState<MeasureMode>(null)
+  const measureMode: MeasureMode = activeTool === 'measure-distance' ? 'distance' : activeTool === 'measure-area' ? 'area' : null
   const [measurePoints, setMeasurePoints] = useState<LngLat[]>([])
   const [measureDrawing, setMeasureDrawing] = useState(false)
   const [measureCursorPos, setMeasureCursorPos] = useState<LngLat | null>(null)
 
   // ── Fauna heatmap ───────────────────────────────────────────────────────
   const [faunaData, setFaunaData] = useState<[number, number, number][]>([])
-  const [faunaHeatmapActive, setFaunaHeatmapActive] = useState(false)
-  const [faunaLocationsActive, setFaunaLocationsActive] = useState(false)
+  const [faunaHeatmapActive, setFaunaHeatmapActive] = useState(() => saved.fauna?.heatmap ?? false)
+  const [faunaLocationsActive, setFaunaLocationsActive] = useState(() => saved.fauna?.locations ?? false)
   const [faunaLoading, setFaunaLoading] = useState(false)
   const [faunaFetched, setFaunaFetched] = useState(false)
+  const [faunaFailed, setFaunaFailed] = useState(false)
 
   // ── Property info mode ──────────────────────────────────────────────────
-  const [propertyInfoActive, setPropertyInfoActive] = useState(false)
   const [hoveredPropertyId, setHoveredPropertyId] = useState<number | null>(null)
   const [hoveredPropertyBasic, setHoveredPropertyBasic] = useState<{
     nome?: string
@@ -242,27 +296,100 @@ export default function MapLibreMap({
   } | null>(null)
 
   // ── Basemap ─────────────────────────────────────────────────────────────
-  const [basemap, setBasemap] = useState<BasemapKey>('satellite')
-  const [basemapOpen, setBasemapOpen] = useState(false)
+  const [basemap, setBasemap] = useState<BasemapKey>(() => readBasemap() ?? DEFAULT_BASEMAP)
+  const [mineralRaw, setMineralRaw] = useState<any>(null)
+  const [mineralFailed, setMineralFailed] = useState(false)
+  const tokens = useMemo(() => readMapTokens(), [])
+
+  // Mineral indisponível: o mapa mostra Ruas e o seletor avisa; só volta quando o usuário escolher o Mineral de novo.
+  const shownBasemap: BasemapKey = basemap === 'mineral' && mineralFailed ? 'streets' : basemap
+
+  useEffect(() => {
+    if (basemap !== 'mineral' || mineralRaw || mineralFailed) return
+    let alive = true
+    loadMineralStyle()
+      .then((style) => alive && setMineralRaw(style))
+      .catch(() => alive && setMineralFailed(true))
+    return () => { alive = false }
+  }, [basemap, mineralRaw, mineralFailed])
+
+  const handleBasemapChange = useCallback((key: BasemapKey) => {
+    setBasemap(key)
+    saveBasemap(key)
+    if (key === 'mineral') setMineralFailed(false)
+  }, [])
+
+  const mapStyle = useMemo(() => {
+    if (shownBasemap !== 'mineral') return STATIC_STYLES[shownBasemap]
+    return mineralRaw ? tintMineral(mineralRaw, tokens) : blankStyle(tokens.bg)
+  }, [shownBasemap, mineralRaw, tokens])
+
+  // ── Modo 2D/3D (salvo no navegador) ─────────────────────────────────────
+  const [viewMode, setViewMode] = useState<ViewMode>(readSavedMode)
+  // O relevo só desliga quando a câmera termina de achatar: nada some do nada (DESIGN.md 8.4).
+  const [terrainOn, setTerrainOn] = useState(() => viewMode === '3d')
+  const viewModeRef = useRef(viewMode)
+  const autoMoveRef = useRef(false) // a animação de abertura não grava a preferência
 
   // ── Map ref & region bounds ─────────────────────────────────────────────
   const mapRef = useRef<any>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
   const fitBoundsDone = useRef(false)
   const [regionBounds, setRegionBounds] = useState<{
+    nome?: string | null
     center: [number, number]
     bbox: [number, number, number, number]
   } | null>(null)
 
+  // ── Explorar (DESIGN.md 13.5): o registro aberto no painel e o que ele desenha no mapa ──────────────────────────
+  const [dockOpen, setDockOpen] = useState<string | null>(null)
+  const [exploreSelection, setExploreSelection] = useState<ConsultaSelection | null>(null)
+  const [exploreFeature, setExploreFeature] = useState<ConsultaItem | null>(null)
+  const exploreOpen = useRef(false)
+  exploreOpen.current = dockOpen === 'explore'
+  // abrir um registro (pela lista ou por um clique no mapa) abre o painel Explorar; voltar para a lista (null) só troca a visão
+  const selectExplore = useCallback((selection: ConsultaSelection | null) => {
+    setExploreSelection(selection)
+    setExploreFeature(null)
+    if (selection) setDockOpen('explore')
+  }, [])
+  // leva o mapa até o registro, deixando-o fora do painel que abre embaixo (no celular o painel ocupa a largura toda)
+  const focusExplore = useCallback((item: ConsultaItem) => {
+    setExploreFeature(item)
+    const map = mapRef.current
+    if (!map || !item.geometry) return
+    const [w, s, e, n] = bbox(item.geometry)
+    if (![w, s, e, n].every(Number.isFinite)) return
+    const height = map.getContainer().clientHeight
+    const width = map.getContainer().clientWidth
+    // o painel ocupa o lado esquerdo (no celular, a parte de baixo): o registro fica no espaço livre que sobra, não por trás dele
+    const panel = exploreOpen.current
+    const padding = width < 640
+      ? { top: 80, bottom: panel ? Math.round(height * 0.6) : 90, left: 40, right: 40 }
+      : { top: 80, bottom: 110, left: panel ? 400 : 40, right: 40 }
+    map.fitBounds([[w, s], [e, n]], {
+      padding,
+      maxZoom: item.geometry.type === 'Point' ? Math.min(16, map.getZoom() + 1.25) : 15,
+      duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1200,
+    })
+  }, [])
+  const getExploreBounds = useCallback((): ConsultaBounds | null => {
+    const b = mapRef.current?.getBounds()
+    return b ? [Math.max(-180, b.getWest()), Math.max(-90, b.getSouth()), Math.min(180, b.getEast()), Math.min(90, b.getNorth())] : null
+  }, [])
+  // outra região, outro contexto: o registro aberto não vale mais
+  useEffect(() => { setExploreSelection(null); setExploreFeature(null) }, [regiaoId])
+
   // ── Fetch catalog metadata (lightweight, no GeoJSON) ────────────────────
-  const fetchCatalog = useCallback(async () => {
+  // `fresh`: o Atualizar ignora o cache do navegador (a API guarda o catálogo por 2 minutos), senão traria a versão de antes da edição
+  const fetchCatalog = useCallback(async (fresh = false) => {
     if (_cache.layers.length === 0) setLoadingLayers(true)
     setError(null)
     try {
       const catalogUrl = regiaoId
         ? `/api/map/layers?metadataOnly=true&regiao_id=${regiaoId}`
         : '/api/map/layers?metadataOnly=true'
-      const response = await fetch(catalogUrl)
+      const response = await fetch(catalogUrl, fresh ? { cache: 'reload' } : undefined)
       if (response.ok) {
         const data: LayerResponseDTO[] = await response.json()
         const sorted = data.sort((a, b) => (a.ordering || 0) - (b.ordering || 0))
@@ -299,9 +426,13 @@ export default function MapLibreMap({
       if (response.ok) {
         const dto: LayerResponseDTO = await response.json()
         enqueueLayerData(slug, dto.data)
+        setFailedLayers((prev) => prev.filter((s) => s !== slug))
+      } else {
+        setFailedLayers((prev) => (prev.includes(slug) ? prev : [...prev, slug]))
       }
     } catch (e) {
       console.error(`Failed to load layer data for ${slug}:`, e)
+      setFailedLayers((prev) => (prev.includes(slug) ? prev : [...prev, slug]))
     } finally {
       fetchingRef.current.delete(slug)
     }
@@ -348,26 +479,50 @@ export default function MapLibreMap({
   useEffect(() => {
     if (fitBoundsDone.current || !mapLoaded || !regionBounds || !mapRef.current) return
     fitBoundsDone.current = true
+    // Abre onde a pessoa deixou, se ainda for dentro da região (a câmera já nasceu ali, em initialViewState): sem movimento.
+    if (saved.camera && isInsideBounds(saved.camera, regionBounds.bbox)) return
     const [minLng, minLat, maxLng, maxLat] = regionBounds.bbox
+    // um movimento só: enquadra a região e inclina até o modo salvo (2D na primeira visita)
+    autoMoveRef.current = true
     mapRef.current.fitBounds(
       [[minLng, minLat], [maxLng, maxLat]],
-      { padding: 60, duration: 1000 },
+      { padding: 60, duration: 1200, linear: true, ...cameraFor(viewMode) },
     )
+  // viewMode só vale na abertura; trocar o modo depois não reenquadra a região
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapLoaded, regionBounds])
+
+  const handleViewModeChange = useCallback((mode: ViewMode) => {
+    viewModeRef.current = mode
+    setViewMode(mode)
+    saveMode(mode)
+    if (mode === '3d') setTerrainOn(true)
+    mapRef.current?.easeTo({ ...cameraFor(mode), duration: 1000 })
+  }, [])
+
+  // O segmento segue a câmera: inclinar com o mouse ou clicar na bússola também troca 2D/3D (e salva).
+  const handleMoveEnd = useCallback((e: { viewState: { pitch: number; longitude: number; latitude: number; zoom: number } }) => {
+    if (autoMoveRef.current) { autoMoveRef.current = false; return } // o enquadramento automático da abertura não é escolha da pessoa
+    saveRegionPrefs(regiaoId, { camera: { lng: e.viewState.longitude, lat: e.viewState.latitude, zoom: e.viewState.zoom } })
+    const next = modeFromPitch(e.viewState.pitch)
+    if (next !== viewModeRef.current) { viewModeRef.current = next; setViewMode(next); saveMode(next) }
+    setTerrainOn(next === '3d')
+  }, [regiaoId])
+
+  // "Enquadrar a região": o mesmo movimento da abertura, a qualquer hora (a câmera nova fica salva, porque foi escolha da pessoa)
+  const handleFitRegion = useCallback(() => {
+    if (!regionBounds || !mapRef.current) return
+    const [minLng, minLat, maxLng, maxLat] = regionBounds.bbox
+    mapRef.current.fitBounds([[minLng, minLat], [maxLng, maxLat]], { padding: 60, duration: 1200, linear: true, ...cameraFor(viewModeRef.current) })
+  }, [regionBounds])
 
   // Initialize all layers as visible once catalog arrives
   useEffect(() => {
     if (!initializedRef.current && layers.length > 0) {
-      const slugs: string[] = []
-      layers.forEach((l) => {
-        if (l.groups?.length) {
-          l.groups.forEach((g) => slugs.push(`${l.slug}__${g.id}`))
-        }
-        slugs.push(l.slug)
-      })
-      setVisibleLayers(slugs)
+      setVisibleLayers(restoreVisibleSlugs(layers, readRegionPrefs(regiaoId).layers))
       initializedRef.current = true
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [layers])
 
   // Date filter: invalida apenas camadas date-sensitive (acoes, raw_firms, desmatamento).
@@ -431,6 +586,7 @@ export default function MapLibreMap({
       const slug = sv.includes('__') ? sv.split('__')[0] : sv
       parentSlugs.add(slug)
     })
+    if (draft) parentSlugs.add(draft.slug)
     parentSlugs.forEach((slug) => {
       if (!layerData[slug] && !fetchingRef.current.has(slug)) {
         fetchLayerData(slug)
@@ -438,14 +594,15 @@ export default function MapLibreMap({
     })
   // layerData intentionally in deps: after cache clear, re-fetches visible slugs
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [visibleLayers, layerData, fetchLayerData])
+  }, [visibleLayers, layerData, fetchLayerData, draft])
 
   // ── Fauna data fetch ─────────────────────────────────────────────────────
   useEffect(() => {
     if (
       (faunaHeatmapActive || faunaLocationsActive) &&
       !faunaFetched &&
-      !faunaLoading
+      !faunaLoading &&
+      !faunaFailed
     ) {
       setFaunaLoading(true)
       fetch('/api/map/heatmap/fauna-exotica')
@@ -454,12 +611,14 @@ export default function MapLibreMap({
           if (json.success && json.data) {
             setFaunaData(json.data)
             setFaunaFetched(true)
+          } else {
+            setFaunaFailed(true)
           }
         })
-        .catch(console.error)
+        .catch(() => setFaunaFailed(true))
         .finally(() => setFaunaLoading(false))
     }
-  }, [faunaHeatmapActive, faunaLocationsActive, faunaFetched, faunaLoading])
+  }, [faunaHeatmapActive, faunaLocationsActive, faunaFetched, faunaLoading, faunaFailed])
 
   // Clear property hover state when info mode is deactivated
   useEffect(() => {
@@ -469,27 +628,64 @@ export default function MapLibreMap({
     }
   }, [propertyInfoActive])
 
+  // Só uma ferramenta ativa por vez: escolher outra (ou null) desliga a anterior e limpa o que ela deixou
+  const selectTool = useCallback((tool: Tool | null) => {
+    setActiveTool(tool)
+    setMeasurePoints([])
+    setMeasureCursorPos(null)
+    setMeasureDrawing(isMeasureTool(tool))
+    setInspectedCoord(null)
+  }, [])
+
+  const handleFinishMeasure = useCallback(() => {
+    setMeasureDrawing(false)
+    setMeasureCursorPos(null)
+  }, [])
+
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (measureMode) {
-          if (measureDrawing) {
-            setMeasureDrawing(false)
-            setMeasureCursorPos(null)
-          } else {
-            setMeasureMode(null)
-            setMeasurePoints([])
-          }
-        }
-      }
+      if (e.key === 'Escape' && !e.defaultPrevented && activeTool) selectTool(null)
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [measureMode, measureDrawing])
+  }, [activeTool, selectTool])
+
+  // Só grava depois de a pessoa mexer: abrir no padrão e sair não pode "congelar" o padrão como se fosse escolha dela
+  const prefsTouched = useRef(false)
+  useEffect(() => {
+    if (!prefsTouched.current) return
+    saveRegionPrefs(regiaoId, {
+      layers: visibleLayers,
+      fauna: { heatmap: faunaHeatmapActive, locations: faunaLocationsActive },
+    })
+  }, [regiaoId, visibleLayers, faunaHeatmapActive, faunaLocationsActive])
+
+  // "Voltar ao padrão do mapa" (DESIGN.md 13.2): esquece o que estava salvo e põe o mapa como na primeira visita
+  const handleResetPrefs = useCallback(() => {
+    clearRegionPrefs(regiaoId)
+    clearBasemap()
+    clearMode()
+    prefsTouched.current = false
+    setVisibleLayers(initialVisibleSlugs(layers))
+    setFaunaHeatmapActive(false)
+    setFaunaLocationsActive(false)
+    setBasemap(DEFAULT_BASEMAP)
+    setMineralFailed(false)
+    const [s, e] = datesFromIntent({ kind: 'preset', id: 'year' }, new Date())
+    setDateFilter(s, e)
+    setAreaFilter({})
+    viewModeRef.current = '2d'
+    setViewMode('2d')
+    handleFitRegion()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [regiaoId, layers, handleFitRegion])
 
   // ── Layer toggle handlers ─────────────────────────────────────────────────
   const handleLayerToggle = useCallback((slug: string, isChecked: boolean) => {
+    prefsTouched.current = true
+    if (slug === FAUNA_HEATMAP) { setFaunaHeatmapActive(isChecked); return }
+    if (slug === FAUNA_LOCATIONS) { setFaunaLocationsActive(isChecked); return }
     setVisibleLayers((prev) =>
       isChecked ? [...prev, slug] : prev.filter((s) => s !== slug)
     )
@@ -497,6 +693,8 @@ export default function MapLibreMap({
 
   const handleGroupToggle = useCallback(
     (slugs: string[], isChecked: boolean) => {
+      prefsTouched.current = true
+      if (slugs.includes(FAUNA_HEATMAP)) { setFaunaHeatmapActive(isChecked); setFaunaLocationsActive(isChecked); return }
       setVisibleLayers((prev) => {
         if (isChecked)
           return [...prev, ...slugs.filter((s) => !prev.includes(s))]
@@ -508,6 +706,9 @@ export default function MapLibreMap({
 
   const handleToggleAll = useCallback(
     (isChecked: boolean) => {
+      prefsTouched.current = true
+      setFaunaHeatmapActive(isChecked)
+      setFaunaLocationsActive(isChecked)
       if (isChecked) {
         const all: string[] = []
         layers.forEach((l) => {
@@ -529,12 +730,107 @@ export default function MapLibreMap({
     []
   )
 
+  // ── Edição de camada (DESIGN.md 13.3) ────────────────────────────────────
+  const renderLayers = useMemo(
+    () =>
+      draft
+        ? layers.map((l) => (l.slug === draft.slug ? { ...l, name: draft.edit.name, visualConfig: applyEdit(l.visualConfig as any, draft.edit) as any } : l))
+        : layers,
+    [layers, draft],
+  )
+
+  const handleEditLayer = useCallback(
+    (slug: string) => {
+      const layer = layers.find((l) => l.slug === slug)
+      if (!layer) return
+      // o tipo da camada pode depender da geometria dos dados (camada sem tipo no catálogo): o editor olha a primeira feição
+      const geometryType = (layerData[slug]?.features[0]?.geometry as any)?.type ?? null
+      const initial = readEdit(layer as any, { geometryType, defaultVisibleFallback: isDefaultOnSlug(slug) })
+      setSaveLayerError(null)
+      setDraft({ slug, initial, edit: initial })
+    },
+    [layers, layerData],
+  )
+
+  // O ícone que uma área tem agora: o da regra do catálogo (o que o marcador usa), senão o do serviço, senão o da camada
+  const currentGroupIcon = useCallback(
+    (slug: string, groupKey: string) => {
+      const layer = layers.find((l) => l.slug === slug)
+      const group = layer?.groups?.find((g) => String(g.id) === groupKey)
+      return ruleIcon(layer?.visualConfig as any, groupKey) ?? group?.icon ?? readEdit(layer as any).style.iconName ?? 'map-pin'
+    },
+    [layers],
+  )
+
+  const handleEditGroup = useCallback(
+    (slug: string, groupKey: string) => {
+      const layer = layers.find((l) => l.slug === slug)
+      if (!layer) return
+      const initial = readEdit(layer as any, { defaultVisibleFallback: isDefaultOnSlug(slug) })
+      setSaveLayerError(null)
+      setDraft({ slug, groupKey, initial, edit: initial })
+    },
+    [layers],
+  )
+
+  // O mesmo applyEdit do servidor: o mapa fica igual ao que foi gravado sem precisar buscar o catálogo de novo
+  const patchLayer = useCallback((slug: string, name: string, visualConfig: any) => {
+    const patch = (l: LayerResponseDTO) => (l.slug === slug ? { ...l, name, visualConfig } : l)
+    _cache.layers = _cache.layers.map(patch)
+    setLayers((prev) => prev.map(patch))
+  }, [])
+
+  const putLayer = useCallback(async (slug: string, edit: LayerEdit) => {
+    const res = await fetch(`/api/admin/layer-catalog/${slug}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(edit) })
+    const json = await res.json().catch(() => null)
+    if (!res.ok || !json?.success) throw new Error(json?.error?.message ?? 'Não conseguimos salvar.')
+    return json.data as { slug: string; name: string; visualConfig: any }
+  }, [])
+
+  const handleSaveLayer = useCallback(async () => {
+    if (!draft) return
+    setSavingLayer(true)
+    setSaveLayerError(null)
+    try {
+      const saved = await putLayer(draft.slug, draft.edit)
+      patchLayer(saved.slug, saved.name, saved.visualConfig)
+      const previous = draft.initial
+      setDraft(null)
+      flash(saved.slug)
+      // Aviso no alto, com 10 s para desfazer (o modelo do laboratório). Desfazer também avisa o que aconteceu, no mesmo cartão.
+      setNotice({
+        id: Date.now(),
+        tone: 'success',
+        title: draft.groupKey ? `Salvamos o ícone de “${draft.groupKey}”` : `Salvamos “${saved.name}”`,
+        body: draft.groupKey ? `Em ${saved.name}. Quem atualizar o mapa já vê a mudança.` : 'Quem atualizar o mapa já vê a mudança.',
+        undo: {
+          seconds: 10,
+          onUndo: async () => {
+            try {
+              const back = await putLayer(saved.slug, previous)
+              patchLayer(back.slug, back.name, back.visualConfig)
+              flash(back.slug)
+              setNotice({ id: Date.now(), tone: 'success', title: 'Desfeito', body: `“${back.name}” voltou a ser como era.` })
+            } catch {
+              setNotice({ id: Date.now(), tone: 'error', title: 'Não conseguimos desfazer', body: 'Abra a camada e edite de novo.' })
+            }
+          },
+        },
+      })
+    } catch (e) {
+      // o que a pessoa editou fica na tela (o rascunho não é descartado) e o motivo vem em frase
+      setSaveLayerError(e instanceof Error ? e.message : 'Não conseguimos salvar.')
+    } finally {
+      setSavingLayer(false)
+    }
+  }, [draft, putLayer, patchLayer, flash])
+
   // ── Processed layers (ordering-stable: all visible layers, data or empty) ──
   // Iterates `layers` in catalog order — Source/Layer components are registered in
   // the correct MapLibre stack position from the first render, so late-arriving
   // data (e.g. propriedades at 10s) does not push layers to the top of the stack.
   const processedLayers = useMemo(() => {
-    return layers.map((layer) => {
+    return renderLayers.map((layer) => {
       const data = layerData[layer.slug]
       const vc = layer.visualConfig
       const ruleField = vc?.rules?.[0]?.field
@@ -551,6 +847,8 @@ export default function MapLibreMap({
         isVisible = visibleLayers.includes(layer.slug)
       }
 
+      // em edição, a camada aparece mesmo desligada: a pré-visualização é para ver a mudança (o editor avisa isso)
+      if (draft?.slug === layer.slug) isVisible = true
       if (!isVisible) return null
 
       // Use loaded data or empty collection — either way Source is registered in order
@@ -566,7 +864,7 @@ export default function MapLibreMap({
 
       return { layer, displayData, isIcon: isIconLayer(layer.visualConfig) }
     }).filter((item): item is NonNullable<typeof item> => item !== null)
-  }, [layers, visibleLayers, layerData, EMPTY_FC])
+  }, [renderLayers, visibleLayers, layerData, EMPTY_FC, draft?.slug])
 
   // ── interactiveLayerIds for click/hover ───────────────────────────────────
   const interactiveLayerIds = useMemo(
@@ -582,14 +880,22 @@ export default function MapLibreMap({
   // ── Shared feature-click handler (usado por layers MapLibre E por icon markers) ──
   const openFeatureModal = useCallback(
     (slug: string, props: Record<string, any>) => {
+      // ação e propriedade abrem no painel Explorar (o dossiê completo está lá, em "Abrir dossiê"); o resto segue no modal
+      if ((slug === 'acoes' || slug === 'propriedades') && props.id) {
+        selectExplore({ kind: slug, id: Number(props.id) })
+        return
+      }
       if (slug === 'acoes') setSelectedAcao(props)
       else setSelectedAcao(null)
       openModal('', <FeatureDetails layerType={slug} properties={props} />)
     },
-    [openModal]
+    [openModal, selectExplore]
   )
 
   // ── Hover handler para icon markers (HTML Markers não disparam onMouseMove do Map) ──
+  // Um cartão por vez: com o mouse num grupo de ações, o cartão da ação que está por baixo não abre (DESIGN.md 13.4)
+  const [clusterHovered, setClusterHovered] = useState(false)
+
   const handleMarkerHover = useCallback(
     (props: Record<string, any> | null, coords: [number, number] | null) => {
       setHoveredFeature(props)
@@ -598,12 +904,31 @@ export default function MapLibreMap({
     []
   )
 
+  // Propriedade escolhida (por mouse ou toque): o cartão mostra o que o mapa já sabe e busca o resto
+  const selectProperty = useCallback((props: Record<string, any>) => {
+    setHoveredPropertyId(props.id ?? null)
+    setHoveredPropertyBasic({
+      nome: props.nome,
+      cod_imovel: props.cod_imovel,
+      municipio: props.municipio,
+      num_area: props.num_area,
+    })
+    setHoveredFeature(null)
+    setHoverCoords(null)
+  }, [])
+
   // ── Map event handlers ────────────────────────────────────────────────────
   const handleMapClick = useCallback(
     (e: any) => {
       // Coordinate inspector mode
       if (coordInspectorActive) {
         setInspectedCoord({ lat: e.lngLat.lat, lng: e.lngLat.lng })
+        return
+      }
+
+      // Propriedade: tocar numa propriedade mostra os dados dela, como passar o mouse
+      if (propertyInfoActive && e.features?.[0]?.layer.id.startsWith('propriedades-')) {
+        selectProperty(e.features[0].properties ?? {})
         return
       }
 
@@ -622,7 +947,7 @@ export default function MapLibreMap({
       const slug = feature.layer.id.replace(/-(fill|circle|line|hover-circle)$/, '')
       openFeatureModal(slug, feature.properties ?? {})
     },
-    [coordInspectorActive, measureMode, measureDrawing, openFeatureModal]
+    [coordInspectorActive, propertyInfoActive, selectProperty, measureMode, measureDrawing, openFeatureModal]
   )
 
   const handleMouseMove = useCallback(
@@ -651,16 +976,7 @@ export default function MapLibreMap({
 
       // Property info mode: intercept propriedades hover before exclusion check
       if (propertyInfoActive && slug === 'propriedades') {
-        const props = feature.properties ?? {}
-        setHoveredPropertyId(props.id ?? null)
-        setHoveredPropertyBasic({
-          nome: props.nome,
-          cod_imovel: props.cod_imovel,
-          municipio: props.municipio,
-          num_area: props.num_area,
-        })
-        setHoveredFeature(null)
-        setHoverCoords(null)
+        selectProperty(feature.properties ?? {})
         return
       }
 
@@ -678,15 +994,12 @@ export default function MapLibreMap({
       setHoveredFeature({ ...feature.properties, _slug: slug })
       setHoverCoords([e.lngLat.lng, e.lngLat.lat])
     },
-    [measureMode, measureDrawing, propertyInfoActive]
+    [measureMode, measureDrawing, propertyInfoActive, selectProperty]
   )
 
   const handleContextMenu = useCallback(() => {
-    if (measureMode && measureDrawing) {
-      setMeasureDrawing(false)
-      setMeasureCursorPos(null)
-    }
-  }, [measureMode, measureDrawing])
+    if (measureMode && measureDrawing) handleFinishMeasure()
+  }, [measureMode, measureDrawing, handleFinishMeasure])
 
   // ── Cursor style ──────────────────────────────────────────────────────────
   const cursor = useMemo(() => {
@@ -792,23 +1105,6 @@ export default function MapLibreMap({
   )
 
   // ── Measure control handlers ───────────────────────────────────────────────
-  const handleToggleMeasureMode = useCallback(
-    (mode: 'distance' | 'area') => {
-      if (measureMode === mode) {
-        setMeasureMode(null)
-        setMeasurePoints([])
-        setMeasureCursorPos(null)
-        setMeasureDrawing(false)
-      } else {
-        setMeasureMode(mode)
-        setMeasurePoints([])
-        setMeasureCursorPos(null)
-        setMeasureDrawing(true)
-      }
-    },
-    [measureMode]
-  )
-
   const handleClearMeasure = useCallback(() => {
     setMeasurePoints([])
     setMeasureCursorPos(null)
@@ -817,8 +1113,8 @@ export default function MapLibreMap({
 
   // ── LayerManager options ───────────────────────────────────────────────────
   const layerManagerOptions = useMemo((): LayerManagerOption[] => {
-    return layers.map((layer) => {
-      const { legendType, iconName, color: baseColor, fillColor: baseFill } =
+    return renderLayers.map((layer) => {
+      const { legendType, iconName, color: baseColor, fillColor: baseFill, fillOpacity: baseFillOpacity } =
         getLayerLegendInfo(layer.visualConfig)
       const config = layer.visualConfig
       const firstRule = config?.rules?.[0]
@@ -846,15 +1142,17 @@ export default function MapLibreMap({
             icon: iconName,
             legendType,
             fillColor: baseFill,
+            fillOpacity: baseFillOpacity,
             category: layer.visualConfig?.category,
             subOptions: groups.map((group) => ({
               id: `${layer.slug}__${group.id}`,
               label: group.label,
               slug: `${layer.slug}__${group.id}`,
               color: group.color || baseColor,
-              icon: group.icon || iconName,
+              icon: ruleIcon(config, group.id) ?? group.icon ?? iconName,
               legendType,
               fillColor: baseFill,
+              fillOpacity: baseFillOpacity,
               category: layer.visualConfig?.category,
             })),
           }
@@ -869,16 +1167,118 @@ export default function MapLibreMap({
         icon: iconName,
         legendType,
         fillColor: baseFill,
+        fillOpacity: baseFillOpacity,
         category: layer.visualConfig?.category,
       }
     })
-  }, [layers])
+  }, [renderLayers])
+
+  // A Fauna fecha a lista, junto das camadas de monitoramento (a lista agrupa por categoria)
+  const panelOptions = useMemo((): LayerManagerOption[] => {
+          return [
+      ...layerManagerOptions,
+      {
+        id: 'fauna',
+        slug: 'fauna',
+        editable: false,
+        label: 'Fauna exótica (javali)',
+        color: 'var(--color-crit)',
+        icon: 'paw-print',
+        category: 'Monitoramento',
+        subOptions: [
+          { id: FAUNA_HEATMAP, slug: FAUNA_HEATMAP, label: 'Mapa de calor', color: 'var(--color-crit)', legendType: 'heatmap' },
+          { id: FAUNA_LOCATIONS, slug: FAUNA_LOCATIONS, label: 'Localizações pontuais', color: 'var(--color-crit)', legendType: 'circle' },
+        ],
+      },
+    ]
+  }, [layerManagerOptions])
+
+  const panelActiveLayers = useMemo(
+    () => [
+      ...visibleLayers,
+      ...(faunaHeatmapActive ? [FAUNA_HEATMAP] : []),
+      ...(faunaLocationsActive ? [FAUNA_LOCATIONS] : []),
+    ],
+    [visibleLayers, faunaHeatmapActive, faunaLocationsActive],
+  )
+
+  // Quantas feições cada camada tem no mapa, e quais estão sendo mexidas por um filtro (as duas coisas aparecem na linha)
+  const dateOn = !!(dateFilter.startDate || dateFilter.endDate)
+  const areaOn = areaFilter.minArea !== undefined || areaFilter.maxArea !== undefined
+
+  const layerCounts = useMemo(() => {
+    const c: Record<string, number> = {}
+    Object.entries(layerData).forEach(([slug, fc]) => { c[slug] = fc.features.length })
+    if (faunaFetched) c.fauna = faunaData.length
+    return c
+  }, [layerData, faunaFetched, faunaData.length])
+
+  const filterNotes = useMemo(() => {
+    const n: Record<string, FilterNote> = {}
+    layers.forEach((l) => {
+      const note = filterNoteFor(l.slug, dateOn, areaOn)
+      if (note) n[l.slug] = note
+    })
+    return n
+  }, [layers, dateOn, areaOn])
+
+  // Onde cada filtro vale, para o painel Filtros dizer (e avisar se nenhuma dessas camadas está ligada)
+  const dateAffects = useMemo(() => {
+    const hit = layers.filter((l) => l.visualConfig?.dateFilter === true || DATE_SENSITIVE_SLUGS.has(l.slug))
+    return { names: hit.map((l) => l.name.trim()), anyOn: hit.some((l) => isLayerOn(l.slug, visibleLayers)) }
+  }, [layers, visibleLayers])
+
+  const areaAffects = useMemo(() => {
+    const hit = layers.filter((l) => AREA_SENSITIVE_SLUGS.has(l.slug))
+    return { names: hit.map((l) => l.name.trim()), anyOn: hit.some((l) => isLayerOn(l.slug, visibleLayers)) }
+  }, [layers, visibleLayers])
+
+  // Andamento de cada fonte (DESIGN.md 2.1): só as camadas ligadas mostram carregando ou erro
+  const layerStatus = useMemo(() => {
+    const st: Record<string, LayerStatus> = {}
+    new Set(visibleLayers.map((s) => s.split('__')[0])).forEach((slug) => {
+      if (failedLayers.includes(slug)) st[slug] = 'error'
+      else if (!layerData[slug]) st[slug] = 'loading'
+    })
+    if (faunaHeatmapActive || faunaLocationsActive) {
+      if (faunaFailed) st.fauna = 'error'
+      else if (!faunaFetched) st.fauna = 'loading'
+    }
+    return st
+  }, [visibleLayers, failedLayers, layerData, faunaHeatmapActive, faunaLocationsActive, faunaFailed, faunaFetched])
+
+  const refreshing = loadingLayers || Object.values(layerStatus).includes('loading')
+
+  const handleReload = useCallback(() => {
+    _cache.data = {}
+    pendingBatch.current = {}
+    if (batchTimer.current) { clearTimeout(batchTimer.current); batchTimer.current = null }
+    setLayerData({})
+    setFailedLayers([])
+    fetchingRef.current.clear()
+    setFaunaFetched(false)
+    setFaunaFailed(false)
+    fetchCatalog(true)
+  }, [fetchCatalog])
+
+  const handleRetryLayer = useCallback((slug: string) => {
+    if (slug === 'fauna') { setFaunaFailed(false); return }
+    setFailedLayers((prev) => prev.filter((s) => s !== slug))
+    fetchLayerData(slug)
+  }, [fetchLayerData])
 
   // ── Hover popup content ───────────────────────────────────────────────────
   const hoveredLayerConfig = useMemo(() => {
     if (!hoveredFeature) return null
     return layers.find((l) => l.slug === hoveredFeature._slug) ?? null
   }, [hoveredFeature, layers])
+
+  // Cor e ícone do cartão da ação: o mesmo cálculo do marcador (6.2, regra 13), nunca um palpite a partir do evento
+  const hoveredAcaoStyle = useMemo(() => {
+    if (hoveredFeature?._slug !== 'acoes') return null
+    const vc = hoveredLayerConfig?.visualConfig as any
+    return resolveFeatureStyle({ baseStyle: vc?.baseStyle || vc, rules: vc?.rules }, { properties: hoveredFeature } as any) as { color?: string; iconName?: string }
+  }, [hoveredFeature, hoveredLayerConfig])
 
   const hoverPopupFields = useMemo(() => {
     if (!hoveredLayerConfig) return null
@@ -901,15 +1301,20 @@ export default function MapLibreMap({
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="w-full h-full relative">
+      <PrismCursor />
       <Map
         ref={mapRef}
-        initialViewState={{
-          longitude: center[1],
-          latitude: center[0],
-          zoom,
-        }}
+        initialViewState={
+          saved.camera
+            ? { longitude: saved.camera.lng, latitude: saved.camera.lat, zoom: saved.camera.zoom, ...cameraFor(viewMode) }
+            : { longitude: center[1], latitude: center[0], zoom }
+        }
         style={{ width: '100%', height: '100%' }}
-        mapStyle={BASEMAPS[basemap] as any}
+        mapStyle={mapStyle as any}
+        maxZoom={BASEMAP_MAX_ZOOM[shownBasemap]}
+        // null desliga o terreno (a prop tipada só aceita undefined, mas a biblioteca trata null como "sem terreno")
+        terrain={(terrainOn ? { source: 'dem', exaggeration: TERRAIN_EXAGGERATION } : null) as any}
+        onMoveEnd={handleMoveEnd}
         cursor={cursor}
         onLoad={() => setMapLoaded(true)}
         onClick={handleMapClick}
@@ -917,7 +1322,12 @@ export default function MapLibreMap({
         onContextMenu={handleContextMenu}
         interactiveLayerIds={interactiveLayerIds}
       >
-        <NavigationControl position="top-right" />
+        {/* ── Relevo (DEM): serve ao terreno 3D e, nas bases claras, ao sombreado. Primeiro filho: fica sob os dados. ── */}
+        <Source id="dem" type="raster-dem" tiles={DEM_TILES} encoding="terrarium" tileSize={256} maxzoom={DEM_MAX_ZOOM}>
+          {HILLSHADE_BASEMAPS.has(shownBasemap) && (
+            <Layer id="relevo" type="hillshade" paint={hillshadePaint(tokens) as any} />
+          )}
+        </Source>
 
         {/* ── Data layers (Source+Layer) ── */}
         {processedLayers.flatMap(({ layer, displayData, isIcon }) => {
@@ -1016,6 +1426,8 @@ export default function MapLibreMap({
           ]
         })}
 
+        {exploreFeature?.geometry && <ExploreHighlight geometry={exploreFeature.geometry} basemap={shownBasemap} />}
+
         {/* ── Icon layers (HTML Markers com ícones Lucide por feature) ── */}
         {processedLayers
           .filter(({ isIcon, displayData }) => isIcon && displayData.features.length > 0)
@@ -1026,6 +1438,8 @@ export default function MapLibreMap({
               data={displayData}
               onFeatureClick={openFeatureModal}
               onFeatureHover={handleMarkerHover}
+              onClusterHover={setClusterHovered}
+              basemap={shownBasemap}
             />
           ))}
 
@@ -1165,17 +1579,17 @@ export default function MapLibreMap({
           </Marker>
         )}
 
-        {/* ── Hover: card de ação (dark, Apple-style) ── */}
-        {hoveredFeature?._slug === 'acoes' && hoverCoords ? (
+        {/* ── Hover: cartão da ação (13.4) ── */}
+        {clusterHovered ? null : hoveredFeature?._slug === 'acoes' && hoverCoords ? (
           <Popup
             longitude={hoverCoords[0]}
             latitude={hoverCoords[1]}
             closeButton={false}
-            offset={[0, -20] as any}
+            offset={[0, -22] as any}
             anchor="bottom"
             className="acao-hover-popup"
           >
-            <AcaoHoverCard properties={hoveredFeature} />
+            <AcaoHoverCard properties={hoveredFeature} color={hoveredAcaoStyle?.color} iconName={hoveredAcaoStyle?.iconName} />
           </Popup>
         ) : hoveredFeature && hoverCoords && hoverPopupFields?.length ? (
           /* ── Hover: tooltip genérico para outras camadas ── */
@@ -1207,113 +1621,8 @@ export default function MapLibreMap({
 
       {/* ── Controls overlay ─────────────────────────────────────────────── */}
 
-      {/* Basemap dropdown */}
-      {basemapOpen && (
-        <div
-          className="fixed inset-0 z-[399]"
-          onClick={() => setBasemapOpen(false)}
-        />
-      )}
-      <div className="absolute top-4 right-14 z-[400]">
-        <div className="relative">
-          <Button
-            variant="outline"
-            size="sm"
-            className="h-8 px-3 text-xs bg-white/90 backdrop-blur-sm shadow-md border-gray-200 text-slate-700 gap-1"
-            onClick={() => setBasemapOpen((v) => !v)}
-          >
-            <LucideIcons.Layers className="h-3 w-3" />
-            {BASEMAP_LABELS[basemap]}
-            <LucideIcons.ChevronDown className={`h-3 w-3 transition-transform ${basemapOpen ? 'rotate-180' : ''}`} />
-          </Button>
-          {basemapOpen && (
-            <div className="absolute right-0 mt-1 w-36 bg-white rounded-md shadow-lg border border-gray-200 py-1 z-10">
-              {(Object.keys(BASEMAPS) as BasemapKey[]).map((key) => (
-                <button
-                  key={key}
-                  className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between hover:bg-gray-50 transition-colors ${
-                    basemap === key ? 'text-brand-primary font-semibold' : 'text-slate-700'
-                  }`}
-                  onClick={() => { setBasemap(key); setBasemapOpen(false) }}
-                >
-                  {BASEMAP_LABELS[key]}
-                  {basemap === key && <LucideIcons.Check className="h-3 w-3" />}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Left panel: filters */}
-      <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-4">
-        <DateFilterControl onDateChange={setDateFilter} />
-        <PropertyFilterControl onFilterChange={setAreaFilter} />
-        <MaplibreFaunaHeatmapControl
-          isHeatmapActive={faunaHeatmapActive}
-          isLocationsActive={faunaLocationsActive}
-          isLoading={faunaLoading}
-          hasFetched={faunaFetched}
-          dataCount={faunaData.length}
-          onToggleHeatmap={setFaunaHeatmapActive}
-          onToggleLocations={setFaunaLocationsActive}
-        />
-        <PropertyInfoControl
-          isActive={propertyInfoActive}
-          onToggle={() => setPropertyInfoActive((v) => !v)}
-          hoveredPropertyId={hoveredPropertyId}
-          hoveredPropertyBasic={hoveredPropertyBasic}
-        />
-      </div>
-
-      {/* Reload button */}
-      <div className="absolute top-44 right-4 z-[400]">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => {
-            _cache.data = {}
-            pendingBatch.current = {}
-            if (batchTimer.current) { clearTimeout(batchTimer.current); batchTimer.current = null }
-            setLayerData({})
-            fetchingRef.current.clear()
-            fetchCatalog()
-          }}
-          className="bg-white hover:bg-gray-100 shadow-md text-black border-input"
-          title="Atualizar dados"
-        >
-          <LucideIcons.RefreshCw
-            className={`h-4 w-4 ${loadingLayers ? 'animate-spin' : ''}`}
-          />
-        </Button>
-      </div>
-
-      {/* Measure control */}
-      <MaplibreMeasureControl
-        mode={measureMode}
-        isDrawing={measureDrawing}
-        hasPoints={measurePoints.length > 0}
-        distance={measureDistance}
-        area={measureArea}
-        onToggleMode={handleToggleMeasureMode}
-        onClear={handleClearMeasure}
-      />
-
-      {/* Coordinate inspector */}
-      <MaplibreCoordinateInspector
-        isActive={coordInspectorActive}
-        onToggle={() => {
-          setCoordInspectorActive((v) => !v)
-          if (coordInspectorActive) setInspectedCoord(null)
-        }}
-        coordinate={inspectedCoord}
-      />
-
-      {/* Snapshot */}
-      <MaplibreSnapshotControl
-        activeLayers={visibleLayers}
-        mapRef={mapRef}
-      />
+      {/* Câmera: zoom, bússola e 2D|3D */}
+      <CameraControls mapRef={mapRef} ready={mapLoaded} viewMode={viewMode} onViewModeChange={handleViewModeChange} canFitRegion={!!regionBounds} onFitRegion={handleFitRegion} />
 
       {/* Shapefile uploader */}
       {/* <ShapefileUploader
@@ -1330,29 +1639,146 @@ export default function MapLibreMap({
         }}
       /> */}
 
-      {/* Bottom-left: LayerManager */}
-      <div className="absolute bottom-4 left-4 z-[1000]">
-        <LayerManager
-          title="Camadas"
-          options={layerManagerOptions}
-          activeLayers={visibleLayers}
-          onLayerToggle={handleLayerToggle}
-          onToggleAll={handleToggleAll}
-          onGroupToggle={handleGroupToggle}
+      {/* Dock: o que o mapa mostra (Camadas, Filtros), ferramentas (Medir, Consultar) e Imprimir */}
+      <MapDock
+        open={dockOpen}
+        onOpenChange={setDockOpen}
+        above={activeTool && (
+          <ToolFeedback
+            tool={activeTool}
+            onExit={() => selectTool(null)}
+            measure={{ points: measurePoints.length, drawing: measureDrawing, distance: measureDistance, area: measureArea, onClear: handleClearMeasure, onFinish: handleFinishMeasure }}
+            coordinate={inspectedCoord}
+            property={{ id: hoveredPropertyId, basic: hoveredPropertyBasic }}
+          />
+        )}
+      >
+        <DockPanelButton
+          id="layers"
+          accentTitle={isAdmin ? 'Editar camadas' : undefined}
+          titleIcon={isAdmin && (picking || draft) ? LucideIcons.Pencil : undefined}
+          accent={!!(isAdmin && (picking || draft))}
+          icon={LucideIcons.Layers}
+          label="Camadas"
+          motion="rise"
+          alert={basemap !== shownBasemap || !!draft}
+          action={
+            <>
+              {/* "Editar" só para quem pode, e some enquanto há um editor aberto (lá dentro já há Salvar e Cancelar). O "Atualizar" sai do
+                  cabeçalho enquanto se edita: com o título "Editar camadas" e o "Concluir", o cabeçalho ficava pesado e o título quebrava.
+                  Quem sai encolhe e some, quem entra cresce (8.4): nada pula. */}
+              {isAdmin && (
+                <Reveal show={!draft}>
+                  <EditModeButton active={picking} onToggle={() => setPicking((v) => !v)} />
+                </Reveal>
+              )}
+              <Reveal show={!(isAdmin && (picking || !!draft))}>
+                <RefreshButton refreshing={refreshing} onRefresh={handleReload} />
+              </Reveal>
+            </>
+          }
+        >
+          <LayersPanel
+            basemap={basemap}
+            shownBasemap={shownBasemap}
+            onBasemapChange={handleBasemapChange}
+            onReset={handleResetPrefs}
+            onPick={isAdmin && picking ? handleEditLayer : undefined}
+            onPickGroup={isAdmin && picking ? handleEditGroup : undefined}
+            flashSlug={flashSlug}
+            editing={
+              draft && draft.groupKey ? (
+                <GroupIconEditor
+                  layerName={layers.find((l) => l.slug === draft.slug)?.name ?? draft.initial.name}
+                  groupLabel={draft.groupKey}
+                  icon={draft.edit.ruleIcons?.[draft.groupKey] ?? currentGroupIcon(draft.slug, draft.groupKey)}
+                  color={draft.edit.style.color}
+                  dirty={JSON.stringify(draft.edit) !== JSON.stringify(draft.initial)}
+                  onChange={(icon) => setDraft((d) => (d && d.groupKey ? { ...d, edit: { ...d.edit, ruleIcons: { ...d.edit.ruleIcons, [d.groupKey]: icon } } } : d))}
+                  onSave={handleSaveLayer}
+                  onCancel={() => { setDraft(null); setSaveLayerError(null) }}
+                  saving={savingLayer}
+                  error={saveLayerError}
+                />
+              ) : draft && (
+                <LayerEditor
+                  savedName={layers.find((l) => l.slug === draft.slug)?.name ?? draft.initial.name}
+                  edit={draft.edit}
+                  initial={draft.initial}
+                  onChange={(edit) => setDraft((d) => (d ? { ...d, edit } : d))}
+                  onSave={handleSaveLayer}
+                  onCancel={() => { setDraft(null); setSaveLayerError(null) }}
+                  saving={savingLayer}
+                  error={saveLayerError}
+                  iconLocked={!!(layers.find((l) => l.slug === draft.slug)?.visualConfig as any)?.rules?.length}
+                  hiddenOnMap={!isLayerOn(draft.slug, visibleLayers)}
+                />
+              )
+            }
+            options={panelOptions}
+            activeLayers={panelActiveLayers}
+            onLayerToggle={handleLayerToggle}
+            onHideAll={() => handleToggleAll(false)}
+            onGroupToggle={handleGroupToggle}
+            counts={layerCounts}
+            filterNotes={filterNotes}
+            status={layerStatus}
+            onRetry={handleRetryLayer}
+            loading={loadingLayers}
+          />
+        </DockPanelButton>
+        <DockPanelButton id="filters" icon={LucideIcons.SlidersHorizontal} label="Filtros" motion="slide" badge={activeFilterCount(dateFilter.startDate, dateFilter.endDate, areaFilter)}>
+          <FiltersPanel
+            startDate={dateFilter.startDate}
+            endDate={dateFilter.endDate}
+            onDateChange={handleDateChange}
+            area={areaFilter}
+            onAreaChange={handleAreaChange}
+            dateAffects={dateAffects}
+            areaAffects={areaAffects}
+          />
+        </DockPanelButton>
+        <DockPanelButton id="explore" icon={LucideIcons.Search} label="Explorar" motion="grow" side>
+          <ExplorePanel
+            key={regiaoId ?? 'padrao'}
+            regiaoId={regiaoId}
+            regionName={regionBounds?.nome ?? undefined}
+            actionVisualConfig={layers.find((l) => l.slug === 'acoes')?.visualConfig}
+            selection={exploreSelection}
+            onSelect={selectExplore}
+            onFocus={focusExplore}
+            getBounds={getExploreBounds}
+            onDossie={(selection) => {
+              setSelectedAcao(selection.kind === 'acoes' ? { id: selection.id } : null)
+              openModal('', <FeatureDetails layerType={selection.kind} properties={{ id: selection.id }} />)
+            }}
+          />
+        </DockPanelButton>
+        <DockDivider />
+        <ToolMenu
+          icon={LucideIcons.Ruler}
+          label="Medir"
+          motion="tilt"
+          tools={[{ id: 'measure-distance', icon: LucideIcons.Ruler }, { id: 'measure-area', icon: LucideIcons.SquareDashed }]}
+          active={activeTool === 'measure-distance' || activeTool === 'measure-area' ? activeTool : null}
+          onSelect={selectTool}
         />
-      </div>
+        <ToolMenu
+          icon={LucideIcons.Crosshair}
+          label="Consultar"
+          motion="spin"
+          tools={[{ id: 'coords', icon: LucideIcons.Crosshair }, { id: 'property', icon: LucideIcons.Info }]}
+          active={activeTool === 'coords' || activeTool === 'property' ? activeTool : null}
+          onSelect={selectTool}
+        />
+        <DockDivider />
+        <MaplibreSnapshotControl activeLayers={visibleLayers} mapRef={mapRef} />
+      </MapDock>
 
-      {/* Loading overlay */}
-      {loadingLayers && (
-        <div className="absolute inset-0 z-[2000] bg-black/40 backdrop-blur-sm flex items-center justify-center pointer-events-none">
-          <div className="bg-brand-dark border border-white/10 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary" />
-            <span className="text-slate-200 text-sm font-medium">
-              Atualizando dados...
-            </span>
-          </div>
-        </div>
-      )}
+      {/* Aviso (salvou, desfazer): no alto e ao centro, com contador (DESIGN.md 12) */}
+      <div className="pointer-events-none absolute inset-x-3 top-4 z-[2000] flex justify-center">
+        <Notice notice={notice} onClose={() => setNotice(null)} />
+      </div>
 
       {/* Modal */}
       <Modal

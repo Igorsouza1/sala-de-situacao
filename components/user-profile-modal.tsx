@@ -161,11 +161,11 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
   ──────────────────────────*/
   return (
     <Dialog open={isOpen} onOpenChange={(o) => !o && handleClose()}>
-      <DialogContent className="max-w-md w-[95vw] max-h-[95vh] p-0 bg-pantaneiro-green border-0 shadow-2xl overflow-hidden">
+      <DialogContent className="max-w-md w-[95vw] max-h-[95vh] p-0 bg-primary border-0 shadow-2xl overflow-hidden">
         <DialogTitle className="sr-only">Perfil</DialogTitle>
 
         {/* HEADER */}
-        <div className="relative bg-gradient-to-br from-slate-700 via-slate-600 to-slate-700 h-32 rounded-t-lg">
+        <div className="relative bg-linear-to-br from-slate-700 via-slate-600 to-slate-700 h-32 rounded-t-lg">
           <Button
             size="icon"
             variant="ghost"
@@ -176,8 +176,8 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
           </Button>
 
           {/* Avatar fake */}
-          <div className="absolute -bottom-8 left-6 w-16 h-16 bg-pantaneiro-lime rounded-full border-4 border-pantaneiro-green flex items-center justify-center">
-            <span className="text-pantaneiro-green text-xl font-semibold">{getInitials(displayName)}</span>
+          <div className="absolute -bottom-8 left-6 w-16 h-16 bg-accent rounded-full border-4 border-primary flex items-center justify-center">
+            <span className="text-primary text-xl font-semibold">{getInitials(displayName)}</span>
           </div>
         </div>
 
@@ -253,7 +253,7 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
                   <h1 className="text-xl font-semibold text-white">{displayName || "Nome não informado"}</h1>
-                  <Badge className="bg-pantaneiro-lime/20 text-pantaneiro-lime border-pantaneiro-lime/30 text-xs">
+                  <Badge className="bg-accent/20 text-accent border-accent/30 text-xs">
                     <Shield className="w-3 h-3 mr-1" />
                     Verificado
                   </Badge>
@@ -271,7 +271,7 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
                 </div>
                 <div>
                   <p className="text-white/50 text-xs uppercase">Status</p>
-                  <p className="text-pantaneiro-lime font-medium">Ativo</p>
+                  <p className="text-accent font-medium">Ativo</p>
                 </div>
               </div>
 
@@ -303,7 +303,7 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
                         value={editName}
                         onChange={(e) => setEditName(e.target.value)}
                         placeholder="Digite seu nome completo"
-                        className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-pantaneiro-lime focus:ring-pantaneiro-lime/20 h-10"
+                        className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-accent focus:ring-accent/20 h-10"
                       />
                     </div>
 
@@ -311,7 +311,7 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
                       <Button
                         disabled={loading}
                         onClick={handleUpdateProfile}
-                        className="bg-pantaneiro-lime hover:bg-pantaneiro-lime/90 text-pantaneiro-green h-9 flex-1"
+                        className="bg-accent hover:bg-accent/90 text-primary h-9 flex-1"
                       >
                         <Save className="w-3 h-3 mr-1" />
                         {loading ? "Salvando..." : "Salvar"}
@@ -368,7 +368,7 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
                       <Button
                         disabled={loading || !currentPassword || !newPassword || !confirmPassword}
                         onClick={handleUpdatePassword}
-                        className="bg-pantaneiro-lime hover:bg-pantaneiro-lime/90 text-pantaneiro-green h-9 flex-1"
+                        className="bg-accent hover:bg-accent/90 text-primary h-9 flex-1"
                       >
                         <Save className="w-3 h-3 mr-1" />
                         {loading ? "Alterando..." : "Alterar Senha"}
@@ -405,7 +405,7 @@ export function UserProfileModal({ isOpen, onClose }: UserProfileModalProps) {
 function PersonalItem({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center gap-3">
-      <div className="w-2 h-2 bg-pantaneiro-lime rounded-full" />
+      <div className="w-2 h-2 bg-accent rounded-full" />
       <div>
         <p className="text-white/50 text-xs">{label}</p>
         <p className="text-white text-sm">{value}</p>
@@ -496,7 +496,7 @@ function PasswordInput({ id, label, value, onChange, visible, toggle }: Password
           value={value}
           onChange={onChange}
           placeholder={label}
-          className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-pantaneiro-lime focus:ring-pantaneiro-lime/20 h-10 pr-10"
+          className="bg-white/10 border-white/20 text-white placeholder:text-white/50 focus:border-accent focus:ring-accent/20 h-10 pr-10"
         />
         <Button
           type="button"

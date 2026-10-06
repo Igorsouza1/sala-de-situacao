@@ -164,7 +164,7 @@ export function FaunaHeatmapControl() {
             </div>
 
             {isLoading && (
-              <p className="text-xs text-slate-500 animate-pulse">Carregando dados...</p>
+              <p className="text-xs text-slate-500">Carregando dados...</p>
             )}
             {hasFetched && data.length > 0 && (
               <p className="text-xs text-slate-500">

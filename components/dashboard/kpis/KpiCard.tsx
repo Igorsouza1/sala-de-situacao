@@ -67,18 +67,18 @@ function Sparkline({ data, color }: { data: number[]; color: string }) {
 
 function SkeletonKpiCard() {
   return (
-    <div className="h-44 bg-card border border-border rounded-xl overflow-hidden animate-pulse flex flex-col">
-      <div className="h-1 w-full bg-muted flex-none" />
+    <div className="h-44 bg-card border border-border rounded-xl overflow-hidden flex flex-col">
+      <div className="h-1 w-full bg-muted bg-shimmer flex-none" />
       <div className="flex flex-col flex-1 p-4 gap-2">
         <div className="flex justify-between items-center">
-          <div className="w-8 h-8 rounded-lg bg-muted" />
-          <div className="w-4 h-4 rounded bg-muted" />
+          <div className="w-8 h-8 rounded-lg bg-muted bg-shimmer" />
+          <div className="w-4 h-4 rounded bg-muted bg-shimmer" />
         </div>
-        <div className="w-24 h-3 bg-muted rounded" />
-        <div className="w-16 h-7 bg-muted rounded" />
-        <div className="w-32 h-2.5 bg-muted rounded" />
+        <div className="w-24 h-3 bg-muted bg-shimmer rounded" />
+        <div className="w-16 h-7 bg-muted bg-shimmer rounded" />
+        <div className="w-32 h-2.5 bg-muted bg-shimmer rounded" />
         <div className="flex-1" />
-        <div className="w-full h-7 bg-muted rounded" />
+        <div className="w-full h-7 bg-muted bg-shimmer rounded" />
       </div>
     </div>
   )

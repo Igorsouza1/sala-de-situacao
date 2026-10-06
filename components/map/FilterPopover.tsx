@@ -27,19 +27,19 @@ export function FilterPopover({ icon: Icon, title, count, isActive, panelClassNa
           size="icon"
           onClick={() => setIsOpen(!isOpen)}
           className={`bg-white hover:bg-gray-100 shadow-md text-slate-700 border-input rounded-full w-10 h-10 transition-colors ${
-            isOpen ? "ring-2 ring-brand-primary ring-offset-2" : ""
+            isOpen ? "ring-2 ring-primary ring-offset-2" : ""
           }`}
           title={title}
         >
           <Icon className="h-5 w-5" />
         </Button>
         {count != null && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-brand-primary text-white text-[10px] font-bold leading-none shadow">
+          <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-primary text-white text-[10px] font-bold leading-none shadow-sm">
             {count}
           </span>
         )}
         {isActive && count == null && (
-          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-brand-primary shadow" />
+          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-primary shadow-sm" />
         )}
       </div>
 

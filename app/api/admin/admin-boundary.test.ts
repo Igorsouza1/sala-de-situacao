@@ -11,7 +11,6 @@ import * as resendInvite from "./users/[roleId]/resend/route";
 import * as userAccount from "./users/account/[userId]/route";
 import * as propertyById from "./properties/[id]/route";
 import * as layerById from "./layers/[id]/route";
-import * as layerVisual from "./layers/[id]/visual/route";
 import * as regionAcoes from "./regions/[id]/acoes/route";
 import * as commitDesmatamento from "./regions/[id]/commit-desmatamento/route";
 import * as commitFocos from "./regions/[id]/commit-focos/route";
@@ -60,7 +59,6 @@ const routes = [
   ["user account DELETE", () => userAccount.DELETE(request("DELETE"), accountContext)],
   ["property PATCH", () => propertyById.PATCH(request("PATCH"), context)],
   ["layer DELETE", () => layerById.DELETE(request("DELETE"), context)],
-  ["layer visual PUT", () => layerVisual.PUT(request("PUT"), context)],
   ["region actions GET", () => regionAcoes.GET(request("GET"), context)],
   ["region actions POST", () => regionAcoes.POST(request("POST"), context)],
   ["desmatamento import POST", () => commitDesmatamento.POST(request("POST"), context)],

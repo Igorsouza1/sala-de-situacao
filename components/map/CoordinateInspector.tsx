@@ -74,7 +74,7 @@ export function CoordinateInspector() {
           <Button
             variant={isActive ? "default" : "outline"}
             size="icon"
-            className={`shadow-md transition-all ${isActive ? 'bg-brand-primary text-white border-brand-primary' : 'bg-white text-black hover:bg-gray-100'}`}
+            className={`shadow-md transition-all ${isActive ? 'bg-primary text-white border-primary' : 'bg-white text-black hover:bg-gray-100'}`}
             onClick={toggleActive}
             title="Capturar Coordenadas"
           >
@@ -83,7 +83,7 @@ export function CoordinateInspector() {
 
           {/* Result Panel (Floating next to button or separate?) */}
           {isActive && coordinate && (
-             <div className="bg-white/95 backdrop-blur-sm p-3 rounded-lg shadow-xl border border-gray-200 mt-2 flex flex-col gap-2 min-w-[200px] animate-in slide-in-from-right-4 fade-in">
+             <div className="bg-white/95 backdrop-blur-xs p-3 rounded-lg shadow-xl border border-gray-200 mt-2 flex flex-col gap-2 min-w-[200px] animate-in slide-in-from-right-4 fade-in">
                  <div className="flex justify-between items-center text-xs font-semibold text-slate-500 uppercase tracking-wider border-b pb-1 mb-1">
                      <span>Coordenadas</span>
                      <MapPin className="h-3 w-3" />

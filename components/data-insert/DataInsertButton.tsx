@@ -12,7 +12,7 @@ export function DataInsertButton({ onClick }: DataInsertButtonProps) {
     <Button
       onClick={onClick}
       size="sm"
-      className="w-full bg-pantaneiro-lime hover:bg-pantaneiro-lime/90 text-pantaneiro-green font-medium"
+      className="w-full bg-accent hover:bg-accent/90 text-primary font-medium"
     >
       <Plus className="h-4 w-4 mr-2" />
       Adicionar Dados

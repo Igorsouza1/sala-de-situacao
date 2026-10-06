@@ -19,11 +19,11 @@ interface ViewBox {
 
 // Map index to chart color variables
 const CHART_COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
+  "var(--color-crit)",
+  "var(--color-ok)",
+  "var(--color-water)",
+  "var(--color-warn)",
+  "var(--color-mineral)",
 ]
 
 export function GraficoAcoes() {
@@ -96,7 +96,7 @@ export function GraficoAcoes() {
               innerRadius="60%"
               outerRadius="80%"
               strokeWidth={2}
-              stroke="hsl(var(--card))"
+              stroke="var(--color-card)"
             >
               <Label
                 content={({ viewBox }) => {

@@ -1,123 +1,271 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
-@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&display=swap");
+@import 'tailwindcss';
+@import 'tw-animate-css';
 
-body {
-  font-family: "Playfair Display", Arial, Helvetica, sans-serif;
-}
+@source '../*.{js,ts,jsx,tsx,mdx}';
+/* só o código do produto gera classes: as pastas de ferramentas de agentes e de documentação não */
+@source not '../.agent';
+@source not '../.claude';
+@source not '../docs';
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+/*
+  Fonte única do visual: DESIGN.md (raiz). Cada valor abaixo vem de lá, com a seção entre parênteses.
+  `static` faz o Tailwind emitir TODAS as variáveis, mesmo as que só aparecem em strings (ex.: gráficos usam var(--color-crit)).
+  Não existe modo escuro (DESIGN.md, seção 15): a paleta foi pensada só para o claro.
+*/
+@theme static {
+  /* Tipografia (5) */
+  --font-sans: var(--font-plex), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  /* Neutros e marca (4.1) */
+  --color-background: #ffffff;
+  --color-foreground: #181a19; /* grafite */
+  --color-card: #ffffff;
+  --color-card-foreground: #181a19;
+  --color-popover: #ffffff;
+  --color-popover-foreground: #181a19;
+  --color-muted: color-mix(in oklab, #ffffff 91%, #181a19); /* fundo afundado: esqueleto, trilho, chip */
+  --color-muted-foreground: #5c625d; /* texto secundário, 6,25:1 */
+  --color-border: #e5e7e4; /* névoa: só separa, nunca texto */
+  --color-input: #858b86; /* pedra: borda de campo e trilho de toggle (exigem 3:1) */
+
+  --color-primary: #1f4d3a; /* floresta: ação e foco */
+  --color-primary-foreground: #ffffff;
+  --color-primary-hover: #1b4433;
+  --color-primary-active: #183b2c;
+  --color-ring: #1f4d3a;
+  --color-secondary: #dce5df; /* verde claro: seleção e hover suave */
+  --color-secondary-foreground: #355042; /* verde-tinta, 6,86:1 sobre o verde claro */
+  --color-accent: #dce5df;
+  --color-accent-foreground: #181a19;
+  --color-mineral: #54705f; /* assinatura em detalhes */
+  --color-stone: #858b86; /* só elementos sem texto */
+
+  /* Dados e severidade (4.2): quem tem cor é o conteúdo */
+  --color-crit: #c8431a; /* crítico, fogo */
+  --color-warn: #e09a00; /* atenção, desmatamento — só preenchimento ou ícone com rótulo, nunca texto */
+  --color-ok: #2e7d5b; /* normal */
+  --color-water: #2a7da6;
+  --color-recuo: #cdd2cd; /* o que não pede atenção */
+  --color-destructive: #c8431a;
+  --color-destructive-foreground: #ffffff;
+
+  /* Mapa Mineral (13): o MapLibre não lê var(), então components/map/helpers/basemaps.ts lê estes valores com getComputedStyle.
+     Aprovados no laboratório; não são tons de marca, só da base do mapa. */
+  --color-map-water: #c6d8de; /* azul-ardósia claro */
+  --color-map-water-text: #4f6f7b;
+  --color-map-forest: #cfddd2; /* mata */
+  --color-map-grass: #dde7de; /* parque, campo, uso do solo */
+  --color-map-urban: #eceeeb; /* área urbana */
+  --color-map-casing: #d9ddd8; /* contorno das ruas */
+  --color-map-shadow: #2f3d35; /* relevo sombreado */
+  --color-map-shadow-accent: #4b5d52;
+
+  /* Forma (6): pequeno 4, médio 6, grande 10. Sem pílulas. */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --shadow-card: 0 1px 2px rgb(24 26 25 / 0.06), 0 4px 14px rgb(24 26 25 / 0.05);
+  --shadow-control: 0 1px 2px rgb(24 26 25 / 0.12), 0 6px 18px rgb(24 26 25 / 0.12); /* controles sobre o mapa: mais definida que a do card, que se perde sobre a base clara (13) */
+
+  --default-ring-width: 3px;
+  --default-ring-color: #1f4d3a;
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+  --ease-spring: cubic-bezier(0.34, 1.32, 0.64, 1); /* leve mola (8.1): passa uns 3% do destino e volta */
+  --animate-shimmer: shimmer 1.3s linear infinite; /* esqueleto (8.1): o único movimento em loop permitido */
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
+  }
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
+  }
+  @keyframes shimmer {
+    to {
+      background-position: -200% 0;
+    }
   }
 }
 
+/* Tailwind v4 trocou a cor de borda padrão para currentcolor: voltamos ao token de divisória. */
 @layer base {
-  :root {
-    /* Light mode - keeping standard or adjusting slightly to brand if needed.
-       Assuming standard light mode for now, but primary should match brand. */
-    --background: 0 0% 100%;
-    --foreground: 222 47% 11%; /* Dark blue text */
-
-    --card: 0 0% 100%;
-    --card-foreground: 222 47% 11%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 47% 11%;
-
-    --primary: 217 91% 60%; /* Brand Primary */
-    --primary-foreground: 210 40% 98%;
-
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222 47% 11%;
-
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215 16% 47%;
-
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222 47% 11%;
-
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 217 91% 60%;
-
-    --radius: 0.5rem;
-
-    /* Chart Colors - Semantic but adapted */
-    --chart-1: 0 84% 60%; /* Red (Fire) */
-    --chart-2: 142 76% 36%; /* Green (Nature/Deforestation) */
-    --chart-3: 217 91% 60%; /* Blue (Water) */
-    --chart-4: 48 96% 53%; /* Yellow */
-    --chart-5: 262 83% 58%; /* Purple */
-
-    --pantaneiro-green: 160 84% 50%;
-    --pantaneiro-lime: 66 70% 30%;
-    --pantaneiro-lime-hover: 66 70% 40%;
-  }
-
-  .dark {
-    /* Brand Dark Mode */
-    --background: 222 47% 11%; /* #0F172A */
-    --foreground: 210 40% 98%;
-
-    --card: 222 52% 14%; /* #111c35 - Brand Dark Blue */
-    --card-foreground: 210 40% 98%;
-
-    --popover: 222 47% 11%;
-    --popover-foreground: 210 40% 98%;
-
-    --primary: 217 91% 60%; /* #3B82F6 */
-    --primary-foreground: 222 47% 11%;
-
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 217 91% 60%;
-
-    /* Chart Colors Dark */
-    --chart-1: 0 70% 50%;
-    --chart-2: 142 70% 40%;
-    --chart-3: 217 91% 60%;
-    --chart-4: 48 90% 50%;
-    --chart-5: 262 80% 50%;
-
-    --pantaneiro-green: 160 84% 39%;
-    --pantaneiro-lime: 66 70% 54%;
-    --pantaneiro-lime-hover: 66 70% 60%;
-  }
-}
-
-.container {
-  width: 100%;
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 0 16px;
-}
-
-@layer base {
-  * {
-    @apply border-border;
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-border);
   }
 
   body {
-    @apply bg-background text-foreground;
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    font-size: 0.9375rem; /* corpo de 15 px: densidade confortável (6) */
+  }
+
+  /* Títulos: peso 600 e espaçamento levemente negativo (5) */
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-weight: 600;
+    letter-spacing: -0.012em;
+  }
+
+  /* Números sempre em mono, alinhados na vertical (5) */
+  .font-mono {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /*
+    Tailwind v4 zerou o cursor dos botões: tudo que é clicável precisa de pointer (16).
+    Bloqueado: prefira aria-disabled a disabled (o disabled do shadcn tem pointer-events: none e esconde o cursor, 10).
+  */
+  :is(button, [role='button'], [role='tab'], [role='menuitem'], [role='option'], [role='switch'], [role='checkbox'], a[href], summary, label[for], select, input[type='checkbox'], input[type='radio']):not(:disabled):not([aria-disabled='true']):not([data-disabled]) {
+    cursor: pointer;
+  }
+  :is(button, [role='button'], [role='menuitem'], [role='tab']):is(:disabled, [aria-disabled='true'], [data-disabled]) {
+    cursor: not-allowed;
   }
 }
+
+@utility text-balance {
+  text-wrap: balance;
+}
+
+/* Esqueleto (8.1): um brilho passa pelo bloco; é o único movimento em loop permitido */
+@utility bg-shimmer {
+  background-image: linear-gradient(90deg, var(--color-muted) 0%, color-mix(in oklab, var(--color-muted) 92%, #181a19) 45%, var(--color-muted) 90%);
+  background-size: 200% 100%;
+  animation: var(--animate-shimmer);
+}
+
+@layer utilities {
+  .container {
+    width: 100%;
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 16px;
+  }
+}
+
+/* Painéis do mapa (8.1): os cartões entram em ordem de leitura, 60 ms entre eles, logo depois de o painel abrir.
+   `data-open` fica no painel; fechado, tudo volta junto e sem espera. */
+.panel-rise > * {
+  opacity: 0;
+  translate: 0 8px;
+  transition: opacity 260ms ease-out, translate 300ms var(--ease-spring);
+}
+[data-open='true'] .panel-rise > * {
+  opacity: 1;
+  translate: 0 0;
+  transition-delay: calc(var(--rise, 0) * 60ms + 90ms);
+}
+.panel-rise > :nth-child(2) { --rise: 1; }
+.panel-rise > :nth-child(3) { --rise: 2; }
+.panel-rise > :nth-child(4) { --rise: 3; }
+.panel-rise > :nth-child(n + 5) { --rise: 4; }
+
+/* Número que surge ou muda (o contador de filtros do dock): nasce pequeno, passa um pouco e assenta */
+@keyframes pop {
+  0% { opacity: 0; scale: 0.5; }
+  60% { opacity: 1; scale: 1.2; }
+  100% { opacity: 1; scale: 1; }
+}
+.animate-pop { animation: pop 320ms var(--ease-spring) both; }
+
+/* Texto que foi trocado em cima do que a pessoa estava vendo: pisca em verde claro e se apaga devagar (8.4, 1,9 s) */
+@keyframes found {
+  from { background-color: var(--color-secondary); }
+  to { background-color: transparent; }
+}
+.animate-found { animation: found 1900ms ease-out both; }
+
+/* Cartões que abrem a partir de um botão (seletor de cor, 8.1): nascem pequenos no ponto do botão, com a mola do projeto (260 ms),
+   e saem mais rápido (150 ms). A origem vem do Radix, que sabe onde o botão está. */
+@keyframes popover-in {
+  from { opacity: 0; scale: 0.88; translate: 0 -6px; }
+  to { opacity: 1; scale: 1; translate: 0 0; }
+}
+@keyframes popover-out {
+  to { opacity: 0; scale: 0.95; translate: 0 -4px; }
+}
+.popover-spring { transform-origin: var(--radix-popover-content-transform-origin); }
+.popover-spring[data-state='open'] { animation: popover-in 260ms var(--ease-spring) both; }
+.popover-spring[data-state='closed'] { animation: popover-out 150ms ease-in forwards; }
+
+/* Cartão de hover da ação (13.4): sobe do marcador com a mola do projeto. O atraso de 120 ms (com opacidade 0 até lá) impede que
+   passar o mouse rápido pelo mapa pisque cartões; o fundo fica invisível até começar. */
+@keyframes hover-card-in {
+  from { opacity: 0; scale: 0.92; translate: 0 6px; }
+  to { opacity: 1; scale: 1; translate: 0 0; }
+}
+.animate-hover-card { transform-origin: bottom center; animation: hover-card-in 240ms var(--ease-spring) 120ms both; }
+
+/* Aviso do mapa (12): entra de cima com mola e sai deslizando para cima, como o toast do laboratório */
+@keyframes notice-in {
+  from { opacity: 0; translate: 0 -18px; scale: 0.96; }
+  to { opacity: 1; translate: 0 0; scale: 1; }
+}
+@keyframes notice-out {
+  to { opacity: 0; translate: 0 -14px; scale: 0.96; }
+}
+.animate-notice-in { animation: notice-in 400ms var(--ease-spring) both; }
+.animate-notice-out { animation: notice-out 190ms ease-in forwards; }
+
+/* Movimento reduzido (8.3): as trocas acontecem, sem animação. O destaque do que mudou fica fixo (8.4, regra 3). */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+  /* os cartões já estão no lugar, sem espera; a frase trocada não pisca (a própria frase diz o que mudou) */
+  .panel-rise > * { transition-delay: 0s !important; translate: none; }
+  .animate-found { animation: none; }
+}
+
+/* Cursor Prisma aurora (10, components/map/PrismCursor.tsx): o nativo só some depois do primeiro movimento;
+   campo de texto mantém o I-beam e a mira de medir/inspecionar (data-pc-native) mantém o crosshair. */
+:root[data-pc-ready]:not([data-pc-native]) *:not(input:not([type='checkbox']):not([type='radio']):not([type='button'])):not(textarea):not(select):not([contenteditable='true']) {
+  cursor: none !important;
+}
+.pc-cursor { position: fixed; left: 0; top: 0; width: 30px; height: 30px; z-index: 2147483000; pointer-events: none; opacity: 0; transition: opacity 0.12s ease; will-change: transform; }
+.pc-cursor[data-visible='1'] { opacity: 1; }
+.pc-cursor:is([data-state='text'], [data-state='native']) { opacity: 0 !important; }
+.pc-halo { fill: none; stroke: #fff; stroke-width: 3.4; stroke-linejoin: round; }
+.pc-body { fill: var(--color-foreground); stroke: none; transition: fill 0.15s ease; }
+.pc-facet { fill: none; stroke: #fff; stroke-width: 0.9; opacity: 0.55; }
+/* borda inteira em degradê (só no clicável): o gradiente desliza na diagonal e aparece pelo traço, com halo desfocado */
+.pc-edge { fill: none; stroke: url(#pc-grad); stroke-width: 1.5; stroke-linejoin: round; opacity: 0; transition: opacity 0.2s ease; }
+.pc-aurora { fill: none; stroke: url(#pc-grad); stroke-width: 6; stroke-linejoin: round; opacity: 0; filter: blur(2.6px); transition: opacity 0.25s ease; }
+.pc-cursor[data-state='link'] .pc-body { fill: var(--color-mineral); }
+.pc-cursor[data-state='link'] .pc-edge { opacity: 1; }
+.pc-cursor[data-state='link'] .pc-aurora { opacity: 0.8; }
+.pc-cursor[data-down] .pc-body { fill: color-mix(in oklab, var(--color-foreground) 70%, #000); }
+.pc-cursor[data-state='link'][data-down] .pc-body { fill: color-mix(in oklab, var(--color-mineral) 80%, #000); }
+.pc-ban { display: none; }
+.pc-ban circle { fill: #fff; stroke: var(--color-crit); stroke-width: 1.7; }
+.pc-ban path { stroke: var(--color-crit); stroke-width: 1.7; fill: none; }
+.pc-cursor[data-state='no'] .pc-ban { display: inline; }
+/* círculo leve que nasce na ponta ao clicar (criado por JS) */
+.pc-ring { position: fixed; z-index: 2147483000; pointer-events: none; width: 30px; height: 30px; margin: -15px 0 0 -15px; border-radius: 9999px; border: 1.5px solid var(--color-mineral); background: color-mix(in oklab, var(--color-mineral) 12%, transparent); transform: scale(0.15); opacity: 0.75; animation: pc-ring 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+@keyframes pc-ring { to { transform: scale(1); opacity: 0; } }
 
 .cursor-crosshair .leaflet-interactive {
   cursor: crosshair !important;

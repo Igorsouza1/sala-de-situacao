@@ -18,8 +18,8 @@ interface PropertyEditDialogProps {
 
 function SectionHeader({ title }: { title: string }) {
   return (
-    <div className="pt-2 pb-1 border-b border-neutral-200 dark:border-neutral-700">
-      <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500 dark:text-neutral-400">{title}</p>
+    <div className="pt-2 pb-1 border-b border-neutral-200">
+      <p className="text-xs font-semibold uppercase tracking-wider text-neutral-500">{title}</p>
     </div>
   );
 }

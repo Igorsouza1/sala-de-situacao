@@ -1,98 +1,72 @@
 "use client"
 
-import { useState } from "react"
-import { LandPlot } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { useEffect, useRef, useState } from "react"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { FilterPopover } from "./FilterPopover"
+import type { AreaFilter } from "./helpers/filters"
+
+// Tamanho da propriedade aplica sozinho, um instante depois da última tecla (DESIGN.md 2.2),
+// e a contagem mostra na hora o que o filtro deixou.
 
 interface PropertyFilterControlProps {
-  onFilterChange: (filters: { minArea?: number; maxArea?: number }) => void
+  value: AreaFilter
+  onChange: (filter: AreaFilter) => void
 }
 
-export function PropertyFilterControl({ onFilterChange }: PropertyFilterControlProps) {
-  const [minArea, setMinArea] = useState<string>("")
-  const [maxArea, setMaxArea] = useState<string>("")
-  const [count, setCount] = useState<number | null>(null)
+const toText = (n?: number) => (n === undefined ? "" : String(n))
+const toNumber = (t: string) => (t.trim() === "" || Number.isNaN(parseFloat(t)) ? undefined : parseFloat(t))
 
-  async function fetchCount(min?: number, max?: number) {
-    const params = new URLSearchParams()
-    if (min !== undefined) params.append("minArea", String(min))
-    if (max !== undefined) params.append("maxArea", String(max))
-    const res = await fetch(`/api/map/propriedades/count?${params}`)
-    const data = await res.json()
-    setCount(data.count ?? null)
-  }
+export function PropertyFilterControl({ value, onChange }: PropertyFilterControlProps) {
+  const [min, setMin] = useState(toText(value.minArea))
+  const [max, setMax] = useState(toText(value.maxArea))
+  const [count, setCount] = useState<number | null>(null)
+  const lastRequest = useRef(0)
+
+  // quem está de fora (Limpar tudo) pode mudar o filtro: os campos acompanham
+  useEffect(() => {
+    if (toNumber(min) !== value.minArea) setMin(toText(value.minArea))
+    if (toNumber(max) !== value.maxArea) setMax(toText(value.maxArea))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value.minArea, value.maxArea])
+
+  // digitou e parou: aplica e conta
+  useEffect(() => {
+    const minArea = toNumber(min)
+    const maxArea = toNumber(max)
+    if (minArea === value.minArea && maxArea === value.maxArea) return
+    const t = setTimeout(async () => {
+      onChange({ minArea, maxArea })
+      if (minArea === undefined && maxArea === undefined) { setCount(null); return }
+      const id = ++lastRequest.current
+      const params = new URLSearchParams()
+      if (minArea !== undefined) params.append("minArea", String(minArea))
+      if (maxArea !== undefined) params.append("maxArea", String(maxArea))
+      try {
+        const res = await fetch(`/api/map/propriedades/count?${params}`)
+        const data = await res.json()
+        if (id === lastRequest.current) setCount(data.count ?? null)
+      } catch {
+        if (id === lastRequest.current) setCount(null)
+      }
+    }, 500)
+    return () => clearTimeout(t)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [min, max])
 
   return (
-    <FilterPopover icon={LandPlot} title="Filtros de Propriedade" count={count}>
-      {(close) => (
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label className="text-xs text-slate-600 font-medium">Tamanho da Área (Hectares)</Label>
-            <div className="flex gap-2 items-center">
-              <div className="flex-1">
-                <Input
-                  type="number"
-                  placeholder="Mín"
-                  value={minArea}
-                  onChange={(e) => setMinArea(e.target.value)}
-                  className="h-8 text-sm"
-                  min="0"
-                />
-              </div>
-              <span className="text-slate-400 text-sm">-</span>
-              <div className="flex-1">
-                <Input
-                  type="number"
-                  placeholder="Máx"
-                  value={maxArea}
-                  onChange={(e) => setMaxArea(e.target.value)}
-                  className="h-8 text-sm"
-                  min="0"
-                />
-              </div>
-            </div>
-          </div>
-
-          {count != null && (
-            <p className="text-xs text-slate-500 text-center">
-              <span className="font-semibold text-brand-primary">{count}</span> propriedade{count !== 1 ? "s" : ""} encontrada{count !== 1 ? "s" : ""}
-            </p>
-          )}
-
-          <div className="flex gap-2 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1 h-8 text-xs"
-              onClick={() => {
-                setMinArea("")
-                setMaxArea("")
-                setCount(null)
-                onFilterChange({ minArea: undefined, maxArea: undefined })
-                close()
-              }}
-            >
-              Limpar
-            </Button>
-            <Button
-              size="sm"
-              className="flex-1 h-8 text-xs bg-brand-primary hover:bg-blue-600 text-white"
-              onClick={async () => {
-                const min = minArea ? parseFloat(minArea) : undefined
-                const max = maxArea ? parseFloat(maxArea) : undefined
-                await fetchCount(min, max)
-                onFilterChange({ minArea: min, maxArea: max })
-                close()
-              }}
-            >
-              Aplicar
-            </Button>
-          </div>
-        </div>
+    <div className="space-y-3">
+      {/* lê-se como o filtro que é: "Área de [mínimo] a [máximo] ha" — sem título extra para decifrar */}
+      <div className="flex items-center gap-2 text-sm">
+        <span className="shrink-0">Área de</span>
+        <Input type="number" min="0" inputMode="decimal" placeholder="Mínimo" aria-label="Área mínima, em hectares" value={min} onChange={(e) => setMin(e.target.value)} className="h-9 min-w-0 flex-1 px-2.5 text-sm" />
+        <span className="shrink-0">a</span>
+        <Input type="number" min="0" inputMode="decimal" placeholder="Máximo" aria-label="Área máxima, em hectares" value={max} onChange={(e) => setMax(e.target.value)} className="h-9 min-w-0 flex-1 px-2.5 text-sm" />
+        <abbr title="hectares" className="shrink-0 no-underline">ha</abbr>
+      </div>
+      {count != null && (
+        <p key={count} role="status" className="animate-in fade-in-0 text-sm text-muted-foreground duration-200">
+          <span className="font-mono font-semibold tabular-nums text-foreground">{count}</span> propriedade{count !== 1 ? "s" : ""} encontrada{count !== 1 ? "s" : ""}
+        </p>
       )}
-    </FilterPopover>
+    </div>
   )
 }

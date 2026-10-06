@@ -25,7 +25,7 @@ function Calendar({ selected, onChange, className }: CalendarProps) {
         months: "flex flex-col",
         month: "flex flex-col gap-3",
         month_caption: "flex justify-center pt-1 relative items-center w-full",
-        caption_label: "text-sm font-medium text-slate-700",
+        caption_label: "text-sm font-medium text-foreground",
         nav: "flex items-center",
         button_previous: cn(
           buttonVariants({ variant: "outline" }),
@@ -37,7 +37,7 @@ function Calendar({ selected, onChange, className }: CalendarProps) {
         ),
         month_grid: "w-full border-collapse",
         weekdays: "flex",
-        weekday: "text-slate-400 w-9 font-normal text-[0.8rem] text-center pb-1",
+        weekday: "text-muted-foreground w-9 font-normal text-[0.8rem] text-center pb-1",
         week: "flex w-full",
         day: "relative p-0 text-center text-sm focus-within:relative focus-within:z-20",
         day_button: cn(
@@ -45,10 +45,10 @@ function Calendar({ selected, onChange, className }: CalendarProps) {
           "size-9 p-0 font-normal aria-selected:opacity-100"
         ),
         selected:
-          "bg-brand-primary text-white rounded-md hover:bg-blue-600 hover:text-white focus:bg-brand-primary focus:text-white",
-        today: "bg-slate-100 text-slate-900 rounded-md",
-        outside: "text-slate-300 opacity-50",
-        disabled: "text-slate-300 opacity-50",
+          "bg-primary text-white rounded-md hover:bg-primary-hover hover:text-white focus:bg-primary focus:text-white",
+        today: "bg-muted text-foreground rounded-md",
+        outside: "text-muted-foreground opacity-50",
+        disabled: "text-muted-foreground opacity-50",
         hidden: "invisible",
       }}
       components={{

@@ -194,50 +194,50 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
     <div className="w-full space-y-6 animate-in fade-in duration-500 relative z-0">
       
       {/* Modern Card Header */}
-      <div className="bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 z-10 relative mt-4">
+      <div className="bg-white border border-neutral-200 rounded-2xl p-5 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 z-10 relative mt-4">
         <div className="flex gap-4 items-center flex-1">
-          <div className="w-12 h-12 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 rounded-xl flex items-center justify-center shrink-0 shadow-sm border border-blue-100 dark:border-blue-900/50">
+          <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-xl flex items-center justify-center shrink-0 shadow-xs border border-blue-100">
              <Layers className="w-6 h-6" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-neutral-900 dark:text-neutral-50 leading-tight">
+            <h2 className="text-lg font-bold text-neutral-900 leading-tight">
               Gerenciamento Territorial
             </h2>
-            <p className="text-sm text-neutral-500 dark:text-neutral-400 mt-1 max-w-xl">
+            <p className="text-sm text-neutral-500 mt-1 max-w-xl">
               Visualize os limites da região, adicione propriedades ou camadas complementares.
             </p>
           </div>
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 items-center shrink-0">
-          <div className="flex rounded-xl bg-neutral-100 dark:bg-neutral-800 p-1 border border-neutral-200 dark:border-neutral-700 shadow-sm mr-2">
+          <div className="flex rounded-xl bg-neutral-100 p-1 border border-neutral-200 shadow-xs mr-2">
             <button
               onClick={() => setActiveTab("baseLayers")}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "baseLayers" ? "bg-white dark:bg-neutral-900 shadow text-neutral-900 dark:text-neutral-100" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"}`}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "baseLayers" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700"}`}
             >
               Camadas Base
             </button>
             <button
               onClick={() => setActiveTab("properties")}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "properties" ? "bg-white dark:bg-neutral-900 shadow text-neutral-900 dark:text-neutral-100" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"}`}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "properties" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700"}`}
             >
               Propriedades (CAR)
             </button>
             <button
               onClick={() => setActiveTab("focos")}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "focos" ? "bg-white dark:bg-neutral-900 shadow text-neutral-900 dark:text-neutral-100" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"}`}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "focos" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700"}`}
             >
               Focos
             </button>
             <button
               onClick={() => setActiveTab("desmatamento")}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "desmatamento" ? "bg-white dark:bg-neutral-900 shadow text-neutral-900 dark:text-neutral-100" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"}`}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "desmatamento" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700"}`}
             >
               Desmatamento
             </button>
             <button
               onClick={() => setActiveTab("acoes")}
-              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "acoes" ? "bg-white dark:bg-neutral-900 shadow text-neutral-900 dark:text-neutral-100" : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"}`}
+              className={`px-4 py-2 text-sm font-semibold rounded-lg transition-all ${activeTab === "acoes" ? "bg-white shadow-sm text-neutral-900" : "text-neutral-500 hover:text-neutral-700"}`}
             >
               Ações
             </button>
@@ -248,7 +248,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
               variant="outline"
               onClick={handleCancelPreview}
               disabled={isSaving}
-              className="h-10 rounded-lg text-red-600 border-red-200 hover:bg-red-50 dark:border-red-900/30 dark:hover:bg-red-900/20 font-medium px-4 shadow-sm transition-all"
+              className="h-10 rounded-lg text-red-600 border-red-200 hover:bg-red-50 font-medium px-4 shadow-xs transition-all"
             >
               <Trash2 className="w-4 h-4 mr-2" /> Descartar Arquivo
             </Button>
@@ -267,15 +267,15 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
         {/* Map Column */}
         <div className="col-span-1 xl:col-span-3">
-          <div className="h-[600px] w-full rounded-2xl overflow-hidden border border-neutral-200 dark:border-neutral-800 shadow-sm relative z-0 bg-neutral-100 dark:bg-neutral-950">
+          <div className="h-[600px] w-full rounded-2xl overflow-hidden border border-neutral-200 shadow-xs relative z-0 bg-neutral-100">
 
             {isLoading && (
-              <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-white/70 dark:bg-black/70 backdrop-blur-sm transition-opacity">
-                <div className="flex flex-col items-center gap-3 bg-white dark:bg-neutral-900 p-6 rounded-2xl shadow-xl border border-neutral-200 dark:border-neutral-800">
-                  <div className="w-10 h-10 bg-blue-50 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                    <Loader2 className="w-6 h-6 animate-spin text-blue-600 dark:text-blue-400" />
+              <div className="absolute inset-0 z-[1000] flex items-center justify-center bg-white/70 backdrop-blur-xs transition-opacity">
+                <div className="flex flex-col items-center gap-3 bg-white p-6 rounded-2xl shadow-xl border border-neutral-200">
+                  <div className="w-10 h-10 bg-blue-50 rounded-full flex items-center justify-center">
+                    <Loader2 className="w-6 h-6 animate-spin text-blue-600" />
                   </div>
-                  <span className="font-semibold text-neutral-800 dark:text-neutral-200">Processando geometria...</span>
+                  <span className="font-semibold text-neutral-800">Processando geometria...</span>
                 </div>
               </div>
             )}
@@ -553,35 +553,35 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
         {/* Options Column */}
         <div className="col-span-1 flex flex-col gap-6">
           {isPreviewing ? (
-            <div className="bg-white dark:bg-neutral-900 border-2 border-emerald-500/50 dark:border-emerald-500/30 rounded-2xl shadow-lg flex flex-col h-[600px] overflow-hidden">
-               <div className="p-5 border-b border-neutral-100 dark:border-neutral-800 shrink-0 bg-emerald-50 dark:bg-emerald-950/20">
-                 <h3 className="font-semibold text-lg flex items-center gap-2 text-emerald-900 dark:text-emerald-400 leading-tight">
+            <div className="bg-white border-2 border-emerald-500/50 rounded-2xl shadow-lg flex flex-col h-[600px] overflow-hidden">
+               <div className="p-5 border-b border-neutral-100 shrink-0 bg-emerald-50">
+                 <h3 className="font-semibold text-lg flex items-center gap-2 text-emerald-900 leading-tight">
                    <Layers className="w-5 h-5" /> Configurando Camada
                  </h3>
-                 <p className="text-xs text-emerald-700/80 dark:text-emerald-500/70 mt-1">
+                 <p className="text-xs text-emerald-700/80 mt-1">
                    Ajuste o estilo antes de aplicar ao mapa.
                  </p>
                </div>
 
                <div className="flex-1 p-5 overflow-y-auto space-y-7">
                   <div className="space-y-2">
-                    <Label className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">Nome da Camada</Label>
+                    <Label className="text-sm font-semibold text-neutral-800">Nome da Camada</Label>
                     <Input
                       value={layerName}
                       onChange={(e) => setLayerName(e.target.value)}
                       placeholder="Ex: Zona de Amortecimento..."
-                      className="h-11 bg-neutral-50 dark:bg-neutral-950/50 text-base shadow-sm font-medium"
+                      className="h-11 bg-neutral-50 text-base shadow-xs font-medium"
                     />
                   </div>
 
-                  <div className="bg-neutral-50/50 dark:bg-neutral-950/20 rounded-xl border border-neutral-100 dark:border-neutral-800 p-5 space-y-6 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
+                  <div className="bg-neutral-50/50 rounded-xl border border-neutral-100 p-5 space-y-6 shadow-[inset_0_2px_10px_rgba(0,0,0,0.02)]">
                     <div className="space-y-4">
-                      <Label className="text-sm font-semibold flex items-center justify-between text-neutral-800 dark:text-neutral-200">
+                      <Label className="text-sm font-semibold flex items-center justify-between text-neutral-800">
                         <span>Cor Dominante</span>
-                        <span className="font-mono text-xs text-neutral-500 bg-neutral-200 dark:bg-neutral-800 px-2 py-0.5 rounded uppercase">{layerColor}</span>
+                        <span className="font-mono text-xs text-neutral-500 bg-neutral-200 px-2 py-0.5 rounded uppercase">{layerColor}</span>
                       </Label>
                       <div className="flex gap-5 items-center">
-                        <div className="relative w-14 h-14 rounded-xl shadow-md overflow-hidden shrink-0 ring-1 ring-neutral-200 dark:ring-neutral-700 cursor-pointer group">
+                        <div className="relative w-14 h-14 rounded-xl shadow-md overflow-hidden shrink-0 ring-1 ring-neutral-200 cursor-pointer group">
                           <input
                             type="color"
                             value={layerColor}
@@ -593,7 +593,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                         <div className="flex-1 space-y-3">
                            <Label className="text-xs font-semibold text-neutral-500 flex justify-between">
                              <span>Espessura da linha</span>
-                             <strong className="text-neutral-900 dark:text-neutral-100">{layerWeight[0]}px</strong>
+                             <strong className="text-neutral-900">{layerWeight[0]}px</strong>
                            </Label>
                            <Slider
                              value={layerWeight}
@@ -607,10 +607,10 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                       </div>
                     </div>
 
-                    <div className="space-y-4 pt-5 border-t border-neutral-200 dark:border-neutral-800">
-                      <Label className="text-sm font-semibold flex justify-between text-neutral-800 dark:text-neutral-200">
+                    <div className="space-y-4 pt-5 border-t border-neutral-200">
+                      <Label className="text-sm font-semibold flex justify-between text-neutral-800">
                         <span>Opacidade do Preenchimento</span>
-                        <strong className="text-emerald-600 dark:text-emerald-400">{layerOpacity[0]}%</strong>
+                        <strong className="text-emerald-600">{layerOpacity[0]}%</strong>
                       </Label>
                       <Slider
                         value={layerOpacity}
@@ -626,7 +626,7 @@ export function RegionMapPreview({ regionId, initialGeoJson, baseLayers = [], pr
                   </div>
                </div>
 
-               <div className="p-5 border-t border-neutral-100 dark:border-neutral-800 shrink-0 bg-neutral-50 dark:bg-neutral-950/50">
+               <div className="p-5 border-t border-neutral-100 shrink-0 bg-neutral-50">
                   <Button
                      onClick={handleSave}
                      disabled={isSaving}

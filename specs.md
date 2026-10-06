@@ -54,7 +54,7 @@ Configuração: package.json, next.config.ts e tsconfig.json.
 Schema do banco de dados: https://gemini.google.com/share/e71dd66e1578
 
 7. Documentação de Design
-Para padrões visuais, paleta de cores e guias de estilo, consulte a documentação do [Design System](docs/design-system.md).
+Para padrões visuais, paleta de cores e guias de estilo, consulte o [DESIGN.md](DESIGN.md), que reúne as decisões e os motivos de cada uma.
 
 8. Regras de Segurança (SECURITY RULES)
 > [!IMPORTANT]

@@ -35,7 +35,7 @@ const QUALITY_BANDS = [
 ]
 
 function qualityFor(v: number | null): { label: string; color: string } {
-  if (v === null) return { label: "Sem dado", color: "hsl(var(--muted-foreground))" }
+  if (v === null) return { label: "Sem dado", color: "var(--color-muted-foreground)" }
   if (v <= 3)  return { label: "Excelente", color: "#10b981" }
   if (v <= 7)  return { label: "Boa",       color: "#eab308" }
   if (v <= 15) return { label: "Regular",   color: "#f97316" }
@@ -54,7 +54,7 @@ function CustomTooltip({ active, payload }: any) {
     : ""
   const capitalized = date.charAt(0).toUpperCase() + date.slice(1)
   return (
-    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-xl px-4 py-3 min-w-[180px]">
+    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-xs shadow-xl px-4 py-3 min-w-[180px]">
       <p className="text-[11px] font-medium text-muted-foreground mb-2">{capitalized}</p>
       {value !== null ? (
         <>
@@ -83,7 +83,7 @@ function CustomXTick({ x, y, payload }: any) {
     return (
       <g transform={`translate(${x},${y})`}>
         <text x={0} y={0} dy={14} textAnchor="middle"
-          fill="hsl(var(--foreground))" fontSize={11} fontWeight={700}>{yr}</text>
+          fill="var(--color-foreground)" fontSize={11} fontWeight={700}>{yr}</text>
       </g>
     )
   }
@@ -92,7 +92,7 @@ function CustomXTick({ x, y, payload }: any) {
   return (
     <g transform={`translate(${x},${y})`}>
       <text x={0} y={0} dy={14} textAnchor="middle"
-        fill="hsl(var(--muted-foreground))" fontSize={10}>{abbr}</text>
+        fill="var(--color-muted-foreground)" fontSize={10}>{abbr}</text>
     </g>
   )
 }
@@ -104,7 +104,7 @@ function StatBadge({ label, value, unit, color }: { label: string; value: string
     <div className="flex flex-col items-end sm:items-start">
       <span className="text-[11px] text-muted-foreground">{label}</span>
       <div className="flex items-baseline gap-1">
-        <span className="text-lg font-bold" style={{ color: color ?? "hsl(var(--foreground))" }}>{value}</span>
+        <span className="text-lg font-bold" style={{ color: color ?? "var(--color-foreground)" }}>{value}</span>
         {unit && <span className="text-xs text-muted-foreground">{unit}</span>}
       </div>
     </div>
@@ -179,7 +179,7 @@ export function GraficoTurbidezDeque() {
   const lastQ = qualityFor(stats?.last?.turbidez ?? null)
 
   return (
-    <Card className="border-border bg-card shadow-sm w-full">
+    <Card className="border-border bg-card shadow-xs w-full">
       <CardHeader className="pb-2 px-6 pt-6">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="flex items-start gap-3">
@@ -232,7 +232,7 @@ export function GraficoTurbidezDeque() {
 
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="hsl(var(--border))"
+                stroke="var(--color-border)"
                 strokeOpacity={0.4}
                 vertical={false}
               />
@@ -263,14 +263,14 @@ export function GraficoTurbidezDeque() {
                 <ReferenceLine
                   key={periodo}
                   x={periodo}
-                  stroke="hsl(var(--muted-foreground))"
+                  stroke="var(--color-muted-foreground)"
                   strokeOpacity={0.3}
                   strokeDasharray="4 3"
                   label={{
                     value: periodo.slice(0, 4),
                     position: "insideTopLeft",
                     fontSize: 10,
-                    fill: "hsl(var(--muted-foreground))",
+                    fill: "var(--color-muted-foreground)",
                     dy: -4,
                   }}
                 />
@@ -281,12 +281,12 @@ export function GraficoTurbidezDeque() {
                 domain={[0, yMax]}
                 tickLine={false}
                 axisLine={false}
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
                 width={42}
                 unit=" NTU"
                 tickCount={6}
               />
-              <Tooltip content={<CustomTooltip />} cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.35, radius: 4 }} />
+              <Tooltip content={<CustomTooltip />} cursor={{ fill: "var(--color-muted)", fillOpacity: 0.35, radius: 4 }} />
 
               <Bar dataKey="turbidez" radius={[4, 4, 0, 0]} maxBarSize={28}>
                 {data.map((entry, index) => {
@@ -294,7 +294,7 @@ export function GraficoTurbidezDeque() {
                   return (
                     <Cell
                       key={index}
-                      fill={entry.turbidez === null ? "hsl(var(--muted))" : q.color}
+                      fill={entry.turbidez === null ? "var(--color-muted)" : q.color}
                       fillOpacity={entry.turbidez === null ? 0.3 : 0.85}
                     />
                   )

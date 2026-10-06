@@ -109,3 +109,23 @@ export async function insertLayerData(layerId: number, geojson: any, properties:
     `);
 }
 
+
+/** A entrada do catálogo pelo slug, sem filtro de organização: quem chama decide se a pessoa pode ver ou editar. */
+export async function findLayerEntryBySlug(slug: string) {
+    const result = await db
+        .select()
+        .from(layerCatalogInMonitoramento)
+        .where(eq(layerCatalogInMonitoramento.slug, slug))
+        .limit(1);
+    return result[0];
+}
+
+/** Grava o nome e o visual_config de uma camada (a aparência). Nada mais do catálogo muda. */
+export async function updateLayerEntry(id: number, patch: { name: string; visualConfig: Record<string, unknown> }) {
+    const result = await db
+        .update(layerCatalogInMonitoramento)
+        .set({ name: patch.name, visualConfig: patch.visualConfig })
+        .where(eq(layerCatalogInMonitoramento.id, id))
+        .returning({ id: layerCatalogInMonitoramento.id });
+    return result[0];
+}

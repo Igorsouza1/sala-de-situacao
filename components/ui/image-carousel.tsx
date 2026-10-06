@@ -27,22 +27,22 @@ export const ImageCarousel = ({ images }: { images: string[] }) => {
   
     return (
       <>
-        <div className="bg-white border border-gray-100 rounded-lg shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between p-3 border-b border-gray-100">
+        <div className="bg-card border border-border rounded-lg shadow-card overflow-hidden">
+          <div className="flex items-center justify-between p-3 border-b border-border">
             <div className="flex items-center space-x-2">
-              <ImageIcon className="h-4 w-4 text-gray-500" />
-              <span className="text-sm font-medium text-gray-700">Imagens registradas</span>
+              <ImageIcon className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm font-medium text-foreground">Imagens registradas</span>
             </div>
             <div className="flex items-center space-x-2">
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 {currentIndex + 1} de {images.length}
               </span>
               <button
                 onClick={openModal}
-                className="p-1 hover:bg-gray-100 rounded transition-colors"
+                className="p-1 hover:bg-muted rounded transition-colors"
                 title="Expandir imagem"
               >
-                <ZoomIn className="w-4 h-4 text-gray-500" />
+                <ZoomIn className="w-4 h-4 text-muted-foreground" />
               </button>
             </div>
           </div>
@@ -60,15 +60,15 @@ export const ImageCarousel = ({ images }: { images: string[] }) => {
               <>
                 <button
                   onClick={prevImage}
-                  className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full shadow-md flex items-center justify-center hover:bg-white transition-colors"
+                  className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 backdrop-blur-xs rounded-full shadow-md flex items-center justify-center hover:bg-white transition-colors"
                 >
-                  <ChevronLeft className="w-4 h-4 text-gray-700" />
+                  <ChevronLeft className="w-4 h-4 text-foreground" />
                 </button>
                 <button
                   onClick={nextImage}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full shadow-md flex items-center justify-center hover:bg-white transition-colors"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-white/90 backdrop-blur-xs rounded-full shadow-md flex items-center justify-center hover:bg-white transition-colors"
                 >
-                  <ChevronRight className="w-4 h-4 text-gray-700" />
+                  <ChevronRight className="w-4 h-4 text-foreground" />
                 </button>
               </>
             )}
@@ -89,7 +89,7 @@ export const ImageCarousel = ({ images }: { images: string[] }) => {
             )}
   
             {/* Click to expand hint */}
-            <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm text-white px-2 py-1 rounded text-xs opacity-0 hover:opacity-100 transition-opacity">
+            <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-xs text-white px-2 py-1 rounded text-xs opacity-0 hover:opacity-100 transition-opacity">
               Clique para expandir
             </div>
           </div>

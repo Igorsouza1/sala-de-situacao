@@ -16,7 +16,7 @@ export default async function AdminDashboardPage() {
 
         <header className="pt-20 pb-14 text-center">
           <h1 className="text-[40px] md:text-[48px] font-semibold leading-[1.07] tracking-[-0.02em] text-[#1d1d1f]">
-            Sala de Situação
+            GEO PRISMA
           </h1>
           <p className="mt-3 text-[19px] md:text-[21px] font-normal leading-[1.4] text-[#6e6e73]">
             Administração de organizações e regiões monitoradas.

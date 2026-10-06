@@ -49,7 +49,7 @@ function CustomTooltip({ active, payload, label }: any) {
   const capitalized = date.charAt(0).toUpperCase() + date.slice(1)
 
   return (
-    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-xl px-4 py-3 min-w-[160px]">
+    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-xs shadow-xl px-4 py-3 min-w-[160px]">
       <p className="text-[11px] font-medium text-muted-foreground mb-1">{capitalized}</p>
       {value !== null ? (
         <div className="flex items-baseline gap-1.5">
@@ -86,7 +86,7 @@ function CustomXTick({ x, y, payload }: any) {
           y={0}
           dy={14}
           textAnchor="middle"
-          fill="hsl(var(--foreground))"
+          fill="var(--color-foreground)"
           fontSize={11}
           fontWeight={700}
         >
@@ -106,7 +106,7 @@ function CustomXTick({ x, y, payload }: any) {
         y={0}
         dy={14}
         textAnchor="middle"
-        fill="hsl(var(--muted-foreground))"
+        fill="var(--color-muted-foreground)"
         fontSize={10}
       >
         {monthAbbr}
@@ -227,7 +227,7 @@ export function GraficoNivelRioBalneario() {
       : "text-muted-foreground"
 
   return (
-    <Card className="border-border bg-card shadow-sm w-full">
+    <Card className="border-border bg-card shadow-xs w-full">
       <CardHeader className="pb-2 px-6 pt-6">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           {/* Title block */}
@@ -284,7 +284,7 @@ export function GraficoNivelRioBalneario() {
 
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="hsl(var(--border))"
+                stroke="var(--color-border)"
                 strokeOpacity={0.5}
                 vertical={false}
               />
@@ -294,14 +294,14 @@ export function GraficoNivelRioBalneario() {
                 <ReferenceLine
                   key={periodo}
                   x={periodo}
-                  stroke="hsl(var(--muted-foreground))"
+                  stroke="var(--color-muted-foreground)"
                   strokeOpacity={0.3}
                   strokeDasharray="4 3"
                   label={{
                     value: periodo.slice(0, 4),
                     position: "insideTopLeft",
                     fontSize: 10,
-                    fill: "hsl(var(--muted-foreground))",
+                    fill: "var(--color-muted-foreground)",
                     dy: -4,
                   }}
                 />
@@ -320,7 +320,7 @@ export function GraficoNivelRioBalneario() {
                 domain={yDomain}
                 tickLine={false}
                 axisLine={false}
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
                 tickFormatter={(v) => `${v}`}
                 width={38}
                 unit=" m"
@@ -347,7 +347,7 @@ export function GraficoNivelRioBalneario() {
                 activeDot={{
                   r: 5,
                   fill: "hsl(217, 91%, 60%)",
-                  stroke: "hsl(var(--background))",
+                  stroke: "var(--color-background)",
                   strokeWidth: 2,
                 }}
               />

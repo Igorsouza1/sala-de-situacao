@@ -20,7 +20,7 @@ export function CustomTooltip({ active, payload, label }: CustomTooltipProps) {
   if (!data) return null
 
   return (
-    <div className="bg-gray-900/95 backdrop-blur-sm border border-gray-700 rounded-lg p-3 shadow-xl">
+    <div className="bg-gray-900/95 backdrop-blur-xs border border-gray-700 rounded-lg p-3 shadow-xl">
       <p className="text-white font-medium mb-2">
         {format(parseISO(data.originalDate), "dd 'de' MMMM, yyyy", { locale: ptBR })}
       </p>

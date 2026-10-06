@@ -33,7 +33,7 @@ export function LayerCatalogViewer({ layers }: { layers: LayerCatalog[] }) {
       <div className="w-80 border-r flex flex-col bg-muted/10">
         <div className="p-4 border-b space-y-4">
           <div className="flex items-center gap-2 font-semibold">
-            <Layers className="w-5 h-5 text-brand-primary" />
+            <Layers className="w-5 h-5 text-primary" />
             <span>Camadas ({layers.length})</span>
           </div>
           <div className="relative">
@@ -53,7 +53,7 @@ export function LayerCatalogViewer({ layers }: { layers: LayerCatalog[] }) {
               <Button
                 key={layer.id}
                 variant={selectedLayer?.id === layer.id ? "secondary" : "ghost"}
-                className={`justify-start h-auto py-3 px-4 text-left ${selectedLayer?.id === layer.id ? "bg-brand-primary/10 hover:bg-brand-primary/20 text-brand-primary" : ""}`}
+                className={`justify-start h-auto py-3 px-4 text-left ${selectedLayer?.id === layer.id ? "bg-primary/10 hover:bg-primary/20 text-primary" : ""}`}
                 onClick={() => setSelectedLayer(layer)}
               >
                 <div className="flex flex-col gap-1 w-full overflow-hidden">
@@ -80,7 +80,7 @@ export function LayerCatalogViewer({ layers }: { layers: LayerCatalog[] }) {
               {/* Header */}
               <div className="flex items-start justify-between">
                 <div>
-                  <h1 className="text-2xl font-bold bg-gradient-to-r from-brand-primary to-blue-600 bg-clip-text text-transparent">
+                  <h1 className="text-2xl font-bold bg-linear-to-r from-primary to-blue-600 bg-clip-text text-transparent">
                     {selectedLayer.name}
                   </h1>
                   <div className="flex items-center gap-2 mt-2">
@@ -95,7 +95,7 @@ export function LayerCatalogViewer({ layers }: { layers: LayerCatalog[] }) {
               <Card>
                 <CardHeader className="pb-3 border-b bg-slate-50/50">
                     <div className="flex items-center gap-2">
-                        <Settings className="w-4 h-4 text-brand-primary" />
+                        <Settings className="w-4 h-4 text-primary" />
                         <CardTitle className="text-base">Visual Configuration</CardTitle>
                     </div>
                     <CardDescription>Defines how the layer appears on the map (colors, icons, filters).</CardDescription>

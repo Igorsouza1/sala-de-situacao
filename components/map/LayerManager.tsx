@@ -1,17 +1,17 @@
 "use client"
 
-import { useState, useMemo } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { ChevronUp, ChevronDown, Globe, Eye, EyeOff, Layers } from "lucide-react"
+import { useId, useMemo, useRef, useState, type ReactNode } from "react"
+import { ChevronDown, ChevronRight, Layers } from "lucide-react"
 import * as LucideIcons from "lucide-react"
-import { motion, AnimatePresence } from "framer-motion"
+import { Button } from "@/components/ui/button"
+import { Collapse } from "@/components/ui/collapse"
+import { Switch } from "@/components/ui/switch"
+import { cn } from "@/lib/utils"
+import { filterLine, type FilterNote } from "./helpers/layers"
 
-
-// pq temos layermanager aqui? nao temos um DTO com isso?
+// Lista de camadas (DESIGN.md 13.1): um cartão por categoria, sem acordeão (são poucas linhas).
+// Cada linha: amostra (é a legenda, igual ao que o mapa desenha) · nome · quantas feições há no mapa · interruptor.
+// A linha inteira liga e desliga.
 
 export interface LayerManagerOption {
   id: string
@@ -19,420 +19,312 @@ export interface LayerManagerOption {
   color: string
   slug: string
   fillColor?: string
+  fillOpacity?: number
   icon?: string
   legendType?: 'point' | 'line' | 'polygon' | 'circle' | 'icon' | 'heatmap'
   category?: string
   subOptions?: LayerManagerOption[]
+  /** false: não é uma camada do catálogo (ex.: a Fauna) e não tem lápis */
+  editable?: boolean
 }
 
+export type LayerStatus = 'loading' | 'error'
+
 interface LayerManagerProps {
-  title?: string
   options: LayerManagerOption[]
   activeLayers: string[]
   onLayerToggle: (slug: string, isChecked: boolean) => void
-  onToggleAll: (isChecked: boolean) => void
+  onHideAll: () => void
   onGroupToggle?: (slugs: string[], isChecked: boolean) => void
+  /** andamento por camada, pela chave da camada-mãe (2.1: cada fonte mostra o seu) */
+  status?: Record<string, LayerStatus>
+  onRetry?: (slug: string) => void
+  /** o catálogo ainda está chegando */
+  loading?: boolean
+  /** quantas feições cada camada tem no mapa, quando já chegou */
+  counts?: Record<string, number>
+  /** camadas que um filtro está mexendo, e qual */
+  filterNotes?: Record<string, FilterNote>
+  /** modo "escolher a camada para editar" (13.3): cada linha vira um botão que abre o editor. Sem lápis em cada linha. */
+  onPick?: (slug: string) => void
+  /** camada com áreas (ex.: Ações): o que se edita é o ícone de cada área, não a camada */
+  onPickGroup?: (layerSlug: string, groupKey: string) => void
+  /** quais camadas com áreas estão abertas: quem usa o LayerManager em dois lugares (lista e editar) guarda isto, para a lista não fechar ao voltar */
+  expanded?: string[]
+  onToggleExpanded?: (id: string) => void
+  /** a camada acabou de ser editada: a linha pisca em verde claro (8.4) */
+  flashSlug?: string | null
 }
 
-const toPascalCase = (str: string) => {
-  return str
-    .replace(/([-_][a-z])/ig, ($1) => {
-      return $1.toUpperCase()
-        .replace('-', '')
-        .replace('_', '');
-    })
-    .replace(/^./, (str) => str.toUpperCase());
-};
+const toPascalCase = (str: string) =>
+  str.replace(/([-_][a-z])/gi, ($1) => $1.toUpperCase().replace('-', '').replace('_', '')).replace(/^./, (c) => c.toUpperCase())
 
 const getLayerIcon = (iconName?: string) => {
-    if (!iconName) return Layers;
-
-    const pascalName = toPascalCase(iconName);
-    // @ts-ignore
-    const IconComponent = LucideIcons[pascalName];
-
-    return IconComponent || Layers;
+  if (!iconName) return Layers
+  // @ts-ignore
+  return LucideIcons[toPascalCase(iconName)] || Layers
 }
 
-const CATEGORY_ORDER = ['Operacional', 'Monitoramento', 'Base Territorial', 'Infraestrutura'];
-const DEFAULT_EXPANDED = ['Operacional', 'Monitoramento'];
+const CATEGORY_ORDER = ['Operacional', 'Monitoramento', 'Base Territorial', 'Infraestrutura']
 
-function LayerOptionItem({ option, isChecked, onToggle, index, isSubOption }: { option: LayerManagerOption, isChecked: boolean, onToggle: () => void, index: number, isSubOption?: boolean }) {
-    const IconComponent = getLayerIcon(option.icon)
-    const legendType = option.legendType || 'polygon'; 
+// Amostra fiel ao mapa: preenchimento, contorno e transparência da camada. Um fio escuro por fora garante que ela apareça
+// mesmo quando a cor da camada é clara (a linha das estradas é creme, o contorno das nascentes é branco): sem ele, a legenda
+// some no cartão branco e a pessoa precisa adivinhar o que a cor significa. Desligada, a amostra fica esmaecida.
+export function Legend({ option, checked }: { option: LayerManagerOption; checked: boolean }) {
+  const Icon = getLayerIcon(option.icon)
+  const type = option.legendType || 'polygon'
+  const stroke = option.color
+  const fill = option.fillColor || option.color
+  const fillOpacity = option.fillOpacity ?? 1
+  const hairline = 'ring-1 ring-foreground/25'
+  return (
+    <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center transition-opacity duration-200', !checked && 'opacity-40')} aria-hidden>
+      {(type === 'point' || type === 'icon') && (
+        <span className={cn('flex h-6 w-6 items-center justify-center border bg-card', type === 'icon' ? 'rounded-full' : 'rounded-md')} style={{ borderColor: stroke }}>
+          <Icon size={14} style={{ color: stroke }} />
+        </span>
+      )}
+      {type === 'line' && (
+        <svg width="24" height="24" viewBox="0 0 20 20" className="overflow-visible">
+          <path d="M2 15 C 8 15, 12 5, 18 5" fill="none" stroke="currentColor" strokeWidth="4.5" strokeLinecap="round" className="text-foreground/25" />
+          <path d="M2 15 C 8 15, 12 5, 18 5" fill="none" stroke={stroke} strokeWidth="2.5" strokeLinecap="round" />
+        </svg>
+      )}
+      {type === 'circle' && <span className={cn('h-4 w-4 rounded-full border-2', hairline)} style={{ backgroundColor: fill, borderColor: stroke }} />}
+      {type === 'polygon' && (
+        <span
+          className={cn('h-4 w-4 rounded-[3px] border-2', hairline)}
+          style={{ backgroundColor: `color-mix(in srgb, ${fill} ${Math.round(fillOpacity * 100)}%, transparent)`, borderColor: stroke }}
+        />
+      )}
+      {type === 'heatmap' && <span className={cn('h-4 w-4 rounded-sm', hairline)} style={{ background: `linear-gradient(135deg, ${option.color || 'red'} 0%, transparent 100%)` }} />}
+    </span>
+  )
+}
+
+interface RowProps {
+  option: LayerManagerOption
+  checked: boolean
+  onChange: (checked: boolean) => void
+  count?: number
+  status?: LayerStatus
+  note?: FilterNote
+  onRetry?: (slug: string) => void
+  /** botão de expandir, quando a camada tem grupos */
+  expander?: ReactNode
+  sub?: boolean
+  flashed?: boolean
+}
+
+// Colunas alinhadas (DESIGN.md 6.2, regra 8): o interruptor é SEMPRE a última coluna, no mesmo lugar em toda linha, tenha ela grupos ou não.
+// O que expande (a seta) vai junto do nome, que é de onde a pessoa lê "isto abre"; as linhas-filhas recuam só o nome e a amostra,
+// nunca o interruptor. A linha toda liga e desliga (um <label> amarrado ao interruptor), com alvo de 48 px para o toque.
+// A saída do erro é um botão e fica fora do <label>, senão o clique nela ligaria ou desligaria a camada.
+function LayerRow({ option, checked, onChange, count, status, note, onRetry, expander, sub, flashed }: RowProps) {
+  const id = useId()
+  const showCount = !sub && checked && status !== 'loading' && status !== 'error' && count !== undefined
+  const showNote = checked && !!note && status !== 'error'
+  // a frase fica guardada: ao sumir, a altura encolhe com o texto ainda lá, em vez de o texto sumir e a linha pular
+  const lastNote = useRef('')
+  if (showNote) lastNote.current = filterLine(note!, count)
+  return (
+    <div className={cn('relative', flashed && 'animate-found rounded-md', sub && 'before:absolute before:bottom-0 before:left-[1.65rem] before:top-0 before:w-px before:bg-border')}>
+      <div className="flex min-h-12 items-center gap-3 rounded-md pl-2.5 pr-3 transition-colors duration-200 hover:bg-muted">
+        <label htmlFor={id} className={cn('flex min-w-0 flex-1 cursor-pointer items-center gap-3 self-stretch py-2', sub && 'pl-6')}>
+          <Legend option={option} checked={checked} />
+          <span className="min-w-0">
+            <span className={cn('block truncate text-sm', !checked && 'text-muted-foreground')}>{option.label}</span>
+            <Collapse open={showNote}>
+              <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{lastNote.current}</span>
+            </Collapse>
+          </span>
+          {expander}
+          <span className="flex-1" aria-hidden />
+          {checked && status === 'loading' && (
+            <span role="status" className="flex shrink-0 items-center">
+              <span className="bg-shimmer h-2 w-10 rounded-sm" aria-hidden />
+              <span className="sr-only">Carregando</span>
+            </span>
+          )}
+          {showCount && <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">{count}</span>}
+        </label>
+        <Switch id={id} checked={checked} onCheckedChange={onChange} aria-label={option.label} />
+      </div>
+      {checked && status === 'error' && (
+        <p className="pb-2 pl-12 pr-3 text-xs text-crit">
+          Não carregou.{' '}
+          <button type="button" onClick={() => onRetry?.(option.slug)} className="underline underline-offset-2 hover:text-crit/80">
+            Tentar de novo
+          </button>
+        </p>
+      )}
+    </div>
+  )
+}
+
+export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, onGroupToggle, status, onRetry, loading, counts, filterNotes, onPick, onPickGroup, flashSlug, expanded: expandedProp, onToggleExpanded }: LayerManagerProps) {
+  const [localExpanded, setLocalExpanded] = useState<string[]>([])
+  const expanded = expandedProp ?? localExpanded
+  const toggleExpanded = (id: string) =>
+    onToggleExpanded ? onToggleExpanded(id) : setLocalExpanded((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]))
+
+  const sections = useMemo(() => {
+    const groups: Record<string, LayerManagerOption[]> = {}
+    options.forEach((opt) => {
+      const cat = opt.category || 'Outros'
+      ;(groups[cat] ||= []).push(opt)
+    })
+    const rank = (c: string) => (CATEGORY_ORDER.includes(c) ? CATEGORY_ORDER.indexOf(c) : CATEGORY_ORDER.length)
+    return Object.keys(groups)
+      .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
+      .map((name) => ({ name, items: groups[name] }))
+  }, [options])
+
+  if (options.length === 0) {
     return (
-        <motion.div
-        key={option.id}
-        initial={{ opacity: 0, x: -4 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: index * 0.02 }}
-        className={`group flex items-center justify-between rounded-md border transition-colors duration-150 px-2 py-1.5 ${
-            isChecked
-            ? "bg-brand-primary/10 border-brand-primary/20"
-            : "bg-transparent border-transparent hover:bg-white/5"
-        }`}
-        >
-        <div className="flex items-center gap-2 flex-1 min-w-0">
-            <Checkbox
-            id={option.id}
-            checked={isChecked}
-            onCheckedChange={onToggle}
-            className="w-3.5 h-3.5 border-slate-600 data-[state=checked]:bg-brand-primary data-[state=checked]:border-brand-primary data-[state=checked]:text-white flex-shrink-0"
-            />
-
-            {legendType === 'point' && (
-                <div 
-                    className="h-5 w-5 rounded flex items-center justify-center flex-shrink-0 bg-white/5 border border-white/10"
-                    style={{ borderColor: isChecked ? option.color : 'rgba(255,255,255,0.1)' }}
-                >
-                    <IconComponent 
-                        size={12} 
-                        style={{ color: option.color }} 
-                    />
-                </div>
-            )}
-
-            {legendType === 'line' && (
-                <div className="h-5 w-5 flex items-center justify-center flex-shrink-0">
-                    <svg width="20" height="20" viewBox="0 0 20 20" className="opacity-80">
-                        <path 
-                            d="M2 15 C 8 15, 12 5, 18 5" 
-                            fill="none" 
-                            stroke={option.color} 
-                            strokeWidth="2.5" 
-                            strokeLinecap="round"
-                        />
-                    </svg>
-                </div>
-            )}
-
-            {legendType === 'circle' && (
-                <div className="h-5 w-5 flex items-center justify-center flex-shrink-0">
-                    <span
-                        className="h-3 w-3 rounded-full shadow-sm ring-2 ring-inset"
-                        style={{ 
-                            borderColor: option.color,
-                            backgroundColor: option.color
-                        }}
-                    />
-                </div>
-            )}
-
-            {legendType === 'polygon' && (
-                <div className="h-5 w-5 flex items-center justify-center flex-shrink-0">
-                    <span
-                        className="h-3 w-3 rounded-[2px] shadow-sm ring-1 ring-white/20"
-                        style={{ 
-                            backgroundColor: option.fillColor || option.color, // Fill
-                            borderColor: option.color
-                        }}
-                    />
-                </div>
-            )}
-
-            {legendType === 'heatmap' && (
-                <div className="h-5 w-5 flex items-center justify-center flex-shrink-0">
-                     <div 
-                        className="h-3 w-3 rounded-sm shadow-sm"
-                        style={{
-                            background: `linear-gradient(135deg, ${option.color || 'red'} 0%, transparent 100%)`, 
-                            border: '1px solid rgba(255,255,255,0.2)'
-                        }}
-                     />
-                </div>
-            )}
-
-            {legendType === 'icon' && (
-                <div 
-                    className="h-5 w-5 rounded-full flex items-center justify-center flex-shrink-0 bg-white/5 border border-white/10"
-                    style={{ borderColor: isChecked ? option.color : 'rgba(255,255,255,0.1)' }}
-                >
-                    <IconComponent 
-                        size={12} 
-                        style={{ color: option.color }} 
-                    />
-                </div>
-            )}
-
-            <Label
-            htmlFor={option.id}
-            className="text-xs text-slate-300 cursor-pointer select-none flex-1 truncate font-normal"
-            >
-            {option.label}
-            </Label>
-        </div>
-        </motion.div>
-    )
-}
-
-export function LayerManager({ 
-  title = "Camadas", 
-  options, 
-  activeLayers, 
-  onLayerToggle,
-  onToggleAll,
-  onGroupToggle
-}: LayerManagerProps) {
-  const [isExpanded, setIsExpanded] = useState(false)
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(DEFAULT_EXPANDED)
-  const [expandedItems, setExpandedItems] = useState<string[]>([])
-  
-  const toggleItem = (id: string) => {
-    setExpandedItems(prev => 
-      prev.includes(id) 
-        ? prev.filter(i => i !== id)
-        : [...prev, id]
+      <div className="rounded-lg border border-border bg-card p-4">
+        {loading ? (
+          <div role="status" className="space-y-2">
+            <p className="text-sm text-muted-foreground">Buscando as camadas…</p>
+            {[0, 1, 2, 3].map((i) => <div key={i} className="bg-shimmer h-10 rounded-md" aria-hidden />)}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">Ainda não há camadas para esta região.</p>
+        )}
+      </div>
     )
   }
 
-  const toggleExpand = () => setIsExpanded(!isExpanded)
+  const isOn = (slug: string) => activeLayers.includes(slug)
 
-  const toggleCategory = (category: string) => {
-    setExpandedCategories(prev => 
-      prev.includes(category) 
-        ? prev.filter(c => c !== category)
-        : [...prev, category]
+  // Modo "escolher o que editar": uma lista limpa, em que cada linha é um botão com rótulo e seta. Sem interruptor, sem contagem e
+  // sem lápis em cada linha (13.3). Camada com áreas (Ações) NÃO é editável como um todo: ela é só o interruptor que liga as áreas;
+  // o que se edita é o ícone de cada área. Então a linha dela abre as áreas, e a frase embaixo do nome diz isso.
+  if (onPick) {
+    const rowClass = 'flex min-h-12 w-full items-center gap-3 rounded-md px-2.5 py-2 text-left transition-colors duration-200 hover:bg-muted focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30'
+    return (
+      <div className="space-y-4">
+        {sections.map((section, i) => {
+          const items = section.items.filter((o) => o.editable !== false)
+          if (items.length === 0) return null
+          return (
+            <section key={section.name} aria-labelledby={`pick-${i}`} className="rounded-lg border border-border bg-card p-2">
+              <h4 id={`pick-${i}`} className="px-2.5 pb-1 pt-2 text-sm font-semibold">{section.name}</h4>
+              {items.map((option) => {
+                const subs = option.subOptions
+                if (subs?.length && onPickGroup) {
+                  const open = expanded.includes(option.id)
+                  return (
+                    <div key={option.id}>
+                      <button type="button" aria-expanded={open} onClick={() => toggleExpanded(option.id)} className={rowClass}>
+                        <Legend option={option} checked />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm">{option.label}</span>
+                          <span className="mt-0.5 block text-xs text-muted-foreground">Edite o ícone de cada área</span>
+                        </span>
+                        <ChevronDown className={cn('h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-[320ms] ease-out', open && 'rotate-180')} aria-hidden />
+                      </button>
+                      <Collapse open={open}>
+                        <div className="relative before:absolute before:bottom-0 before:left-[1.65rem] before:top-0 before:w-px before:bg-border">
+                          {subs.map((sub) => (
+                            <button
+                              key={sub.id}
+                              type="button"
+                              onClick={() => onPickGroup(option.slug, sub.slug.slice(option.slug.length + 2))}
+                              className={cn(rowClass, 'pl-9', flashSlug === sub.slug && 'animate-found')}
+                            >
+                              <Legend option={sub} checked />
+                              <span className="min-w-0 flex-1 truncate text-sm">{sub.label}</span>
+                              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                            </button>
+                          ))}
+                        </div>
+                      </Collapse>
+                    </div>
+                  )
+                }
+                return (
+                  <button key={option.id} type="button" onClick={() => onPick(option.slug)} className={cn(rowClass, flashSlug === option.slug && 'animate-found')}>
+                    <Legend option={option} checked />
+                    <span className="min-w-0 flex-1 truncate text-sm">{option.label}</span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                  </button>
+                )
+              })}
+            </section>
+          )
+        })}
+      </div>
     )
   }
-
-  // Discretize options by category
-  const groupedOptions = useMemo(() => {
-    const groups: Record<string, LayerManagerOption[]> = {};
-    
-    options.forEach(opt => {
-        const cat = opt.category || "Outros";
-        if (!groups[cat]) groups[cat] = [];
-        groups[cat].push(opt);
-    });
-
-    // Sort categories based on predefined order
-    const sortedCategories = Object.keys(groups).sort((a, b) => {
-        const indexA = CATEGORY_ORDER.indexOf(a);
-        const indexB = CATEGORY_ORDER.indexOf(b);
-        
-        if (indexA !== -1 && indexB !== -1) return indexA - indexB; // Prioritize mostly based on order
-        if (indexA !== -1) return -1;
-        if (indexB !== -1) return 1;
-        return a.localeCompare(b);
-    });
-
-    return sortedCategories.map(cat => ({
-        name: cat,
-        items: groups[cat]
-    }));
-  }, [options]);
 
   return (
-    <Card className="w-80 max-w-sm bg-brand-dark/95 backdrop-blur-md shadow-2xl z-[1000] overflow-hidden border border-white/10 transition-all duration-300">
-      <CardHeader className="p-3 border-b border-white/10">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 flex-1 min-w-0">
-            <div className="h-8 w-8 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center flex-shrink-0">
-              <Globe className="w-4 h-4 text-brand-primary" />
-            </div>
-
-            <div className="flex-1 min-w-0">
-              <CardTitle className="text-base font-semibold text-slate-100 flex items-center gap-2 truncate">
-                {title}
-              </CardTitle>
-            </div>
-          </div>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleExpand}
-            className="h-8 w-8 p-0 rounded-full text-slate-400 hover:bg-white/10 hover:text-white"
-            aria-expanded={isExpanded}
-            aria-label={isExpanded ? "Fechar camadas" : "Abrir camadas"}
-          >
-            {isExpanded ? (
-              <ChevronUp className="h-4 w-4" />
-            ) : (
-              <ChevronDown className="h-4 w-4" />
-            )}
-          </Button>
-        </div>
-      </CardHeader>
-
-      <AnimatePresence initial={false}>
-        {isExpanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: "easeInOut" }}
-          >
-            <CardContent className="p-2.5">
-                  <div className="max-h-[65vh] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
-                
-                {groupedOptions.map(group => {
-                    const isCatExpanded = expandedCategories.includes(group.name);
-                    
-                    return (
-                    <div key={group.name} className="mb-2 last:mb-0 border border-white/5 rounded-lg overflow-hidden bg-white/[0.02]">
-                        {/* Accordion Header */}
-                        <div 
-                            className="flex items-center justify-between p-2 cursor-pointer hover:bg-white/5 transition-colors select-none"
-                            onClick={() => toggleCategory(group.name)}
-                        >
-                            <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                                {group.name}
-                                <Badge variant="secondary" className="bg-white/10 text-slate-300 text-[10px] h-4 px-1 rounded-sm">
-                                    {group.items.length}
-                                </Badge>
-                            </h4>
-                            {isCatExpanded ? <ChevronUp className="h-3 w-3 text-slate-500" /> : <ChevronDown className="h-3 w-3 text-slate-500" />}
-                        </div>
-
-                        <AnimatePresence>
-                            {isCatExpanded && (
-                                <motion.div
-                                    initial={{ height: 0 }}
-                                    animate={{ height: "auto" }}
-                                    exit={{ height: 0 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="overflow-hidden"
-                                >
-                                    <div className="p-2 pt-0 space-y-1.5 border-t border-white/5">
-                                        {group.items.map((option, index) => {
-                                        // CHECK FOR SUB-OPTIONS (NESTED LAYER)
-                                        if (option.subOptions && option.subOptions.length > 0) {
-                                            const isItemExpanded = expandedItems.includes(option.id);
-                                            // Check if ANY child is active to show visual cue on parent?
-                                            // Or maybe an "indetermined" state checkbox?
-                                            // For now: Just a folder header.
-
-                                            // Helper to count active children
-                                            const activeChildrenCount = option.subOptions.filter(sub => activeLayers.includes(sub.slug)).length;
-                                            const allChildrenCount = option.subOptions.length;
-                                            const isAllSelected = activeChildrenCount === allChildrenCount;
-                                            const isNoneSelected = activeChildrenCount === 0;
-
-                                            const handleGroupCheckbox = (e: React.MouseEvent) => {
-                                                e.stopPropagation(); // Prevent toggling expansion
-                                                if (onGroupToggle) {
-                                                    const allSlugs = option.subOptions?.map(s => s.slug) || [];
-                                                    if (isAllSelected) {
-                                                        // Uncheck all
-                                                        onGroupToggle(allSlugs, false);
-                                                    } else {
-                                                        // Check all
-                                                        onGroupToggle(allSlugs, true);
-                                                    }
-                                                }
-                                            };
-
-                                            return (
-                                                <div key={option.id} className="rounded-md border border-white/5 bg-white/5 overflow-hidden">
-                                                    <div
-                                                        className="flex items-center justify-between p-2 cursor-pointer hover:bg-white/10 transition-colors"
-                                                        onClick={() => toggleItem(option.id)}
-                                                    >
-                                                        <div className="flex items-center gap-2 min-w-0">
-                                                            
-                                                            <Checkbox
-                                                                id={`group-${option.id}`}
-                                                                checked={isAllSelected}
-                                                                // @ts-ignore
-                                                                onClick={handleGroupCheckbox}
-                                                                className={`w-3.5 h-3.5 border-slate-600 data-[state=checked]:bg-brand-primary data-[state=checked]:border-brand-primary data-[state=checked]:text-white flex-shrink-0 ${!isAllSelected && !isNoneSelected ? 'opacity-50 bg-brand-primary/50' : ''}`}
-                                                            />
-
-                                                            {/* Optional: Icon for the group */}
-                                                            {option.icon && (
-                                                                <div className="text-slate-400">
-                                                                   {(() => { const I = getLayerIcon(option.icon); return <I size={14} /> })()}
-                                                                </div>
-                                                            )}
-
-                                                            <span className="text-xs font-medium text-slate-300 truncate">
-                                                                {option.label}
-                                                            </span>
-
-                                                            {/* Badge if children active */}
-                                                            {activeChildrenCount > 0 && (
-                                                                <Badge variant="secondary" className="bg-brand-primary/20 text-brand-primary text-[9px] h-3.5 px-1 rounded-sm">
-                                                                    {activeChildrenCount}/{allChildrenCount}
-                                                                </Badge>
-                                                            )}
-                                                        </div>
-                                                        {isItemExpanded ? <ChevronUp className="h-3 w-3 text-slate-500" /> : <ChevronDown className="h-3 w-3 text-slate-500" />}
-                                                    </div>
-
-                                                    <AnimatePresence>
-                                                        {isItemExpanded && (
-                                                            <motion.div
-                                                                initial={{ height: 0 }}
-                                                                animate={{ height: "auto" }}
-                                                                exit={{ height: 0 }}
-                                                                className="overflow-hidden bg-black/20"
-                                                            >
-                                                                <div className="p-2 space-y-1.5 border-t border-white/5">
-                                                                    {option.subOptions.map((sub, subIdx) => (
-                                                                        <LayerOptionItem
-                                                                            key={sub.id}
-                                                                            option={sub}
-                                                                            isChecked={activeLayers.includes(sub.slug)}
-                                                                            onToggle={() => onLayerToggle(sub.slug, !activeLayers.includes(sub.slug))}
-                                                                            index={subIdx}
-                                                                            isSubOption={true}
-                                                                        />
-                                                                    ))}
-                                                                </div>
-                                                            </motion.div>
-                                                        )}
-                                                    </AnimatePresence>
-                                                </div>
-                                            )
-                                        }
-
-                                        // STANDARD ITEM
-                                        return (
-                                            <LayerOptionItem
-                                                key={option.id}
-                                                option={option}
-                                                isChecked={activeLayers.includes(option.slug)}
-                                                onToggle={() => onLayerToggle(option.slug, !activeLayers.includes(option.slug))}
-                                                index={index}
-                                            />
-                                        )
-                                        })}
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </div>
-                    )
-                })}
+    <div className="space-y-4">
+      {sections.map((section, i) => (
+        <section key={section.name} aria-labelledby={`layers-${i}`} className="rounded-lg border border-border bg-card p-2">
+          <h4 id={`layers-${i}`} className="px-2.5 pb-1 pt-2 text-sm font-semibold">
+            {section.name}
+          </h4>
+          {section.items.map((option) => {
+            const subs = option.subOptions
+            if (!subs?.length) {
+              return (
+                <LayerRow
+                  key={option.id}
+                  option={option}
+                  checked={isOn(option.slug)}
+                  onChange={(c) => onLayerToggle(option.slug, c)}
+                  count={counts?.[option.slug]}
+                  status={status?.[option.slug]}
+                  note={filterNotes?.[option.slug]}
+                  onRetry={onRetry}
+                  flashed={flashSlug === option.slug}
+                />
+              )
+            }
+            // camada com grupos (ex.: Ações por eixo): o interruptor liga ou desliga todos; o chevron abre os grupos, um nível só
+            const slugs = subs.map((s) => s.slug)
+            const onCount = slugs.filter(isOn).length
+            const open = expanded.includes(option.id)
+            return (
+              <div key={option.id}>
+                <LayerRow
+                  option={option}
+                  checked={onCount > 0}
+                  onChange={(c) => onGroupToggle?.(slugs, c)}
+                  count={counts?.[option.slug]}
+                  status={status?.[option.slug]}
+                  note={filterNotes?.[option.slug]}
+                  onRetry={onRetry}
+                  flashed={flashSlug === option.slug}
+                  expander={
+                    <button
+                      type="button"
+                      aria-expanded={open}
+                      aria-label={`${open ? 'Esconder' : 'Mostrar'} os grupos de ${option.label}`}
+                      onClick={() => toggleExpanded(option.id)}
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30"
+                    >
+                      {/* o mesmo chevron gira: a pessoa vê o que mudou, em vez de um ícone trocar por outro (8.1) */}
+                      <ChevronDown className={cn('h-4 w-4 transition-transform duration-[320ms] ease-out', open && 'rotate-180')} aria-hidden />
+                      <span className="sr-only">{onCount} de {slugs.length} ligados</span>
+                    </button>
+                  }
+                />
+                <Collapse open={open}>
+                  {subs.map((sub) => <LayerRow key={sub.id} sub option={sub} checked={isOn(sub.slug)} onChange={(c) => onLayerToggle(sub.slug, c)} />)}
+                </Collapse>
               </div>
+            )
+          })}
+        </section>
+      ))}
 
-              {/* Quick Actions */}
-              <div className="mt-3 pt-3 border-t border-white/10">
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onToggleAll(true)}
-                    className="flex-1 text-xs border-white/10 text-slate-300 bg-white/5 hover:bg-brand-primary/10 hover:text-brand-primary hover:border-brand-primary/20"
-                  >
-                    Mostrar Todas
-                  </Button>
-
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onToggleAll(false)}
-                    className="flex-1 text-xs border-white/10 text-slate-300 bg-white/5 hover:bg-brand-primary/10 hover:text-brand-primary hover:border-brand-primary/20"
-                  >
-                    Ocultar Todas
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </Card>
+      {activeLayers.length > 0 && (
+        <Button variant="outline" size="sm" className="w-full text-xs" onClick={onHideAll}>
+          Ocultar todas
+        </Button>
+      )}
+    </div>
   )
 }

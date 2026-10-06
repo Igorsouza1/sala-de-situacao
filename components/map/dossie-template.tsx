@@ -15,7 +15,7 @@ import { ACTION_CATEGORIES, STATUS_STYLES, ActionCategory, ActionStatus } from "
 // --- Dynamic Imports for Map ---
 const DossieMap = dynamic(() => import("./dossie-map"), { 
   ssr: false,
-  loading: () => <div className="h-64 w-full bg-slate-100 animate-pulse flex items-center justify-center text-slate-400 text-xs">Carregando Mapa...</div>
+  loading: () => <div className="h-64 w-full bg-muted bg-shimmer flex items-center justify-center text-slate-400 text-xs">Carregando Mapa...</div>
 })
 
 export interface HistoryUpdate {
@@ -234,7 +234,7 @@ export function DossieTemplate({
                 Relatório de Ação e<br/>Prevenção Ambiental
               </h1>
               <p className="text-xs font-bold text-slate-500 tracking-widest uppercase mt-1">
-                Sala de Situação • {regionSubtitle(region)}
+                GEO PRISMA • {regionSubtitle(region)}
               </p>
            </div>
 
@@ -254,11 +254,11 @@ export function DossieTemplate({
            {/* --- B. METADADOS DE AUDITORIA (GRID) --- */}
            <section aria-label="Dados da Ocorrência">
               <div className="flex items-center justify-between mb-2">
-                 <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-brand-primary pl-2">
+                 <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-primary pl-2">
                    01. Dados da Ocorrência
                  </h2>
                  {isEditing && (
-                     <Button size="sm" onClick={handleSaveFields} className="h-6 text-xs bg-brand-primary text-white">Salvar Alterações</Button>
+                     <Button size="sm" onClick={handleSaveFields} className="h-6 text-xs bg-primary text-white">Salvar Alterações</Button>
                  )}
               </div>
 
@@ -347,11 +347,11 @@ export function DossieTemplate({
             {/* --- C. CONTEXTO GEOGRÁFICO (MINI MAPA) --- */}
             {hasCoordinates && (
                 <section aria-label="Localização Geográfica" className="break-inside-avoid">
-                     <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-brand-primary pl-2 mb-4">
+                     <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-primary pl-2 mb-4">
                         02. Localização Geográfica
                      </h2>
                      
-                     <div className="border border-slate-300 bg-slate-100 p-1 rounded-sm shadow-sm print:shadow-none">
+                     <div className="border border-slate-300 bg-slate-100 p-1 rounded-sm shadow-xs print:shadow-none">
                         <DossieMap 
                            lat={lat} 
                            lng={lng} 
@@ -365,7 +365,7 @@ export function DossieTemplate({
             {/* --- E. NARRATIVA TÉCNICA (CONTEXTO) & D. IMAGENS --- */}
             <section aria-label="Histórico e Evidências" className="space-y-6">
                  <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-brand-primary pl-2">
+                    <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 border-l-4 border-primary pl-2">
                         03. Relatório Técnico & Evidências
                     </h2>
                  </div>

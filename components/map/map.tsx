@@ -10,6 +10,7 @@ import { CustomLayerControl } from "./CustomLayerControl"
 import { MapPlaceholder } from "./MapPlaceholder"
 import { DateFilterControl } from "./DateFilterControl"
 import { PropertyFilterControl } from "./PropertyFilterControl"
+import { FilterPopover } from "./FilterPopover"
 import { FaunaHeatmapControl } from "./FaunaHeatmapControl"
 import { MeasureControl } from "./MeasureControl"
 import { CoordinateInspector } from "./CoordinateInspector"
@@ -475,8 +476,12 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
         ))}
 
         <div className="absolute top-4 left-4 z-[1000] flex flex-col gap-4">
-          <DateFilterControl onDateChange={setDateFilter} />
-          <PropertyFilterControl onFilterChange={setAreaFilter} />
+          <FilterPopover icon={LucideIcons.Calendar} title="Filtro de Datas" panelClassName="w-72" isActive>
+            {() => <DateFilterControl startDate={dateFilter.startDate} endDate={dateFilter.endDate} onChange={setDateFilter} />}
+          </FilterPopover>
+          <FilterPopover icon={LucideIcons.LandPlot} title="Filtros de Propriedade">
+            {() => <PropertyFilterControl value={areaFilter} onChange={setAreaFilter} />}
+          </FilterPopover>
           <FaunaHeatmapControl />
         </div>
       </MapContainer>
@@ -500,20 +505,22 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
       <div className="absolute bottom-4 left-4 z-[1000] gap-3 flex flex-col">
         {/* <MapLayersCard ... /> Removido */ }
        
-        <LayerManager
-            title="Camadas"
-            options={dynamicLayerOptions}
-            activeLayers={visibleDynamicLayers}
-            onLayerToggle={handleDynamicLayerToggle}
-            onToggleAll={handleToggleAllDynamic}
-            onGroupToggle={handleGroupToggle}
-        />
+        {/* o LayerManager agora é só o conteúdo; o mapa legado dá a moldura (o novo usa o dock) */}
+        <div className="w-80 max-h-[70vh] overflow-y-auto rounded-lg border border-border bg-muted/50 p-3 shadow-control">
+          <LayerManager
+              options={dynamicLayerOptions}
+              activeLayers={visibleDynamicLayers}
+              onLayerToggle={handleDynamicLayerToggle}
+              onHideAll={() => handleToggleAllDynamic(false)}
+              onGroupToggle={handleGroupToggle}
+          />
+        </div>
       </div>
 
       {loadingLayers && (
-        <div className="absolute inset-0 z-[2000] bg-black/40 backdrop-blur-sm flex items-center justify-center pointer-events-none">
-            <div className="bg-brand-dark border border-white/10 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-brand-primary"></div>
+        <div className="absolute inset-0 z-[2000] bg-black/40 backdrop-blur-xs flex items-center justify-center pointer-events-none">
+            <div className="bg-foreground border border-white/10 p-4 rounded-xl shadow-2xl flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent"></div>
                 <span className="text-slate-200 text-sm font-medium">Atualizando dados...</span>
             </div>
         </div>

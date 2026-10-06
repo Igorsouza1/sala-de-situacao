@@ -10,7 +10,7 @@ import { useDesmatamento } from "@/context/DesmatamentoContext"
 const MESES = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
 
 function desmatColor(ha: number): string {
-  if (ha === 0)    return "hsl(var(--muted))"
+  if (ha === 0)    return "var(--color-muted)"
   if (ha <= 10)    return "#86efac"
   if (ha <= 50)    return "#f59e0b"
   if (ha <= 200)   return "#f97316"
@@ -31,18 +31,18 @@ function CustomTooltip({ active, payload }: any) {
   const value: number = d?.desmatamento ?? 0
   const color = desmatColor(value)
   return (
-    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-sm shadow-xl px-4 py-3 min-w-[160px]">
+    <div className="rounded-xl border border-border bg-background/95 backdrop-blur-xs shadow-xl px-4 py-3 min-w-[160px]">
       <p className="text-[11px] font-medium text-muted-foreground mb-1">{d?.mes}</p>
       <div className="flex items-baseline gap-1.5 mb-1">
         <span
           className="text-2xl font-bold tracking-tight"
-          style={{ color: value === 0 ? "hsl(var(--muted-foreground))" : color }}
+          style={{ color: value === 0 ? "var(--color-muted-foreground)" : color }}
         >
           {value.toFixed(1)}
         </span>
         <span className="text-xs text-muted-foreground font-medium">ha</span>
       </div>
-      <p className="text-[11px] font-medium" style={{ color: value === 0 ? "hsl(var(--muted-foreground))" : color }}>
+      <p className="text-[11px] font-medium" style={{ color: value === 0 ? "var(--color-muted-foreground)" : color }}>
         {desmatLabel(value)}
       </p>
     </div>
@@ -78,7 +78,7 @@ export function GraficoDesmatamento() {
 
   if (isLoading) {
     return (
-      <Card className="border-border bg-card shadow-sm w-full">
+      <Card className="border-border bg-card shadow-xs w-full">
         <CardContent className="h-[340px] flex items-center justify-center">
           <div className="flex items-center gap-2 text-muted-foreground text-sm">
             <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
@@ -91,7 +91,7 @@ export function GraficoDesmatamento() {
 
   if (error) {
     return (
-      <Card className="border-border bg-card shadow-sm w-full">
+      <Card className="border-border bg-card shadow-xs w-full">
         <CardContent className="h-[340px] flex items-center justify-center">
           <p className="text-sm text-destructive">{error}</p>
         </CardContent>
@@ -100,7 +100,7 @@ export function GraficoDesmatamento() {
   }
 
   return (
-    <Card className="border-border bg-card shadow-sm w-full">
+    <Card className="border-border bg-card shadow-xs w-full">
       <CardHeader className="pb-2 px-6 pt-6">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
 
@@ -138,7 +138,7 @@ export function GraficoDesmatamento() {
             <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 8 }} barCategoryGap="30%">
               <CartesianGrid
                 strokeDasharray="3 3"
-                stroke="hsl(var(--border))"
+                stroke="var(--color-border)"
                 strokeOpacity={0.5}
                 vertical={false}
               />
@@ -146,19 +146,19 @@ export function GraficoDesmatamento() {
                 dataKey="mes"
                 tickLine={false}
                 axisLine={false}
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                tick={{ fontSize: 11, fill: "var(--color-muted-foreground)" }}
                 tickMargin={8}
               />
               <YAxis
                 tickLine={false}
                 axisLine={false}
-                tick={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }}
                 width={42}
                 unit=" ha"
               />
               <Tooltip
                 content={<CustomTooltip />}
-                cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.4, radius: 4 }}
+                cursor={{ fill: "var(--color-muted)", fillOpacity: 0.4, radius: 4 }}
               />
               <Bar dataKey="desmatamento" radius={[4, 4, 0, 0]} maxBarSize={32}>
                 {data.map((d, i) => (
@@ -172,7 +172,7 @@ export function GraficoDesmatamento() {
         {/* Legend */}
         <div className="flex items-center justify-center gap-4 mt-1 flex-wrap">
           {[
-            { color: "hsl(var(--muted-foreground))", label: "Sem alertas",     opacity: 0.4 },
+            { color: "var(--color-muted-foreground)", label: "Sem alertas",     opacity: 0.4 },
             { color: "#86efac",                       label: "Baixo (≤ 10 ha)"              },
             { color: "#f59e0b",                       label: "Moderado (≤ 50 ha)"           },
             { color: "#f97316",                       label: "Alto (≤ 200 ha)"              },

@@ -161,12 +161,12 @@ export function MeasureControl() {
     <>
         {/* Controls UI */}
         <div className="absolute top-60 right-4 z-[400] flex flex-col gap-2">
-             <div className="flex items-center gap-1 bg-white/90 backdrop-blur-sm p-1 rounded-md shadow-md border border-gray-200">
+             <div className="flex items-center gap-1 bg-white/90 backdrop-blur-xs p-1 rounded-md shadow-md border border-gray-200">
                  {/* Distance Button */}
                  <Button
                     variant={measureMode === 'distance' ? "default" : "ghost"}
                     size="icon"
-                    className={`h-8 w-8 ${measureMode === 'distance' ? 'bg-brand-primary text-white hover:bg-brand-primary/90' : 'text-slate-600 hover:bg-slate-100'}`}
+                    className={`h-8 w-8 ${measureMode === 'distance' ? 'bg-primary text-white hover:bg-primary/90' : 'text-slate-600 hover:bg-slate-100'}`}
                     onClick={toggleMode('distance')}
                     title="Medir Distância"
                 >
@@ -177,7 +177,7 @@ export function MeasureControl() {
                  <Button
                     variant={measureMode === 'area' ? "default" : "ghost"}
                     size="icon"
-                    className={`h-8 w-8 ${measureMode === 'area' ? 'bg-brand-primary text-white hover:bg-brand-primary/90' : 'text-slate-600 hover:bg-slate-100'}`}
+                    className={`h-8 w-8 ${measureMode === 'area' ? 'bg-primary text-white hover:bg-primary/90' : 'text-slate-600 hover:bg-slate-100'}`}
                     onClick={toggleMode('area')}
                     title="Medir Área"
                 >
@@ -203,7 +203,7 @@ export function MeasureControl() {
            
            {/* Result Panel */}
            {points.length > 0 && (
-               <div className="bg-white/90 backdrop-blur-sm p-2 rounded shadow-md border border-gray-200 text-sm font-medium text-slate-700 min-w-[100px] text-center animate-in fade-in slide-in-from-right-4">
+               <div className="bg-white/90 backdrop-blur-xs p-2 rounded shadow-md border border-gray-200 text-sm font-medium text-slate-700 min-w-[100px] text-center animate-in fade-in slide-in-from-right-4">
                    {measureMode === 'distance' ? (
                        <span>Distância: {formatDistance(totalDistance + (cursorPos ? currentSegmentDistance : 0))}</span>
                    ) : (

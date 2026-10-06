@@ -220,8 +220,8 @@ export function GraficoPonteCure(): JSX.Element {
 
           <ChartContainer
             config={{
-              chuva: { label: "Chuva (mm)", color: "hsl(var(--chart-3))" },
-              nivel: { label: "Nível (m)", color: "hsl(var(--chart-2))" },
+              chuva: { label: "Chuva (mm)", color: "var(--color-water)" },
+              nivel: { label: "Nível (m)", color: "var(--color-ok)" },
             }}
             className="h-[400px]"
           >
@@ -231,7 +231,7 @@ export function GraficoPonteCure(): JSX.Element {
 
                 <XAxis
                   dataKey="label"
-                  stroke="hsl(var(--muted-foreground))"
+                  stroke="var(--color-muted-foreground)"
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
@@ -240,7 +240,7 @@ export function GraficoPonteCure(): JSX.Element {
 
                 <YAxis
                   yAxisId="chuva"
-                  stroke="hsl(var(--chart-3))"
+                  stroke="var(--color-water)"
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
@@ -250,14 +250,14 @@ export function GraficoPonteCure(): JSX.Element {
                     value: "Chuva (mm)",
                     angle: -90,
                     position: "insideLeft",
-                    style: { textAnchor: "middle", fill: "hsl(var(--muted-foreground))" },
+                    style: { textAnchor: "middle", fill: "var(--color-muted-foreground)" },
                   }}
                 />
 
                 <YAxis
                   yAxisId="nivel"
                   orientation="right"
-                  stroke="hsl(var(--chart-2))"
+                  stroke="var(--color-ok)"
                   fontSize={11}
                   tickLine={false}
                   axisLine={false}
@@ -267,7 +267,7 @@ export function GraficoPonteCure(): JSX.Element {
                     value: "Nível (m)",
                     angle: 90,
                     position: "insideRight",
-                    style: { textAnchor: "middle", fill: "hsl(var(--muted-foreground))" },
+                    style: { textAnchor: "middle", fill: "var(--color-muted-foreground)" },
                   }}
                 />
 
@@ -289,9 +289,9 @@ export function GraficoPonteCure(): JSX.Element {
                   dot={(props: any) => {
                     const { cx, cy, payload } = props
                     // Logic to color dots based on visibility
-                    let color = "hsl(var(--chart-3))" // default blue
-                    if (payload.visibilidade === "turvo") color = "hsl(var(--chart-4))" // orange
-                    if (payload.visibilidade === "muitoTurvo") color = "hsl(var(--chart-1))" // red
+                    let color = "var(--color-water)" // default blue
+                    if (payload.visibilidade === "turvo") color = "var(--color-warn)" // orange
+                    if (payload.visibilidade === "muitoTurvo") color = "var(--color-crit)" // red
 
                     return <circle key={cx} cx={cx} cy={cy} r={6} fill={color} stroke="#fff" strokeWidth={3} />
                   }}
@@ -305,23 +305,23 @@ export function GraficoPonteCure(): JSX.Element {
 
           <div className="flex flex-wrap gap-4 justify-center text-sm">
             <div className="flex items-center gap-2">
-              <div className="w-6 h-0.5 bg-[hsl(var(--chart-2))]" />
+              <div className="w-6 h-0.5 bg-[var(--color-ok)]" />
               <span className="text-muted-foreground">Nível (m)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-transparent border-2 border-[hsl(var(--chart-3))]" />
+              <div className="w-3 h-3 rounded bg-transparent border-2 border-[var(--color-water)]" />
               <span className="text-muted-foreground">Chuva (mm)</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-[hsl(var(--chart-3))]" />
+              <div className="w-3 h-3 rounded bg-[var(--color-water)]" />
               <span className="text-muted-foreground">Cristalino</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-[hsl(var(--chart-4))]" />
+              <div className="w-3 h-3 rounded bg-[var(--color-warn)]" />
               <span className="text-muted-foreground">Turvo</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 rounded bg-[hsl(var(--chart-1))]" />
+              <div className="w-3 h-3 rounded bg-[var(--color-crit)]" />
               <span className="text-muted-foreground">Muito Turvo</span>
             </div>
           </div>

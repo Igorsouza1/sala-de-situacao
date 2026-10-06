@@ -233,31 +233,5 @@ export const ACOES_VISUAL_CONFIG: any = {
 
 // --- LEGEND & UI HELPERS ---
 
-export const getLayerLegendInfo = (visualConfig: any) => {
-    let legendType: 'point' | 'line' | 'polygon' | 'circle' | 'icon' | 'heatmap' = 'polygon';
-    
-    // 1. Resolve Config (Handle legacy flat vs new structure)
-    const baseStyle = visualConfig?.baseStyle || visualConfig;
-    
-    // 2. Determine Type & Icon
-    // Priority: baseStyle.type -> legacy mapMarker.type -> legacy type
-    const type = baseStyle?.type || visualConfig?.mapMarker?.type || visualConfig?.type;
-    const iconName = baseStyle?.iconName || visualConfig?.mapMarker?.icon || visualConfig?.iconName; 
-
-    if (type) {
-        legendType = type;
-    } else if (iconName) {
-        legendType = 'icon'; 
-    } 
-
-    // 3. Determine Colors
-    const color = baseStyle?.color || visualConfig?.mapMarker?.color || visualConfig?.color || "#3388ff";
-    const fillColor = baseStyle?.fillColor || visualConfig?.mapMarker?.fillColor; // Can be undefined
-
-    return { 
-        legendType, 
-        iconName, 
-        color, 
-        fillColor 
-    };
-}
+// A legenda vive em ./legend (sem JSX, testável); reexportada aqui para quem já importava daqui.
+export { getLayerLegendInfo } from './legend'

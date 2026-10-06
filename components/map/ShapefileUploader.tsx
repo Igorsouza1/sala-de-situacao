@@ -225,7 +225,7 @@ export function ShapefileUploader({ onPreview, onClearPreview, onSaveSuccess }: 
         </Button>
        ) : (
         <div style={{ transform: `translate(${position.x}px, ${position.y}px)`, position: 'absolute', right: 0, top: 0 }}>
-        <Card className="w-80 shadow-2xl bg-white/95 backdrop-blur-sm border-slate-200" style={{ touchAction: 'none' }}>
+        <Card className="w-80 shadow-2xl bg-white/95 backdrop-blur-xs border-slate-200" style={{ touchAction: 'none' }}>
             <CardHeader 
                 className={`pb-3 border-b border-slate-100 relative ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
                 onPointerDown={handlePointerDown}
@@ -245,7 +245,7 @@ export function ShapefileUploader({ onPreview, onClearPreview, onSaveSuccess }: 
                     <X className="h-4 w-4" />
                 </Button>
                 <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                    <MapIcon className="h-4 w-4 text-brand-primary" />
+                    <MapIcon className="h-4 w-4 text-primary" />
                     Adicionar Camada
                 </CardTitle>
                 <CardDescription className="text-xs">
@@ -298,7 +298,7 @@ export function ShapefileUploader({ onPreview, onClearPreview, onSaveSuccess }: 
                         multiple
                         accept=".shp,.dbf,.geojson,.json"
                         onChange={handleFileChange}
-                        className="text-xs cursor-pointer file:cursor-pointer file:h-full file:bg-transparent file:text-brand-primary file:border-0 file:font-medium file:mr-2"
+                        className="text-xs cursor-pointer file:cursor-pointer file:h-full file:bg-transparent file:text-primary file:border-0 file:font-medium file:mr-2"
                     />
                     <div className="flex gap-1 flex-wrap mt-1">
                         {files.shp && <span className="text-[10px] bg-slate-100 px-1 rounded">.shp</span>}

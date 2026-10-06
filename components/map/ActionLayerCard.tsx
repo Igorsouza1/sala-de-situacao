@@ -51,12 +51,12 @@ export function ActionsLayerCard({
   const totalActionsCount = categories.reduce((acc, cat) => acc + cat.count, 0)
 
   return (
-    <Card className="w-full max-w-sm bg-brand-dark/95 backdrop-blur-md shadow-2xl z-[1000] overflow-hidden border border-white/10 transition-all duration-300">
+    <Card className="w-full max-w-sm bg-foreground/95 backdrop-blur-md shadow-2xl z-[1000] overflow-hidden border border-white/10 transition-all duration-300">
       <CardHeader className="p-3 border-b border-white/10">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3 flex-1">
-            <div className="h-8 w-8 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center flex-shrink-0">
-              <NotebookPen className="w-4 h-4 text-brand-primary" />
+            <div className="h-8 w-8 rounded-lg border border-white/10 bg-white/5 flex items-center justify-center shrink-0">
+              <NotebookPen className="w-4 h-4 text-accent" />
             </div>
 
             <div className="flex-1 min-w-0">
@@ -65,9 +65,9 @@ export function ActionsLayerCard({
               </CardTitle>
               <p className="text-sm text-slate-400 mt-0.5">
                   Mostrando{" "}
-                  <span className="font-semibold text-brand-primary">{activeActionsCount}</span>{" "}
+                  <span className="font-semibold text-accent">{activeActionsCount}</span>{" "}
                   de{" "}
-                  <span className="font-semibold text-brand-primary">{totalActionsCount}</span>{" "}
+                  <span className="font-semibold text-accent">{totalActionsCount}</span>{" "}
                   ações
                 </p>
             </div>
@@ -124,19 +124,19 @@ export function ActionsLayerCard({
                           <motion.div
                             animate={{ rotate: isCatExpanded ? 90 : 0 }}
                             transition={{ duration: 0.2, ease: "easeInOut" }}
-                            className="flex-shrink-0"
+                            className="shrink-0"
                           >
                             <ChevronRight className="w-3.5 h-3.5 text-slate-500" />
                           </motion.div>
 
                           {/* Dot colorido sincronizado com o mapa */}
                           <span
-                            className="h-3 w-3 rounded-full flex-shrink-0 ring-1 ring-white/10"
+                            className="h-3 w-3 rounded-full shrink-0 ring-1 ring-white/10"
                             style={{ backgroundColor: category.color }}
                           />
 
                           {/* Ícone opcional, bem discreto */}
-                          <div className="h-6 w-6 rounded flex items-center justify-center flex-shrink-0 bg-brand-dark border border-white/10">
+                          <div className="h-6 w-6 rounded flex items-center justify-center shrink-0 bg-foreground border border-white/10">
                             <CategoryIcon className="w-3.5 h-3.5 text-slate-300" />
                           </div>
 
@@ -145,7 +145,7 @@ export function ActionsLayerCard({
                           </span>
 
                           <Badge
-                            className="ml-auto bg-brand-dark-blue text-brand-primary border border-brand-primary/20 text-xs h-5 px-1.5"
+                            className="ml-auto bg-foreground text-accent border border-accent/20 text-xs h-5 px-1.5"
                           >
                             {category.count}
                             </Badge>
@@ -155,7 +155,7 @@ export function ActionsLayerCard({
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7 p-0 ml-1 rounded-full text-slate-400 hover:bg-white/10 hover:text-white flex-shrink-0"
+                          className="h-7 w-7 p-0 ml-1 rounded-full text-slate-400 hover:bg-white/10 hover:text-white shrink-0"
                           onClick={(e) => {
                             e.stopPropagation()
                             onToggleCategory(category.id, !allTypesSelected)
@@ -164,11 +164,11 @@ export function ActionsLayerCard({
                           aria-label={allTypesSelected ? "Ocultar categoria no mapa" : "Mostrar categoria no mapa"}
                         >
                           {allTypesSelected ? (
-                            <CheckSquare className="w-4 h-4 text-brand-primary" />
+                            <CheckSquare className="w-4 h-4 text-accent" />
                           ) : isIndeterminate ? (
                             <div className="relative w-4 h-4 flex items-center justify-center">
                               <Square className="w-4 h-4" />
-                              <div className="absolute w-1.5 h-1.5 bg-brand-primary rounded-[1px]" />
+                              <div className="absolute w-1.5 h-1.5 bg-primary rounded-[1px]" />
                             </div>
                           ) : (
                             <Square className="w-4 h-4" />
@@ -201,7 +201,7 @@ export function ActionsLayerCard({
                                       isHovered
                                         ? "bg-white/5"
                                         : isChecked
-                                          ? "bg-brand-primary/5"
+                                          ? "bg-accent/5"
                                           : "hover:bg-white/5"
                                     }`}
                                   >
@@ -212,7 +212,7 @@ export function ActionsLayerCard({
                                         onCheckedChange={(checked) =>
                                           onToggleType(category.id, type.id, checked as boolean)
                                         }
-                                        className="w-4 h-4 border-slate-600 data-[state=checked]:bg-brand-primary data-[state=checked]:border-brand-primary data-[state=checked]:text-white flex-shrink-0"
+                                        className="w-4 h-4 border-slate-600 data-[state=checked]:bg-primary data-[state=checked]:border-accent data-[state=checked]:text-white shrink-0"
                                         aria-label={`${type.label === "null" ? "Não Informado" : type.label}`}
                                       />
                                       <Label
@@ -222,7 +222,7 @@ export function ActionsLayerCard({
                                         {type.label === "null" ? "Não Informado" : type.label}
                                       </Label>
                                     </div>
-                                    <span className="text-xs text-slate-500 font-medium ml-2 flex-shrink-0">
+                                    <span className="text-xs text-slate-500 font-medium ml-2 shrink-0">
                                       {type.count}
                                     </span>
                                   </div>

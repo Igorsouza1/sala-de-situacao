@@ -49,7 +49,7 @@ const SECCHI_BANDS = [
 ]
 
 function secchiColor(v: number | null): string {
-  if (v === null) return "hsl(var(--muted-foreground))"
+  if (v === null) return "var(--color-muted-foreground)"
   if (v < 0.5) return "#ef4444"
   if (v < 1.5) return "#f97316"
   if (v < 3.0) return "#22c55e"
@@ -85,7 +85,7 @@ function StatCard({
   value,
   unit,
   sub,
-  color = "hsl(var(--foreground))",
+  color = "var(--color-foreground)",
 }: {
   icon: React.ElementType
   label: string
@@ -123,7 +123,7 @@ function PresetToggle({ value, onChange }: { value: Preset; onChange: (v: Preset
           onClick={() => onChange(days)}
           className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
             value === days
-              ? "bg-primary text-primary-foreground shadow-sm"
+              ? "bg-primary text-primary-foreground shadow-xs"
               : "text-muted-foreground hover:text-foreground hover:bg-muted"
           }`}
         >
@@ -153,11 +153,11 @@ function PainelChuva({ data, preset }: { data: DataPoint[]; preset: Preset }) {
       </div>
       <ResponsiveContainer width="100%" height={90}>
         <BarChart data={data} syncId="balneario-prox" margin={{ top: 4, right: 8, left: 38, bottom: 0 }} barCategoryGap="40%">
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" strokeOpacity={0.4} vertical={false} />
           <XAxis dataKey="label" hide />
           <YAxis
             domain={[0, yMax]} tickLine={false} axisLine={false}
-            tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+            tick={{ fontSize: 9, fill: "var(--color-muted-foreground)" }}
             width={36} unit="mm" tickCount={3}
           />
           <Tooltip
@@ -174,13 +174,13 @@ function PainelChuva({ data, preset }: { data: DataPoint[]; preset: Preset }) {
                 </div>
               )
             }}
-            cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.4 }}
+            cursor={{ fill: "var(--color-muted)", fillOpacity: 0.4 }}
           />
           <Bar dataKey="pluviometria" radius={[2, 2, 0, 0]} maxBarSize={20}>
             {data.map((d, i) => (
               <Cell
                 key={i}
-                fill={d.pluviometria > 50 ? "hsl(225,80%,42%)" : d.pluviometria > 0 ? "hsl(210,80%,65%)" : "hsl(var(--muted))"}
+                fill={d.pluviometria > 50 ? "hsl(225,80%,42%)" : d.pluviometria > 0 ? "hsl(210,80%,65%)" : "var(--color-muted)"}
                 fillOpacity={d.pluviometria > 0 ? 0.85 : 0.3}
               />
             ))}
@@ -218,11 +218,11 @@ function PainelNivel({ data, preset }: { data: DataPoint[]; preset: Preset }) {
               <stop offset="90%" stopColor="hsl(217,91%,60%)" stopOpacity={0}   />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" strokeOpacity={0.4} vertical={false} />
           <XAxis dataKey="label" hide />
           <YAxis
             domain={[yMin, yMax]} tickLine={false} axisLine={false}
-            tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+            tick={{ fontSize: 9, fill: "var(--color-muted-foreground)" }}
             width={36} unit="cm" tickCount={3}
           />
           <Tooltip
@@ -241,14 +241,14 @@ function PainelNivel({ data, preset }: { data: DataPoint[]; preset: Preset }) {
                 </div>
               )
             }}
-            cursor={{ stroke: "hsl(var(--border))", strokeWidth: 1 }}
+            cursor={{ stroke: "var(--color-border)", strokeWidth: 1 }}
           />
           <Area
             type="monotone" dataKey="nivelAgua"
             stroke="hsl(217,91%,60%)" strokeWidth={2}
             fill="url(#nivelGradProx)"
             connectNulls={false} dot={false}
-            activeDot={{ r: 4, fill: "hsl(217,91%,60%)", stroke: "hsl(var(--background))", strokeWidth: 2 }}
+            activeDot={{ r: 4, fill: "hsl(217,91%,60%)", stroke: "var(--color-background)", strokeWidth: 2 }}
           />
         </AreaChart>
       </ResponsiveContainer>
@@ -279,17 +279,17 @@ function PainelSecchi({ data, preset }: { data: DataPoint[]; preset: Preset }) {
             <ReferenceArea key={b.y1} y1={b.y1} y2={Math.min(b.y2, yMax)} fill={b.fill} stroke="none" ifOverflow="hidden" />
           ))}
 
-          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.4} vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" strokeOpacity={0.4} vertical={false} />
           <XAxis
             dataKey="label"
             tickLine={false} axisLine={false}
-            tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+            tick={{ fontSize: 9, fill: "var(--color-muted-foreground)" }}
             interval={xInterval(preset)}
             height={22}
           />
           <YAxis
             domain={[0, yMax]} tickLine={false} axisLine={false}
-            tick={{ fontSize: 9, fill: "hsl(var(--muted-foreground))" }}
+            tick={{ fontSize: 9, fill: "var(--color-muted-foreground)" }}
             width={36} unit=" m" tickCount={4}
           />
           <Tooltip
@@ -309,7 +309,7 @@ function PainelSecchi({ data, preset }: { data: DataPoint[]; preset: Preset }) {
                 </div>
               )
             }}
-            cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.4 }}
+            cursor={{ fill: "var(--color-muted)", fillOpacity: 0.4 }}
           />
           <Bar dataKey="secchi" radius={[3, 3, 0, 0]} maxBarSize={20}>
             {data.map((d, i) => (
@@ -391,7 +391,7 @@ export function GraficoProximidadeBalneario() {
   const hasData = data.length > 0
 
   return (
-    <Card className="border-border bg-card shadow-sm w-full">
+    <Card className="border-border bg-card shadow-xs w-full">
       <CardHeader className="pb-3 px-6 pt-6">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
           <div>
@@ -438,7 +438,7 @@ export function GraficoProximidadeBalneario() {
               value={stats.diasSemChuva !== null ? String(stats.diasSemChuva) : "—"}
               unit={stats.diasSemChuva !== null ? "d" : ""}
               sub={stats.diasSemChuva === 0 ? "chuva hoje" : stats.diasSemChuva !== null ? `última em ${stats.lastChuva?.dateStr}` : undefined}
-              color={stats.diasSemChuva !== null && stats.diasSemChuva > 7 ? "#22c55e" : "hsl(var(--muted-foreground))"}
+              color={stats.diasSemChuva !== null && stats.diasSemChuva > 7 ? "#22c55e" : "var(--color-muted-foreground)"}
             />
           </div>
         )}
