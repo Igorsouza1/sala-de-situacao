@@ -4,7 +4,7 @@ jest.mock('@/lib/service/layerStyleService', () => {
   const actual = jest.requireActual('@/lib/service/layerStyleService')
   return { ...actual, updateLayerEdit: jest.fn() }
 })
-import { PUT } from './route'
+import { PUT } from '../route'
 import { requireRole } from '@/lib/api/require-auth'
 import { LayerEditError, updateLayerEdit } from '@/lib/service/layerStyleService'
 

@@ -47,10 +47,6 @@
     "paleta": 1,
     "hex": 0
   },
-  "app/api/admin/layer-catalog/[slug]/route.test.ts": {
-    "paleta": 0,
-    "hex": 2
-  },
   "app/avistamento-javali/layout.tsx": {
     "paleta": 0,
     "hex": 1
