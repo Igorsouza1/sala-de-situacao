@@ -1,9 +1,9 @@
 'use client'
 
 import { ArrowLeft } from 'lucide-react'
-import * as LucideIcons from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { controlItem } from './helpers/control-style'
+import { resolveLayerIcon } from './helpers/layer-icons'
 import { EditorFooter, IconGrid } from './LayerEditor'
 import { PanelCard } from './PanelCard'
 
@@ -11,7 +11,6 @@ import { PanelCard } from './PanelCard'
 // todas as ações: o que se edita de verdade é o ícone que cada área (cada eixo temático) tem no mapa. Por isso, no modo "Editar",
 // a camada abre as suas áreas, e cada área abre este editor, que pergunta uma coisa só: qual ícone.
 
-const toPascal = (s: string) => s.replace(/(^|-)([a-z0-9])/g, (_, __, c) => c.toUpperCase())
 
 interface GroupIconEditorProps {
   layerName: string
@@ -29,7 +28,7 @@ interface GroupIconEditorProps {
 }
 
 export function GroupIconEditor({ layerName, groupLabel, icon, color, dirty, onChange, onSave, onCancel, saving, error }: GroupIconEditorProps) {
-  const Icon = ((LucideIcons as any)[toPascal(icon)] as LucideIcons.LucideIcon | undefined) ?? LucideIcons.MapPin
+  const Icon = resolveLayerIcon(icon)
   return (
     <div className="space-y-4">
       <button type="button" onClick={onCancel} className={cn('flex h-8 items-center gap-1.5 pl-1.5 pr-3 text-sm font-medium', controlItem())}>

@@ -893,8 +893,8 @@ export default function MapLibreMap({
   )
 
   // ── Hover handler para icon markers (HTML Markers não disparam onMouseMove do Map) ──
-  // Um cartão por vez: com o mouse num grupo de ações, o cartão da ação que está por baixo não abre (DESIGN.md 13.4)
-  const [clusterHovered, setClusterHovered] = useState(false)
+  // Um cartão por vez: com a lista de uma pilha à vista, o cartão da ação que está por baixo não abre (DESIGN.md 13.6)
+  const [stackHovered, setStackHovered] = useState(false)
 
   const handleMarkerHover = useCallback(
     (props: Record<string, any> | null, coords: [number, number] | null) => {
@@ -1438,9 +1438,8 @@ export default function MapLibreMap({
               data={displayData}
               onFeatureClick={openFeatureModal}
               onFeatureHover={handleMarkerHover}
-              onClusterHover={setClusterHovered}
-              basemap={shownBasemap}
-            />
+              onStackHover={setStackHovered}
+                          />
           ))}
 
         {/* ── Shapefile preview ── */}
@@ -1580,12 +1579,12 @@ export default function MapLibreMap({
         )}
 
         {/* ── Hover: cartão da ação (13.4) ── */}
-        {clusterHovered ? null : hoveredFeature?._slug === 'acoes' && hoverCoords ? (
+        {stackHovered ? null : hoveredFeature?._slug === 'acoes' && hoverCoords ? (
           <Popup
             longitude={hoverCoords[0]}
             latitude={hoverCoords[1]}
             closeButton={false}
-            offset={[0, -22] as any}
+            offset={[0, -((hoveredFeature._h as number | undefined) ?? 22) - 8] as any}
             anchor="bottom"
             className="acao-hover-popup"
           >

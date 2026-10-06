@@ -2,7 +2,7 @@
 
 import { useId, useMemo, useRef, useState, type ReactNode } from "react"
 import { ChevronDown, ChevronRight, Layers } from "lucide-react"
-import * as LucideIcons from "lucide-react"
+import { resolveLayerIcon } from "./helpers/layer-icons"
 import { Button } from "@/components/ui/button"
 import { Collapse } from "@/components/ui/collapse"
 import { Switch } from "@/components/ui/switch"
@@ -56,14 +56,8 @@ interface LayerManagerProps {
   flashSlug?: string | null
 }
 
-const toPascalCase = (str: string) =>
-  str.replace(/([-_][a-z])/gi, ($1) => $1.toUpperCase().replace('-', '').replace('_', '')).replace(/^./, (c) => c.toUpperCase())
-
-const getLayerIcon = (iconName?: string) => {
-  if (!iconName) return Layers
-  // @ts-ignore
-  return LucideIcons[toPascalCase(iconName)] || Layers
-}
+// o ícone da camada é o do mapa (Tabler, 11); sem ícone, o das camadas
+const getLayerIcon = (iconName?: string): React.ElementType => (iconName ? resolveLayerIcon(iconName) : Layers)
 
 const CATEGORY_ORDER = ['Operacional', 'Monitoramento', 'Base Territorial', 'Infraestrutura']
 

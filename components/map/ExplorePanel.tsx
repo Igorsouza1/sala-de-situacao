@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type ComponentType } from 'react'
-import * as LucideIcons from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowUpRight, ChevronRight, ClipboardList, House, MapPin, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,7 +12,8 @@ import type { ConsultaBounds, ConsultaItem, ConsultaKind, ConsultaSelection } fr
 import type { LayerVisualConfig } from '@/types/map-dto'
 import { PanelCard } from './PanelCard'
 import { areaText, dateText, listParams, placeText, propertyNames } from './helpers/explore'
-import { resolveFeatureStyle, toPascalCase } from './helpers/map-visuals'
+import { ICON_STROKE, resolveLayerIcon } from './helpers/layer-icons'
+import { resolveFeatureStyle } from './helpers/map-visuals'
 import { tidyText } from './helpers/text'
 import { useConsultaDetail } from './useConsultaDetail'
 import { useConsultaList } from './useConsultaList'
@@ -23,8 +23,6 @@ import { useConsultaList } from './useConsultaList'
 // de 48 px ou mais, e a troca de visão por ViewSwap. O marcador de cada ação é o do mapa (mesma cor e mesmo ícone, 6.2 regra 5).
 
 const STATUS_DOT: Record<string, string> = { 'Identificado': 'bg-warn', 'Em Recuperação': 'bg-water', 'Concluído': 'bg-ok' }
-
-type IconComponent = ComponentType<{ size?: number; color?: string; strokeWidth?: number; 'aria-hidden'?: boolean }>
 
 /** o marcador do mapa: círculo com o ícone da área, na cor da regra do catálogo */
 function Mark({ item, kind, visualConfig, size = 36 }: { item: ConsultaItem; kind: ConsultaKind; visualConfig?: LayerVisualConfig; size?: number }) {
@@ -36,10 +34,10 @@ function Mark({ item, kind, visualConfig, size = 36 }: { item: ConsultaItem; kin
     )
   }
   const style = resolveFeatureStyle({ baseStyle: visualConfig?.baseStyle || visualConfig, rules: visualConfig?.rules }, { properties: item }) as { color?: string; iconName?: string }
-  const Icon = ((LucideIcons as unknown as Record<string, IconComponent>)[toPascalCase(style.iconName || 'map-pin')]) || LucideIcons.MapPin
+  const Icon = resolveLayerIcon(style.iconName)
   return (
     <span aria-hidden style={{ width: size, height: size, backgroundColor: style.color || 'var(--color-primary)' }} className="flex shrink-0 items-center justify-center rounded-full ring-2 ring-white">
-      <Icon size={Math.round(size / 2)} color="white" strokeWidth={2} />
+      <Icon size={Math.round(size / 2)} color="white" stroke={ICON_STROKE} />
     </span>
   )
 }

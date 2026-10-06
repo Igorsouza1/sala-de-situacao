@@ -1,8 +1,7 @@
 'use client'
 
-import * as LucideIcons from 'lucide-react'
-import { ArrowUpRight, MapPin } from 'lucide-react'
-import { toPascalCase } from './helpers/map-visuals'
+import { ArrowUpRight } from 'lucide-react'
+import { ICON_STROKE, resolveLayerIcon } from './helpers/layer-icons'
 import { tidyText } from './helpers/text'
 
 // Cartão que aparece ao passar o mouse numa ação (DESIGN.md 13.4). Responde a uma pergunta só: "que ação é esta e em que pé
@@ -37,13 +36,13 @@ export function AcaoHoverCard({ properties, color = 'var(--color-primary)', icon
   const area = tidyText(properties.eixo_tematico || properties.tipo)
   const status = properties.status as string | undefined
   const date = readDate(properties.time_formatado, properties.time)
-  const Icon: React.ElementType = (iconName && (LucideIcons as any)[toPascalCase(iconName)]) || MapPin
+  const Icon = resolveLayerIcon(iconName)
 
   return (
     <div className="animate-hover-card pointer-events-none w-[272px] select-none overflow-hidden rounded-lg border border-border bg-card shadow-control">
       <div className="flex items-start gap-3 p-4">
         <span aria-hidden style={{ backgroundColor: color }} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-2 ring-white">
-          <Icon size={18} color="white" strokeWidth={2} />
+          <Icon size={18} color="white" stroke={ICON_STROKE} />
         </span>
         <div className="min-w-0 flex-1">
           <h4 className="truncate text-sm font-semibold leading-snug">{name}</h4>
