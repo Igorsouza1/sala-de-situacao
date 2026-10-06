@@ -14,7 +14,7 @@ it('rejects unauthenticated API requests with JSON 401 even without an auth erro
   expect(response.status).toBe(401);
   expect(await response.json()).toMatchObject({ success: false });
 });
-it.each(['/print/dossie/1', '/print/propriedade/1', '/print/map'])('redirects anonymous print access %s', async path => {
+it.each(['/print/dossie/1', '/print/propriedade/1'])('redirects anonymous print access %s', async path => {
   expect((await updateSession(request(path))).headers.get('location')).toBe('https://example.com/sign-in');
 });
 it('allows the public community javali POST without a session', async () => {
@@ -31,7 +31,7 @@ it('allows authenticated API requests', async () => {
 it('fails closed on auth infrastructure errors', async () => {
   getUser.mockRejectedValue(new Error('unavailable'));
   expect((await updateSession(request('/api/acoes'))).status).toBe(401);
-  expect((await updateSession(request('/print/map'))).headers.get('location')).toContain('/sign-in');
+  expect((await updateSession(request('/print/dossie/1'))).headers.get('location')).toContain('/sign-in');
 });
 
 it('allows machine sync only with the configured secret', async () => {

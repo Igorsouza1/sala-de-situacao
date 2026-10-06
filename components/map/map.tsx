@@ -14,7 +14,6 @@ import { FilterPopover } from "./FilterPopover"
 import { FaunaHeatmapControl } from "./FaunaHeatmapControl"
 import { MeasureControl } from "./MeasureControl"
 import { CoordinateInspector } from "./CoordinateInspector"
-import { SnapshotControl } from "./SnapshotControl"
 import { useMapContext } from "@/context/GeoDataContext"
 import L from "leaflet"
 import { FeatureDetails } from "./feature-details"
@@ -349,7 +348,6 @@ export default function Map({ center = [-21.327773, -56.694734], zoom = 11 }: Ma
         <CustomLayerControl />
         <MeasureControl />
         <CoordinateInspector />
-        <SnapshotControl activeLayers={visibleDynamicLayers} />
 
         {previewGeoJSON && (
           <GeoJSON

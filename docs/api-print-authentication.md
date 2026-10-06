@@ -24,13 +24,14 @@ Print action dossiers resolve a tenant and return 404 for inaccessible actions.
 Property dossiers authorize base data by spatial overlap with regions owned by
 the resolved organization, narrowed to every region assigned to the user when
 assignments exist. Owner and superadmin grants cover owned organization regions. Other users
-without a regional assignment receive 404 for property and map printing; an
+without a regional assignment receive 404 for property printing; an
 empty regional grant never expands to the whole organization. Related operational actions are also
 filtered by organization; global environmental base data remains shared.
 
-Map snapshots resolve organization and region before loading the catalog/data.
-Layer ownership is checked before reading data or groups; generic global layers
-remain visible, and action groups cannot expose another organization's labels.
+Map generation (`Gerar mapa`) has no print route and loads nothing on the server:
+it draws the layers the browser already holds for the signed-in user, which were
+authorized by the regular map APIs. The former `/print/map` route and its loader
+were removed (#83).
 
 Regression coverage uses mocked authentication/database boundaries and real
 Next responses/Drizzle SQL construction. It does not substitute for a deployed

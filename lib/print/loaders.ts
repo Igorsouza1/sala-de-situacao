@@ -2,7 +2,6 @@ import { resolveScope } from '@/lib/api/scope';
 import { getAccessibleRegionIdsForUser } from '@/lib/api/require-region';
 import { getAcaoDossie } from '@/lib/service/acoesService';
 import { findPropriedadeDossieData } from '@/lib/repositories/propriedadesRepository';
-import { getAllLayers } from '@/lib/service/layerService';
 import { notFound, redirect } from 'next/navigation';
 
 async function requirePrintScope() {
@@ -34,12 +33,4 @@ export async function loadPrintPropriedade(id: number) {
   const data = await findPropriedadeDossieData(id, tenantId, regionIds ?? undefined);
   if (!data) notFound();
   return data;
-}
-export async function loadPrintLayers(startDate?: Date, endDate?: Date) {
-  const { tenantId, regiaoId, user } = await requirePrintScope();
-  const regionIds = await getAccessibleRegionIdsForUser(user.id, tenantId, user.app_metadata?.is_superadmin === true);
-  if (regionIds?.length === 0) notFound();
-  const regionId = regionIds == null ? undefined
-    : regiaoId != null && regionIds.includes(regiaoId) ? regiaoId : regionIds[0];
-  return getAllLayers(tenantId, startDate, endDate, undefined, undefined, regionId);
 }

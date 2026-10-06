@@ -232,10 +232,9 @@ As seguintes funcionalidades devem ser mantidas na migração:
 - Filtro por área (`PropertyFilterControl`)
 - Medidor de distância (`MeasureControl`)
 - Inspetor de coordenadas (`CoordinateInspector`)
-- Snapshot do mapa (`SnapshotControl`)
 - Preview de GeoJSON (`ShapefileUploader`)
 - Dossier de propriedades e ações
-- Print do mapa (`MapPrintTemplate`)
+- Gerar mapa (tela `GerarMapa`, que substituiu o snapshot e o print do mapa)
 
 ### Requisitos Não-Funcionais
 

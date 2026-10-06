@@ -387,10 +387,6 @@
     "paleta": 1,
     "hex": 0
   },
-  "components/map/MapPrintTemplate.tsx": {
-    "paleta": 16,
-    "hex": 3
-  },
   "components/map/MeasureControl.tsx": {
     "paleta": 13,
     "hex": 9
@@ -414,10 +410,6 @@
   "components/map/ShapefileUploader.tsx": {
     "paleta": 10,
     "hex": 2
-  },
-  "components/map/SnapshotControl.tsx": {
-    "paleta": 2,
-    "hex": 0
   },
   "components/Navbar.tsx": {
     "paleta": 8,
