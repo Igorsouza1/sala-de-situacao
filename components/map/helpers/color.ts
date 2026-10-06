@@ -76,3 +76,29 @@ export function describeColor(hex: string): string {
   const tone = nearestTone(hex)
   return `${base} ${tone <= 1 ? 'claro' : tone >= 3 ? 'escuro' : ''}`.trim()
 }
+
+// ── Modo "Livre": qualquer cor, escolhida num quadrado de saturação e brilho mais uma faixa de matiz ──────────────────
+// Conversões em HSV (matiz 0 a 360; saturação e brilho 0 a 100), que é como o quadrado do seletor funciona.
+export function hsvToHex(h: number, s: number, v: number): string {
+  const sat = s / 100
+  const val = v / 100
+  const l = val * (1 - sat / 2)
+  const sl = l === 0 || l === 1 ? 0 : (val - l) / Math.min(l, 1 - l)
+  return hslToHex(((h % 360) + 360) % 360, sl * 100, l * 100)
+}
+
+export function hexToHsv(hex: string): { h: number; s: number; v: number } {
+  const { h, s, l } = hexToHsl(hex)
+  const sat = s / 100
+  const light = l / 100
+  const v = light + sat * Math.min(light, 1 - light)
+  return { h, s: v === 0 ? 0 : (2 * (1 - light / v)) * 100, v: v * 100 }
+}
+
+/** O código que a pessoa digitou ou colou: aceita com ou sem #, em 3 ou 6 letras; devolve #rrggbb ou nada. */
+export function parseHex(text: string): string | null {
+  const t = text.trim().replace(/^#/, '')
+  if (!/^([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(t)) return null
+  const six = t.length === 3 ? `${t[0]}${t[0]}${t[1]}${t[1]}${t[2]}${t[2]}` : t
+  return `#${six.toLowerCase()}`
+}

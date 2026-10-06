@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useRef, useState, type ReactNode } from "react"
+import { useId, useMemo, useRef, useState, type ReactNode } from "react"
 import { ChevronDown, ChevronRight, Layers } from "lucide-react"
 import * as LucideIcons from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -111,25 +111,30 @@ interface RowProps {
   flashed?: boolean
 }
 
-// A linha inteira é um <label>: clicar em qualquer ponto aciona o interruptor (alvo de 48 px, bom para toque).
+// Colunas alinhadas (DESIGN.md 6.2, regra 8): o interruptor é SEMPRE a última coluna, no mesmo lugar em toda linha, tenha ela grupos ou não.
+// O que expande (a seta) vai junto do nome, que é de onde a pessoa lê "isto abre"; as linhas-filhas recuam só o nome e a amostra,
+// nunca o interruptor. A linha toda liga e desliga (um <label> amarrado ao interruptor), com alvo de 48 px para o toque.
 // A saída do erro é um botão e fica fora do <label>, senão o clique nela ligaria ou desligaria a camada.
 function LayerRow({ option, checked, onChange, count, status, note, onRetry, expander, sub, flashed }: RowProps) {
+  const id = useId()
   const showCount = !sub && checked && status !== 'loading' && status !== 'error' && count !== undefined
   const showNote = checked && !!note && status !== 'error'
   // a frase fica guardada: ao sumir, a altura encolhe com o texto ainda lá, em vez de o texto sumir e a linha pular
   const lastNote = useRef('')
   if (showNote) lastNote.current = filterLine(note!, count)
   return (
-    <div className={cn(sub && 'ml-6 border-l border-border pl-2', flashed && 'animate-found rounded-md')}>
-      <div className="flex items-center">
-        <label className="flex min-h-12 flex-1 cursor-pointer items-center gap-3 rounded-md px-2.5 py-2 transition-colors duration-200 hover:bg-muted">
+    <div className={cn('relative', flashed && 'animate-found rounded-md', sub && 'before:absolute before:bottom-0 before:left-[1.65rem] before:top-0 before:w-px before:bg-border')}>
+      <div className="flex min-h-12 items-center gap-3 rounded-md pl-2.5 pr-3 transition-colors duration-200 hover:bg-muted">
+        <label htmlFor={id} className={cn('flex min-w-0 flex-1 cursor-pointer items-center gap-3 self-stretch py-2', sub && 'pl-6')}>
           <Legend option={option} checked={checked} />
-          <span className="min-w-0 flex-1">
+          <span className="min-w-0">
             <span className={cn('block truncate text-sm', !checked && 'text-muted-foreground')}>{option.label}</span>
             <Collapse open={showNote}>
               <span className="mt-0.5 block text-xs leading-snug text-muted-foreground">{lastNote.current}</span>
             </Collapse>
           </span>
+          {expander}
+          <span className="flex-1" aria-hidden />
           {checked && status === 'loading' && (
             <span role="status" className="flex shrink-0 items-center">
               <span className="bg-shimmer h-2 w-10 rounded-sm" aria-hidden />
@@ -137,12 +142,11 @@ function LayerRow({ option, checked, onChange, count, status, note, onRetry, exp
             </span>
           )}
           {showCount && <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">{count}</span>}
-          <Switch checked={checked} onCheckedChange={onChange} aria-label={option.label} />
         </label>
-        {expander}
+        <Switch id={id} checked={checked} onCheckedChange={onChange} aria-label={option.label} />
       </div>
       {checked && status === 'error' && (
-        <p className="pb-2 pl-12 pr-2.5 text-xs text-crit">
+        <p className="pb-2 pl-12 pr-3 text-xs text-crit">
           Não carregou.{' '}
           <button type="button" onClick={() => onRetry?.(option.slug)} className="underline underline-offset-2 hover:text-crit/80">
             Tentar de novo
@@ -265,7 +269,7 @@ export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, 
                       aria-expanded={open}
                       aria-label={`${open ? 'Esconder' : 'Mostrar'} os grupos de ${option.label}`}
                       onClick={() => toggleExpanded(option.id)}
-                      className="flex h-12 w-10 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-200 hover:bg-muted hover:text-foreground focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30"
+                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors duration-200 hover:bg-secondary hover:text-foreground focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30"
                     >
                       {/* o mesmo chevron gira: a pessoa vê o que mudou, em vez de um ícone trocar por outro (8.1) */}
                       <ChevronDown className={cn('h-4 w-4 transition-transform duration-[320ms] ease-out', open && 'rotate-180')} aria-hidden />

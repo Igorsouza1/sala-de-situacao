@@ -1,4 +1,4 @@
-import { HUES, TONES, describeColor, hexToHsl, hslToHex, nearestHue, nearestTone, tonesFor } from '../helpers/color'
+import { HUES, TONES, describeColor, hexToHsl, hexToHsv, hslToHex, hsvToHex, nearestHue, nearestTone, parseHex, tonesFor } from '../helpers/color'
 
 describe('hslToHex e hexToHsl', () => {
   it('convertem as cores de referência', () => {
@@ -57,5 +57,44 @@ describe('describeColor: a cor em palavras, no lugar do código', () => {
     expect(describeColor(tonesFor(240)[3])).toBe('Azul escuro')
     expect(describeColor(tonesFor(0)[1])).toBe('Vermelho claro')
     expect(describeColor(tonesFor(120)[2])).toBe('Verde')
+  })
+})
+
+describe('modo livre (HSV)', () => {
+  it('converte as cores de referência', () => {
+    expect(hsvToHex(0, 100, 100)).toBe('#ff0000')
+    expect(hsvToHex(240, 100, 100)).toBe('#0000ff')
+    expect(hsvToHex(0, 0, 100)).toBe('#ffffff')
+    expect(hsvToHex(0, 0, 0)).toBe('#000000')
+    expect(hsvToHex(120, 100, 50)).toBe('#008000')
+    expect(hexToHsv('#ff0000')).toEqual({ h: 0, s: 100, v: 100 })
+    expect(hexToHsv('#000000').v).toBe(0)
+  })
+
+  it('ida e volta mantém a cor, para qualquer ponto do quadrado', () => {
+    for (const hex of ['#c8431a', '#2a7da6', '#32a852', '#fef3c7', '#181a19']) {
+      const { h, s, v } = hexToHsv(hex)
+      const back = hexToHsv(hsvToHex(h, s, v))
+      expect(Math.abs(back.v - v)).toBeLessThan(1)
+      expect(Math.abs(back.s - s)).toBeLessThan(2)
+    }
+  })
+
+  it('a matiz dá a volta sem quebrar (360 vale 0)', () => {
+    expect(hsvToHex(360, 100, 100)).toBe('#ff0000')
+    expect(hsvToHex(-120, 100, 100)).toBe('#0000ff')
+  })
+})
+
+describe('parseHex: o código digitado ou colado', () => {
+  it('aceita com ou sem #, em 3 ou 6 letras, e devolve #rrggbb em minúsculas', () => {
+    expect(parseHex('#2A7DA6')).toBe('#2a7da6')
+    expect(parseHex('2a7da6')).toBe('#2a7da6')
+    expect(parseHex('  #fff ')).toBe('#ffffff')
+    expect(parseHex('f80')).toBe('#ff8800')
+  })
+
+  it('recusa o que não é código de cor', () => {
+    for (const t of ['', '#', '12345', '#12345g', 'azul', 'rgb(1,2,3)', '#1234567']) expect(parseHex(t)).toBeNull()
   })
 })
