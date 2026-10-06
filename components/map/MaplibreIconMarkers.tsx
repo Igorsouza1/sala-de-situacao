@@ -80,8 +80,11 @@ export function MaplibreIconMarkers({ layer, data, onFeatureClick, onFeatureHove
       setView({ zoom: map.getZoom(), bbox: [b.getWest() - padLng, b.getSouth() - padLat, b.getEast() + padLng, b.getNorth() + padLat] })
     }
     read()
-    map.on('moveend', read)
-    return () => { map.off('moveend', read) }
+    // com o zoom da roda o mapa termina um movimento a cada quadro; só se relê a vista quando assentou (100 ms parado)
+    let timer: ReturnType<typeof setTimeout> | null = null
+    const settle = () => { if (timer) clearTimeout(timer); timer = setTimeout(read, 100) }
+    map.on('moveend', settle)
+    return () => { map.off('moveend', settle); if (timer) clearTimeout(timer) }
   }, [mapRef])
 
   // cada local do mapa, com as ações que estão nele

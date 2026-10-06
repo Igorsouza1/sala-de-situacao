@@ -48,12 +48,18 @@ export function MapLegend({ mapRef, ready, options, activeLayers }: MapLegendPro
   const [hover, setHover] = useState(false)
   const open = pinned || hover
 
-  // só o que está ligado, e dentro de uma camada com áreas só as áreas ligadas
+  // Só o que está ligado. Uma camada com áreas que têm ícone próprio (Ações) NÃO aparece como linha-mãe: "Ações" não é nada que o mapa
+  // desenhe, o que se vê são os pinos de cada área, e a legenda diz exatamente isso. Já a Fauna, cujas partes (calor e pontos) não
+  // dizem de quê são sozinhas, mantém o nome da camada como título.
   const entries = useMemo(
     () =>
       options
         .filter((o) => isLayerOn(o.slug, activeLayers))
-        .map((o) => ({ option: o, subs: (o.subOptions ?? []).filter((s) => activeLayers.includes(o.slug) || isLayerOn(s.slug, activeLayers)) })),
+        .flatMap((o) => {
+          const subs = (o.subOptions ?? []).filter((s) => activeLayers.includes(o.slug) || isLayerOn(s.slug, activeLayers))
+          if (subs.length > 0 && subs.every((s) => s.legendType === 'icon')) return subs.map((s) => ({ option: s, subs: [] as LayerManagerOption[] }))
+          return [{ option: o, subs }]
+        }),
     [options, activeLayers],
   )
   const shown = entries.slice(0, MAX_SWATCHES)
@@ -62,7 +68,7 @@ export function MapLegend({ mapRef, ready, options, activeLayers }: MapLegendPro
   if (!ready) return null
   return (
     <div
-      className={cn('absolute bottom-24 right-3 z-[400] w-max max-w-[16rem] rounded-lg p-2', controlSurface)}
+      className={cn('absolute right-4 z-[400] w-max min-w-[13rem] max-w-[19rem] rounded-lg p-3 bottom-[4.25rem] max-[1120px]:bottom-24', controlSurface)}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       onFocus={() => setHover(true)}
@@ -75,9 +81,9 @@ export function MapLegend({ mapRef, ready, options, activeLayers }: MapLegendPro
             aria-expanded={open}
             aria-label={open ? 'Recolher a legenda' : 'Mostrar a legenda'}
             onClick={() => setPinned((v) => !v)}
-            className="flex w-full items-center gap-1.5 rounded-sm text-left transition-colors duration-200 hover:bg-muted focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30"
+            className="flex w-full items-center gap-2 rounded-sm p-1 text-left transition-colors duration-200 hover:bg-muted focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30"
           >
-            <span className="flex flex-1 items-center gap-1">
+            <span className="flex flex-1 items-center gap-1.5">
               {shown.map(({ option }) => <Legend key={option.id} option={option} checked />)}
               {hidden > 0 && <span className="px-1 text-xs text-muted-foreground">+{hidden}</span>}
             </span>
@@ -87,19 +93,19 @@ export function MapLegend({ mapRef, ready, options, activeLayers }: MapLegendPro
           {/* abre em altura (8.4): o que entra cresce, o que sai encolhe */}
           <div className={cn('grid transition-[grid-template-rows] duration-[320ms] ease-out', open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]')}>
             <div inert={!open} className={cn('min-h-0 overflow-hidden transition-opacity duration-[320ms] ease-out', open ? 'opacity-100' : 'opacity-0')}>
-              <ul className="space-y-1 pb-2 pt-2">
+              <ul className="space-y-1 pb-3 pt-3">
                 {entries.map(({ option, subs }) => (
                   <li key={option.id}>
-                    <div className="flex items-center gap-2.5">
+                    <div className="flex min-h-9 items-center gap-3 px-1">
                       <Legend option={option} checked />
-                      <span className="min-w-0 truncate text-sm">{option.label}</span>
+                      <span className="min-w-0 text-sm leading-snug">{option.label}</span>
                     </div>
                     {subs.length > 0 && (
-                      <ul className="ml-3 mt-1 space-y-0.5 border-l border-border pl-3">
+                      <ul className="ml-4 border-l border-border pl-3">
                         {subs.map((sub) => (
-                          <li key={sub.id} className="flex items-center gap-2.5">
+                          <li key={sub.id} className="flex min-h-9 items-center gap-3 px-1">
                             <Legend option={sub} checked />
-                            <span className="min-w-0 truncate text-xs text-muted-foreground">{sub.label}</span>
+                            <span className="min-w-0 text-sm leading-snug">{sub.label}</span>
                           </li>
                         ))}
                       </ul>
@@ -113,7 +119,7 @@ export function MapLegend({ mapRef, ready, options, activeLayers }: MapLegendPro
       )}
 
       {bar && (
-        <div className={cn('flex items-center gap-2', entries.length > 0 && 'mt-1.5 border-t border-border pt-2')} role="img" aria-label={`Escala: o traço vale ${bar.label}`}>
+        <div className={cn('flex items-center gap-2', entries.length > 0 && 'mt-1 border-t border-border pt-3')} role="img" aria-label={`Escala: o traço vale ${bar.label}`}>
           <span aria-hidden style={{ width: bar.width }} className="h-1.5 shrink-0 border-x border-b border-foreground/60 transition-[width] duration-150 ease-out" />
           <span className="text-xs tabular-nums text-muted-foreground">{bar.label}</span>
         </div>

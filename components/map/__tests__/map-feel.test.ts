@@ -54,3 +54,26 @@ describe('escala', () => {
     expect(bar.label).toMatch(/\d/)
   })
 })
+
+import { wheelZoomDelta } from '../helpers/map-feel'
+
+describe('wheelZoomDelta', () => {
+  it('rolar para cima aproxima e para baixo afasta', () => {
+    expect(wheelZoomDelta({ deltaY: -100, deltaMode: 0, ctrlKey: false })).toBeGreaterThan(0)
+    expect(wheelZoomDelta({ deltaY: 100, deltaMode: 0, ctrlKey: false })).toBeLessThan(0)
+  })
+  it('um giro de roda vale uns 0,28 níveis', () => {
+    expect(wheelZoomDelta({ deltaY: -100, deltaMode: 0, ctrlKey: false })).toBeCloseTo(0.28, 2)
+  })
+  it('a pinça do trackpad pesa mais por pixel que a roda', () => {
+    const pinch = Math.abs(wheelZoomDelta({ deltaY: 10, deltaMode: 0, ctrlKey: true }))
+    const wheel = Math.abs(wheelZoomDelta({ deltaY: 10, deltaMode: 0, ctrlKey: false }))
+    expect(pinch).toBeGreaterThan(wheel)
+  })
+  it('linhas e páginas viram pixels', () => {
+    expect(Math.abs(wheelZoomDelta({ deltaY: 3, deltaMode: 1, ctrlKey: false }))).toBeCloseTo(48 * 0.0028, 4)
+  })
+  it('uma roda muito rápida não dá um salto enorme', () => {
+    expect(Math.abs(wheelZoomDelta({ deltaY: 5000, deltaMode: 0, ctrlKey: false }))).toBeLessThan(1)
+  })
+})

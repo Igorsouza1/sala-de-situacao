@@ -59,7 +59,8 @@ import { MaplibreSnapshotControl } from './MaplibreSnapshotControl'
 import { MaplibreIconMarkers } from './MaplibreIconMarkers'
 import { ExplorePanel } from './ExplorePanel'
 import { MapLegend } from './MapLegend'
-import { DRAG_PAN, KEY_MOVE_MS, TRACKPAD_ZOOM_RATE, WHEEL_ZOOM_RATE, mapKeyAction } from './helpers/map-feel'
+import { DRAG_PAN, KEY_MOVE_MS, mapKeyAction } from './helpers/map-feel'
+import { useSmoothWheelZoom } from './helpers/use-smooth-wheel-zoom'
 import { ExploreHighlight } from './ExploreHighlight'
 import type { ConsultaBounds, ConsultaItem, ConsultaSelection } from '@/types/map-consulta'
 import bbox from '@turf/bbox'
@@ -336,6 +337,7 @@ export default function MapLibreMap({
   // ── Map ref & region bounds ─────────────────────────────────────────────
   const mapRef = useRef<any>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
+  useSmoothWheelZoom(mapRef, mapLoaded)
   const fitBoundsDone = useRef(false)
   const [regionBounds, setRegionBounds] = useState<{
     nome?: string | null
@@ -503,12 +505,19 @@ export default function MapLibreMap({
   }, [])
 
   // O segmento segue a câmera: inclinar com o mouse ou clicar na bússola também troca 2D/3D (e salva).
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleMoveEnd = useCallback((e: { viewState: { pitch: number; longitude: number; latitude: number; zoom: number } }) => {
     if (autoMoveRef.current) { autoMoveRef.current = false; return } // o enquadramento automático da abertura não é escolha da pessoa
-    saveRegionPrefs(regiaoId, { camera: { lng: e.viewState.longitude, lat: e.viewState.latitude, zoom: e.viewState.zoom } })
-    const next = modeFromPitch(e.viewState.pitch)
-    if (next !== viewModeRef.current) { viewModeRef.current = next; setViewMode(next); saveMode(next) }
-    setTerrainOn(next === '3d')
+    // O zoom da roda (13.7) move o mapa a cada quadro e cada movimento termina com um moveend: só se grava e se confere o ângulo quando
+    // o mapa assentou (150 ms sem se mexer), para não escrever no navegador a cada quadro.
+    const { pitch, longitude, latitude, zoom } = e.viewState
+    if (settleTimer.current) clearTimeout(settleTimer.current)
+    settleTimer.current = setTimeout(() => {
+      saveRegionPrefs(regiaoId, { camera: { lng: longitude, lat: latitude, zoom } })
+      const next = modeFromPitch(pitch)
+      if (next !== viewModeRef.current) { viewModeRef.current = next; setViewMode(next); saveMode(next) }
+      setTerrainOn(next === '3d')
+    }, 150)
   }, [regiaoId])
 
   // "Enquadrar a região": o mesmo movimento da abertura, a qualquer hora (a câmera nova fica salva, porque foi escolha da pessoa)
@@ -1331,12 +1340,9 @@ export default function MapLibreMap({
         dragPan={DRAG_PAN as any}
         // os atalhos são do Prisma (13.7); o do MapLibre responderia junto e o mapa andaria em dobro
         keyboard={false}
-        onLoad={() => {
-          const map = mapRef.current?.getMap()
-          map?.scrollZoom.setWheelZoomRate(WHEEL_ZOOM_RATE)
-          map?.scrollZoom.setZoomRate(TRACKPAD_ZOOM_RATE)
-          setMapLoaded(true)
-        }}
+        // a roda e a pinça do trackpad têm zoom próprio (13.7): o do MapLibre fica desligado
+        scrollZoom={false}
+        onLoad={() => setMapLoaded(true)}
         onClick={handleMapClick}
         onMouseMove={handleMouseMove}
         onContextMenu={handleContextMenu}
