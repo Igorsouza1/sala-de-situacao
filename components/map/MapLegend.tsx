@@ -113,7 +113,11 @@ const IconSwatch = ({ name }: { name: string }) => {
   )
 }
 
-/** o painel que abre para cima do controle: a mesma anatomia dos painéis do dock (cabeçalho, base cinza, cartões) */
+/**
+ * O painel que abre para cima do controle: a mesma anatomia dos painéis do dock (cabeçalho, base cinza, cartões). A altura é limitada para
+ * nunca chegar na câmera (+, −, norte, 2D e 3D, no canto de cima à direita): reservamos o card da câmera (~16rem do alto) e o controle
+ * de baixo, e o que passar disso rola dentro do painel. Antes ele passava por baixo da câmera (C32).
+ */
 function CornerPanel({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div
@@ -122,7 +126,7 @@ function CornerPanel({ open, title, onClose, children }: { open: boolean; title:
       aria-label={title}
       inert={!open}
       className={cn(
-        'absolute bottom-full right-0 mb-3 flex max-h-[calc(100svh-14rem)] w-[22rem] max-w-[calc(100vw-2rem)] origin-bottom-right flex-col overflow-hidden rounded-lg',
+        'absolute bottom-full right-0 mb-3 flex max-h-[calc(100svh-22rem)] max-[1120px]:max-h-[calc(100svh-27rem)] w-[22rem] max-w-[calc(100vw-2rem)] origin-bottom-right flex-col overflow-hidden rounded-lg',
         'transition-[opacity,translate,scale,visibility]',
         controlSurface,
         open ? 'visible scale-100 opacity-100 duration-[240ms] ease-spring' : 'invisible translate-y-2 scale-95 opacity-0 duration-150 ease-in',
