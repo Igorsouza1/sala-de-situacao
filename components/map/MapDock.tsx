@@ -91,7 +91,7 @@ export const DockButton = forwardRef<HTMLButtonElement, DockButtonProps>(functio
 })
 
 // Botão do dock que abre um painel. O conteúdo fica montado mesmo fechado: os filtros guardam o que a pessoa escolheu.
-export function DockPanelButton({ id, icon, label, motion, badge, alert, action, children }: { id: string; icon: LucideIcon; label: string; motion?: DockMotion; badge?: number; alert?: boolean; action?: ReactNode; children: ReactNode }) {
+export function DockPanelButton({ id, icon, label, title, titleIcon: TitleIcon, accent, motion, badge, alert, action, children }: { id: string; icon: LucideIcon; label: string; /** título do painel quando difere do rótulo do botão (ex.: "Editar camadas") */ title?: string; titleIcon?: LucideIcon; /** o painel está num modo especial (ex.: editando): o cabeçalho ganha cor, para o modo ser visto sem ler */ accent?: boolean; motion?: DockMotion; badge?: number; alert?: boolean; action?: ReactNode; children: ReactNode }) {
   const { open, setOpen } = useContext(DockContext)
   const isOpen = open === id
   const trigger = useRef<HTMLButtonElement>(null)
@@ -141,8 +141,12 @@ export function DockPanelButton({ id, icon, label, motion, badge, alert, action,
           isOpen ? 'visible scale-100 opacity-100 duration-[240ms] ease-spring' : 'invisible translate-y-2 scale-95 opacity-0 duration-150 ease-in',
         )}
       >
-        <header className="flex items-center justify-between gap-2 border-b border-border py-2.5 pl-5 pr-3">
-          <h3 className="text-base font-semibold">{label}</h3>
+        <header className={cn('flex items-center justify-between gap-2 border-b py-2.5 pl-5 pr-3 transition-colors duration-300', accent ? 'border-primary/30 bg-secondary text-secondary-foreground' : 'border-border')}>
+          {/* o título é refeito quando muda: a troca "Camadas" → "Editar camadas" aparece (fade), não some e volta de uma vez (8.4) */}
+          <h3 key={title ?? label} className="flex animate-in items-center gap-2 text-base font-semibold fade-in-0 duration-300">
+            {TitleIcon && <TitleIcon className="h-4 w-4" aria-hidden />}
+            {title ?? label}
+          </h3>
           <div className="flex items-center gap-1">
             {action}
             <button

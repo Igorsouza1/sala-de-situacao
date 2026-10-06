@@ -223,10 +223,10 @@ export function LayerEditor({ savedName, edit, initial, onChange, onSave, onCanc
 
   return (
     <div className="space-y-4">
-      {/* o rótulo escrito: seta sem texto não diz para onde volta (11) */}
+      {/* o rótulo escrito diz para onde volta: à lista de edição (e não às "Camadas" normais, que sugeriria que a edição acabou) */}
       <button type="button" onClick={onCancel} className={cn('flex h-8 items-center gap-1.5 pl-1.5 pr-3 text-sm font-medium', controlItem())}>
         <ArrowLeft className="h-4 w-4" aria-hidden />
-        Camadas
+        Editar camadas
       </button>
 
       <PanelCard title={`Editar ${savedName}`}>

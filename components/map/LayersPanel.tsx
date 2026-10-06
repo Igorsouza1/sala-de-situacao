@@ -53,7 +53,7 @@ export function EditModeButton({ active, onToggle }: { active: boolean; onToggle
       type="button"
       aria-pressed={active}
       onClick={onToggle}
-      className={cn('flex h-8 items-center gap-1.5 px-2.5 text-xs font-medium', controlItem(active))}
+      className={cn('flex h-8 items-center gap-1.5 px-2.5 text-xs font-medium', active ? 'rounded-sm bg-primary text-primary-foreground transition-[background-color,scale] duration-200 ease-spring hover:bg-primary-hover active:scale-[0.96] focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30' : controlItem())}
     >
       {active ? <Check className="h-3.5 w-3.5" aria-hidden /> : <Pencil className="h-3.5 w-3.5" aria-hidden />}
       <span>{active ? 'Concluir' : 'Editar'}</span>
@@ -113,7 +113,17 @@ export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, e
   if (layerProps.onPick) {
     return (
       <div key="pick" className="animate-in fade-in-0 slide-in-from-right-4 space-y-4 duration-200">
-        <p className="px-1 text-sm">Escolha a camada que você quer editar.</p>
+        {/* O modo fica dito, em cor e em frase, mesmo depois de salvar ou cancelar: sem isso a lista parecia a lista normal e a pessoa
+            não sabia se ainda estava editando (2.1). A frase também diz o próximo passo. */}
+        <div className="flex items-start gap-3 rounded-lg border border-primary/30 bg-secondary p-4 text-secondary-foreground">
+          <span className="grid size-8 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground" aria-hidden>
+            <Pencil className="h-4 w-4" />
+          </span>
+          <div>
+            <p className="text-sm font-semibold">Você está editando as camadas</p>
+            <p className="mt-0.5 text-sm">Escolha a que quer mudar. Quando terminar, toque em Concluir.</p>
+          </div>
+        </div>
         <LayerManager {...layerProps} expanded={expanded} onToggleExpanded={toggleExpanded} />
       </div>
     )

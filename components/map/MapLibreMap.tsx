@@ -1589,6 +1589,9 @@ export default function MapLibreMap({
       >
         <DockPanelButton
           id="layers"
+          title={isAdmin && (picking || draft) ? 'Editar camadas' : undefined}
+          titleIcon={isAdmin && (picking || draft) ? LucideIcons.Pencil : undefined}
+          accent={!!(isAdmin && (picking || draft))}
           icon={LucideIcons.Layers}
           label="Camadas"
           motion="rise"

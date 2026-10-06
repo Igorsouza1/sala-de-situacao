@@ -34,7 +34,7 @@ export function GroupIconEditor({ layerName, groupLabel, icon, color, dirty, onC
     <div className="space-y-4">
       <button type="button" onClick={onCancel} className={cn('flex h-8 items-center gap-1.5 pl-1.5 pr-3 text-sm font-medium', controlItem())}>
         <ArrowLeft className="h-4 w-4" aria-hidden />
-        Camadas
+        Editar camadas
       </button>
 
       <PanelCard title={`Ícone de ${groupLabel}`} caption={`Área de ${layerName}. É o ícone que as ações desta área têm no mapa.`}>
