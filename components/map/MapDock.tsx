@@ -1,8 +1,9 @@
 'use client'
 
-import { createContext, forwardRef, useContext, useEffect, useId, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
+import { createContext, forwardRef, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { OverlayScroll } from '@/components/ui/overlay-scroll'
 import { controlItem, controlSurface } from './helpers/control-style'
 
 // Dock do mapa (DESIGN.md 13): uma barra só, embaixo e centralizada, onde moram os grupos de funções (Camadas, Filtros…).
@@ -103,6 +104,25 @@ export function DockPanelButton({ id, icon, label, side, accentTitle, titleIcon:
   const wasOpen = useRef(false)
   const panelId = useId()
 
+  // O painel lateral nasce do botão e VIAJA até o canto (8.4: a pessoa vê de onde veio): fechado, ele fica pequeno em cima do botão;
+  // o deslocamento é medido entre o botão e o canto onde o painel para. No celular o painel é de largura toda e não viaja.
+  const [travel, setTravel] = useState<{ x: number; y: number } | null>(null)
+  useLayoutEffect(() => {
+    if (!side) return
+    const measure = () => {
+      const btn = trigger.current
+      const parent = panel.current?.offsetParent as HTMLElement | null
+      if (!btn || !parent || window.innerWidth < 640) { setTravel(null); return }
+      const b = btn.getBoundingClientRect()
+      const p = parent.getBoundingClientRect()
+      // o canto de baixo à esquerda do painel (sm:left-3, mb-3) é a origem da transformação
+      setTravel({ x: b.left + b.width / 2 - (p.left + 12), y: b.top - (p.top - 12) })
+    }
+    measure()
+    window.addEventListener('resize', measure)
+    return () => window.removeEventListener('resize', measure)
+  }, [side])
+
   // Foco (2.1.2, regra 8): ao abrir, vai para o painel; ao fechar com o foco dentro dele, volta ao botão.
   // Se o foco já saiu (abriu outro painel), não o tiramos de lá.
   useEffect(() => {
@@ -136,15 +156,18 @@ export function DockPanelButton({ id, icon, label, side, accentTitle, titleIcon:
         // fechado, o painel fica `inert` (sem foco nem clique, 8.4) e invisível; abre de baixo com leve subida e escala (200 ms) e fecha mais rápido (150 ms)
         inert={!isOpen}
         data-open={isOpen}
+        style={side && travel && !isOpen ? { translate: `${travel.x}px ${travel.y}px`, scale: 0.2 } : undefined}
         className={cn(
           'absolute z-10 flex flex-col overflow-hidden rounded-lg outline-hidden',
-          'bottom-full mb-3 max-sm:inset-x-3 sm:w-[22rem]',
+          'bottom-full mb-3 max-sm:inset-x-3',
           // centrado no botão (o padrão) ou no canto esquerdo, deixando o mapa livre ao lado (lateral); no celular o lateral é mais baixo
-          side ? 'origin-bottom-left max-h-[55svh] sm:left-3 sm:max-h-[calc(100svh-10rem)]' : 'origin-bottom max-h-[75vh] sm:left-1/2 sm:-translate-x-1/2',
+          side ? 'origin-bottom-left max-h-[55svh] sm:left-3 sm:w-[26rem] sm:max-h-[calc(100svh-10rem)]' : 'origin-bottom max-h-[75vh] sm:left-1/2 sm:w-[22rem] sm:-translate-x-1/2',
           'transition-[opacity,translate,scale,visibility]',
           controlSurface,
           // abre com leve mola (a mesma curva dos botões); fecha mais rápido e sem mola, para não demorar a sair da frente (8.1)
-          isOpen ? 'visible scale-100 opacity-100 duration-[240ms] ease-spring' : 'invisible translate-y-2 scale-95 opacity-0 duration-150 ease-in',
+          isOpen
+            ? cn('visible scale-100 opacity-100 ease-spring', side ? 'duration-[320ms]' : 'duration-[240ms]')
+            : cn('invisible opacity-0 ease-in', side ? 'duration-200' : 'duration-150', !(side && travel) && 'translate-y-2 scale-95'),
         )}
       >
         <header className={cn('flex items-center justify-between gap-2 border-b py-2.5 pl-5 pr-3 transition-colors duration-300', accent ? 'border-primary/30 bg-secondary text-secondary-foreground' : 'border-border')}>
@@ -178,7 +201,8 @@ export function DockPanelButton({ id, icon, label, side, accentTitle, titleIcon:
           </div>
         </header>
         {/* base em cinza suave: os cartões brancos de dentro mostram onde cada assunto começa e termina (6.2) */}
-        <div data-panel-scroll className="overflow-y-auto overflow-x-hidden bg-muted/50 p-4">{children}</div>
+        {/* rolagem com a barra do projeto: a barra nativa não aceita o cursor Prisma (10) */}
+        <OverlayScroll data-panel-scroll className="bg-muted/50 p-4">{children}</OverlayScroll>
       </div>
     </div>
   )

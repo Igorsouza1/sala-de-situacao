@@ -37,12 +37,14 @@ interface CameraControlsProps {
   ready: boolean
   viewMode: ViewMode
   onViewModeChange: (mode: ViewMode) => void
+  /** + e −: o mesmo zoom suave da roda (13.7), em degraus de um nível */
+  onZoom: (delta: number) => void
   /** a região já carregou: antes disso não há o que enquadrar */
   canFitRegion: boolean
   onFitRegion: () => void
 }
 
-export function CameraControls({ mapRef, ready, viewMode, onViewModeChange, canFitRegion, onFitRegion }: CameraControlsProps) {
+export function CameraControls({ mapRef, onZoom, ready, viewMode, onViewModeChange, canFitRegion, onFitRegion }: CameraControlsProps) {
   const [bearing, setBearing] = useState(0)
 
   useEffect(() => {
@@ -66,13 +68,13 @@ export function CameraControls({ mapRef, ready, viewMode, onViewModeChange, canF
     <TooltipProvider delayDuration={300}>
       <div className={cn('absolute right-4 top-4 z-[400] flex w-10 flex-col rounded-md p-0.5', controlSurface)}>
         <div className={cn('flex flex-col', touchHidden)}>
-          <Tip hint="Aproximar">
-            <button type="button" aria-label="Aproximar" onClick={() => mapRef.current?.getMap().zoomIn()} className={cn(itemClass, controlItem())}>
+          <Tip hint="Aproximar (+)">
+            <button type="button" aria-label="Aproximar" onClick={() => onZoom(1)} className={cn(itemClass, controlItem())}>
               <Plus className="h-4 w-4" aria-hidden />
             </button>
           </Tip>
-          <Tip hint="Afastar">
-            <button type="button" aria-label="Afastar" onClick={() => mapRef.current?.getMap().zoomOut()} className={cn(itemClass, controlItem())}>
+          <Tip hint="Afastar (−)">
+            <button type="button" aria-label="Afastar" onClick={() => onZoom(-1)} className={cn(itemClass, controlItem())}>
               <Minus className="h-4 w-4" aria-hidden />
             </button>
           </Tip>
@@ -80,7 +82,7 @@ export function CameraControls({ mapRef, ready, viewMode, onViewModeChange, canF
         </div>
 
         {/* o mapa abre onde a pessoa deixou (13.2); este botão devolve a vista da região inteira. Bloqueado, diz por quê (2.1). */}
-        <Tip hint={canFitRegion ? 'Enquadrar a região' : 'Disponível quando a região carregar'}>
+        <Tip hint={canFitRegion ? 'Enquadrar a região (Home)' : 'Disponível quando a região carregar'}>
           <button
             type="button"
             aria-label="Enquadrar a região"

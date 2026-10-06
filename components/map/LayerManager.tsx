@@ -2,7 +2,7 @@
 
 import { useId, useMemo, useRef, useState, type ReactNode } from "react"
 import { ChevronDown, ChevronRight, Layers } from "lucide-react"
-import * as LucideIcons from "lucide-react"
+import { resolveLayerIcon } from "./helpers/layer-icons"
 import { Button } from "@/components/ui/button"
 import { Collapse } from "@/components/ui/collapse"
 import { Switch } from "@/components/ui/switch"
@@ -56,14 +56,8 @@ interface LayerManagerProps {
   flashSlug?: string | null
 }
 
-const toPascalCase = (str: string) =>
-  str.replace(/([-_][a-z])/gi, ($1) => $1.toUpperCase().replace('-', '').replace('_', '')).replace(/^./, (c) => c.toUpperCase())
-
-const getLayerIcon = (iconName?: string) => {
-  if (!iconName) return Layers
-  // @ts-ignore
-  return LucideIcons[toPascalCase(iconName)] || Layers
-}
+// o ícone da camada é o do mapa (Tabler, 11); sem ícone, o das camadas
+const getLayerIcon = (iconName?: string): React.ElementType => (iconName ? resolveLayerIcon(iconName) : Layers)
 
 const CATEGORY_ORDER = ['Operacional', 'Monitoramento', 'Base Territorial', 'Infraestrutura']
 
@@ -79,8 +73,14 @@ export function Legend({ option, checked }: { option: LayerManagerOption; checke
   const hairline = 'ring-1 ring-foreground/25'
   return (
     <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center transition-opacity duration-200', !checked && 'opacity-40')} aria-hidden>
-      {(type === 'point' || type === 'icon') && (
-        <span className={cn('flex h-6 w-6 items-center justify-center border bg-card', type === 'icon' ? 'rounded-full' : 'rounded-md')} style={{ borderColor: stroke }}>
+      {/* ícone: a mesma cara do marcador do mapa (cor cheia e ícone branco, 6.2 regra 5); antes era só o contorno e a pessoa não via a cor */}
+      {type === 'icon' && (
+        <span className="flex h-6 w-6 items-center justify-center rounded-full ring-1 ring-foreground/25" style={{ backgroundColor: stroke }}>
+          <Icon size={14} color="white" />
+        </span>
+      )}
+      {type === 'point' && (
+        <span className="flex h-6 w-6 items-center justify-center rounded-md border bg-card" style={{ borderColor: stroke }}>
           <Icon size={14} style={{ color: stroke }} />
         </span>
       )}

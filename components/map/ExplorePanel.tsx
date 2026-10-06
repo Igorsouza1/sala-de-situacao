@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState, type ComponentType } from 'react'
-import * as LucideIcons from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowUpRight, ChevronRight, ClipboardList, House, MapPin, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,7 +12,8 @@ import type { ConsultaBounds, ConsultaItem, ConsultaKind, ConsultaSelection } fr
 import type { LayerVisualConfig } from '@/types/map-dto'
 import { PanelCard } from './PanelCard'
 import { areaText, dateText, listParams, placeText, propertyNames } from './helpers/explore'
-import { resolveFeatureStyle, toPascalCase } from './helpers/map-visuals'
+import { ICON_STROKE, resolveLayerIcon } from './helpers/layer-icons'
+import { resolveFeatureStyle } from './helpers/map-visuals'
 import { tidyText } from './helpers/text'
 import { useConsultaDetail } from './useConsultaDetail'
 import { useConsultaList } from './useConsultaList'
@@ -22,9 +22,10 @@ import { useConsultaList } from './useConsultaList'
 // registro aberto, com o desenho no mapa. Segue a receita 19.1 (linhas) e 19.2 (painel): base cinza, um cartão por assunto, linha
 // de 48 px ou mais, e a troca de visão por ViewSwap. O marcador de cada ação é o do mapa (mesma cor e mesmo ícone, 6.2 regra 5).
 
-const STATUS_DOT: Record<string, string> = { 'Identificado': 'bg-warn', 'Em Recuperação': 'bg-water', 'Concluído': 'bg-ok' }
-
-type IconComponent = ComponentType<{ size?: number; color?: string; strokeWidth?: number; 'aria-hidden'?: boolean }>
+/** a cor e o ícone que o mapa desenha para esta ação (as regras do catálogo): o ponto de status usa a mesma cor do marcador (C29) */
+function actionStyle(item: ConsultaItem, visualConfig?: LayerVisualConfig) {
+  return resolveFeatureStyle({ baseStyle: visualConfig?.baseStyle || visualConfig, rules: visualConfig?.rules }, { properties: item }) as { color?: string; iconName?: string }
+}
 
 /** o marcador do mapa: círculo com o ícone da área, na cor da regra do catálogo */
 function Mark({ item, kind, visualConfig, size = 36 }: { item: ConsultaItem; kind: ConsultaKind; visualConfig?: LayerVisualConfig; size?: number }) {
@@ -35,11 +36,11 @@ function Mark({ item, kind, visualConfig, size = 36 }: { item: ConsultaItem; kin
       </span>
     )
   }
-  const style = resolveFeatureStyle({ baseStyle: visualConfig?.baseStyle || visualConfig, rules: visualConfig?.rules }, { properties: item }) as { color?: string; iconName?: string }
-  const Icon = ((LucideIcons as unknown as Record<string, IconComponent>)[toPascalCase(style.iconName || 'map-pin')]) || LucideIcons.MapPin
+  const style = actionStyle(item, visualConfig)
+  const Icon = resolveLayerIcon(style.iconName)
   return (
     <span aria-hidden style={{ width: size, height: size, backgroundColor: style.color || 'var(--color-primary)' }} className="flex shrink-0 items-center justify-center rounded-full ring-2 ring-white">
-      <Icon size={Math.round(size / 2)} color="white" strokeWidth={2} />
+      <Icon size={Math.round(size / 2)} color="white" stroke={ICON_STROKE} />
     </span>
   )
 }
@@ -56,12 +57,12 @@ function Row({ item, kind, visualConfig, onSelect }: { item: ConsultaItem; kind:
       <button
         type="button"
         onClick={() => onSelect({ kind, id: item.id })}
-        className="group flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left transition-colors duration-200 hover:bg-muted focus-visible:bg-muted focus-visible:outline-hidden"
+        className="group flex min-h-16 w-full items-center gap-3.5 px-4 py-3.5 text-left transition-colors duration-200 hover:bg-muted focus-visible:bg-muted focus-visible:outline-hidden"
       >
-        <Mark item={item} kind={kind} visualConfig={visualConfig} />
+        <Mark item={item} kind={kind} visualConfig={visualConfig} size={40} />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-semibold leading-snug">{name}</span>
-          <span className="mt-0.5 block truncate text-xs leading-snug text-muted-foreground">{second}</span>
+          <span className="mt-1 block truncate text-xs leading-snug text-muted-foreground">{second}</span>
           {third && <span className="block truncate text-xs leading-snug text-muted-foreground">{third}</span>}
         </span>
         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-[translate] duration-200 ease-spring group-hover:translate-x-0.5" aria-hidden />
@@ -72,8 +73,8 @@ function Row({ item, kind, visualConfig, onSelect }: { item: ConsultaItem; kind:
 
 function RowSkeleton() {
   return (
-    <div aria-hidden className="flex min-h-14 items-center gap-3 px-4 py-3">
-      <Skeleton className="h-9 w-9 shrink-0 rounded-full" />
+    <div aria-hidden className="flex min-h-16 items-center gap-3.5 px-4 py-3.5">
+      <Skeleton className="h-10 w-10 shrink-0 rounded-full" />
       <div className="flex-1 space-y-2">
         <Skeleton className="h-3.5 w-3/4" />
         <Skeleton className="h-3 w-1/2" />
@@ -289,7 +290,7 @@ function Detail({ item, selection, regiaoId, visualConfig, onRelated, onFocus, o
             {action && item.status && (
               <p className="mt-3 flex items-center gap-2 text-sm">
                 {item.status}
-                <span aria-hidden className={cn('h-2 w-2 shrink-0 rounded-full', STATUS_DOT[item.status] ?? 'bg-muted-foreground')} />
+                <span aria-hidden className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: actionStyle(item, visualConfig).color || 'var(--color-primary)' }} />
               </p>
             )}
             {action && date && <p className="mt-0.5 text-xs leading-snug text-muted-foreground">Registrada em {date}</p>}

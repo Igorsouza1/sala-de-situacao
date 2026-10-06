@@ -58,6 +58,14 @@ import { ShapefileUploader } from './ShapefileUploader'
 import { MaplibreSnapshotControl } from './MaplibreSnapshotControl'
 import { MaplibreIconMarkers } from './MaplibreIconMarkers'
 import { ExplorePanel } from './ExplorePanel'
+import { MapLegend, type LegendTarget } from './MapLegend'
+import { LegendFlash } from './LegendFlash'
+import { NewsBell } from './NewsBell'
+import { useNovidades } from './useNovidades'
+import type { NewsItem } from './helpers/novidades'
+import { buildRuleLegend, featuresForLegendEntry } from './helpers/legend-rules'
+import { DRAG_PAN, KEY_MOVE_MS, mapKeyAction } from './helpers/map-feel'
+import { useSmoothWheelZoom } from './helpers/use-smooth-wheel-zoom'
 import { ExploreHighlight } from './ExploreHighlight'
 import type { ConsultaBounds, ConsultaItem, ConsultaSelection } from '@/types/map-consulta'
 import bbox from '@turf/bbox'
@@ -334,6 +342,7 @@ export default function MapLibreMap({
   // ── Map ref & region bounds ─────────────────────────────────────────────
   const mapRef = useRef<any>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
+  const zoomBy = useSmoothWheelZoom(mapRef, mapLoaded)
   const fitBoundsDone = useRef(false)
   const [regionBounds, setRegionBounds] = useState<{
     nome?: string | null
@@ -366,7 +375,7 @@ export default function MapLibreMap({
     const panel = exploreOpen.current
     const padding = width < 640
       ? { top: 80, bottom: panel ? Math.round(height * 0.6) : 90, left: 40, right: 40 }
-      : { top: 80, bottom: 110, left: panel ? 400 : 40, right: 40 }
+      : { top: 80, bottom: 110, left: panel ? 440 : 40, right: 40 }
     map.fitBounds([[w, s], [e, n]], {
       padding,
       maxZoom: item.geometry.type === 'Point' ? Math.min(16, map.getZoom() + 1.25) : 15,
@@ -377,6 +386,13 @@ export default function MapLibreMap({
     const b = mapRef.current?.getBounds()
     return b ? [Math.max(-180, b.getWest()), Math.max(-90, b.getSouth()), Math.min(180, b.getEast()), Math.min(90, b.getNorth())] : null
   }, [])
+  // Fechar o Explorar solta a seleção (o registro aberto e o destaque no mapa): a pessoa vê que acabou. Espera a saída do painel (200 ms)
+  // para o conteúdo não trocar de visão enquanto ele some, e não solta se o painel voltou a abrir nesse meio-tempo.
+  useEffect(() => {
+    if (dockOpen === 'explore') return
+    const t = setTimeout(() => { setExploreSelection(null); setExploreFeature(null) }, 200)
+    return () => clearTimeout(t)
+  }, [dockOpen])
   // outra região, outro contexto: o registro aberto não vale mais
   useEffect(() => { setExploreSelection(null); setExploreFeature(null) }, [regiaoId])
 
@@ -501,12 +517,19 @@ export default function MapLibreMap({
   }, [])
 
   // O segmento segue a câmera: inclinar com o mouse ou clicar na bússola também troca 2D/3D (e salva).
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const handleMoveEnd = useCallback((e: { viewState: { pitch: number; longitude: number; latitude: number; zoom: number } }) => {
     if (autoMoveRef.current) { autoMoveRef.current = false; return } // o enquadramento automático da abertura não é escolha da pessoa
-    saveRegionPrefs(regiaoId, { camera: { lng: e.viewState.longitude, lat: e.viewState.latitude, zoom: e.viewState.zoom } })
-    const next = modeFromPitch(e.viewState.pitch)
-    if (next !== viewModeRef.current) { viewModeRef.current = next; setViewMode(next); saveMode(next) }
-    setTerrainOn(next === '3d')
+    // O zoom da roda (13.7) move o mapa a cada quadro e cada movimento termina com um moveend: só se grava e se confere o ângulo quando
+    // o mapa assentou (150 ms sem se mexer), para não escrever no navegador a cada quadro.
+    const { pitch, longitude, latitude, zoom } = e.viewState
+    if (settleTimer.current) clearTimeout(settleTimer.current)
+    settleTimer.current = setTimeout(() => {
+      saveRegionPrefs(regiaoId, { camera: { lng: longitude, lat: latitude, zoom } })
+      const next = modeFromPitch(pitch)
+      if (next !== viewModeRef.current) { viewModeRef.current = next; setViewMode(next); saveMode(next) }
+      setTerrainOn(next === '3d')
+    }, 150)
   }, [regiaoId])
 
   // "Enquadrar a região": o mesmo movimento da abertura, a qualquer hora (a câmera nova fica salva, porque foi escolha da pessoa)
@@ -646,10 +669,19 @@ export default function MapLibreMap({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !e.defaultPrevented && activeTool) selectTool(null)
+      // setas movem, + e − dão zoom, Home enquadra a região (13.7). Com o modal aberto, ou com a tecla sendo de outra coisa em foco, nada.
+      if (modalData.isOpen) return
+      const action = mapKeyAction(e, e.target instanceof Element ? e.target : null)
+      const map = mapRef.current
+      if (!action || !map) return
+      e.preventDefault()
+      if (action.type === 'pan') map.panBy([action.dx, action.dy], { duration: KEY_MOVE_MS })
+      else if (action.type === 'zoom') zoomBy(action.delta)
+      else handleFitRegion()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [activeTool, selectTool])
+  }, [activeTool, selectTool, modalData.isOpen, handleFitRegion, zoomBy])
 
   // Só grava depois de a pessoa mexer: abrir no padrão e sair não pode "congelar" o padrão como se fosse escolha dela
   const prefsTouched = useRef(false)
@@ -893,8 +925,8 @@ export default function MapLibreMap({
   )
 
   // ── Hover handler para icon markers (HTML Markers não disparam onMouseMove do Map) ──
-  // Um cartão por vez: com o mouse num grupo de ações, o cartão da ação que está por baixo não abre (DESIGN.md 13.4)
-  const [clusterHovered, setClusterHovered] = useState(false)
+  // Um cartão por vez: com a lista de uma pilha à vista, o cartão da ação que está por baixo não abre (DESIGN.md 13.6)
+  const [stackHovered, setStackHovered] = useState(false)
 
   const handleMarkerHover = useCallback(
     (props: Record<string, any> | null, coords: [number, number] | null) => {
@@ -1193,6 +1225,90 @@ export default function MapLibreMap({
     ]
   }, [layerManagerOptions])
 
+  // A legenda das camadas de pinos (Ações), das regras do catálogo e do que está no mapa agora: a cor e o ícone dizem coisas diferentes
+  const ruleLegends = useMemo(() => {
+    const out: Record<string, ReturnType<typeof buildRuleLegend>> = {}
+    for (const { layer, displayData, isIcon } of processedLayers) {
+      if (!isIcon) continue
+      const vc = layer.visualConfig
+      const sections = buildRuleLegend({ baseStyle: (vc?.baseStyle || vc) as any, rules: vc?.rules as any }, displayData.features)
+      if (sections.length > 0) out[layer.slug] = sections
+    }
+    return out
+  }, [processedLayers])
+
+  // Clicar num item da legenda (13.7): leva o mapa até o que ele representa e o destaca com uma piscada suave, duas vezes e só isso.
+  // O que pisca: os pinos (por conta própria) ou, nas outras camadas, o destaque desenhado pelo mapa. A piscada começa quando a câmera chega.
+  const [legendFlash, setLegendFlash] = useState<{ features: any[]; on: boolean; blink: ReadonlySet<object> | null } | null>(null)
+  const flashTimers = useRef<ReturnType<typeof setTimeout>[]>([])
+  useEffect(() => () => { flashTimers.current.forEach(clearTimeout) }, [])
+  // Leva o mapa até um conjunto de feições e o destaca com a piscada: o que a legenda e o sino de novidades usam
+  const showFeatures = useCallback((features: any[], markers: boolean) => {
+    const map = mapRef.current
+    if (!map || features.length === 0) return
+    const [w, s, e, n] = bbox({ type: 'FeatureCollection', features } as any)
+    if (![w, s, e, n].every(Number.isFinite)) return
+    const height = map.getContainer().clientHeight
+    const width = map.getContainer().clientWidth
+    // a legenda (canto de baixo à direita) e o Explorar (à esquerda, se aberto) ocupam as bordas: o alvo fica no espaço livre
+    const padding = width < 640
+      ? { top: 80, bottom: Math.round(height * 0.6), left: 40, right: 40 }
+      : { top: 80, bottom: 110, left: exploreOpen.current ? 440 : 80, right: 400 }
+    const onlyPoints = features.every((f) => f.geometry?.type === 'Point')
+    flashTimers.current.forEach(clearTimeout)
+    flashTimers.current = []
+    const start = () => {
+      const blink = markers ? new Set<object>(features) : null
+      const at = (ms: number, on: boolean) => flashTimers.current.push(setTimeout(() => setLegendFlash((f) => (f ? { ...f, on } : f)), ms))
+      setLegendFlash({ features, on: true, blink })
+      at(700, false); at(1000, true); at(1700, false)
+      flashTimers.current.push(setTimeout(() => setLegendFlash(null), 2100))
+    }
+    // a piscada espera a câmera chegar (e os pinos nascerem): ~150 ms depois do fim do movimento
+    map.once('moveend', () => flashTimers.current.push(setTimeout(start, 150)))
+    map.fitBounds([[w, s], [e, n]], { padding, maxZoom: onlyPoints ? 15 : 16, duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1200 })
+  }, [])
+
+  // Clicar num item da legenda (13.7): leva o mapa até o que ele representa e o destaca com uma piscada suave, duas vezes e só isso.
+  const handleLegendShow = useCallback((target: LegendTarget) => {
+    let features: any[] = []
+    let markers = false
+    if (target.kind === 'layer' && target.slug.startsWith('fauna')) {
+      features = faunaGeoJSON.features
+    } else {
+      const item = processedLayers.find((p) => p.layer.slug === target.slug.split('__')[0])
+      if (!item) return
+      markers = item.isIcon
+      if (target.kind === 'rule') {
+        const vc = item.layer.visualConfig as any
+        features = featuresForLegendEntry({ rules: vc?.rules }, item.displayData.features as any[], target.title, target.key)
+      } else features = item.displayData.features as any[]
+    }
+    showFeatures(features, markers)
+  }, [processedLayers, faunaGeoJSON, showFeatures])
+
+  // ── Novidades (13.8): o sino e o que o clique num item faz ──────────────────────────────────────────────────
+  const news = useNovidades(regiaoId)
+  const [pendingNews, setPendingNews] = useState<{ slug: string; ids: Set<string> } | null>(null)
+  // clicar num item: liga a camada (nas camadas com áreas, todas as áreas), e, quando os dados chegam, enquadra e destaca só os novos
+  const handleNewsShow = useCallback((item: NewsItem) => {
+    if (!isLayerOn(item.slug, visibleLayers)) {
+      const option = layerManagerOptions.find((o) => o.slug === item.slug)
+      if (option?.subOptions?.length) handleGroupToggle(option.subOptions.map((s) => s.slug), true)
+      else handleLayerToggle(item.slug, true)
+    }
+    setPendingNews({ slug: item.slug, ids: new Set(item.ids) })
+  }, [visibleLayers, layerManagerOptions, handleGroupToggle, handleLayerToggle])
+  useEffect(() => {
+    if (!pendingNews) return
+    const item = processedLayers.find((p) => p.layer.slug === pendingNews.slug)
+    if (!item || !layerData[pendingNews.slug]) return // espera ligar e chegar
+    setPendingNews(null)
+    const matching = (item.displayData.features as any[]).filter((f) => pendingNews.ids.has(String(f.properties?.id)))
+    if (matching.length > 0) showFeatures(matching, item.isIcon)
+    else setNotice({ id: Date.now(), tone: 'error', title: 'Não achamos isto no mapa', body: 'Um filtro de período ou de tamanho pode estar escondendo.' })
+  }, [pendingNews, processedLayers, layerData, showFeatures])
+
   const panelActiveLayers = useMemo(
     () => [
       ...visibleLayers,
@@ -1316,6 +1432,14 @@ export default function MapLibreMap({
         terrain={(terrainOn ? { source: 'dem', exaggeration: TERRAIN_EXAGGERATION } : null) as any}
         onMoveEnd={handleMoveEnd}
         cursor={cursor}
+        // inércia ao soltar o arrasto (13.7); o zoom da roda é ajustado em onLoad
+        dragPan={DRAG_PAN as any}
+        // os atalhos são do Prisma (13.7); o do MapLibre responderia junto e o mapa andaria em dobro
+        keyboard={false}
+        // a roda e a pinça do trackpad têm zoom próprio (13.7): o do MapLibre fica desligado
+        scrollZoom={false}
+        // os créditos moram no controle de canto (13.7): o botão do MapLibre abria expandido e ficava por baixo da legenda
+        attributionControl={false}
         onLoad={() => setMapLoaded(true)}
         onClick={handleMapClick}
         onMouseMove={handleMouseMove}
@@ -1427,6 +1551,7 @@ export default function MapLibreMap({
         })}
 
         {exploreFeature?.geometry && <ExploreHighlight geometry={exploreFeature.geometry} basemap={shownBasemap} />}
+        {legendFlash && !legendFlash.blink && <LegendFlash features={legendFlash.features} on={legendFlash.on} basemap={shownBasemap} />}
 
         {/* ── Icon layers (HTML Markers com ícones Lucide por feature) ── */}
         {processedLayers
@@ -1438,9 +1563,9 @@ export default function MapLibreMap({
               data={displayData}
               onFeatureClick={openFeatureModal}
               onFeatureHover={handleMarkerHover}
-              onClusterHover={setClusterHovered}
-              basemap={shownBasemap}
-            />
+              onStackHover={setStackHovered}
+              blink={legendFlash?.blink ?? null}
+                          />
           ))}
 
         {/* ── Shapefile preview ── */}
@@ -1580,12 +1705,12 @@ export default function MapLibreMap({
         )}
 
         {/* ── Hover: cartão da ação (13.4) ── */}
-        {clusterHovered ? null : hoveredFeature?._slug === 'acoes' && hoverCoords ? (
+        {stackHovered ? null : hoveredFeature?._slug === 'acoes' && hoverCoords ? (
           <Popup
             longitude={hoverCoords[0]}
             latitude={hoverCoords[1]}
             closeButton={false}
-            offset={[0, -22] as any}
+            offset={[0, -((hoveredFeature._h as number | undefined) ?? 22) - 8] as any}
             anchor="bottom"
             className="acao-hover-popup"
           >
@@ -1622,7 +1747,9 @@ export default function MapLibreMap({
       {/* ── Controls overlay ─────────────────────────────────────────────── */}
 
       {/* Câmera: zoom, bússola e 2D|3D */}
-      <CameraControls mapRef={mapRef} ready={mapLoaded} viewMode={viewMode} onViewModeChange={handleViewModeChange} canFitRegion={!!regionBounds} onFitRegion={handleFitRegion} />
+      <NewsBell items={news.items} unread={news.unread} since={news.since} options={panelOptions} onOpen={() => { news.markSeen(); if (dockOpen === 'explore') setDockOpen(null) }} onClose={news.dismiss} onShow={handleNewsShow} yield={dockOpen === 'explore'} />
+      <MapLegend mapRef={mapRef} ready={mapLoaded} options={panelOptions} activeLayers={panelActiveLayers} ruleLegends={ruleLegends} counts={layerCounts} onShow={handleLegendShow} />
+      <CameraControls mapRef={mapRef} onZoom={zoomBy} ready={mapLoaded} viewMode={viewMode} onViewModeChange={handleViewModeChange} canFitRegion={!!regionBounds} onFitRegion={handleFitRegion} />
 
       {/* Shapefile uploader */}
       {/* <ShapefileUploader

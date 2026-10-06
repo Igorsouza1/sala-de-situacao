@@ -2,7 +2,6 @@
 
 import { useMemo, useState, type KeyboardEvent } from 'react'
 import { ArrowLeft, Check, ChevronDown } from 'lucide-react'
-import * as LucideIcons from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Collapse } from '@/components/ui/collapse'
 import { Input } from '@/components/ui/input'
@@ -21,6 +20,7 @@ import {
   type LayerCategory,
   type LayerEdit,
 } from '@/lib/layer-style'
+import { resolveLayerIcon } from './helpers/layer-icons'
 import { LAYER_ICONS, colorName, readPalette } from './helpers/layer-palette'
 import { OtherColor } from './ColorPicker'
 import { controlItem } from './helpers/control-style'
@@ -32,7 +32,7 @@ import { PanelCard } from './PanelCard'
 // editor traduz em números, deriva o contorno e esconde o que quase nunca muda. Nada de hex, de pixels ou de porcentagem.
 
 const toPascal = (s: string) => s.replace(/(^|-)([a-z0-9])/g, (_, __, c) => c.toUpperCase())
-const iconFor = (name: string) => ((LucideIcons as any)[toPascal(name)] as LucideIcons.LucideIcon | undefined) ?? LucideIcons.MapPin
+const iconFor = resolveLayerIcon
 
 const LEGEND_TYPE = { fill: 'polygon', line: 'line', circle: 'circle', icon: 'icon', other: 'heatmap' } as const
 
