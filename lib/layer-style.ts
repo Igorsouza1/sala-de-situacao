@@ -35,6 +35,11 @@ export interface LayerEdit {
   category: LayerCategory
   defaultVisibility: boolean
   style: LayerStyle
+  /**
+   * Ícone de cada área de uma camada com grupos (ex.: cada eixo temático de Ações), pelo valor que o mapa compara.
+   * Vem da regra por valor do catálogo (`rules` com `styleProperty: 'iconName'`), que é o que o mapa usa para desenhar o marcador.
+   */
+  ruleIcons?: Record<string, string>
 }
 
 type Json = Record<string, any>
@@ -107,6 +112,21 @@ export function readStyle(vc: Json | null | undefined, geometryType?: string | n
   return out({ color, fillColor: color, radius: num(s.radius, 28) })
 }
 
+// ── Ícone por área (regra por valor) ────────────────────────────────────────────────────────────────────────────
+const iconRule = (vc: Json | null | undefined): Json | undefined =>
+  Array.isArray(vc?.rules) ? vc!.rules.find((r: Json) => r?.styleProperty === 'iconName' && r.values && typeof r.values === 'object') : undefined
+
+export const hasIconRule = (vc: Json | null | undefined) => !!iconRule(vc)
+
+/** O ícone que o mapa usa para um valor (ex.: um eixo temático). Compara como o mapa: igual, ou sem diferenciar maiúsculas. */
+export function ruleIcon(vc: Json | null | undefined, key: string): string | undefined {
+  const values: Json | undefined = iconRule(vc)?.values
+  if (!values) return undefined
+  const found = key in values ? key : Object.keys(values).find((k) => k.toLowerCase() === key.trim().toLowerCase())
+  const v = found !== undefined ? values[found] : undefined
+  return typeof v === 'string' ? v : undefined
+}
+
 // `defaultVisibleFallback`: o que vale quando o catálogo não diz nada (a lista de camadas que abrem ligadas, no código).
 export function readEdit(
   layer: { name: string; visualConfig?: Json | null },
@@ -119,7 +139,14 @@ export function readEdit(
     category,
     defaultVisibility: typeof vc?.defaultVisibility === 'boolean' ? vc.defaultVisibility : (opts.defaultVisibleFallback ?? false),
     style: readStyle(vc, opts.geometryType),
+    ruleIcons: ruleIconsOf(vc),
   }
+}
+
+function ruleIconsOf(vc: Json | null | undefined): Record<string, string> | undefined {
+  const values: Json | undefined = iconRule(vc)?.values
+  if (!values) return undefined
+  return Object.fromEntries(Object.entries(values).filter(([, v]) => typeof v === 'string')) as Record<string, string>
 }
 
 // Põe a aparência nos dois lugares: no `baseStyle` sempre (o Leaflet e a reserva do mapa leem dele) e no `maplibre` quando ele
@@ -175,6 +202,14 @@ export function applyEdit(vc: Json | null | undefined, edit: LayerEdit): Json {
   const out = applyStyle(vc, edit.style)
   out.category = edit.category
   out.defaultVisibility = edit.defaultVisibility
+  // ícone de cada área: grava na regra por valor que o mapa já lê, sem mexer nas outras regras nem nas chaves que não mudaram
+  const rule = iconRule(out)
+  if (rule && edit.ruleIcons) {
+    for (const [key, icon] of Object.entries(edit.ruleIcons)) {
+      const existing = key in rule.values ? key : Object.keys(rule.values).find((k) => k.toLowerCase() === key.trim().toLowerCase())
+      rule.values[existing ?? key] = icon
+    }
+  }
   return out
 }
 

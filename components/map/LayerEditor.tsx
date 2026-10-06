@@ -140,6 +140,58 @@ function ColorField({ value, onChange }: { value: string; onChange: (hex: string
   )
 }
 
+// A grade de ícones (a mesma no editor da camada e no editor de ícone de cada área): o nome do escolhido fica ao lado do título,
+// porque o ícone sozinho, sem texto, não diz o que é (11).
+export function IconGrid({ value, onChange }: { value?: string; onChange: (iconName: string) => void }) {
+  const label = LAYER_ICONS.find((i) => i.name === value)?.label
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <span className="text-sm">Ícone</span>
+        <span className="text-xs text-muted-foreground">{label ?? 'Outro'}</span>
+      </div>
+      <div role="radiogroup" aria-label="Ícone" className="grid grid-cols-6 gap-2">
+        {LAYER_ICONS.map((i) => {
+          const Icon = iconFor(i.name)
+          const selected = value === i.name
+          return (
+            <button
+              key={i.name}
+              type="button"
+              role="radio"
+              aria-checked={selected}
+              aria-label={i.label}
+              title={i.label}
+              onClick={() => onChange(i.name)}
+              className={cn('flex h-9 items-center justify-center rounded-md border transition-[background-color,border-color,scale] duration-200 ease-spring active:scale-95 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30', selected ? 'border-primary bg-secondary text-secondary-foreground' : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground')}
+            >
+              <Icon className="h-4 w-4" aria-hidden />
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+// A barra de salvar acompanha a rolagem: a frase de "vale para todos" e os botões nunca saem de vista. Respiro (6.2): afastada do
+// cartão de cima, com uma sombra leve que mostra que há conteúdo passando por baixo.
+export function EditorFooter({ saving, error, why, canSave, onSave, onCancel }: { saving: boolean; error: string | null; why: string | null; canSave: boolean; onSave: () => void; onCancel: () => void }) {
+  return (
+    <div className="sticky bottom-0 -mx-4 -mb-4 mt-2 space-y-2 border-t border-border bg-card px-4 pb-4 pt-4 shadow-[0_-10px_14px_-12px_rgb(24_26_25/0.22)]">
+      <p className="text-xs text-muted-foreground">Vale para todos que veem esta região.</p>
+      {error && <p role="alert" className="text-xs text-crit">{error} O que você editou continua aqui.</p>}
+      {why && !error && <p className="text-xs text-muted-foreground">{why}</p>}
+      <div className="grid grid-cols-2 gap-2 pt-1">
+        <Button variant="outline" size="sm" onClick={onCancel} aria-disabled={saving}>Cancelar</Button>
+        <Button size="sm" aria-disabled={!canSave} onClick={() => canSave && onSave()}>
+          {saving ? 'Salvando…' : 'Salvar'}
+        </Button>
+      </div>
+    </div>
+  )
+}
+
 interface LayerEditorProps {
   /** o nome da camada como está salvo (o título não muda enquanto a pessoa digita) */
   savedName: string
@@ -206,32 +258,7 @@ export function LayerEditor({ savedName, edit, initial, onChange, onSave, onCanc
               (iconLocked ? (
                 <p className="text-xs leading-snug text-muted-foreground">O ícone desta camada vem do eixo de cada ação, então não dá para trocá-lo por aqui. Escolher o ícone de cada eixo ainda não existe.</p>
               ) : (
-                <div>
-                  <div className="mb-2 flex items-center justify-between gap-3">
-                    <span className="text-sm">Ícone</span>
-                    <span className="text-xs text-muted-foreground">{iconLabel ?? 'Outro'}</span>
-                  </div>
-                  <div role="radiogroup" aria-label="Ícone" className="grid grid-cols-6 gap-2">
-                    {LAYER_ICONS.map((i) => {
-                      const Icon = iconFor(i.name)
-                      const selected = edit.style.iconName === i.name
-                      return (
-                        <button
-                          key={i.name}
-                          type="button"
-                          role="radio"
-                          aria-checked={selected}
-                          aria-label={i.label}
-                          title={i.label}
-                          onClick={() => setStyle({ ...edit.style, iconName: i.name })}
-                          className={cn('flex h-9 items-center justify-center rounded-md border transition-[background-color,border-color,scale] duration-200 ease-spring active:scale-95 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30', selected ? 'border-primary bg-secondary text-secondary-foreground' : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground')}
-                        >
-                          <Icon className="h-4 w-4" aria-hidden />
-                        </button>
-                      )
-                    })}
-                  </div>
-                </div>
+                <IconGrid value={edit.style.iconName} onChange={(iconName) => setStyle({ ...edit.style, iconName })} />
               ))}
           </div>
         </PanelCard>
@@ -276,18 +303,7 @@ export function LayerEditor({ savedName, edit, initial, onChange, onSave, onCanc
         </Collapse>
       </section>
 
-      {/* a barra de salvar acompanha a rolagem: a frase de "vale para todos" e os botões nunca saem de vista */}
-      <div className="sticky bottom-0 -mx-4 -mb-4 border-t border-border bg-card px-4 pb-4 pt-3">
-        <p className="mb-2 text-xs text-muted-foreground">Vale para todos que veem esta região.</p>
-        {error && <p role="alert" className="mb-2 text-xs text-crit">{error} O que você editou continua aqui.</p>}
-        {why && !error && <p className="mb-2 text-xs text-muted-foreground">{why}</p>}
-        <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" size="sm" onClick={onCancel} aria-disabled={saving}>Cancelar</Button>
-          <Button size="sm" aria-disabled={!canSave} onClick={() => canSave && onSave()}>
-            {saving ? 'Salvando…' : 'Salvar'}
-          </Button>
-        </div>
-      </div>
+      <EditorFooter saving={saving} error={error} why={why} canSave={canSave} onSave={onSave} onCancel={onCancel} />
     </div>
   )
 }

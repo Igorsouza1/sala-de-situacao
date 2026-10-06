@@ -103,6 +103,10 @@ interface LayersPanelProps extends LayerManagerProps {
 
 export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, editing, ...layerProps }: LayersPanelProps) {
   const unavailable = basemap !== shownBasemap
+  // quais camadas com áreas estão abertas: vive aqui (e não na lista) porque a lista é desmontada enquanto o editor está aberto,
+  // e a pessoa precisa voltar para onde estava (8.4)
+  const [expanded, setExpanded] = useState<string[]>([])
+  const toggleExpanded = (id: string) => setExpanded((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]))
   // o editor entra pela direita e a lista volta pela esquerda: a pessoa vê que foi para dentro e que voltou
   if (editing) return <div key="editor" className="animate-in fade-in-0 slide-in-from-right-4 duration-200">{editing}</div>
   // escolher a camada: só a lista, em botões, com a instrução em cima (a tela diz o que fazer, a pessoa não adivinha)
@@ -110,7 +114,7 @@ export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, e
     return (
       <div key="pick" className="animate-in fade-in-0 slide-in-from-right-4 space-y-4 duration-200">
         <p className="px-1 text-sm">Escolha a camada que você quer editar.</p>
-        <LayerManager {...layerProps} />
+        <LayerManager {...layerProps} expanded={expanded} onToggleExpanded={toggleExpanded} />
       </div>
     )
   }
@@ -146,7 +150,7 @@ export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, e
         )}
       </PanelCard>
 
-      <LayerManager {...layerProps} />
+      <LayerManager {...layerProps} expanded={expanded} onToggleExpanded={toggleExpanded} />
 
       <ResetButton onReset={onReset} />
     </div>

@@ -76,7 +76,7 @@ export function Notice({ notice, onClose }: { notice: NoticeData | null; onClose
       onBlur={() => setPaused(false)}
       className={cn('pointer-events-auto w-full max-w-sm rounded-lg border bg-card p-4 shadow-control', border, leaving ? 'animate-notice-out' : 'animate-notice-in')}
     >
-      <div key={n.id} className="flex animate-in items-start gap-3 fade-in-0 duration-200">
+      <div key={n.id} className="flex animate-in items-center gap-3 fade-in-0 duration-200">
         {n.undo ? (
           // o contador: um anel que se esvazia e o número dentro; o leitor de tela ouve a frase, não cada tique
           <span className="relative grid size-9 shrink-0 place-items-center" aria-hidden>
@@ -101,7 +101,7 @@ export function Notice({ notice, onClose }: { notice: NoticeData | null; onClose
           {n.undo && <p className="sr-only">Dá para desfazer por mais {seconds} segundos.</p>}
         </div>
 
-        <div className="-mr-1 -mt-1 flex shrink-0 items-center gap-1">
+        <div className="-mr-1 flex shrink-0 items-center gap-1">
           {n.undo && (
             <Button variant="secondary" size="sm" className="h-8" onClick={n.undo.onUndo}>
               Desfazer

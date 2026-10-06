@@ -149,14 +149,25 @@ export function OtherColor({ value, inPalette, onChange }: { value: string; inPa
       }}
     >
       <PopoverTrigger asChild>
+        {/* Rótulo e "+" ficam sempre à vista, inclusive com uma cor já escolhida: sem isso, o quadrado colorido parecia só mais
+            uma cor fixa, e a pessoa não sabia que ali se escolhe outra (2.2). Com uma cor própria escolhida, o texto vira "Mudar". */}
         <button
           type="button"
-          aria-label="Outra cor"
-          title="Outra cor"
-          className={cn(tile, 'relative', !inPalette && picked)}
-          style={!inPalette ? { backgroundColor: value } : undefined}
+          aria-label={inPalette ? 'Outra cor' : 'Mudar esta cor'}
+          className="group flex items-center gap-2 rounded-md pr-1 text-xs text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-hidden"
         >
-          {inPalette ? <Plus className="h-4 w-4 text-muted-foreground" aria-hidden /> : <Check className="h-4 w-4 text-background mix-blend-difference" aria-hidden />}
+          <span
+            className={cn(tile, 'relative group-active:scale-95 group-focus-visible:ring-[3px] group-focus-visible:ring-ring/40', !inPalette && picked)}
+            style={!inPalette ? { backgroundColor: value } : undefined}
+          >
+            {inPalette ? <Plus className="h-4 w-4 text-muted-foreground" aria-hidden /> : <Check className="h-4 w-4 text-background mix-blend-difference" aria-hidden />}
+            {!inPalette && (
+              <span className="absolute -bottom-1.5 -right-1.5 grid size-4 place-items-center rounded-full bg-card ring-1 ring-foreground/30" aria-hidden>
+                <Plus className="size-2.5 text-foreground" />
+              </span>
+            )}
+          </span>
+          {inPalette ? 'Outra cor' : 'Mudar'}
         </button>
       </PopoverTrigger>
 

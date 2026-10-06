@@ -37,5 +37,5 @@ export function MaplibreSnapshotControl({
     window.open(`/print/map?${params.toString()}`, "_blank")
   }
 
-  return <DockButton icon={Printer} label="Imprimir" onClick={handleSnapshot} />
+  return <DockButton icon={Printer} label="Imprimir" motion="drop" onClick={handleSnapshot} />
 }

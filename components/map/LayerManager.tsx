@@ -47,6 +47,11 @@ interface LayerManagerProps {
   filterNotes?: Record<string, FilterNote>
   /** modo "escolher a camada para editar" (13.3): cada linha vira um botão que abre o editor. Sem lápis em cada linha. */
   onPick?: (slug: string) => void
+  /** camada com áreas (ex.: Ações): o que se edita é o ícone de cada área, não a camada */
+  onPickGroup?: (layerSlug: string, groupKey: string) => void
+  /** quais camadas com áreas estão abertas: quem usa o LayerManager em dois lugares (lista e editar) guarda isto, para a lista não fechar ao voltar */
+  expanded?: string[]
+  onToggleExpanded?: (id: string) => void
   /** a camada acabou de ser editada: a linha pisca em verde claro (8.4) */
   flashSlug?: string | null
 }
@@ -157,9 +162,11 @@ function LayerRow({ option, checked, onChange, count, status, note, onRetry, exp
   )
 }
 
-export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, onGroupToggle, status, onRetry, loading, counts, filterNotes, onPick, flashSlug }: LayerManagerProps) {
-  const [expanded, setExpanded] = useState<string[]>([])
-  const toggleExpanded = (id: string) => setExpanded((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]))
+export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, onGroupToggle, status, onRetry, loading, counts, filterNotes, onPick, onPickGroup, flashSlug, expanded: expandedProp, onToggleExpanded }: LayerManagerProps) {
+  const [localExpanded, setLocalExpanded] = useState<string[]>([])
+  const expanded = expandedProp ?? localExpanded
+  const toggleExpanded = (id: string) =>
+    onToggleExpanded ? onToggleExpanded(id) : setLocalExpanded((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]))
 
   const sections = useMemo(() => {
     const groups: Record<string, LayerManagerOption[]> = {}
@@ -190,9 +197,11 @@ export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, 
 
   const isOn = (slug: string) => activeLayers.includes(slug)
 
-  // Modo "escolher a camada para editar": uma lista limpa, em que cada linha é um botão com rótulo e seta. Sem interruptor, sem
-  // contagem e sem lápis em cada linha (13.3): a intenção de editar é uma só, no cabeçalho do painel, e a lista não fica apertada.
+  // Modo "escolher o que editar": uma lista limpa, em que cada linha é um botão com rótulo e seta. Sem interruptor, sem contagem e
+  // sem lápis em cada linha (13.3). Camada com áreas (Ações) NÃO é editável como um todo: ela é só o interruptor que liga as áreas;
+  // o que se edita é o ícone de cada área. Então a linha dela abre as áreas, e a frase embaixo do nome diz isso.
   if (onPick) {
+    const rowClass = 'flex min-h-12 w-full items-center gap-3 rounded-md px-2.5 py-2 text-left transition-colors duration-200 hover:bg-muted focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30'
     return (
       <div className="space-y-4">
         {sections.map((section, i) => {
@@ -201,28 +210,53 @@ export function LayerManager({ options, activeLayers, onLayerToggle, onHideAll, 
           return (
             <section key={section.name} aria-labelledby={`pick-${i}`} className="rounded-lg border border-border bg-card p-2">
               <h4 id={`pick-${i}`} className="px-2.5 pb-1 pt-2 text-sm font-semibold">{section.name}</h4>
-              {items.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => onPick(option.slug)}
-                  className={cn(
-                    'flex min-h-12 w-full items-center gap-3 rounded-md px-2.5 py-2 text-left transition-colors duration-200 hover:bg-muted focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30',
-                    flashSlug === option.slug && 'animate-found',
-                  )}
-                >
-                  <Legend option={option} checked />
-                  <span className="min-w-0 flex-1 truncate text-sm">{option.label}</span>
-                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-                </button>
-              ))}
+              {items.map((option) => {
+                const subs = option.subOptions
+                if (subs?.length && onPickGroup) {
+                  const open = expanded.includes(option.id)
+                  return (
+                    <div key={option.id}>
+                      <button type="button" aria-expanded={open} onClick={() => toggleExpanded(option.id)} className={rowClass}>
+                        <Legend option={option} checked />
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm">{option.label}</span>
+                          <span className="mt-0.5 block text-xs text-muted-foreground">Edite o ícone de cada área</span>
+                        </span>
+                        <ChevronDown className={cn('h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-[320ms] ease-out', open && 'rotate-180')} aria-hidden />
+                      </button>
+                      <Collapse open={open}>
+                        <div className="relative before:absolute before:bottom-0 before:left-[1.65rem] before:top-0 before:w-px before:bg-border">
+                          {subs.map((sub) => (
+                            <button
+                              key={sub.id}
+                              type="button"
+                              onClick={() => onPickGroup(option.slug, sub.slug.slice(option.slug.length + 2))}
+                              className={cn(rowClass, 'pl-9', flashSlug === sub.slug && 'animate-found')}
+                            >
+                              <Legend option={sub} checked />
+                              <span className="min-w-0 flex-1 truncate text-sm">{sub.label}</span>
+                              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                            </button>
+                          ))}
+                        </div>
+                      </Collapse>
+                    </div>
+                  )
+                }
+                return (
+                  <button key={option.id} type="button" onClick={() => onPick(option.slug)} className={cn(rowClass, flashSlug === option.slug && 'animate-found')}>
+                    <Legend option={option} checked />
+                    <span className="min-w-0 flex-1 truncate text-sm">{option.label}</span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                  </button>
+                )
+              })}
             </section>
           )
         })}
       </div>
     )
   }
-
 
   return (
     <div className="space-y-4">

@@ -27,7 +27,8 @@ import type { LayerManagerOption, LayerStatus } from './LayerManager'
 import { EditModeButton, LayersPanel, RefreshButton } from './LayersPanel'
 import { Notice, type NoticeData } from './Notice'
 import { LayerEditor } from './LayerEditor'
-import { applyEdit, readEdit, type LayerEdit } from '@/lib/layer-style'
+import { GroupIconEditor } from './GroupIconEditor'
+import { applyEdit, readEdit, ruleIcon, type LayerEdit } from '@/lib/layer-style'
 import { FiltersPanel } from './FiltersPanel'
 import { activeFilterCount, datesFromIntent, intentFromDates } from './helpers/filters'
 import {
@@ -165,7 +166,7 @@ export default function MapLibreMap({
 
   // ── Edição de camada (DESIGN.md 13.3): o estado fica aqui em cima porque o mapa e a busca de dados também o leem ──
   // O rascunho vale só na tela até a pessoa salvar: o mapa e a lista desenham a camada com ele (pré-visualização ao vivo).
-  const [draft, setDraft] = useState<{ slug: string; initial: LayerEdit; edit: LayerEdit } | null>(null)
+  const [draft, setDraft] = useState<{ slug: string; /** a área em edição (ex.: um eixo de Ações), quando o que se edita é o ícone dela */ groupKey?: string; initial: LayerEdit; edit: LayerEdit } | null>(null)
   const [savingLayer, setSavingLayer] = useState(false)
   const [saveLayerError, setSaveLayerError] = useState<string | null>(null)
   const [picking, setPicking] = useState(false) // "Editar": a lista vira "escolha a camada"
@@ -706,6 +707,27 @@ export default function MapLibreMap({
     [layers, layerData],
   )
 
+  // O ícone que uma área tem agora: o da regra do catálogo (o que o marcador usa), senão o do serviço, senão o da camada
+  const currentGroupIcon = useCallback(
+    (slug: string, groupKey: string) => {
+      const layer = layers.find((l) => l.slug === slug)
+      const group = layer?.groups?.find((g) => String(g.id) === groupKey)
+      return ruleIcon(layer?.visualConfig as any, groupKey) ?? group?.icon ?? readEdit(layer as any).style.iconName ?? 'map-pin'
+    },
+    [layers],
+  )
+
+  const handleEditGroup = useCallback(
+    (slug: string, groupKey: string) => {
+      const layer = layers.find((l) => l.slug === slug)
+      if (!layer) return
+      const initial = readEdit(layer as any, { defaultVisibleFallback: isDefaultOnSlug(slug) })
+      setSaveLayerError(null)
+      setDraft({ slug, groupKey, initial, edit: initial })
+    },
+    [layers],
+  )
+
   // O mesmo applyEdit do servidor: o mapa fica igual ao que foi gravado sem precisar buscar o catálogo de novo
   const patchLayer = useCallback((slug: string, name: string, visualConfig: any) => {
     const patch = (l: LayerResponseDTO) => (l.slug === slug ? { ...l, name, visualConfig } : l)
@@ -734,8 +756,8 @@ export default function MapLibreMap({
       setNotice({
         id: Date.now(),
         tone: 'success',
-        title: `Salvamos “${saved.name}”`,
-        body: 'Quem atualizar o mapa já vê a mudança.',
+        title: draft.groupKey ? `Salvamos o ícone de “${draft.groupKey}”` : `Salvamos “${saved.name}”`,
+        body: draft.groupKey ? `Em ${saved.name}. Quem atualizar o mapa já vê a mudança.` : 'Quem atualizar o mapa já vê a mudança.',
         undo: {
           seconds: 10,
           onUndo: async () => {
@@ -1074,7 +1096,7 @@ export default function MapLibreMap({
               label: group.label,
               slug: `${layer.slug}__${group.id}`,
               color: group.color || baseColor,
-              icon: group.icon || iconName,
+              icon: ruleIcon(config, group.id) ?? group.icon ?? iconName,
               legendType,
               fillColor: baseFill,
               fillOpacity: baseFillOpacity,
@@ -1569,6 +1591,7 @@ export default function MapLibreMap({
           id="layers"
           icon={LucideIcons.Layers}
           label="Camadas"
+          motion="rise"
           alert={basemap !== shownBasemap || !!draft}
           action={
             <>
@@ -1584,9 +1607,23 @@ export default function MapLibreMap({
             onBasemapChange={handleBasemapChange}
             onReset={handleResetPrefs}
             onPick={isAdmin && picking ? handleEditLayer : undefined}
+            onPickGroup={isAdmin && picking ? handleEditGroup : undefined}
             flashSlug={flashSlug}
             editing={
-              draft && (
+              draft && draft.groupKey ? (
+                <GroupIconEditor
+                  layerName={layers.find((l) => l.slug === draft.slug)?.name ?? draft.initial.name}
+                  groupLabel={draft.groupKey}
+                  icon={draft.edit.ruleIcons?.[draft.groupKey] ?? currentGroupIcon(draft.slug, draft.groupKey)}
+                  color={draft.edit.style.color}
+                  dirty={JSON.stringify(draft.edit) !== JSON.stringify(draft.initial)}
+                  onChange={(icon) => setDraft((d) => (d && d.groupKey ? { ...d, edit: { ...d.edit, ruleIcons: { ...d.edit.ruleIcons, [d.groupKey]: icon } } } : d))}
+                  onSave={handleSaveLayer}
+                  onCancel={() => { setDraft(null); setSaveLayerError(null) }}
+                  saving={savingLayer}
+                  error={saveLayerError}
+                />
+              ) : draft && (
                 <LayerEditor
                   savedName={layers.find((l) => l.slug === draft.slug)?.name ?? draft.initial.name}
                   edit={draft.edit}
@@ -1613,7 +1650,7 @@ export default function MapLibreMap({
             loading={loadingLayers}
           />
         </DockPanelButton>
-        <DockPanelButton id="filters" icon={LucideIcons.SlidersHorizontal} label="Filtros" badge={activeFilterCount(dateFilter.startDate, dateFilter.endDate, areaFilter)}>
+        <DockPanelButton id="filters" icon={LucideIcons.SlidersHorizontal} label="Filtros" motion="slide" badge={activeFilterCount(dateFilter.startDate, dateFilter.endDate, areaFilter)}>
           <FiltersPanel
             startDate={dateFilter.startDate}
             endDate={dateFilter.endDate}
@@ -1628,6 +1665,7 @@ export default function MapLibreMap({
         <ToolMenu
           icon={LucideIcons.Ruler}
           label="Medir"
+          motion="tilt"
           tools={[{ id: 'measure-distance', icon: LucideIcons.Ruler }, { id: 'measure-area', icon: LucideIcons.SquareDashed }]}
           active={activeTool === 'measure-distance' || activeTool === 'measure-area' ? activeTool : null}
           onSelect={selectTool}
@@ -1635,6 +1673,7 @@ export default function MapLibreMap({
         <ToolMenu
           icon={LucideIcons.Crosshair}
           label="Consultar"
+          motion="spin"
           tools={[{ id: 'coords', icon: LucideIcons.Crosshair }, { id: 'property', icon: LucideIcons.Info }]}
           active={activeTool === 'coords' || activeTool === 'property' ? activeTool : null}
           onSelect={selectTool}

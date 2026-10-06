@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { findLayerEntryBySlug, updateLayerEntry } from '@/lib/repositories/layerRepository'
-import { LAYER_CATEGORIES, applyEdit, isHexColor, layerShape, type LayerEdit } from '@/lib/layer-style'
+import { LAYER_CATEGORIES, applyEdit, hasIconRule, isHexColor, layerShape, type LayerEdit } from '@/lib/layer-style'
 
 // Edição da aparência de uma camada do catálogo (DESIGN.md 13.3). O `slug` nunca muda: o código decide comportamento por ele.
 
@@ -21,6 +21,11 @@ export const layerEditSchema = z.object({
     radius: z.number().min(1).max(60),
     iconName: z.string().regex(/^[a-z0-9-]{1,40}$/, 'Ícone inválido.').optional(),
   }),
+  // ícone de cada área (ex.: cada eixo temático de Ações): a chave é o valor que o mapa compara, o valor é o nome do ícone
+  ruleIcons: z
+    .record(z.string().trim().min(1).max(80), z.string().regex(/^[a-z0-9-]{1,40}$/, 'Ícone inválido.'))
+    .refine((r) => Object.keys(r).length <= 100, 'Áreas demais para editar de uma vez.')
+    .optional(),
 })
 
 export class LayerEditError extends Error {
@@ -53,6 +58,11 @@ export async function updateLayerEdit(slug: string, edit: LayerEdit, actor: Acto
   const vc = (entry.visualConfig ?? {}) as Record<string, any>
   if (hasExplicitShape(vc) && layerShape(vc) !== edit.style.shape) {
     throw new LayerEditError(400, 'O tipo da camada não pode ser trocado por aqui.')
+  }
+
+  // ícone por área só existe onde há regra por valor; do contrário o pedido seria gravado e o mapa nunca o leria
+  if (edit.ruleIcons && Object.keys(edit.ruleIcons).length > 0 && !hasIconRule(vc)) {
+    throw new LayerEditError(400, 'Esta camada não tem ícone por área para editar.')
   }
 
   const visualConfig = applyEdit(vc, edit)

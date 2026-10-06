@@ -83,6 +83,37 @@ describe('updateLayerEdit', () => {
     expect(updateLayerEntry).not.toHaveBeenCalled()
   })
 
+  describe('ícone por área', () => {
+    const acoes = {
+      ...propriedades,
+      slug: 'acoes',
+      visualConfig: {
+        category: 'Operacional',
+        baseStyle: { type: 'icon', color: '#64748b', iconName: 'map-pin' },
+        rules: [{ field: 'eixo_tematico', styleProperty: 'iconName', values: { Vegetação: 'sprout', Monitoramento: 'activity' } }],
+      },
+    }
+
+    it('grava o ícone de uma área na regra por valor e mantém as outras', async () => {
+      ;(findLayerEntryBySlug as jest.Mock).mockResolvedValue(acoes)
+      const next = { ...readEdit(acoes), ruleIcons: { Vegetação: 'trees' } }
+      await updateLayerEdit('acoes', next as any, { tenantId: ORG_A, isSuperadmin: false })
+      const patch = (updateLayerEntry as jest.Mock).mock.calls[0][1]
+      expect(patch.visualConfig.rules[0].values).toEqual({ Vegetação: 'trees', Monitoramento: 'activity' })
+    })
+
+    it('recusa ícone por área numa camada sem regra (seria gravado e nunca lido)', async () => {
+      await expect(updateLayerEdit('propriedades', { ...edit(), ruleIcons: { x: 'trees' } } as any, { tenantId: ORG_A, isSuperadmin: false })).rejects.toMatchObject({ status: 400 })
+      expect(updateLayerEntry).not.toHaveBeenCalled()
+    })
+
+    it('o esquema recusa nome de ícone com caractere perigoso e chave vazia', () => {
+      expect(layerEditSchema.safeParse({ ...edit(), ruleIcons: { Vegetação: '../x' } }).success).toBe(false)
+      expect(layerEditSchema.safeParse({ ...edit(), ruleIcons: { '  ': 'trees' } }).success).toBe(false)
+      expect(layerEditSchema.safeParse({ ...edit(), ruleIcons: { Vegetação: 'trees' } }).success).toBe(true)
+    })
+  })
+
   it('camada sem tipo explícito aceita o tipo que o editor viu nos dados (geometria)', async () => {
     ;(findLayerEntryBySlug as jest.Mock).mockResolvedValue({ ...propriedades, visualConfig: { category: 'Monitoramento' } })
     const asCircle = edit({ style: { ...edit().style, shape: 'circle' } })

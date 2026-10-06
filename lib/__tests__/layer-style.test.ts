@@ -1,4 +1,4 @@
-import { FILL_LEVELS, LINE_WEIGHTS, POINT_SIZES, applyEdit, applyStyle, deriveOutline, editableFields, isHexColor, layerShape, mainColor, nearestLevel, readEdit, readStyle, withMainColor, type LayerEdit } from '../layer-style'
+import { hasIconRule, ruleIcon, FILL_LEVELS, LINE_WEIGHTS, POINT_SIZES, applyEdit, applyStyle, deriveOutline, editableFields, isHexColor, layerShape, mainColor, nearestLevel, readEdit, readStyle, withMainColor, type LayerEdit } from '../layer-style'
 
 // As camadas abaixo são cópias reduzidas das reais do catálogo (região 1, Bonito).
 const propriedades = {
@@ -22,7 +22,7 @@ const acoes = {
   category: 'Operacional',
   groupByColumn: 'eixo_tematico',
   baseStyle: { type: 'icon', color: '#64748b', radius: 28, iconName: 'map-pin' },
-  rules: [{ field: 'eixo_tematico', styleProperty: 'iconName', values: { Vegetação: 'sprout' } }],
+  rules: [{ field: 'eixo_tematico', styleProperty: 'iconName', values: { Vegetação: 'sprout', Monitoramento: 'activity', 'Recursos Hídricos': 'droplets' } }],
 }
 const semMaplibre = { category: 'Base Territorial', baseStyle: { type: 'polygon', color: '#2563eb', weight: 2, opacity: 1, fillColor: '#3b82f6', fillOpacity: 0 } }
 
@@ -227,5 +227,48 @@ describe('uma cor só: a tela deriva o resto', () => {
   it('o que a tela deriva grava e lê de volta igual', () => {
     const style = withMainColor(readStyle(propriedades), '#2a7da6')
     expect(readStyle(applyStyle(propriedades, style))).toEqual(style)
+  })
+})
+
+describe('ícone por área (regra por valor)', () => {
+  it('lê o ícone de cada área como o mapa lê: igual, ou sem diferenciar maiúsculas e espaços', () => {
+    expect(ruleIcon(acoes, 'Vegetação')).toBe('sprout')
+    expect(ruleIcon(acoes, ' vegetação ')).toBe('sprout')
+    expect(ruleIcon(acoes, 'Fauna')).toBeUndefined() // sem regra para esse eixo
+    expect(ruleIcon(estradas, 'x')).toBeUndefined()
+    expect(hasIconRule(acoes)).toBe(true)
+    expect(hasIconRule(propriedades)).toBe(false)
+  })
+
+  it('readEdit traz todos os ícones por área; camada sem regra não traz', () => {
+    expect(readEdit({ name: 'Ações', visualConfig: acoes }).ruleIcons).toEqual({ Vegetação: 'sprout', Monitoramento: 'activity', 'Recursos Hídricos': 'droplets' })
+    expect(readEdit({ name: 'Estradas', visualConfig: estradas }).ruleIcons).toBeUndefined()
+  })
+
+  it('troca o ícone de uma área e deixa as outras, a cor e as regras como estavam', () => {
+    const edit = { ...readEdit({ name: 'Ações', visualConfig: acoes }), ruleIcons: { Vegetação: 'trees' } }
+    const out = applyEdit(acoes, edit)
+    expect(out.rules[0].values).toEqual({ Vegetação: 'trees', Monitoramento: 'activity', 'Recursos Hídricos': 'droplets' })
+    expect(out.rules[0].field).toBe('eixo_tematico')
+    expect(out.baseStyle.color).toBe('#64748b')
+    expect(acoes.rules[0].values.Vegetação).toBe('sprout') // o original não muda
+  })
+
+  it('uma área sem regra ganha uma chave nova; a que existe com outra caixa é trocada, sem duplicar', () => {
+    const novo = applyEdit(acoes, { ...readEdit({ name: 'Ações', visualConfig: acoes }), ruleIcons: { Fauna: 'paw-print' } })
+    expect(novo.rules[0].values.Fauna).toBe('paw-print')
+    const caixa = applyEdit(acoes, { ...readEdit({ name: 'Ações', visualConfig: acoes }), ruleIcons: { 'vegetação': 'trees' } })
+    expect(Object.keys(caixa.rules[0].values)).toHaveLength(3)
+    expect(caixa.rules[0].values.Vegetação).toBe('trees')
+  })
+
+  it('o que o mapa lê depois de gravar é o ícone novo (ida e volta)', () => {
+    const out = applyEdit(acoes, { ...readEdit({ name: 'Ações', visualConfig: acoes }), ruleIcons: { Vegetação: 'trees' } })
+    expect(ruleIcon(out, 'Vegetação')).toBe('trees')
+  })
+
+  it('camada sem regra ignora ruleIcons', () => {
+    const out = applyEdit(estradas, { ...readEdit({ name: 'Estradas', visualConfig: estradas }), ruleIcons: { x: 'trees' } })
+    expect(out.rules).toBeUndefined()
   })
 })

@@ -42,25 +42,38 @@ export function DockDivider() {
   return <div role="separator" aria-orientation="vertical" className="mx-1 my-1.5 w-px bg-border" />
 }
 
+// Cada ícone se move do seu jeito quando o mouse passa no botão (8.1): camadas sobem, o filtro desliza, a régua se inclina,
+// a mira gira um quarto de volta, a folha da impressora desce. É o ícone que se move (o botão inteiro só sobe 1 px), com a mola do projeto.
+export type DockMotion = 'rise' | 'slide' | 'tilt' | 'spin' | 'drop'
+const MOTION: Record<DockMotion, string> = {
+  rise: 'group-hover:-translate-y-[3px]',
+  slide: 'group-hover:translate-x-[3px]',
+  tilt: 'group-hover:-rotate-[18deg]',
+  spin: 'group-hover:rotate-90',
+  drop: 'group-hover:translate-y-[3px]',
+}
+
 interface DockButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   icon: LucideIcon
   label: string
   active?: boolean
+  /** como o ícone se move no hover */
+  motion?: DockMotion
   /** quantos filtros ou itens estão ligados: aparece como número no canto */
   badge?: number
   /** algo pede atenção dentro do painel (ponto âmbar no canto) */
   alert?: boolean
 }
 
-export const DockButton = forwardRef<HTMLButtonElement, DockButtonProps>(function DockButton({ icon: Icon, label, active, badge, alert, className, ...props }, ref) {
+export const DockButton = forwardRef<HTMLButtonElement, DockButtonProps>(function DockButton({ icon: Icon, label, active, motion, badge, alert, className, ...props }, ref) {
   return (
     <button
       ref={ref}
       type="button"
-      className={cn('relative flex min-w-16 flex-col items-center gap-0.5 px-3 py-1.5 text-xs font-medium', controlItem(active), className)}
+      className={cn('group relative flex min-w-16 flex-col items-center gap-0.5 px-3 py-1.5 text-xs font-medium hover:-translate-y-px', controlItem(active), className)}
       {...props}
     >
-      <Icon className="h-[18px] w-[18px]" aria-hidden />
+      <Icon className={cn('h-[18px] w-[18px] transition-[translate,rotate] duration-300 ease-spring', motion && MOTION[motion])} aria-hidden />
       {label}
       {!!badge && (
         <span key={badge} className="animate-pop absolute right-1.5 top-1 flex h-4 min-w-4 items-center justify-center rounded-sm bg-primary px-1 font-mono text-[10px] font-semibold text-primary-foreground">
@@ -78,7 +91,7 @@ export const DockButton = forwardRef<HTMLButtonElement, DockButtonProps>(functio
 })
 
 // Botão do dock que abre um painel. O conteúdo fica montado mesmo fechado: os filtros guardam o que a pessoa escolheu.
-export function DockPanelButton({ id, icon, label, badge, alert, action, children }: { id: string; icon: LucideIcon; label: string; badge?: number; alert?: boolean; action?: ReactNode; children: ReactNode }) {
+export function DockPanelButton({ id, icon, label, motion, badge, alert, action, children }: { id: string; icon: LucideIcon; label: string; motion?: DockMotion; badge?: number; alert?: boolean; action?: ReactNode; children: ReactNode }) {
   const { open, setOpen } = useContext(DockContext)
   const isOpen = open === id
   const trigger = useRef<HTMLButtonElement>(null)
@@ -101,6 +114,7 @@ export function DockPanelButton({ id, icon, label, badge, alert, action, childre
         ref={trigger}
         icon={icon}
         label={label}
+        motion={motion}
         active={isOpen}
         badge={badge}
         alert={alert}
