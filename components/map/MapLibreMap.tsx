@@ -55,7 +55,8 @@ import { Modal } from './Modal'
 import { EditAcaoModal } from './EditAcaoModal'
 import { FeatureDetails } from './feature-details'
 import { ShapefileUploader } from './ShapefileUploader'
-import { MaplibreSnapshotControl } from './MaplibreSnapshotControl'
+import { GerarMapa, type GerarMapaSession } from './GerarMapa'
+import { GerarMapaButton } from './GerarMapaButton'
 import { MaplibreIconMarkers } from './MaplibreIconMarkers'
 import { ExplorePanel } from './ExplorePanel'
 import { MapLegend, type LegendTarget } from './MapLegend'
@@ -1405,6 +1406,25 @@ export default function MapLibreMap({
     )
   }, [hoveredLayerConfig])
 
+  // ── Gerar mapa: um retrato do que a pessoa está vendo, entregue à tela do gerador ──────────────
+  const [gerarMapa, setGerarMapa] = useState<GerarMapaSession | null>(null)
+  const openGerarMapa = useCallback(() => {
+    const map = mapRef.current?.getMap()
+    if (!map) return
+    const center = map.getCenter()
+    const container = map.getContainer()
+    const drawn = processedLayers.filter(({ displayData }) => displayData.features.length > 0)
+    setGerarMapa({
+      snapshot: map.getStyle(),
+      camera: { lng: center.lng, lat: center.lat, zoom: map.getZoom() },
+      viewport: { w: container.clientWidth, h: container.clientHeight },
+      basemap: shownBasemap,
+      dataSourceIds: [...processedLayers.map(({ layer }) => layer.slug), ...(faunaData.length > 0 ? ['fauna'] : [])],
+      iconLayers: drawn.filter(({ isIcon }) => isIcon).map(({ layer, displayData }) => ({ layer, data: displayData })),
+      layerNames: drawn.map(({ layer }) => layer.name),
+    })
+  }, [processedLayers, shownBasemap, faunaData.length])
+
   // ── Error state ───────────────────────────────────────────────────────────
   if (error) {
     return (
@@ -1899,8 +1919,10 @@ export default function MapLibreMap({
           onSelect={selectTool}
         />
         <DockDivider />
-        <MaplibreSnapshotControl activeLayers={visibleLayers} mapRef={mapRef} />
+        <GerarMapaButton onOpen={openGerarMapa} />
       </MapDock>
+
+      {gerarMapa && <GerarMapa session={gerarMapa} onClose={() => setGerarMapa(null)} />}
 
       {/* Aviso (salvou, desfazer): no alto e ao centro, com contador (DESIGN.md 12) */}
       <div className="pointer-events-none absolute inset-x-3 top-4 z-[2000] flex justify-center">
