@@ -58,6 +58,8 @@ import { ShapefileUploader } from './ShapefileUploader'
 import { MaplibreSnapshotControl } from './MaplibreSnapshotControl'
 import { MaplibreIconMarkers } from './MaplibreIconMarkers'
 import { ExplorePanel } from './ExplorePanel'
+import { MapLegend } from './MapLegend'
+import { DRAG_PAN, KEY_MOVE_MS, TRACKPAD_ZOOM_RATE, WHEEL_ZOOM_RATE, mapKeyAction } from './helpers/map-feel'
 import { ExploreHighlight } from './ExploreHighlight'
 import type { ConsultaBounds, ConsultaItem, ConsultaSelection } from '@/types/map-consulta'
 import bbox from '@turf/bbox'
@@ -646,10 +648,19 @@ export default function MapLibreMap({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && !e.defaultPrevented && activeTool) selectTool(null)
+      // setas movem, + e − dão zoom, Home enquadra a região (13.7). Com o modal aberto, ou com a tecla sendo de outra coisa em foco, nada.
+      if (modalData.isOpen) return
+      const action = mapKeyAction(e, e.target instanceof Element ? e.target : null)
+      const map = mapRef.current
+      if (!action || !map) return
+      e.preventDefault()
+      if (action.type === 'pan') map.panBy([action.dx, action.dy], { duration: KEY_MOVE_MS })
+      else if (action.type === 'zoom') map.zoomTo(map.getZoom() + action.delta, { duration: KEY_MOVE_MS })
+      else handleFitRegion()
     }
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [activeTool, selectTool])
+  }, [activeTool, selectTool, modalData.isOpen, handleFitRegion])
 
   // Só grava depois de a pessoa mexer: abrir no padrão e sair não pode "congelar" o padrão como se fosse escolha dela
   const prefsTouched = useRef(false)
@@ -1316,7 +1327,16 @@ export default function MapLibreMap({
         terrain={(terrainOn ? { source: 'dem', exaggeration: TERRAIN_EXAGGERATION } : null) as any}
         onMoveEnd={handleMoveEnd}
         cursor={cursor}
-        onLoad={() => setMapLoaded(true)}
+        // inércia ao soltar o arrasto (13.7); o zoom da roda é ajustado em onLoad
+        dragPan={DRAG_PAN as any}
+        // os atalhos são do Prisma (13.7); o do MapLibre responderia junto e o mapa andaria em dobro
+        keyboard={false}
+        onLoad={() => {
+          const map = mapRef.current?.getMap()
+          map?.scrollZoom.setWheelZoomRate(WHEEL_ZOOM_RATE)
+          map?.scrollZoom.setZoomRate(TRACKPAD_ZOOM_RATE)
+          setMapLoaded(true)
+        }}
         onClick={handleMapClick}
         onMouseMove={handleMouseMove}
         onContextMenu={handleContextMenu}
@@ -1621,6 +1641,7 @@ export default function MapLibreMap({
       {/* ── Controls overlay ─────────────────────────────────────────────── */}
 
       {/* Câmera: zoom, bússola e 2D|3D */}
+      <MapLegend mapRef={mapRef} ready={mapLoaded} options={panelOptions} activeLayers={panelActiveLayers} />
       <CameraControls mapRef={mapRef} ready={mapLoaded} viewMode={viewMode} onViewModeChange={handleViewModeChange} canFitRegion={!!regionBounds} onFitRegion={handleFitRegion} />
 
       {/* Shapefile uploader */}

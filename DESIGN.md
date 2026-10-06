@@ -633,6 +633,15 @@ Cartão branco com sombra, ícone em círculo tingido, título e frase curta, **
 - **O desenho vale em todo lugar** (6.2 regra 5): marcador, cartão de hover, lista de pilha, Explorar, legenda e editor de ícones leem o mesmo mapa de nomes.
 - **Por que HTML e não uma camada do mapa:** pino com ícone e selo é rico demais para uma camada; o custo (um elemento por marcador) é contido porque **só os da tela, com folga, existem**.
 
+### 13.7 Mexer e se orientar
+
+**Para que serve:** o mapa é o holofote, então mexer nele precisa ser fluido e a pessoa nunca deve se perguntar "onde estou?" ou "o que é esta cor?".
+
+- **Movimento** (`helpers/map-feel.ts`, todos os valores num lugar só para ajustar olhando a tela): o zoom da roda anda um pouco mais por giro (1/350, padrão 1/450) e o do trackpad e da pinça também (1/70, padrão 1/100); ao soltar o arrasto o mapa **continua deslizando** e desacelera (`linearity` 0,25, `deceleration` 1700, `maxSpeed` 1700; os padrões são 0,3, 2500 e 1400). **Limite conhecido:** o suavizado do zoom da roda é o do MapLibre; só se muda a taxa, não a curva. Se ainda parecer em degraus, o próximo passo é um zoom próprio (acumular a roda e animar até o destino, ancorado no mouse), que não foi feito por não dar para julgar sem ver a tela.
+- **Teclado:** **setas** movem o mapa (140 px, o dobro com Shift), **+** e **−** dão zoom (um nível, dois com Shift), **Home** enquadra a região, com 260 ms de movimento. A tecla é do mapa só quando **não é de outra coisa em foco**: campo de texto, menu, seletor, painel (onde a seta rola) e o modal ficam com ela (`mapKeyAction`). O atalho aparece no tooltip dos botões da câmera ("Aproximar (+)", "Afastar (−)", "Enquadrar a região (Home)"). O teclado do próprio MapLibre fica desligado: responderia junto e o mapa andaria em dobro.
+- **Legenda e escala** (`MapLegend`): um cartão pequeno no **canto de baixo à direita**, acima do dock. Só as camadas **ligadas**, cada uma com a **amostra fiel ao mapa** (6.2 regra 5, a mesma da lista de Camadas). Recolhido, são as amostras numa linha (até 6 e "+N"); ao **passar o mouse, focar ou tocar**, abre com o nome de cada uma e, nas camadas com áreas (Ações), a de cada área, com a altura crescendo em 320 ms (8.4). Sem camada ligada, sobra só a escala.
+- **Escala:** um traço com uma **distância redonda** (1, 2 ou 5 vezes uma potência de 10: "200 m", "2 km") para o zoom e a latitude de agora, de no máximo 96 px. Fica sempre embaixo no mesmo cartão. Motivo: sem escala, o tamanho de uma mancha de desmatamento ou de uma propriedade não se lê.
+
 ---
 
 ## 14. Referência viva e escolha final
