@@ -133,3 +133,22 @@ export function tintMineral(style: any, t: MapTokens) {
   }
   return s
 }
+
+// Bases escuras (a foto de satélite) e claras: o que se desenha por cima de várias cores (a mancha dos grupos de ações, 13.4)
+// precisa do contraste certo em cada uma. Branco aparece no satélite e some no Mineral; verde aparece no Mineral e some no satélite.
+export const DARK_BASEMAPS: ReadonlySet<BasemapKey> = new Set(['satellite', 'satellite-soft'])
+
+export interface OverlayInk {
+  /** tokens de cor (do globals.css): preenchimento e contorno, e o fio por fora que os separa do fundo */
+  fill: string
+  line: string
+  casing: string
+  fillOpacity: number
+  casingOpacity: number
+}
+
+export function overlayInk(basemap: BasemapKey): OverlayInk {
+  return DARK_BASEMAPS.has(basemap)
+    ? { fill: '--color-card', line: '--color-card', casing: '--color-foreground', fillOpacity: 0.3, casingOpacity: 0.35 }
+    : { fill: '--color-primary', line: '--color-primary', casing: '--color-card', fillOpacity: 0.22, casingOpacity: 0.9 }
+}

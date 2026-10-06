@@ -63,7 +63,7 @@ import { ToolMenu } from './ToolMenu'
 import { isMeasureTool, type Tool } from './helpers/tools'
 import { useMapContext } from '@/context/GeoDataContext'
 import { useUserRole } from '@/hooks/useUserRole'
-import { getLayerLegendInfo } from './helpers/map-visuals'
+import { getLayerLegendInfo, resolveFeatureStyle } from './helpers/map-visuals'
 import { Button } from '@/components/ui/button'
 import { CameraControls } from './CameraControls'
 import { DockPanelButton, DockDivider, MapDock } from './MapDock'
@@ -844,6 +844,9 @@ export default function MapLibreMap({
   )
 
   // ── Hover handler para icon markers (HTML Markers não disparam onMouseMove do Map) ──
+  // Um cartão por vez: com o mouse num grupo de ações, o cartão da ação que está por baixo não abre (DESIGN.md 13.4)
+  const [clusterHovered, setClusterHovered] = useState(false)
+
   const handleMarkerHover = useCallback(
     (props: Record<string, any> | null, coords: [number, number] | null) => {
       setHoveredFeature(props)
@@ -1221,6 +1224,13 @@ export default function MapLibreMap({
     return layers.find((l) => l.slug === hoveredFeature._slug) ?? null
   }, [hoveredFeature, layers])
 
+  // Cor e ícone do cartão da ação: o mesmo cálculo do marcador (6.2, regra 13), nunca um palpite a partir do evento
+  const hoveredAcaoStyle = useMemo(() => {
+    if (hoveredFeature?._slug !== 'acoes') return null
+    const vc = hoveredLayerConfig?.visualConfig as any
+    return resolveFeatureStyle({ baseStyle: vc?.baseStyle || vc, rules: vc?.rules }, { properties: hoveredFeature } as any) as { color?: string; iconName?: string }
+  }, [hoveredFeature, hoveredLayerConfig])
+
   const hoverPopupFields = useMemo(() => {
     if (!hoveredLayerConfig) return null
     return (
@@ -1377,6 +1387,8 @@ export default function MapLibreMap({
               data={displayData}
               onFeatureClick={openFeatureModal}
               onFeatureHover={handleMarkerHover}
+              onClusterHover={setClusterHovered}
+              basemap={shownBasemap}
             />
           ))}
 
@@ -1516,17 +1528,17 @@ export default function MapLibreMap({
           </Marker>
         )}
 
-        {/* ── Hover: card de ação (dark, Apple-style) ── */}
-        {hoveredFeature?._slug === 'acoes' && hoverCoords ? (
+        {/* ── Hover: cartão da ação (13.4) ── */}
+        {clusterHovered ? null : hoveredFeature?._slug === 'acoes' && hoverCoords ? (
           <Popup
             longitude={hoverCoords[0]}
             latitude={hoverCoords[1]}
             closeButton={false}
-            offset={[0, -20] as any}
+            offset={[0, -22] as any}
             anchor="bottom"
             className="acao-hover-popup"
           >
-            <AcaoHoverCard properties={hoveredFeature} />
+            <AcaoHoverCard properties={hoveredFeature} color={hoveredAcaoStyle?.color} iconName={hoveredAcaoStyle?.iconName} />
           </Popup>
         ) : hoveredFeature && hoverCoords && hoverPopupFields?.length ? (
           /* ── Hover: tooltip genérico para outras camadas ── */

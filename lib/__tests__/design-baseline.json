@@ -323,10 +323,6 @@
     "paleta": 11,
     "hex": 0
   },
-  "components/map/AcaoHoverCard.tsx": {
-    "paleta": 0,
-    "hex": 19
-  },
   "components/map/ActionLayerCard.tsx": {
     "paleta": 10,
     "hex": 0
@@ -382,10 +378,6 @@
   "components/map/MapLayerCard.tsx": {
     "paleta": 8,
     "hex": 0
-  },
-  "components/map/MaplibreIconMarkers.tsx": {
-    "paleta": 0,
-    "hex": 1
   },
   "components/map/MapLibreMap.tsx": {
     "paleta": 5,

@@ -66,3 +66,19 @@ describe('bases', () => {
     expect([...HILLSHADE_BASEMAPS].sort()).toEqual(['mineral', 'osm', 'streets'])
   })
 })
+
+describe('overlayInk', () => {
+  const { overlayInk, DARK_BASEMAPS, BASEMAP_KEYS } = require('../helpers/basemaps')
+  it('usa o mesmo par de cores em todas as bases escuras (satélite)', () => {
+    const [a, b] = [...DARK_BASEMAPS].map((k: string) => overlayInk(k))
+    expect(a).toEqual(b)
+    expect(a.fill).toBe('--color-card')
+  })
+  it('usa o verde da marca nas bases claras, com fio claro por fora', () => {
+    for (const k of BASEMAP_KEYS.filter((k: string) => !DARK_BASEMAPS.has(k))) {
+      const ink = overlayInk(k)
+      expect(ink.fill).toBe('--color-primary')
+      expect(ink.casing).toBe('--color-card')
+    }
+  })
+})
