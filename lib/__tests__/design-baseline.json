@@ -369,7 +369,7 @@
   },
   "components/map/helpers/map-visuals.tsx": {
     "paleta": 0,
-    "hex": 16
+    "hex": 15
   },
   "components/map/helpers/maplibre-layer.ts": {
     "paleta": 0,
