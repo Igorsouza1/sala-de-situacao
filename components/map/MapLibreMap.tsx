@@ -1863,7 +1863,6 @@ export default function MapLibreMap({
             onAreaChange={handleAreaChange}
             dateAffects={dateAffects}
             areaAffects={areaAffects}
-            regiaoId={regiaoId}
           />
         </DockPanelButton>
         <DockPanelButton id="explore" icon={LucideIcons.Search} label="Explorar" motion="grow" side>
