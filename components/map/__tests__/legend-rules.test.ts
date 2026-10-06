@@ -47,3 +47,27 @@ describe('buildRuleLegend', () => {
     expect(cor.entries[0].color).toBe('#dc2626')
   })
 })
+
+import { featuresForLegendEntry } from '../helpers/legend-rules'
+
+describe('featuresForLegendEntry', () => {
+  const features = [
+    f({ status: 'Identificado', eixo_tematico: 'Outros' }),
+    f({ status: 'Identificado', eixo_tematico: 'Vegetação' }),
+    f({ status: 'Em Recuperação', eixo_tematico: 'Outros' }),
+    f({ status: 'Identificado', eixo_tematico: 'Outros', carater: 'Ativo' }),
+  ]
+  it('a cor Identificado é de quem tem essa situação e não foi forçado pelo caráter', () => {
+    expect(featuresForLegendEntry(config, features, 'Cor', 'status:Identificado')).toHaveLength(2)
+  })
+  it('o caráter Ativo pega as suas feições na cor', () => {
+    expect(featuresForLegendEntry(config, features, 'Cor', 'carater:Ativo')).toHaveLength(1)
+  })
+  it('"Demais" é o que não casou nenhuma regra de cor', () => {
+    expect(featuresForLegendEntry(config, features, 'Cor', 'base:color')).toHaveLength(1)
+  })
+  it('o ícone da área pega as feições daquela área', () => {
+    expect(featuresForLegendEntry(config, features, 'Ícone', 'eixo_tematico:Outros')).toHaveLength(2)
+    expect(featuresForLegendEntry(config, features, 'Ícone', 'eixo_tematico:Vegetação')).toHaveLength(1)
+  })
+})

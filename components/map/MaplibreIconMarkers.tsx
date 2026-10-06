@@ -27,6 +27,14 @@ const DOT_HEIGHT = 14
 // translate e scale precisam estar na lista da transição (no Tailwind v4 não entram em transition-transform: caso C6)
 const motion = 'transition-[translate,scale,box-shadow] duration-300 ease-spring active:scale-95 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/40'
 
+const Halo = ({ top }: { top: string }) => (
+  <span
+    aria-hidden
+    className="animate-legend-halo pointer-events-none absolute left-1/2 h-9 w-9 -translate-x-1/2 -translate-y-1/2 rounded-full border-[3px] border-white"
+    style={{ top, boxShadow: '0 0 0 1.5px color-mix(in srgb, var(--color-foreground) 45%, transparent)' }}
+  />
+)
+
 // A gota do pino: o corpo na cor da área, com um fio branco que a separa do satélite
 const PIN_PATH = 'M16 41 C16 41 3 26.5 3 16 C3 8.3 8.8 2.5 16 2.5 C23.2 2.5 29 8.3 29 16 C29 26.5 16 41 16 41 Z'
 
@@ -37,6 +45,8 @@ interface Props {
   onFeatureHover: (props: Record<string, any> | null, coords: [number, number] | null) => void
   /** avisa quando a lista de uma pilha está à vista: o mapa esconde o cartão da ação que está por baixo (um cartão por vez) */
   onStackHover?: (active: boolean) => void
+  /** as feições que um item da legenda está mostrando agora: o marcador delas pisca (13.7) */
+  blink?: ReadonlySet<object> | null
 }
 
 interface View { zoom: number; bbox: [number, number, number, number] }
@@ -51,7 +61,7 @@ interface Spot {
 // coordenadas iguais até ~1 m (5 casas) são o mesmo lugar
 const spotKey = (lng: number, lat: number) => `${lng.toFixed(5)},${lat.toFixed(5)}`
 
-export function MaplibreIconMarkers({ layer, data, onFeatureClick, onFeatureHover, onStackHover }: Props) {
+export function MaplibreIconMarkers({ layer, data, onFeatureClick, onFeatureHover, onStackHover, blink }: Props) {
   const { current: mapRef } = useMap()
   const vc = layer.visualConfig
   // Normaliza para o mesmo formato que o Leaflet usa em resolveFeatureStyle
@@ -92,6 +102,7 @@ export function MaplibreIconMarkers({ layer, data, onFeatureClick, onFeatureHove
       const props = feature.properties ?? {}
       const entry: StackEntry = {
         key: feature.id != null ? `${layer.slug}-${feature.id}` : `${layer.slug}-idx-${idx}`,
+        feature,
         props,
         name: tidyText(String(props.name || props.acao || '')) || 'Ação sem nome',
         status: props.status as string | undefined,
@@ -137,6 +148,7 @@ export function MaplibreIconMarkers({ layer, data, onFeatureClick, onFeatureHove
         const open = () => (extra > 0 ? setStack({ spot, pinned: true }) : onFeatureClick(layer.slug, first.props))
         const enter = () => (extra > 0 ? setStack((s) => (s?.pinned ? s : { spot, pinned: false })) : onFeatureHover({ ...first.props, _slug: layer.slug, _h: asPin ? PIN_HEIGHT : DOT_HEIGHT }, [spot.lng, spot.lat]))
         const leave = () => (extra > 0 ? setStack((s) => (s?.pinned ? s : null)) : onFeatureHover(null, null))
+        const blinking = !!blink && spot.entries.some((en) => blink.has(en.feature))
         const keys = (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open() } }
         return (
           <Marker key={spot.key} ref={skipOcclusionCheck} longitude={spot.lng} latitude={spot.lat} anchor={asPin ? 'bottom' : 'center'} onClick={(e) => { e.originalEvent.stopPropagation(); open() }}>
@@ -156,6 +168,7 @@ export function MaplibreIconMarkers({ layer, data, onFeatureClick, onFeatureHove
                 <svg viewBox="0 0 32 44" className="absolute inset-0 h-full w-full drop-shadow-md" aria-hidden>
                   <path d={PIN_PATH} style={{ fill: first.color }} stroke="white" strokeWidth="2" strokeLinejoin="round" />
                 </svg>
+                {blinking && <Halo top="16px" />}
                 <span className="absolute left-1/2 top-[16px] -translate-x-1/2 -translate-y-1/2" aria-hidden>
                   <Icon size={16} color="white" stroke={ICON_STROKE} />
                 </span>
@@ -171,13 +184,15 @@ export function MaplibreIconMarkers({ layer, data, onFeatureClick, onFeatureHove
                 tabIndex={0}
                 aria-label={label}
                 style={{ opacity: first.opacity, backgroundColor: first.color }}
-                className={cn('animate-pop h-3.5 w-3.5 cursor-pointer rounded-full shadow-control ring-2 ring-white hover:scale-150', motion)}
+                className={cn('animate-pop relative h-3.5 w-3.5 cursor-pointer rounded-full shadow-control ring-2 ring-white hover:scale-150', motion)}
                 onKeyDown={keys}
                 onMouseEnter={enter}
                 onMouseLeave={leave}
                 onFocus={enter}
                 onBlur={leave}
-              />
+              >
+                {blinking && <Halo top="50%" />}
+              </div>
             )}
           </Marker>
         )

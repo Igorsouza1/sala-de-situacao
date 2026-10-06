@@ -10,6 +10,8 @@ import { ICON_STROKE, resolveLayerIcon } from './helpers/layer-icons'
 
 export interface StackEntry {
   key: string
+  /** a feição de origem (para casar com o que a legenda está mostrando) */
+  feature: object
   props: Record<string, any>
   name: string
   status?: string

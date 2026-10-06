@@ -38,6 +38,42 @@ const entryLabel = (rule: Rule, key: string) => {
   return prefix ? `${prefix} ${text.toLowerCase()}` : text
 }
 
+/** de qual regra vem a cor e de qual vem o ícone desta feição; a última regra que casa e define a propriedade vence, como no desenho do marcador (resolveFeatureStyle) */
+function classifyFeature(rules: Rule[], feature: { properties?: Record<string, unknown> | null }): { color: RuleLegendEntry | null; icon: RuleLegendEntry | null } {
+  let color: RuleLegendEntry | null = null
+  let icon: RuleLegendEntry | null = null
+  for (const rule of rules) {
+    const key = matchKey(rule, feature.properties?.[rule.field])
+    if (key === null) continue
+    const value = rule.values[key]
+    const label = entryLabel(rule, key)
+    const id = `${rule.field}:${key}`
+    if (rule.styleProperty === 'color' && typeof value === 'string') color = { key: id, label, color: value }
+    else if (rule.styleProperty === 'iconName' && typeof value === 'string') icon = { key: id, label, iconName: value }
+    else if (!rule.styleProperty && value && typeof value === 'object') {
+      const v = value as { color?: string; iconName?: string }
+      if (v.color) color = { key: id, label, color: v.color }
+      if (v.iconName) icon = { key: id, label, iconName: v.iconName }
+    }
+  }
+  return { color, icon }
+}
+
+/** as feições que um item da legenda representa ("Identificado" na cor, "Solo & Relevo" no ícone, "Demais" no que não casou nenhuma regra) */
+export function featuresForLegendEntry<T extends { properties?: Record<string, unknown> | null }>(
+  config: { rules?: Rule[] } | null | undefined,
+  features: T[],
+  title: RuleLegendSection['title'],
+  key: string,
+): T[] {
+  const rules = (config?.rules ?? []).filter((r) => r && r.values && typeof r.values === 'object')
+  return features.filter((f) => {
+    const { color, icon } = classifyFeature(rules, f)
+    const hit = title === 'Cor' ? color : icon
+    return (hit?.key ?? (title === 'Cor' ? 'base:color' : 'base:icon')) === key
+  })
+}
+
 export function buildRuleLegend(
   config: { baseStyle?: { color?: string; iconName?: string }; rules?: Rule[] } | null | undefined,
   features: { properties?: Record<string, unknown> | null }[],
@@ -52,23 +88,7 @@ export function buildRuleLegend(
   let iconFallback = false
 
   for (const feature of features) {
-    // a última regra que casa e define a propriedade vence, como no desenho do marcador (resolveFeatureStyle)
-    let color: RuleLegendEntry | null = null
-    let icon: RuleLegendEntry | null = null
-    for (const rule of rules) {
-      const key = matchKey(rule, feature.properties?.[rule.field])
-      if (key === null) continue
-      const value = rule.values[key]
-      const label = entryLabel(rule, key)
-      const id = `${rule.field}:${key}`
-      if (rule.styleProperty === 'color' && typeof value === 'string') color = { key: id, label, color: value }
-      else if (rule.styleProperty === 'iconName' && typeof value === 'string') icon = { key: id, label, iconName: value }
-      else if (!rule.styleProperty && value && typeof value === 'object') {
-        const v = value as { color?: string; iconName?: string }
-        if (v.color) color = { key: id, label, color: v.color }
-        if (v.iconName) icon = { key: id, label, iconName: v.iconName }
-      }
-    }
+    const { color, icon } = classifyFeature(rules, feature)
     if (color) colors.set(color.key, color)
     else colorFallback = true
     if (icon) icons.set(icon.key, icon)

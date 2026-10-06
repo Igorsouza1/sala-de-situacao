@@ -215,6 +215,15 @@
 }
 .animate-hover-card { transform-origin: bottom center; animation: hover-card-in 240ms var(--ease-spring) 120ms both; }
 
+/* Piscada de um item da legenda (13.7): um anel claro, com fio escuro, que cresce e se apaga em volta do marcador, duas vezes e só isso */
+@keyframes legend-halo {
+  0% { opacity: 0; scale: 0.5; }
+  25% { opacity: 0.95; }
+  60% { opacity: 0; scale: 1.7; }
+  100% { opacity: 0; scale: 1.7; }
+}
+.animate-legend-halo { animation: legend-halo 900ms ease-out 2 both; }
+
 /* Pino das ações (13.6): ao passar do ponto para o pino (zoom 13), ele cresce a partir da ponta, com a mola do projeto */
 @keyframes pin-in {
   from { opacity: 0; scale: 0.4; }

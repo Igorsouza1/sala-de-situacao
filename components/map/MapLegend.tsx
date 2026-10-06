@@ -21,8 +21,14 @@ import { PanelCard } from './PanelCard'
 // MapLibre, que abria expandido e ficava por baixo da legenda.
 
 const STORAGE_KEY = 'prisma:mapa:legenda'
+const HINT = 'Toque num item para ver onde ele está no mapa.'
 
 type Panel = 'legend' | 'credits' | null
+
+/** o que um item da legenda aponta: uma camada inteira, ou um item de cor ou de ícone das regras de uma camada de pinos */
+export type LegendTarget =
+  | { kind: 'layer'; slug: string }
+  | { kind: 'rule'; slug: string; title: RuleLegendSection['title']; key: string }
 
 interface MapLegendProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -32,6 +38,10 @@ interface MapLegendProps {
   activeLayers: string[]
   /** a legenda por regras (cor e ícone) das camadas de pinos, pela chave da camada */
   ruleLegends: Record<string, RuleLegendSection[]>
+  /** quantas feições cada camada tem no mapa: item sem nenhuma não leva a lugar nenhum e diz por quê */
+  counts: Record<string, number>
+  /** clicar num item: o mapa leva até o que ele representa e o destaca com uma piscada (8.4: a pessoa vê o que é) */
+  onShow: (target: LegendTarget) => void
 }
 
 function useScale(mapRef: MapLegendProps['mapRef'], ready: boolean) {
@@ -67,12 +77,22 @@ function useCredits(mapRef: MapLegendProps['mapRef'], ready: boolean) {
   return credits
 }
 
-function Row({ children, label }: { children: React.ReactNode; label: string }) {
+// Cada linha é um botão: leva o mapa até o que ela representa. Sem nada no mapa agora, fica esmaecida e diz por quê (2.1: bloqueado).
+function Row({ children, label, onClick, empty }: { children: React.ReactNode; label: string; onClick: () => void; empty?: boolean }) {
   return (
-    <div className="flex min-h-10 items-center gap-3">
+    <button
+      type="button"
+      aria-disabled={empty}
+      title={empty ? 'Nada disto no mapa agora' : 'Mostrar no mapa'}
+      onClick={() => { if (!empty) onClick() }}
+      className={cn(
+        '-mx-2 flex min-h-10 w-[calc(100%+1rem)] items-center gap-3 rounded-md px-2 text-left transition-[background-color,scale] duration-200 ease-spring hover:bg-muted active:scale-[0.98] focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30',
+        empty && 'opacity-50 hover:bg-transparent active:scale-100',
+      )}
+    >
       {children}
       <span className="min-w-0 text-sm leading-snug">{label}</span>
-    </div>
+    </button>
   )
 }
 
@@ -119,7 +139,7 @@ function CornerPanel({ open, title, onClose, children }: { open: boolean; title:
   )
 }
 
-export function MapLegend({ mapRef, ready, options, activeLayers, ruleLegends }: MapLegendProps) {
+export function MapLegend({ mapRef, ready, options, activeLayers, ruleLegends, counts, onShow }: MapLegendProps) {
   const bar = useScale(mapRef, ready)
   const credits = useCredits(mapRef, ready)
   const [panel, setPanel] = useState<Panel>(null)
@@ -159,7 +179,7 @@ export function MapLegend({ mapRef, ready, options, activeLayers, ruleLegends }:
     [options, activeLayers, ruleLegends],
   )
   const plainEntries = entries.filter((e) => e.sections.length === 0)
-  const ruleSections = entries.flatMap((e) => e.sections)
+  const ruleSections = entries.flatMap((e) => e.sections.map((section) => ({ slug: e.option.slug, section })))
   const hasLegend = entries.length > 0
 
   if (!ready) return null
@@ -169,24 +189,24 @@ export function MapLegend({ mapRef, ready, options, activeLayers, ruleLegends }:
         <CornerPanel open={panel === 'legend' && hasLegend} title="Legenda" onClose={() => choose(null)}>
           <div className="space-y-4">
             {plainEntries.length > 0 && (
-              <PanelCard title="Camadas">
+              <PanelCard title="Camadas" caption={HINT}>
                 <div>
                   {plainEntries.map(({ option, subs }) =>
                     subs.length > 0 ? (
                       <div key={option.id}>
-                        <Row label={option.label}>
+                        <Row label={option.label} onClick={() => onShow({ kind: 'layer', slug: option.slug })} empty={counts[option.slug] === 0}>
                           <Legend option={option} checked />
                         </Row>
                         <div className="ml-3 border-l border-border pl-3">
                           {subs.map((sub) => (
-                            <Row key={sub.id} label={sub.label}>
+                            <Row key={sub.id} label={sub.label} onClick={() => onShow({ kind: 'layer', slug: sub.slug })}>
                               <Legend option={sub} checked />
                             </Row>
                           ))}
                         </div>
                       </div>
                     ) : (
-                      <Row key={option.id} label={option.label}>
+                      <Row key={option.id} label={option.label} onClick={() => onShow({ kind: 'layer', slug: option.slug })} empty={counts[option.slug] === 0}>
                         <Legend option={option} checked />
                       </Row>
                     ),
@@ -194,11 +214,11 @@ export function MapLegend({ mapRef, ready, options, activeLayers, ruleLegends }:
                 </div>
               </PanelCard>
             )}
-            {ruleSections.map((section) => (
-              <PanelCard key={section.title} title={`${section.title} dos pinos`}>
+            {ruleSections.map(({ slug, section }, i) => (
+              <PanelCard key={`${slug}-${section.title}`} title={`${section.title} dos pinos`} caption={i === 0 && plainEntries.length === 0 ? HINT : undefined}>
                 <div>
                   {section.entries.map((e) => (
-                    <Row key={e.key} label={e.label}>
+                    <Row key={e.key} label={e.label} onClick={() => onShow({ kind: 'rule', slug, title: section.title, key: e.key })}>
                       {section.title === 'Cor' ? <ColorSwatch color={e.color ?? 'transparent'} /> : <IconSwatch name={e.iconName ?? 'map-pin'} />}
                     </Row>
                   ))}

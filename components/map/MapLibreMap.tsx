@@ -58,8 +58,9 @@ import { ShapefileUploader } from './ShapefileUploader'
 import { MaplibreSnapshotControl } from './MaplibreSnapshotControl'
 import { MaplibreIconMarkers } from './MaplibreIconMarkers'
 import { ExplorePanel } from './ExplorePanel'
-import { MapLegend } from './MapLegend'
-import { buildRuleLegend } from './helpers/legend-rules'
+import { MapLegend, type LegendTarget } from './MapLegend'
+import { LegendFlash } from './LegendFlash'
+import { buildRuleLegend, featuresForLegendEntry } from './helpers/legend-rules'
 import { DRAG_PAN, KEY_MOVE_MS, mapKeyAction } from './helpers/map-feel'
 import { useSmoothWheelZoom } from './helpers/use-smooth-wheel-zoom'
 import { ExploreHighlight } from './ExploreHighlight'
@@ -1233,6 +1234,51 @@ export default function MapLibreMap({
     return out
   }, [processedLayers])
 
+  // Clicar num item da legenda (13.7): leva o mapa até o que ele representa e o destaca com uma piscada suave, duas vezes e só isso.
+  // O que pisca: os pinos (por conta própria) ou, nas outras camadas, o destaque desenhado pelo mapa. A piscada começa quando a câmera chega.
+  const [legendFlash, setLegendFlash] = useState<{ features: any[]; on: boolean; blink: ReadonlySet<object> | null } | null>(null)
+  const flashTimers = useRef<ReturnType<typeof setTimeout>[]>([])
+  useEffect(() => () => { flashTimers.current.forEach(clearTimeout) }, [])
+  const handleLegendShow = useCallback((target: LegendTarget) => {
+    const map = mapRef.current
+    if (!map) return
+    let features: any[] = []
+    let markers = false
+    if (target.kind === 'layer' && target.slug.startsWith('fauna')) {
+      features = faunaGeoJSON.features
+    } else {
+      const item = processedLayers.find((p) => p.layer.slug === target.slug.split('__')[0])
+      if (!item) return
+      markers = item.isIcon
+      if (target.kind === 'rule') {
+        const vc = item.layer.visualConfig as any
+        features = featuresForLegendEntry({ rules: vc?.rules }, item.displayData.features as any[], target.title, target.key)
+      } else features = item.displayData.features as any[]
+    }
+    if (features.length === 0) return
+    const [w, s, e, n] = bbox({ type: 'FeatureCollection', features } as any)
+    if (![w, s, e, n].every(Number.isFinite)) return
+    const height = map.getContainer().clientHeight
+    const width = map.getContainer().clientWidth
+    // a legenda está aberta (é onde se clicou) no canto de baixo à direita, e o Explorar à esquerda se estiver aberto: o alvo fica no espaço livre
+    const padding = width < 640
+      ? { top: 80, bottom: Math.round(height * 0.6), left: 40, right: 40 }
+      : { top: 80, bottom: 110, left: exploreOpen.current ? 440 : 80, right: 400 }
+    const onlyPoints = features.every((f) => f.geometry?.type === 'Point')
+    flashTimers.current.forEach(clearTimeout)
+    flashTimers.current = []
+    const start = () => {
+      const blink = markers ? new Set<object>(features) : null
+      const at = (ms: number, on: boolean) => flashTimers.current.push(setTimeout(() => setLegendFlash((f) => (f ? { ...f, on } : f)), ms))
+      setLegendFlash({ features, on: true, blink })
+      at(700, false); at(1000, true); at(1700, false)
+      flashTimers.current.push(setTimeout(() => setLegendFlash(null), 2100))
+    }
+    // a piscada espera a câmera chegar (e os pinos nascerem): ~150 ms depois do fim do movimento
+    map.once('moveend', () => flashTimers.current.push(setTimeout(start, 150)))
+    map.fitBounds([[w, s], [e, n]], { padding, maxZoom: onlyPoints ? 15 : 16, duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1200 })
+  }, [processedLayers, faunaGeoJSON])
+
   const panelActiveLayers = useMemo(
     () => [
       ...visibleLayers,
@@ -1475,6 +1521,7 @@ export default function MapLibreMap({
         })}
 
         {exploreFeature?.geometry && <ExploreHighlight geometry={exploreFeature.geometry} basemap={shownBasemap} />}
+        {legendFlash && !legendFlash.blink && <LegendFlash features={legendFlash.features} on={legendFlash.on} basemap={shownBasemap} />}
 
         {/* ── Icon layers (HTML Markers com ícones Lucide por feature) ── */}
         {processedLayers
@@ -1487,6 +1534,7 @@ export default function MapLibreMap({
               onFeatureClick={openFeatureModal}
               onFeatureHover={handleMarkerHover}
               onStackHover={setStackHovered}
+              blink={legendFlash?.blink ?? null}
                           />
           ))}
 
@@ -1669,7 +1717,7 @@ export default function MapLibreMap({
       {/* ── Controls overlay ─────────────────────────────────────────────── */}
 
       {/* Câmera: zoom, bússola e 2D|3D */}
-      <MapLegend mapRef={mapRef} ready={mapLoaded} options={panelOptions} activeLayers={panelActiveLayers} ruleLegends={ruleLegends} />
+      <MapLegend mapRef={mapRef} ready={mapLoaded} options={panelOptions} activeLayers={panelActiveLayers} ruleLegends={ruleLegends} counts={layerCounts} onShow={handleLegendShow} />
       <CameraControls mapRef={mapRef} onZoom={zoomBy} ready={mapLoaded} viewMode={viewMode} onViewModeChange={handleViewModeChange} canFitRegion={!!regionBounds} onFitRegion={handleFitRegion} />
 
       {/* Shapefile uploader */}
