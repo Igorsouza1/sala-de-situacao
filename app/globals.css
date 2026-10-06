@@ -215,6 +215,17 @@
 }
 .animate-hover-card { transform-origin: bottom center; animation: hover-card-in 240ms var(--ease-spring) 120ms both; }
 
+/* O sino de novidades balança UMA vez quando chega novidade (13.8); nunca em loop (8.2) */
+@keyframes bell-ring {
+  0% { rotate: 0deg; }
+  15% { rotate: -16deg; }
+  35% { rotate: 13deg; }
+  55% { rotate: -9deg; }
+  75% { rotate: 5deg; }
+  100% { rotate: 0deg; }
+}
+.animate-bell-ring { transform-origin: 50% 12%; animation: bell-ring 700ms ease-out 1 both; }
+
 /* Piscada de um item da legenda (13.7): um anel claro, com fio escuro, que cresce e se apaga em volta do marcador, duas vezes e só isso */
 @keyframes legend-halo {
   0% { opacity: 0; scale: 0.5; }

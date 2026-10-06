@@ -647,6 +647,17 @@ Cartão branco com sombra, ícone em círculo tingido, título e frase curta, **
 - **Os botões + e − e as teclas usam o mesmo zoom suave da roda** (cada degrau soma ao destino e o mapa desliza até lá, ancorado no centro), em vez do salto do `zoomIn()` do MapLibre (C29).
 - **Escala:** um traço com uma **distância redonda** (1, 2 ou 5 vezes uma potência de 10: "200 m", "2 km") para o zoom e a latitude de agora, de no máximo 96 px. Fica sempre embaixo no mesmo cartão. Motivo: sem escala, o tamanho de uma mancha de desmatamento ou de uma propriedade não se lê.
 
+### 13.8 Novidades: o que mudou desde que eu estive aqui
+
+**Para que serve:** a primeira resposta do mapa. Quem vigia o território abre o mapa querendo saber "aconteceu algo?", e o mapa não deve esperar que a pessoa vá caçar. Serve às três personas (o secretário que consome evidência, o técnico de campo e o técnico do IHP).
+
+- **O sino**, no canto de cima à esquerda (`NewsBell`), na linguagem dos controles. **Sem novidade:** neutro e sem número. **Com novidade:** verde cheio, com o número num selo branco. **Balança uma vez** quando a novidade chega (o número sobe) e fica parado: **nunca em loop** (8.2, o ponto pulsante já saiu por isso). Com `prefers-reduced-motion` não balança.
+- **A lista** abre para baixo, na anatomia dos painéis (19.2): cabeçalho "Novidades", base cinza e um cartão "Desde 02/10 às 14:32" com uma linha por fonte, em frases que não pedem decifrar: "12 focos de calor novos", "1 alerta de desmatamento", "2 ações novas", **fogo primeiro**. A amostra é a da legenda. Sem novidade: "Tudo em dia", com o desde quando. O Explorar e a lista de novidades **não ficam abertos juntos** (ocupariam o mesmo lugar).
+- **Quando algo conta como visto:** **abrir a lista** marca como visto; **abrir o mapa não marca nada**, para a novidade nunca sumir sem ter sido lida. A lista aberta continua mostrando o que a pessoa veio ler, e some ao fechar. O ponto de partida é guardado **por região no navegador** (como 13.2), com o instante **do banco** (nunca a hora do aparelho, que erra por fuso e relógio) e o maior id de ação visto. **Primeira visita:** não há com o que comparar, então o sino **começa vazio** em vez de mostrar tudo como novo. **Limite aceito:** não acompanha a pessoa entre aparelhos (o gatilho para migrar é o de 13.2). Com o mapa aberto, confere de novo a cada 5 minutos e quando a aba volta a ser vista.
+- **O que conta como novo:** **focos** e **alertas de desmatamento** pelo `created_at` do vínculo com a região (`firms_regioes` e `desmatamento_regioes`: quando passaram a valer para ela); **ações** pelo **id maior que o último visto**, porque as ações legadas **não têm `created_at`**: o texto diz "ações novas" sem prometer a data do registro.
+- **Clicar num item** liga a camada (nas camadas com áreas, todas as áreas), **enquadra os itens novos e os destaca com a piscada** da 13.7. Não mexe nos filtros da pessoa. Se nada aparece, um aviso diz "Não achamos isto no mapa" e o motivo provável (um filtro de período ou de tamanho).
+- **Rota:** `GET /api/map/novidades` (zod, `resolveScope`, ADR 0010); sem `regiao_id`, vale a região do usuário. Sem ponto de partida só devolve de onde partir. Devolve até 500 ids por fonte, para o mapa destacar sem levar milhares de linhas.
+
 ---
 
 ## 14. Referência viva e escolha final

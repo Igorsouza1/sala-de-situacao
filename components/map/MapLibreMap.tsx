@@ -60,6 +60,9 @@ import { MaplibreIconMarkers } from './MaplibreIconMarkers'
 import { ExplorePanel } from './ExplorePanel'
 import { MapLegend, type LegendTarget } from './MapLegend'
 import { LegendFlash } from './LegendFlash'
+import { NewsBell } from './NewsBell'
+import { useNovidades } from './useNovidades'
+import type { NewsItem } from './helpers/novidades'
 import { buildRuleLegend, featuresForLegendEntry } from './helpers/legend-rules'
 import { DRAG_PAN, KEY_MOVE_MS, mapKeyAction } from './helpers/map-feel'
 import { useSmoothWheelZoom } from './helpers/use-smooth-wheel-zoom'
@@ -1239,28 +1242,15 @@ export default function MapLibreMap({
   const [legendFlash, setLegendFlash] = useState<{ features: any[]; on: boolean; blink: ReadonlySet<object> | null } | null>(null)
   const flashTimers = useRef<ReturnType<typeof setTimeout>[]>([])
   useEffect(() => () => { flashTimers.current.forEach(clearTimeout) }, [])
-  const handleLegendShow = useCallback((target: LegendTarget) => {
+  // Leva o mapa até um conjunto de feições e o destaca com a piscada: o que a legenda e o sino de novidades usam
+  const showFeatures = useCallback((features: any[], markers: boolean) => {
     const map = mapRef.current
-    if (!map) return
-    let features: any[] = []
-    let markers = false
-    if (target.kind === 'layer' && target.slug.startsWith('fauna')) {
-      features = faunaGeoJSON.features
-    } else {
-      const item = processedLayers.find((p) => p.layer.slug === target.slug.split('__')[0])
-      if (!item) return
-      markers = item.isIcon
-      if (target.kind === 'rule') {
-        const vc = item.layer.visualConfig as any
-        features = featuresForLegendEntry({ rules: vc?.rules }, item.displayData.features as any[], target.title, target.key)
-      } else features = item.displayData.features as any[]
-    }
-    if (features.length === 0) return
+    if (!map || features.length === 0) return
     const [w, s, e, n] = bbox({ type: 'FeatureCollection', features } as any)
     if (![w, s, e, n].every(Number.isFinite)) return
     const height = map.getContainer().clientHeight
     const width = map.getContainer().clientWidth
-    // a legenda está aberta (é onde se clicou) no canto de baixo à direita, e o Explorar à esquerda se estiver aberto: o alvo fica no espaço livre
+    // a legenda (canto de baixo à direita) e o Explorar (à esquerda, se aberto) ocupam as bordas: o alvo fica no espaço livre
     const padding = width < 640
       ? { top: 80, bottom: Math.round(height * 0.6), left: 40, right: 40 }
       : { top: 80, bottom: 110, left: exploreOpen.current ? 440 : 80, right: 400 }
@@ -1277,7 +1267,47 @@ export default function MapLibreMap({
     // a piscada espera a câmera chegar (e os pinos nascerem): ~150 ms depois do fim do movimento
     map.once('moveend', () => flashTimers.current.push(setTimeout(start, 150)))
     map.fitBounds([[w, s], [e, n]], { padding, maxZoom: onlyPoints ? 15 : 16, duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1200 })
-  }, [processedLayers, faunaGeoJSON])
+  }, [])
+
+  // Clicar num item da legenda (13.7): leva o mapa até o que ele representa e o destaca com uma piscada suave, duas vezes e só isso.
+  const handleLegendShow = useCallback((target: LegendTarget) => {
+    let features: any[] = []
+    let markers = false
+    if (target.kind === 'layer' && target.slug.startsWith('fauna')) {
+      features = faunaGeoJSON.features
+    } else {
+      const item = processedLayers.find((p) => p.layer.slug === target.slug.split('__')[0])
+      if (!item) return
+      markers = item.isIcon
+      if (target.kind === 'rule') {
+        const vc = item.layer.visualConfig as any
+        features = featuresForLegendEntry({ rules: vc?.rules }, item.displayData.features as any[], target.title, target.key)
+      } else features = item.displayData.features as any[]
+    }
+    showFeatures(features, markers)
+  }, [processedLayers, faunaGeoJSON, showFeatures])
+
+  // ── Novidades (13.8): o sino e o que o clique num item faz ──────────────────────────────────────────────────
+  const news = useNovidades(regiaoId)
+  const [pendingNews, setPendingNews] = useState<{ slug: string; ids: Set<string> } | null>(null)
+  // clicar num item: liga a camada (nas camadas com áreas, todas as áreas), e, quando os dados chegam, enquadra e destaca só os novos
+  const handleNewsShow = useCallback((item: NewsItem) => {
+    if (!isLayerOn(item.slug, visibleLayers)) {
+      const option = layerManagerOptions.find((o) => o.slug === item.slug)
+      if (option?.subOptions?.length) handleGroupToggle(option.subOptions.map((s) => s.slug), true)
+      else handleLayerToggle(item.slug, true)
+    }
+    setPendingNews({ slug: item.slug, ids: new Set(item.ids) })
+  }, [visibleLayers, layerManagerOptions, handleGroupToggle, handleLayerToggle])
+  useEffect(() => {
+    if (!pendingNews) return
+    const item = processedLayers.find((p) => p.layer.slug === pendingNews.slug)
+    if (!item || !layerData[pendingNews.slug]) return // espera ligar e chegar
+    setPendingNews(null)
+    const matching = (item.displayData.features as any[]).filter((f) => pendingNews.ids.has(String(f.properties?.id)))
+    if (matching.length > 0) showFeatures(matching, item.isIcon)
+    else setNotice({ id: Date.now(), tone: 'error', title: 'Não achamos isto no mapa', body: 'Um filtro de período ou de tamanho pode estar escondendo.' })
+  }, [pendingNews, processedLayers, layerData, showFeatures])
 
   const panelActiveLayers = useMemo(
     () => [
@@ -1717,6 +1747,7 @@ export default function MapLibreMap({
       {/* ── Controls overlay ─────────────────────────────────────────────── */}
 
       {/* Câmera: zoom, bússola e 2D|3D */}
+      <NewsBell items={news.items} unread={news.unread} since={news.since} options={panelOptions} onOpen={() => { news.markSeen(); if (dockOpen === 'explore') setDockOpen(null) }} onClose={news.dismiss} onShow={handleNewsShow} yield={dockOpen === 'explore'} />
       <MapLegend mapRef={mapRef} ready={mapLoaded} options={panelOptions} activeLayers={panelActiveLayers} ruleLegends={ruleLegends} counts={layerCounts} onShow={handleLegendShow} />
       <CameraControls mapRef={mapRef} onZoom={zoomBy} ready={mapLoaded} viewMode={viewMode} onViewModeChange={handleViewModeChange} canFitRegion={!!regionBounds} onFitRegion={handleFitRegion} />
 
