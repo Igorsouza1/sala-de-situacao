@@ -7,6 +7,7 @@
 import { useEffect, useRef, useState } from 'react'
 
 const PRISM = 'M4.5 3 L21 11 L13 13 L10 21.5 Z'
+const TAU = 15 // ms: quanto o prisma demora a alcançar o ponteiro (menos = mais colado, mais = mais solto)
 const TIP = { x: 4.5, y: 3 } // ponta do prisma dentro do SVG de 30px
 const CLICKABLE = 'button, [role="button"], [role="tab"], [role="menuitem"], [role="option"], [role="switch"], [role="checkbox"], a[href], summary, label[for], input[type="checkbox"], input[type="radio"]'
 const TEXT = 'input:not([type="checkbox"]):not([type="radio"]):not([type="button"]), textarea, [contenteditable="true"], select'
@@ -22,10 +23,30 @@ export function PrismCursor() {
     const root = document.documentElement
     const box = wrap.current
     if (!box) return
-    let x = -100, y = -100, raf = 0, ready = false
+    let ready = false
     let state = 'default'
+    let lastCheck = 0
+    let lastTarget: Element | null = null
+    // Deslizar (o "a mais" do Mac): o prisma não salta para onde o ponteiro está, ele escorrega até lá. É um alisamento por tempo
+    // (não por quadro), então é igual em 60 e em 144 Hz; com TAU curto o atraso some em ~100 ms e a mira continua fiel.
+    // Com movimento reduzido ele vai direto. O laço só roda enquanto há caminho a andar.
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    let tx = -100, ty = -100, cx = -100, cy = -100, raf = 0, prev = 0
+    const glide = (now: number) => {
+      const dt = Math.min(now - prev, 64)
+      prev = now
+      const k = reduce ? 1 : 1 - Math.exp(-dt / TAU)
+      cx += (tx - cx) * k
+      cy += (ty - cy) * k
+      const done = Math.abs(tx - cx) < 0.05 && Math.abs(ty - cy) < 0.05
+      if (done) { cx = tx; cy = ty }
+      box.style.transform = `translate3d(${cx - TIP.x}px, ${cy - TIP.y}px, 0)`
+      raf = done ? 0 : requestAnimationFrame(glide)
+    }
 
-    // botão desabilitado tem pointer-events:none (shadcn): o hit-test não o enxerga, então detecta pela geometria
+    // botão desabilitado tem pointer-events:none (shadcn): o hit-test não o enxerga, então detecta pela geometria.
+    // Ler a geometria de tudo a cada movimento força o navegador a recalcular o layout (e no mapa isso trava o ponteiro);
+    // por isso só se confere o estado de ~8 em 8 quadros (a cada 120 ms) e a posição é escrita sempre, sem esperar.
     const blockedAt = (px: number, py: number) =>
       Array.from(document.querySelectorAll<HTMLElement>(BLOCKED)).some((e) => {
         const r = e.getBoundingClientRect()
@@ -42,10 +63,7 @@ export function PrismCursor() {
       if (mc === 'pointer' || t.closest(CLICKABLE)) return 'link'
       return 'default'
     }
-    const place = () => {
-      raf = 0
-      box.style.transform = `translate3d(${x - TIP.x}px, ${y - TIP.y}px, 0)`
-      const next = kind(document.elementFromPoint(x, y), blockedAt(x, y))
+    const setState = (next: string) => {
       if (next === state) return
       state = next
       box.dataset.state = next
@@ -54,9 +72,18 @@ export function PrismCursor() {
     }
     const move = (e: PointerEvent) => {
       if (e.pointerType === 'touch') return
-      x = e.clientX; y = e.clientY
-      if (!ready) { ready = true; root.setAttribute('data-pc-ready', ''); box.dataset.visible = '1' }
-      if (!raf) raf = requestAnimationFrame(place)
+      // o último ponto do quadro (o navegador junta vários movimentos num evento só): o prisma fica onde o ponteiro está
+      const last = e.getCoalescedEvents?.().at(-1) ?? e
+      tx = last.clientX; ty = last.clientY
+      if (!ready) { ready = true; cx = tx; cy = ty; root.setAttribute('data-pc-ready', ''); box.dataset.visible = '1' }
+      if (!raf) { prev = e.timeStamp; raf = requestAnimationFrame(glide) }
+      const t = e.target instanceof Element ? e.target : null
+      // trocou de elemento (ou está num campo de texto): confere na hora, para o prisma ficar verde ao entrar num botão; parado no mesmo elemento, só de 120 em 120 ms
+      const changed = t !== lastTarget
+      lastTarget = t
+      if (!changed && e.timeStamp - lastCheck < 120 && state !== 'text') return
+      lastCheck = e.timeStamp
+      setState(kind(t, blockedAt(last.clientX, last.clientY)))
     }
     const press = (e: PointerEvent) => {
       if (e.pointerType === 'touch') return
