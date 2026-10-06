@@ -3,6 +3,7 @@
 import { createContext, forwardRef, useContext, useEffect, useId, useLayoutEffect, useRef, useState, type ButtonHTMLAttributes, type ReactNode } from 'react'
 import { X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { OverlayScroll } from '@/components/ui/overlay-scroll'
 import { controlItem, controlSurface } from './helpers/control-style'
 
 // Dock do mapa (DESIGN.md 13): uma barra só, embaixo e centralizada, onde moram os grupos de funções (Camadas, Filtros…).
@@ -200,7 +201,8 @@ export function DockPanelButton({ id, icon, label, side, accentTitle, titleIcon:
           </div>
         </header>
         {/* base em cinza suave: os cartões brancos de dentro mostram onde cada assunto começa e termina (6.2) */}
-        <div data-panel-scroll className="overflow-y-auto overflow-x-hidden bg-muted/50 p-4">{children}</div>
+        {/* rolagem com a barra do projeto: a barra nativa não aceita o cursor Prisma (10) */}
+        <OverlayScroll data-panel-scroll className="bg-muted/50 p-4">{children}</OverlayScroll>
       </div>
     </div>
   )
