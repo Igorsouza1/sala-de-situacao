@@ -125,8 +125,8 @@ describe('buildGrid em UTM', () => {
 
   it('as linhas são em metros redondos, com milhar separado', () => {
     expect(grid.lines.length).toBeGreaterThanOrEqual(4)
-    grid.lines.forEach((l) => expect(l.label).toMatch(/^\d{1,3}( \d{3})+$/))
-    grid.lines.forEach((l) => expect(Number(l.label.replace(/ /g, '')) % 1000).toBe(0))
+    grid.lines.forEach((l) => expect(l.label).toMatch(/^\d{1,3}(\.\d{3})+$/))
+    grid.lines.forEach((l) => expect(Number(l.label.replace(/\./g, '')) % 1000).toBe(0))
   })
 
   it('cada linha de leste é (quase) vertical e cada linha de norte (quase) horizontal, e todas ficam perto da área', () => {
