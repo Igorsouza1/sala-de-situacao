@@ -168,4 +168,13 @@ describe('formato das coordenadas', () => {
     expect(isCustomGerar({ coords: 'dd' })).toBe(true)
     expect(isCustomGerar({ coords: 'dms' })).toBe(false)
   })
+
+  it('o modo do marcador das ações volta; um valor estranho vira "não salvo"', () => {
+    const store = fakeStore()
+    saveGerarPrefs({ markerLook: 'icon' }, store)
+    expect(readGerarPrefs(store).markerLook).toBe('icon')
+    expect(readGerarPrefs(fakeStore({ 'prisma:mapa:gerar': JSON.stringify({ v: 1, markerLook: 'bolinha' }) })).markerLook).toBeUndefined()
+    expect(isCustomGerar({ markerLook: 'auto' })).toBe(false)
+    expect(isCustomGerar({ markerLook: 'dot' })).toBe(true)
+  })
 })

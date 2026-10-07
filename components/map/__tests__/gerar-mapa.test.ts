@@ -109,4 +109,17 @@ describe('composeSheetStyle', () => {
     const out = composeSheetStyle(base, { ...snapshot, layers: [...snapshot.layers, { id: 'fundo-layer', type: 'raster', source: 'focos' }] }, ['focos'], null) as any
     expect(out.layers.filter((l: any) => l.id === 'fundo-layer')).toHaveLength(1)
   })
+  it('"só estas": as camadas da fonte escolhida ganham o filtro; as outras ficam como estão', () => {
+    const snap = {
+      ...snapshot,
+      sources: { ...snapshot.sources, propriedades: { type: 'geojson', data: {} } },
+      layers: [...snapshot.layers, { id: 'propriedades-fill', type: 'fill', source: 'propriedades' }, { id: 'propriedades-line', type: 'line', source: 'propriedades', filter: ['==', ['get', 'x'], 1] }],
+    }
+    const out = composeSheetStyle(base, snap, ['focos', 'propriedades'], null, { source: 'propriedades', ids: [7, 9] }) as any
+    const pick = ['in', ['get', 'id'], ['literal', [7, 9]]]
+    expect(out.layers.find((l: any) => l.id === 'propriedades-fill').filter).toEqual(pick)
+    expect(out.layers.find((l: any) => l.id === 'propriedades-line').filter).toEqual(['all', ['==', ['get', 'x'], 1], pick])
+    expect(out.layers.find((l: any) => l.id === 'focos-circle').filter).toBeUndefined()
+    expect(snap.layers[snap.layers.length - 2]).not.toHaveProperty('filter')
+  })
 })

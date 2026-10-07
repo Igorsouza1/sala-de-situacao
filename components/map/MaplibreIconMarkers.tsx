@@ -51,6 +51,8 @@ interface Props {
   onStackHover?: (active: boolean) => void
   /** as feições que um item da legenda está mostrando agora: o marcador delas pisca (13.7) */
   blink?: ReadonlySet<object> | null
+  /** só na folha do Gerar mapa: fixa o ícone (pino) ou o ponto em qualquer zoom; sem isso, o zoom decide */
+  look?: 'auto' | 'icon' | 'dot'
 }
 
 interface View { zoom: number; bbox: [number, number, number, number] }
@@ -65,7 +67,7 @@ interface Spot {
 // coordenadas iguais até ~1 m (5 casas) são o mesmo lugar
 const spotKey = (lng: number, lat: number) => `${lng.toFixed(5)},${lat.toFixed(5)}`
 
-export function MaplibreIconMarkers({ layer, data, onFeatureClick, onFeatureHover, onStackHover, blink }: Props) {
+export function MaplibreIconMarkers({ layer, data, onFeatureClick, onFeatureHover, onStackHover, blink, look = 'auto' }: Props) {
   const { current: mapRef } = useMap()
   const vc = layer.visualConfig
   // Normaliza para o mesmo formato que o Leaflet usa em resolveFeatureStyle
@@ -127,7 +129,7 @@ export function MaplibreIconMarkers({ layer, data, onFeatureClick, onFeatureHove
     const [w, s, e, n] = view.bbox
     return spots.filter((p) => p.lng >= w && p.lng <= e && p.lat >= s && p.lat <= n)
   }, [spots, view])
-  const asPin = (view?.zoom ?? 0) >= PIN_ZOOM
+  const asPin = look === 'auto' ? (view?.zoom ?? 0) >= PIN_ZOOM : look === 'icon'
 
   // A lista de uma pilha: ao passar o mouse é só leitura; ao clicar fica aberta, com as linhas clicáveis (fecha no Esc ou clicando fora).
   const [stack, setStack] = useState<{ spot: Spot; pinned: boolean } | null>(null)

@@ -36,6 +36,7 @@ export function composeSheetStyle(
   snapshot: Json | null | undefined,
   dataSourceIds: string[],
   hillshade: { source: Json; paint: Json } | null,
+  only?: { source: string; ids: number[] } | null,
 ): Json {
   const ids = new Set(dataSourceIds)
   const sources: Json = { ...base.sources }
@@ -52,13 +53,22 @@ export function composeSheetStyle(
     for (const id of ids) if (snapshot.sources?.[id]) sources[id] = snapshot.sources[id]
     for (const layer of snapshot.layers ?? []) {
       if (!ids.has(layer.source) || taken.has(layer.id)) continue
-      layers.push(layer)
+      // "só estas": a camada desenha apenas as feições escolhidas, sem mexer nos dados (a legenda e o mapa principal seguem iguais)
+      const pick = only && layer.source === only.source ? ['in', ['get', 'id'], ['literal', only.ids]] : null
+      layers.push(pick ? { ...layer, filter: layer.filter ? ['all', layer.filter, pick] : pick } : layer)
       taken.add(layer.id)
     }
   }
 
   return { ...base, sources, layers }
 }
+
+// Como as ações aparecem na folha: o mapa troca o ponto pelo ícone ao chegar perto (zoom 13); na folha a pessoa pode fixar um
+// dos dois, para mostrar os ícones com o mapa longe (ou só pontos, perto).
+export const MARKER_LOOKS = ['auto', 'icon', 'dot'] as const
+export type MarkerLook = (typeof MARKER_LOOKS)[number]
+export const DEFAULT_MARKER_LOOK: MarkerLook = 'auto'
+export const MARKER_LOOK_LABELS: Record<MarkerLook, string> = { auto: 'Pelo zoom', icon: 'Sempre ícone', dot: 'Sempre ponto' }
 
 // O que a folha pode mostrar a mais: ligado por padrão, a pessoa desliga o que não quer (título, legenda e fonte dos dados não saem).
 // O mapa de localização começa desligado. O logo e os textos livres não são interruptores: aparecem quando há imagem ou texto.

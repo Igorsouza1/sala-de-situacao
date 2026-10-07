@@ -16,6 +16,7 @@ import { LogoPicker } from './LogoPicker'
 import { NoteCard } from './NoteCard'
 import type { LayerManagerOption } from './LayerManager'
 import { PanelCard } from './PanelCard'
+import { PropertyPicker, type PickedProperty } from './PropertyPicker'
 import { Segmented } from './Segmented'
 import { SheetExport, type ExportJob } from './SheetExport'
 import { SheetPage, layoutOf, type Camera, type Json, type SheetSettings, type Size } from './SheetPage'
@@ -40,6 +41,9 @@ import {
   DEFAULT_NORTH_STYLE,
   DEFAULT_SHOW,
   DEFAULT_LOOK,
+  DEFAULT_MARKER_LOOK,
+  MARKER_LOOK_LABELS,
+  MARKER_LOOKS,
   GRID_LEVEL_LABELS,
   NORTH_LABELS,
   NORTH_STYLES,
@@ -49,6 +53,7 @@ import {
   printBasemapFor,
   type GridNumbers,
   type NorthStyle,
+  type MarkerLook,
   MAX_BLOCKS,
   newBlock,
   type BlockLook,
@@ -80,6 +85,8 @@ export interface GerarMapaSession {
   layerNames: string[]
   /** a legenda do mapa de agora: de onde a legenda da folha parte */
   legend: { options: LayerManagerOption[]; activeLayers: string[]; ruleLegends: Record<string, RuleLegendSection[]> }
+  /** a região do mapa: a busca de propriedades da folha olha só ela */
+  regiaoId?: number
 }
 
 const SWATCH: Record<BasemapKey, string> = {
@@ -101,6 +108,9 @@ const PARTS: { id: Part; label: string }[] = [
 const COORD_OPTIONS: { value: GridFormat; label: string }[] = [{ value: 'dms', label: 'Grau-min-seg' }, { value: 'dd', label: 'Grau decimal' }, { value: 'utm', label: 'UTM' }]
 const NUMBER_OPTIONS: { value: GridNumbers; label: string }[] = [{ value: 'margin', label: 'Na margem' }, { value: 'inside', label: 'Dentro do mapa' }]
 const NORTH_OPTIONS = NORTH_STYLES.map((value) => ({ value, label: NORTH_LABELS[value] }))
+const MARKER_OPTIONS = MARKER_LOOKS.map((value) => ({ value, label: MARKER_LOOK_LABELS[value] }))
+const PROPERTY_MODES = [{ value: 'all', label: 'Todas' }, { value: 'some', label: 'Só algumas' }] as const
+const PROPERTY_SOURCE = 'propriedades'
 const LEGEND_PLACE_OPTIONS = [{ value: 'over', label: 'Sobre o mapa' }, { value: 'side', label: 'Ao lado do mapa' }] as const
 const todayLabel = () => new Date().toLocaleDateString('pt-BR')
 
@@ -194,6 +204,19 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
   const [gridLevel, setGridLevel] = useState(saved.gridLevel ?? DEFAULT_GRID_LEVEL)
   const [gridNumbers, setGridNumbers] = useState<GridNumbers>(saved.gridNumbers ?? DEFAULT_GRID_NUMBERS)
   const [northStyle, setNorthStyle] = useState<NorthStyle>(saved.northStyle ?? DEFAULT_NORTH_STYLE)
+  const [markerLook, setMarkerLook] = useState<MarkerLook>(saved.markerLook ?? DEFAULT_MARKER_LOOK)
+  // propriedades da folha: todas, ou só as escolhidas pelo nome (a escolha é desta região e deste mapa: não fica salva)
+  const [propMode, setPropMode] = useState<'all' | 'some'>('all')
+  const [pickedProps, setPickedProps] = useState<PickedProperty[]>([])
+  const hasIcons = session.iconLayers.length > 0
+  const hasProps = useMemo(
+    () => session.dataSourceIds.includes(PROPERTY_SOURCE) && (session.snapshot?.layers ?? []).some((l: any) => l.source === PROPERTY_SOURCE),
+    [session.dataSourceIds, session.snapshot],
+  )
+  const only = useMemo(
+    () => (hasProps && propMode === 'some' ? { source: PROPERTY_SOURCE, ids: pickedProps.map((p) => p.id) } : null),
+    [hasProps, propMode, pickedProps],
+  )
   // o logo não é salvo: vale enquanto esta tela está aberta
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [legendCorner, setLegendCorner] = useState<Corner>(saved.legendCorner ?? DEFAULT_LEGEND_CORNER)
@@ -206,9 +229,9 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
   const legendSections = useMemo(() => applyLegendEdits(legendBase, legendEdits), [legendBase, legendEdits])
   const corners = useMemo(() => placeCorners(sideActive ? null : legendCorner), [sideActive, legendCorner])
   useEffect(() => {
-    saveGerarPrefs({ paper, orientation, coords, legendCorner, legendSide, gridLevel, gridNumbers, northStyle, legendHidden: legendEdits.hidden, show })
-  }, [paper, orientation, coords, legendCorner, legendSide, gridLevel, gridNumbers, northStyle, legendEdits.hidden, show])
-  const custom = isCustomGerar({ paper, orientation, coords, legendCorner, legendSide, gridLevel, gridNumbers, northStyle, legendHidden: legendEdits.hidden, show, basemap: picked ?? undefined })
+    saveGerarPrefs({ paper, orientation, coords, legendCorner, legendSide, gridLevel, gridNumbers, northStyle, markerLook, legendHidden: legendEdits.hidden, show })
+  }, [paper, orientation, coords, legendCorner, legendSide, gridLevel, gridNumbers, northStyle, markerLook, legendEdits.hidden, show])
+  const custom = isCustomGerar({ paper, orientation, coords, legendCorner, legendSide, gridLevel, gridNumbers, northStyle, markerLook, legendHidden: legendEdits.hidden, show, basemap: picked ?? undefined })
   const resetChoices = () => {
     clearGerarPrefs()
     setPaper(DEFAULT_SHEET.paper)
@@ -219,6 +242,7 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
     setGridLevel(DEFAULT_GRID_LEVEL)
     setGridNumbers(DEFAULT_GRID_NUMBERS)
     setNorthStyle(DEFAULT_NORTH_STYLE)
+    setMarkerLook(DEFAULT_MARKER_LOOK)
     setLegendEdits((e) => ({ ...e, hidden: [] }))
     setShow({ ...DEFAULT_SHOW })
     setPicked(null)
@@ -262,8 +286,8 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
     const hillshade = HILLSHADE_BASEMAPS.has(baseState.shown)
       ? { source: { type: 'raster-dem', tiles: DEM_TILES, encoding: 'terrarium', tileSize: 256, maxzoom: DEM_MAX_ZOOM }, paint: hillshadePaint(readMapTokens()) }
       : null
-    return composeSheetStyle(baseStyle, session.snapshot, session.dataSourceIds, hillshade)
-  }, [baseStyle, baseState.shown, session.snapshot, session.dataSourceIds])
+    return composeSheetStyle(baseStyle, session.snapshot, session.dataSourceIds, hillshade, only)
+  }, [baseStyle, baseState.shown, session.snapshot, session.dataSourceIds, only])
 
   const credits = useMemo(() => {
     const parts = collectAttributions(sheetStyle as any).flatMap((html) => parseAttribution(html).map((p) => p.text.trim()))
@@ -271,8 +295,8 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
   }, [sheetStyle])
 
   const settings = useMemo<SheetSettings>(
-    () => ({ paper, orientation, title, show, coords, gridLevel, gridNumbers, northStyle, legendSide: sideActive, blocks, corners, legend: { title: legendEdits.title, sections: legendSections }, credits, today, logoUrl, center }),
-    [paper, orientation, title, show, coords, gridLevel, gridNumbers, northStyle, sideActive, blocks, corners, legendEdits.title, legendSections, credits, today, logoUrl, center],
+    () => ({ paper, orientation, title, show, coords, gridLevel, gridNumbers, northStyle, markerLook, legendSide: sideActive, blocks, corners, legend: { title: legendEdits.title, sections: legendSections }, credits, today, logoUrl, center }),
+    [paper, orientation, title, show, coords, gridLevel, gridNumbers, northStyle, markerLook, sideActive, blocks, corners, legendEdits.title, legendSections, credits, today, logoUrl, center],
   )
 
   // ── a folha cabe na área disponível; o mapa dentro dela acompanha ──
@@ -433,6 +457,37 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
                 </div>
               </PanelCard>
               </div>
+              {(hasIcons || hasProps) && (
+                <div className={inTab('folha')}>
+                <PanelCard title="Ações e propriedades" caption="Vale só para a folha: o mapa não muda.">
+                  <div className="space-y-6">
+                    {hasIcons && (
+                      <div>
+                        <p className="mb-2 text-sm text-muted-foreground">Como as ações aparecem</p>
+                        <Segmented label="Como as ações aparecem" value={markerLook} options={MARKER_OPTIONS} onChange={setMarkerLook} />
+                        <p key={markerLook} className="animate-in fade-in mt-2 text-xs leading-snug text-muted-foreground duration-200">
+                          {markerLook === 'auto' ? 'Longe, um ponto; perto, o ícone.' : markerLook === 'icon' ? 'O ícone aparece em qualquer distância, até com o mapa longe.' : 'Só o ponto colorido, mesmo com o mapa perto.'}
+                        </p>
+                      </div>
+                    )}
+                    {hasProps && (
+                      <div>
+                        <p className="mb-2 text-sm text-muted-foreground">Quais propriedades aparecem</p>
+                        <Segmented label="Quais propriedades aparecem" value={propMode} options={[...PROPERTY_MODES]} onChange={setPropMode} />
+                        <Collapse open={propMode === 'some'} clip>
+                          <div className="pt-4">
+                            <PropertyPicker regiaoId={session.regiaoId} chosen={pickedProps} onChange={setPickedProps} />
+                            {pickedProps.length === 0 && (
+                              <p role="status" className="animate-in fade-in mt-3 text-xs leading-snug text-muted-foreground duration-200">Nenhuma escolhida ainda: a folha sai sem propriedades. Procure pelo nome e ligue as que quer.</p>
+                            )}
+                          </div>
+                        </Collapse>
+                      </div>
+                    )}
+                  </div>
+                </PanelCard>
+                </div>
+              )}
               <div className={inTab('folha')}>
               <PanelCard title="O que aparece na folha" caption="Título, legenda e fonte dos dados sempre saem. Ao ligar um item, os ajustes dele aparecem logo abaixo.">
                 <ul className="-my-1">

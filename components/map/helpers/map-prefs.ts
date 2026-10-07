@@ -1,6 +1,6 @@
 import { BASEMAP_KEYS, type BasemapKey } from './basemaps'
 import type { AreaFilter, DateIntent, PresetId } from './filters'
-import { DEFAULT_GRID_LEVEL, DEFAULT_GRID_NUMBERS, DEFAULT_NORTH_STYLE, DEFAULT_SHOW, GRID_NUMBERS, NORTH_STYLES, PART_IDS, PRINT_BASEMAPS, clampGridLevel, type GridNumbers, type NorthStyle, type Part } from './gerar-mapa'
+import { DEFAULT_GRID_LEVEL, DEFAULT_GRID_NUMBERS, DEFAULT_MARKER_LOOK, DEFAULT_NORTH_STYLE, DEFAULT_SHOW, GRID_NUMBERS, MARKER_LOOKS, NORTH_STYLES, PART_IDS, PRINT_BASEMAPS, clampGridLevel, type GridNumbers, type MarkerLook, type NorthStyle, type Part } from './gerar-mapa'
 import type { GridFormat } from './grid'
 import { CORNERS, DEFAULT_LEGEND_CORNER, DEFAULT_SHEET, ORIENTATIONS, PAPERS, type Corner, type Orientation, type Paper } from './sheet'
 
@@ -157,6 +157,7 @@ export interface GerarPrefs {
   gridLevel?: number
   gridNumbers?: GridNumbers
   northStyle?: NorthStyle
+  markerLook?: MarkerLook
   /** os itens que a pessoa tirou da legenda (ids): voltam tirados da próxima vez */
   legendHidden?: string[]
   /** só as partes que a pessoa mexeu; o resto vem do padrão */
@@ -184,6 +185,7 @@ export function readGerarPrefs(store: Store | null = browserStore()): GerarPrefs
     if (json.gridLevel !== undefined) prefs.gridLevel = clampGridLevel(json.gridLevel)
     if (GRID_NUMBERS.includes(json.gridNumbers)) prefs.gridNumbers = json.gridNumbers
     if (NORTH_STYLES.includes(json.northStyle)) prefs.northStyle = json.northStyle
+    if (MARKER_LOOKS.includes(json.markerLook)) prefs.markerLook = json.markerLook
     if (json.show && typeof json.show === 'object') {
       const show: Partial<Record<Part, boolean>> = {}
       for (const id of PART_IDS) if (typeof json.show[id] === 'boolean') show[id] = json.show[id]
@@ -199,7 +201,7 @@ export function readGerarPrefs(store: Store | null = browserStore()): GerarPrefs
 export function saveGerarPrefs(patch: GerarPrefs, store: Store | null = browserStore()): void {
   try {
     const known: GerarPrefs = {}
-    for (const k of ['paper', 'orientation', 'basemap', 'coords', 'legendCorner', 'legendSide', 'gridLevel', 'gridNumbers', 'northStyle', 'legendHidden', 'show'] as const) {
+    for (const k of ['paper', 'orientation', 'basemap', 'coords', 'legendCorner', 'legendSide', 'gridLevel', 'gridNumbers', 'northStyle', 'markerLook', 'legendHidden', 'show'] as const) {
       if (patch[k] !== undefined) (known as any)[k] = patch[k]
     }
     store?.setItem(GERAR_KEY, JSON.stringify({ v: VERSION, ...readGerarPrefs(store), ...known }))
@@ -227,6 +229,7 @@ export function isCustomGerar(p: GerarPrefs): boolean {
   if (p.gridLevel !== undefined && p.gridLevel !== DEFAULT_GRID_LEVEL) return true
   if (p.gridNumbers !== undefined && p.gridNumbers !== DEFAULT_GRID_NUMBERS) return true
   if (p.northStyle !== undefined && p.northStyle !== DEFAULT_NORTH_STYLE) return true
+  if (p.markerLook !== undefined && p.markerLook !== DEFAULT_MARKER_LOOK) return true
   if (p.legendHidden && p.legendHidden.length > 0) return true
   return PART_IDS.some((id) => p.show?.[id] !== undefined && p.show[id] !== DEFAULT_SHOW[id])
 }

@@ -1408,8 +1408,9 @@ export default function MapLibreMap({
       iconLayers: drawn.filter(({ isIcon }) => isIcon).map(({ layer, displayData }) => ({ layer, data: displayData })),
       layerNames: drawn.map(({ layer }) => layer.name),
       legend: { options: panelOptions, activeLayers: panelActiveLayers, ruleLegends },
+      regiaoId,
     })
-  }, [processedLayers, shownBasemap, faunaData.length, panelOptions, panelActiveLayers, ruleLegends])
+  }, [regiaoId, processedLayers, shownBasemap, faunaData.length, panelOptions, panelActiveLayers, ruleLegends])
 
   // ── Error state ───────────────────────────────────────────────────────────
   if (error) {

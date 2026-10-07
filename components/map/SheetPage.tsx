@@ -9,7 +9,7 @@ import type { GerarMapaSession } from './GerarMapa'
 import { MaplibreIconMarkers } from './MaplibreIconMarkers'
 import { GridLines, GridMarginLabels, LegendBlock, FreeBlocks, LegendPanel, LocationInset, NorthArrow, ScaleBlock, projectGrid, type MapView } from './SheetOverlays'
 import { BASEMAP_MAX_ZOOM, type BasemapKey } from './helpers/basemaps'
-import { GRID_LEVELS, type GridNumbers, type MapBlock, type NorthStyle, type Part } from './helpers/gerar-mapa'
+import { GRID_LEVELS, type GridNumbers, type MarkerLook, type MapBlock, type NorthStyle, type Part } from './helpers/gerar-mapa'
 import { datumLine, type GridFormat } from './helpers/grid'
 import type { LegendSection } from './helpers/legend-sheet'
 import { DRAG_PAN } from './helpers/map-feel'
@@ -35,6 +35,8 @@ export interface SheetSettings {
   gridLevel: number
   gridNumbers: GridNumbers
   northStyle: NorthStyle
+  /** ícone ou ponto das ações, em qualquer zoom (auto: o zoom decide) */
+  markerLook: MarkerLook
   /** a legenda fora do mapa, na coluna ao lado (só na folha deitada) */
   legendSide: boolean
   /** textos soltos na folha */
@@ -135,6 +137,7 @@ export const SheetPage = forwardRef<HTMLDivElement, SheetPageProps>(function She
             gridMarginMm={sheet.gridMargin}
             north={show.north}
             northStyle={settings.northStyle}
+            markerLook={settings.markerLook}
             scale={show.scale}
             inset={show.inset}
             insetStyle={baseStyle}
@@ -197,6 +200,7 @@ interface SheetMapProps {
   gridMarginMm: number
   north: boolean
   northStyle: NorthStyle
+  markerLook: MarkerLook
   scale: boolean
   inset: boolean
   insetStyle: Json | null
@@ -214,7 +218,7 @@ interface SheetMapProps {
   cameraProbe?: MutableRefObject<(() => Camera | null) | null>
 }
 
-const SheetMap = memo(function SheetMap({ session, style, basemap, frame, frameMm, pxPerMm, grid, gridLevel, gridNumbers, gridMarginMm, north, northStyle, scale, inset, insetStyle, onBackgroundPress, legend, corners, mapHeightMm, initialCamera, interactive, pixelRatio, onSettle, onIdle, cameraProbe }: SheetMapProps) {
+const SheetMap = memo(function SheetMap({ session, style, basemap, frame, frameMm, pxPerMm, grid, gridLevel, gridNumbers, gridMarginMm, north, northStyle, markerLook, scale, inset, insetStyle, onBackgroundPress, legend, corners, mapHeightMm, initialCamera, interactive, pixelRatio, onSettle, onIdle, cameraProbe }: SheetMapProps) {
   const [settled, setSettled] = useState({ lng: initialCamera?.lng ?? session.camera.lng, lat: initialCamera?.lat ?? session.camera.lat })
   const mapRef = useRef<any>(null)
   const [loaded, setLoaded] = useState(false)
@@ -273,8 +277,8 @@ const SheetMap = memo(function SheetMap({ session, style, basemap, frame, frameM
 
   // os marcadores não dependem da vista: o mesmo elemento a cada quadro faz o React pular a refazê-los
   const markers = useMemo(
-    () => session.iconLayers.map(({ layer, data }) => <MaplibreIconMarkers key={layer.slug} layer={layer} data={data} onFeatureClick={NO_CLICK} onFeatureHover={NO_CLICK} />),
-    [session.iconLayers],
+    () => session.iconLayers.map(({ layer, data }) => <MaplibreIconMarkers key={layer.slug} layer={layer} data={data} onFeatureClick={NO_CLICK} onFeatureHover={NO_CLICK} look={markerLook} />),
+    [session.iconLayers, markerLook],
   )
 
   const previous = useRef(frame)
