@@ -126,9 +126,15 @@ const multiples = (from: number, to: number, step: number) => {
 
 const groupThousands = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, thousandsSeparator)
 
+// As linhas passam um pouco da borda da vista. Sem isso elas terminam exatamente na borda do mapa e, por arredondamento (a borda de 1 px
+// do quadro, a inclinação das linhas UTM), muitas nem tocam o lado de baixo e o da direita: faltam os números ali.
+const OVERSHOOT = 0.06
+
 export function buildGrid(bounds: Bounds, format: GridFormat): Grid {
   const { west, south, east, north } = bounds
   if (!(east > west && north > south)) return { format, lines: [] }
+  const padX = (east - west) * OVERSHOOT
+  const padY = (north - south) * OVERSHOOT
 
   if (format === 'dms') {
     const step = pickStep(DMS_STEPS, Math.min(east - west, north - south) * 3600)
@@ -137,12 +143,12 @@ export function buildGrid(bounds: Bounds, format: GridFormat): Grid {
       ...multiples(west * 3600, east * 3600, step).map<GridLine>((s) => ({
         axis: 'meridian',
         label: formatDms(s / 3600, 'lng', precision),
-        points: [[s / 3600, south], [s / 3600, north]],
+        points: [[s / 3600, south - padY], [s / 3600, north + padY]],
       })),
       ...multiples(south * 3600, north * 3600, step).map<GridLine>((s) => ({
         axis: 'parallel',
         label: formatDms(s / 3600, 'lat', precision),
-        points: [[west, s / 3600], [east, s / 3600]],
+        points: [[west - padX, s / 3600], [east + padX, s / 3600]],
       })),
     ]
     return { format, lines }
@@ -161,14 +167,15 @@ export function buildGrid(bounds: Bounds, format: GridFormat): Grid {
   const northings = corners.map((c) => c.northing)
   const [minE, maxE, minN, maxN] = [Math.min(...eastings), Math.max(...eastings), Math.min(...northings), Math.max(...northings)]
   const step = pickStep(UTM_STEPS, Math.min(maxE - minE, maxN - minN))
+  const [padE, padN] = [(maxE - minE) * OVERSHOOT, (maxN - minN) * OVERSHOOT]
   const along = (a: number, b: number) => Array.from({ length: UTM_SAMPLES }, (_, i) => a + ((b - a) * i) / (UTM_SAMPLES - 1))
   const point = (e: number, n: number): [number, number] => {
     const p = fromUtm(e, n, zone, isSouth)
     return [p.lng, p.lat]
   }
   const lines: GridLine[] = [
-    ...multiples(minE, maxE, step).map<GridLine>((e) => ({ axis: 'meridian', label: groupThousands(e), points: along(minN, maxN).map((n) => point(e, n)) })),
-    ...multiples(minN, maxN, step).map<GridLine>((n) => ({ axis: 'parallel', label: groupThousands(n), points: along(minE, maxE).map((e) => point(e, n)) })),
+    ...multiples(minE, maxE, step).map<GridLine>((e) => ({ axis: 'meridian', label: groupThousands(e), points: along(minN - padN, maxN + padN).map((n) => point(e, n)) })),
+    ...multiples(minN, maxN, step).map<GridLine>((n) => ({ axis: 'parallel', label: groupThousands(n), points: along(minE - padE, maxE + padE).map((e) => point(e, n)) })),
   ]
   return { format, lines, zone, south: isSouth }
 }

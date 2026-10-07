@@ -185,3 +185,17 @@ describe('rótulos da grade UTM', () => {
     }
   })
 })
+
+describe('as linhas passam da borda da vista', () => {
+  const b = { west: -57.0, south: -21.4, east: -56.6, north: -21.0 }
+  it.each(['dms', 'utm'] as const)('%s: cada linha vai além dos quatro lados, para sempre cruzar a borda do mapa (rótulos embaixo e à direita)', (format) => {
+    const { lines } = buildGrid(b, format)
+    expect(lines.length).toBeGreaterThan(0)
+    for (const l of lines) {
+      const lngs = l.points.map((p) => p[0])
+      const lats = l.points.map((p) => p[1])
+      if (l.axis === 'meridian') { expect(Math.min(...lats)).toBeLessThan(b.south); expect(Math.max(...lats)).toBeGreaterThan(b.north) }
+      else { expect(Math.min(...lngs)).toBeLessThan(b.west); expect(Math.max(...lngs)).toBeGreaterThan(b.east) }
+    }
+  })
+})
