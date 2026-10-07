@@ -380,7 +380,7 @@
     "hex": 0
   },
   "components/map/MapLibreMap.tsx": {
-    "paleta": 5,
+    "paleta": 3,
     "hex": 9
   },
   "components/map/MapPlaceholder.tsx": {

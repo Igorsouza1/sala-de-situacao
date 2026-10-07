@@ -14,6 +14,7 @@ import {
   useCallback,
   useRef,
   useMemo,
+  useSyncExternalStore,
 } from 'react'
 import * as LucideIcons from 'lucide-react'
 import type { LayerResponseDTO, MapFeatureCollection } from '@/types/map-dto'
@@ -71,7 +72,8 @@ import { useSmoothWheelZoom } from './helpers/use-smooth-wheel-zoom'
 import { ExploreHighlight } from './ExploreHighlight'
 import type { ConsultaBounds, ConsultaItem, ConsultaSelection } from '@/types/map-consulta'
 import bbox from '@turf/bbox'
-import { AcaoHoverCard } from './AcaoHoverCard'
+import { MapHoverPopups } from './MapHoverPopups'
+import { createHoverStore, type HoverStore } from './helpers/hover-store'
 import { ToolFeedback } from './ToolFeedback'
 import { ToolMenu } from './ToolMenu'
 import { isMeasureTool, type Tool } from './helpers/tools'
@@ -267,11 +269,10 @@ export default function MapLibreMap({
   } | null>(null)
 
   // ── Hover tooltip ───────────────────────────────────────────────────────
-  const [hoveredFeature, setHoveredFeature] = useState<Record<
-    string,
-    any
-  > | null>(null)
-  const [hoverCoords, setHoverCoords] = useState<[number, number] | null>(null)
+  // fora do estado do mapa: o mouse sobre uma feição troca isto a cada movimento (ver hover-store.ts)
+  const hover = useRef<HoverStore>(null as unknown as HoverStore)
+  if (!hover.current) hover.current = createHoverStore()
+  const hasHover = useSyncExternalStore(hover.current.subscribe, () => hover.current.get().feature !== null, () => false)
 
   // ── Coordinate inspector ────────────────────────────────────────────────
   const [activeTool, setActiveTool] = useState<Tool | null>(null)
@@ -932,8 +933,7 @@ export default function MapLibreMap({
 
   const handleMarkerHover = useCallback(
     (props: Record<string, any> | null, coords: [number, number] | null) => {
-      setHoveredFeature(props)
-      setHoverCoords(coords)
+      hover.current.set(props, coords)
     },
     []
   )
@@ -947,8 +947,7 @@ export default function MapLibreMap({
       municipio: props.municipio,
       num_area: props.num_area,
     })
-    setHoveredFeature(null)
-    setHoverCoords(null)
+    hover.current.set(null, null)
   }, [])
 
   // ── Map event handlers ────────────────────────────────────────────────────
@@ -988,16 +987,14 @@ export default function MapLibreMap({
     (e: any) => {
       if (measureMode && measureDrawing) {
         setMeasureCursorPos([e.lngLat.lng, e.lngLat.lat])
-        setHoveredFeature(null)
-        setHoverCoords(null)
+        hover.current.set(null, null)
         setHoveredPropertyId(null)
         setHoveredPropertyBasic(null)
         return
       }
 
       if (!e.features?.length) {
-        setHoveredFeature(null)
-        setHoverCoords(null)
+        hover.current.set(null, null)
         if (propertyInfoActive) {
           setHoveredPropertyId(null)
           setHoveredPropertyBasic(null)
@@ -1020,13 +1017,11 @@ export default function MapLibreMap({
       }
 
       if (EXCLUDED_HOVER.some((ex) => slug.includes(ex))) {
-        setHoveredFeature(null)
-        setHoverCoords(null)
+        hover.current.set(null, null)
         return
       }
 
-      setHoveredFeature({ ...feature.properties, _slug: slug })
-      setHoverCoords([e.lngLat.lng, e.lngLat.lat])
+      hover.current.set({ ...feature.properties, _slug: slug }, [e.lngLat.lng, e.lngLat.lat])
     },
     [measureMode, measureDrawing, propertyInfoActive, selectProperty]
   )
@@ -1040,9 +1035,9 @@ export default function MapLibreMap({
     if (coordInspectorActive) return 'crosshair'
     if (measureMode && measureDrawing) return 'crosshair'
     if (propertyInfoActive && hoveredPropertyId) return 'pointer'
-    if (hoveredFeature) return 'pointer'
+    if (hasHover) return 'pointer'
     return 'grab'
-  }, [coordInspectorActive, measureMode, measureDrawing, hoveredFeature, propertyInfoActive, hoveredPropertyId])
+  }, [coordInspectorActive, measureMode, measureDrawing, hasHover, propertyInfoActive, hoveredPropertyId])
 
   // ── Measure calculations ──────────────────────────────────────────────────
   const measureDistance = useMemo(
@@ -1385,28 +1380,6 @@ export default function MapLibreMap({
     fetchLayerData(slug)
   }, [fetchLayerData])
 
-  // ── Hover popup content ───────────────────────────────────────────────────
-  const hoveredLayerConfig = useMemo(() => {
-    if (!hoveredFeature) return null
-    return layers.find((l) => l.slug === hoveredFeature._slug) ?? null
-  }, [hoveredFeature, layers])
-
-  // Cor e ícone do cartão da ação: o mesmo cálculo do marcador (6.2, regra 13), nunca um palpite a partir do evento
-  const hoveredAcaoStyle = useMemo(() => {
-    if (hoveredFeature?._slug !== 'acoes') return null
-    const vc = hoveredLayerConfig?.visualConfig as any
-    return resolveFeatureStyle({ baseStyle: vc?.baseStyle || vc, rules: vc?.rules }, { properties: hoveredFeature } as any) as { color?: string; iconName?: string }
-  }, [hoveredFeature, hoveredLayerConfig])
-
-  const hoverPopupFields = useMemo(() => {
-    if (!hoveredLayerConfig) return null
-    return (
-      hoveredLayerConfig.visualConfig?.popupFields ||
-      hoveredLayerConfig.schemaConfig?.fields ||
-      null
-    )
-  }, [hoveredLayerConfig])
-
   // ── Gerar mapa: um retrato do que a pessoa está vendo, entregue à tela do gerador ──────────────
   const [gerarMapa, setGerarMapa] = useState<GerarMapaSession | null>(null)
   const openGerarMapa = useCallback(() => {
@@ -1726,44 +1699,8 @@ export default function MapLibreMap({
           </Marker>
         )}
 
-        {/* ── Hover: cartão da ação (13.4) ── */}
-        {stackHovered ? null : hoveredFeature?._slug === 'acoes' && hoverCoords ? (
-          <Popup
-            longitude={hoverCoords[0]}
-            latitude={hoverCoords[1]}
-            closeButton={false}
-            offset={[0, -((hoveredFeature._h as number | undefined) ?? 22) - 8] as any}
-            anchor="bottom"
-            className="acao-hover-popup"
-          >
-            <AcaoHoverCard properties={hoveredFeature} color={hoveredAcaoStyle?.color} iconName={hoveredAcaoStyle?.iconName} />
-          </Popup>
-        ) : hoveredFeature && hoverCoords && hoverPopupFields?.length ? (
-          /* ── Hover: tooltip genérico para outras camadas ── */
-          <Popup
-            longitude={hoverCoords[0]}
-            latitude={hoverCoords[1]}
-            closeButton={false}
-            offset={[0, -8] as any}
-            anchor="bottom"
-          >
-            <div className="p-1 min-w-[150px]">
-              <h3 className="font-bold mb-1 text-xs border-b pb-1">
-                {hoveredLayerConfig?.name}
-              </h3>
-              <div className="space-y-0.5 text-[10px]">
-                {hoverPopupFields.map((field) => (
-                  <div key={field.key} className="flex justify-between gap-4">
-                    <span className="text-slate-500">{field.label}:</span>
-                    <span className="font-medium text-slate-800">
-                      {hoveredFeature[field.key] ?? '-'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </Popup>
-        ) : null}
+        {/* ── Hover: cartão da ação (13.4) e tooltip das outras camadas ── */}
+        <MapHoverPopups store={hover.current} layers={layers} hidden={stackHovered} />
       </Map>
 
       {/* ── Controls overlay ─────────────────────────────────────────────── */}
