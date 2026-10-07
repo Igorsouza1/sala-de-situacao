@@ -131,3 +131,28 @@ describe('preferências novas do Gerar mapa', () => {
     expect(raw.notes).toBeUndefined()
   })
 })
+
+describe('itens tirados da legenda', () => {
+  it('voltam tirados da próxima vez', () => {
+    const store = fakeStore()
+    saveGerarPrefs({ legendHidden: ['layer:propriedades', 'layer:focos'] }, store)
+    expect(readGerarPrefs(store).legendHidden).toEqual(['layer:propriedades', 'layer:focos'])
+  })
+
+  it('tirar tudo de novo (legenda inteira de volta) também é lembrado', () => {
+    const store = fakeStore()
+    saveGerarPrefs({ legendHidden: ['layer:focos'] }, store)
+    saveGerarPrefs({ legendHidden: [] }, store)
+    expect(readGerarPrefs(store).legendHidden).toEqual([])
+  })
+
+  it('só aceita texto na lista; o resto é descartado', () => {
+    const store = fakeStore({ 'prisma:mapa:gerar': JSON.stringify({ v: 1, legendHidden: ['layer:a', 3, null, { x: 1 }] }) })
+    expect(readGerarPrefs(store).legendHidden).toEqual(['layer:a'])
+  })
+
+  it('com itens tirados, a tela diz que está usando as últimas escolhas; sem nenhum, não', () => {
+    expect(isCustomGerar({ legendHidden: ['layer:focos'] })).toBe(true)
+    expect(isCustomGerar({ legendHidden: [] })).toBe(false)
+  })
+})

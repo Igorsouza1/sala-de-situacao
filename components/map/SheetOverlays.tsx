@@ -2,12 +2,12 @@
 
 import '@/lib/maplibre-worker'
 import Map, { Layer, Source } from 'react-map-gl/maplibre'
-import { memo, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { memo, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { ColorSwatch, IconSwatch } from './MapLegend'
 import { Legend } from './LayerManager'
 import { buildGrid, edgeCrossing, type GridFormat } from './helpers/grid'
-import type { NorthStyle } from './helpers/gerar-mapa'
+import { clampPos, type MapBlock, type NorthStyle } from './helpers/gerar-mapa'
 import type { LegendItem, LegendSection } from './helpers/legend-sheet'
 import { paperScale, paperScaleBar, type PaperFrame } from './helpers/scale'
 import { SIDE_W, cornerAnchor, type Corner } from './helpers/sheet'
@@ -207,14 +207,86 @@ export const LocationInset = memo(function LocationInset({ style, view, center, 
 })
 
 // ── Texto livre ───────────────────────────────────────────────────────────────────────────────────────────────────
-// Três lugares: abaixo do título (SheetPage), no alto do mapa e na coluna ao lado da legenda.
-export function NoteBlock({ text, pxPerMm }: { text: string; pxPerMm: number }) {
+// Textos soltos sobre o mapa, que a pessoa arrasta para onde quiser (ou move com as setas), e dois textos de lugar fixo: abaixo do título
+// (SheetPage) e na coluna ao lado do mapa. A posição de um bloco é uma fração do mapa, então sai no papel onde está na tela.
+interface FreeBlocksProps {
+  blocks: MapBlock[]
+  pxPerMm: number
+  /** na folha de exportação não há arrasto nem seleção */
+  interactive: boolean
+  selected?: string | null
+  onSelect?: (id: string) => void
+  onMove?: (id: string, x: number, y: number) => void
+}
+
+const STEP = 0.01
+
+export function FreeBlocks({ blocks, pxPerMm, interactive, selected, onSelect, onMove }: FreeBlocksProps) {
   const mm = (v: number) => v * pxPerMm
-  if (!text.trim()) return null
+  const box = useRef<HTMLDivElement>(null)
+  const grab = useRef<{ id: string; dx: number; dy: number } | null>(null)
+
+  const point = (e: PointerEvent) => {
+    const r = box.current!.getBoundingClientRect()
+    return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height }
+  }
+  const down = (e: PointerEvent<HTMLDivElement>, b: MapBlock) => {
+    if (!interactive) return
+    e.currentTarget.setPointerCapture(e.pointerId)
+    const p = point(e)
+    grab.current = { id: b.id, dx: p.x - b.x, dy: p.y - b.y }
+    onSelect?.(b.id)
+  }
+  const move = (e: PointerEvent<HTMLDivElement>) => {
+    const g = grab.current
+    if (!g) return
+    const p = point(e)
+    onMove?.(g.id, clampPos(p.x - g.dx), clampPos(p.y - g.dy))
+  }
+  const up = (e: PointerEvent<HTMLDivElement>) => {
+    grab.current = null
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+  }
+  const keys = (e: KeyboardEvent<HTMLDivElement>, b: MapBlock) => {
+    const k = e.shiftKey ? STEP * 5 : STEP
+    const d = e.key === 'ArrowLeft' ? [-k, 0] : e.key === 'ArrowRight' ? [k, 0] : e.key === 'ArrowUp' ? [0, -k] : e.key === 'ArrowDown' ? [0, k] : null
+    if (!d) return
+    e.preventDefault()
+    onMove?.(b.id, clampPos(b.x + d[0]), clampPos(b.y + d[1]))
+  }
+
   return (
-    <p className={`${plate} line-clamp-3 text-center text-foreground`} style={{ top: mm(INSET_MM), left: '50%', translate: '-50% 0', maxWidth: '34%', padding: mm(1.5), fontSize: mm(2.6) }}>
-      {text}
-    </p>
+    <div ref={box} className="pointer-events-none absolute inset-0">
+      {blocks.map((b) => {
+        const empty = b.text.trim() === ''
+        // texto vazio só aparece na tela de edição (para achar o bloco); no papel não sai nada
+        if (empty && !interactive) return null
+        return (
+          <div
+            key={b.id}
+            role={interactive ? 'button' : undefined}
+            tabIndex={interactive ? 0 : undefined}
+            aria-label={interactive ? `Texto sobre o mapa: ${empty ? 'vazio' : b.text}. Arraste ou use as setas para mover.` : undefined}
+            onPointerDown={(e) => down(e, b)}
+            onPointerMove={move}
+            onPointerUp={up}
+            onPointerCancel={up}
+            onKeyDown={(e) => keys(e, b)}
+            onFocus={() => interactive && onSelect?.(b.id)}
+            className={cn(
+              plate,
+              'whitespace-pre-line text-center text-foreground',
+              interactive && 'pointer-events-auto cursor-grab touch-none select-none transition-shadow duration-200 hover:ring-2 hover:ring-primary/40 focus-visible:outline-hidden active:cursor-grabbing',
+              interactive && selected === b.id && 'ring-2 ring-primary',
+              empty && 'text-muted-foreground',
+            )}
+            style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, translate: '-50% -50%', maxWidth: '40%', padding: mm(1.5), fontSize: mm(2.8) }}
+          >
+            {empty ? 'Escreva o texto' : b.text}
+          </div>
+        )
+      })}
+    </div>
   )
 }
 

@@ -7,9 +7,9 @@ import { forwardRef, useCallback, useEffect, useMemo, useRef, useState, type Mut
 import { cn } from '@/lib/utils'
 import type { GerarMapaSession } from './GerarMapa'
 import { MaplibreIconMarkers } from './MaplibreIconMarkers'
-import { GridLines, GridMarginLabels, LegendBlock, LegendPanel, LocationInset, NoteBlock, NorthArrow, ScaleBlock, SideNote, projectGrid, type MapView } from './SheetOverlays'
+import { GridLines, GridMarginLabels, LegendBlock, FreeBlocks, LegendPanel, LocationInset, NorthArrow, ScaleBlock, SideNote, projectGrid, type MapView } from './SheetOverlays'
 import { BASEMAP_MAX_ZOOM, type BasemapKey } from './helpers/basemaps'
-import { GRID_LEVELS, type GridNumbers, type NorthStyle, type Notes, type Part } from './helpers/gerar-mapa'
+import { GRID_LEVELS, type GridNumbers, type MapBlock, type NorthStyle, type Notes, type Part } from './helpers/gerar-mapa'
 import { datumLine, type GridFormat } from './helpers/grid'
 import type { LegendSection } from './helpers/legend-sheet'
 import { DRAG_PAN } from './helpers/map-feel'
@@ -38,6 +38,8 @@ export interface SheetSettings {
   /** a legenda fora do mapa, na coluna ao lado (só na folha deitada) */
   legendSide: boolean
   notes: Notes
+  /** textos soltos sobre o mapa */
+  blocks: MapBlock[]
   corners: ReturnType<typeof placeCorners>
   legend: { title: string; sections: LegendSection[] }
   credits: string
@@ -52,7 +54,8 @@ export interface SheetSettings {
 export function layoutOf(s: Pick<SheetSettings, 'paper' | 'orientation' | 'notes' | 'legendSide' | 'show' | 'gridNumbers'>): Sheet {
   return sheetLayout(s.paper, s.orientation, {
     subtitle: s.notes.title.trim() !== '',
-    legendSide: s.legendSide,
+    // a coluna ao lado existe quando há legenda ou texto para ela
+    side: s.legendSide || s.notes.side.trim() !== '',
     gridMargin: s.show.grid && s.gridNumbers === 'margin',
   })
 }
@@ -76,17 +79,22 @@ export interface SheetPageProps {
   onIdle?: () => void
   /** a tela guarda aqui uma função que lê onde o mapa está agora (para exportar exatamente este enquadramento) */
   cameraProbe?: MutableRefObject<(() => Camera | null) | null>
+  /** o bloco de texto escolhido e o que fazer ao escolher ou arrastar um (só na tela, não na exportação) */
+  selectedBlock?: string | null
+  onBlockSelect?: (id: string) => void
+  onBlockMove?: (id: string, x: number, y: number) => void
 }
 
 export const SheetPage = forwardRef<HTMLDivElement, SheetPageProps>(function SheetPage(
-  { settings, session, style, baseStyle, basemap, px, initialCamera, interactive = true, pixelRatio, onSettle, onIdle, cameraProbe },
+  { settings, session, style, baseStyle, basemap, px, initialCamera, interactive = true, pixelRatio, onSettle, onIdle, cameraProbe, selectedBlock, onBlockSelect, onBlockMove },
   ref,
 ) {
   const { show, corners } = settings
   const hasSubtitle = settings.notes.title.trim() !== ''
+  const hasSide = settings.notes.side.trim() !== ''
   const sheet = useMemo(
-    () => layoutOf({ paper: settings.paper, orientation: settings.orientation, notes: { title: hasSubtitle ? 'x' : '', map: '', side: '' }, legendSide: settings.legendSide, show: settings.show, gridNumbers: settings.gridNumbers }),
-    [settings.paper, settings.orientation, hasSubtitle, settings.legendSide, settings.show, settings.gridNumbers],
+    () => layoutOf({ paper: settings.paper, orientation: settings.orientation, notes: { title: hasSubtitle ? 'x' : '', side: hasSide ? 'x' : '' }, legendSide: settings.legendSide, show: settings.show, gridNumbers: settings.gridNumbers }),
+    [settings.paper, settings.orientation, hasSubtitle, hasSide, settings.legendSide, settings.show, settings.gridNumbers],
   )
   const mm = (v: number) => v * px
   const frame: Size = { w: Math.round(sheet.map.w * px), h: Math.round(sheet.map.h * px) }
@@ -137,8 +145,11 @@ export const SheetPage = forwardRef<HTMLDivElement, SheetPageProps>(function She
             scale={show.scale}
             inset={show.inset}
             insetStyle={baseStyle}
-            note={settings.notes.map}
-            legend={sheet.side ? null : settings.legend}
+            blocks={settings.blocks}
+            selectedBlock={selectedBlock}
+            onBlockSelect={onBlockSelect}
+            onBlockMove={onBlockMove}
+            legend={sheet.side && settings.legendSide ? null : settings.legend}
             corners={corners}
             mapHeightMm={sheet.map.h}
             initialCamera={initialCamera}
@@ -153,7 +164,7 @@ export const SheetPage = forwardRef<HTMLDivElement, SheetPageProps>(function She
 
       {sheet.side && (
         <div className="absolute" style={{ left: mm(sheet.side.x), top: mm(sheet.side.y), width: mm(sheet.side.w), height: mm(sheet.side.h) }}>
-          <LegendPanel title={settings.legend.title} sections={settings.legend.sections} pxPerMm={px} maxHeightMm={sheet.side.h}>
+          <LegendPanel title={settings.legend.title} sections={settings.legendSide ? settings.legend.sections : []} pxPerMm={px} maxHeightMm={sheet.side.h}>
             <SideNote text={settings.notes.side} pxPerMm={px} />
           </LegendPanel>
         </div>
@@ -199,7 +210,10 @@ interface SheetMapProps {
   scale: boolean
   inset: boolean
   insetStyle: Json | null
-  note: string
+  blocks: MapBlock[]
+  selectedBlock?: string | null
+  onBlockSelect?: (id: string) => void
+  onBlockMove?: (id: string, x: number, y: number) => void
   /** null: a legenda está na coluna ao lado, não sobre o mapa */
   legend: { title: string; sections: LegendSection[] } | null
   corners: ReturnType<typeof placeCorners>
@@ -212,7 +226,7 @@ interface SheetMapProps {
   cameraProbe?: MutableRefObject<(() => Camera | null) | null>
 }
 
-function SheetMap({ session, style, basemap, frame, frameMm, pxPerMm, grid, gridLevel, gridNumbers, gridMarginMm, north, northStyle, scale, inset, insetStyle, note, legend, corners, mapHeightMm, initialCamera, interactive, pixelRatio, onSettle, onIdle, cameraProbe }: SheetMapProps) {
+function SheetMap({ session, style, basemap, frame, frameMm, pxPerMm, grid, gridLevel, gridNumbers, gridMarginMm, north, northStyle, scale, inset, insetStyle, blocks, selectedBlock, onBlockSelect, onBlockMove, legend, corners, mapHeightMm, initialCamera, interactive, pixelRatio, onSettle, onIdle, cameraProbe }: SheetMapProps) {
   const [settled, setSettled] = useState({ lng: initialCamera?.lng ?? session.camera.lng, lat: initialCamera?.lat ?? session.camera.lat })
   const mapRef = useRef<any>(null)
   const [loaded, setLoaded] = useState(false)
@@ -326,7 +340,7 @@ function SheetMap({ session, style, basemap, frame, frameMm, pxPerMm, grid, grid
       {view && scale && <ScaleBlock view={view} frame={{ mm: frameMm, px: frame.w }} pxPerMm={pxPerMm} corner={corners.scale} />}
       {legend && corners.legend && <LegendBlock title={legend.title} sections={legend.sections} corner={corners.legend} pxPerMm={pxPerMm} mapHeightMm={mapHeightMm} />}
       {restView && inset && insetStyle && <LocationInset style={insetStyle} view={restView} center={settled} pxPerMm={pxPerMm} corner={corners.inset} />}
-      <NoteBlock text={note} pxPerMm={pxPerMm} />
+      <FreeBlocks blocks={blocks} pxPerMm={pxPerMm} interactive={interactive} selected={selectedBlock} onSelect={onBlockSelect} onMove={onBlockMove} />
       </div>
       {gridLines && gridNumbers === 'margin' && gridMarginMm > 0 && <GridMarginLabels lines={gridLines} frame={frame} pxPerMm={pxPerMm} marginMm={gridMarginMm} />}
     </div>

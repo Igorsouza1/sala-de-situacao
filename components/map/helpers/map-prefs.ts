@@ -157,11 +157,14 @@ export interface GerarPrefs {
   gridLevel?: number
   gridNumbers?: GridNumbers
   northStyle?: NorthStyle
+  /** os itens que a pessoa tirou da legenda (ids): voltam tirados da próxima vez */
+  legendHidden?: string[]
   /** só as partes que a pessoa mexeu; o resto vem do padrão */
   show?: Partial<Record<Part, boolean>>
 }
 
 const GERAR_KEY = 'prisma:mapa:gerar'
+const MAX_HIDDEN = 200
 const COORD_FORMATS: GridFormat[] = ['dms', 'utm']
 
 export function readGerarPrefs(store: Store | null = browserStore()): GerarPrefs {
@@ -175,6 +178,7 @@ export function readGerarPrefs(store: Store | null = browserStore()): GerarPrefs
     if (ORIENTATIONS.includes(json.orientation)) prefs.orientation = json.orientation
     if (PRINT_BASEMAPS.includes(json.basemap)) prefs.basemap = json.basemap
     if (COORD_FORMATS.includes(json.coords)) prefs.coords = json.coords
+    if (Array.isArray(json.legendHidden)) prefs.legendHidden = json.legendHidden.filter((id: unknown) => typeof id === 'string').slice(0, MAX_HIDDEN)
     if (CORNERS.includes(json.legendCorner)) prefs.legendCorner = json.legendCorner
     if (typeof json.legendSide === 'boolean') prefs.legendSide = json.legendSide
     if (json.gridLevel !== undefined) prefs.gridLevel = clampGridLevel(json.gridLevel)
@@ -195,7 +199,7 @@ export function readGerarPrefs(store: Store | null = browserStore()): GerarPrefs
 export function saveGerarPrefs(patch: GerarPrefs, store: Store | null = browserStore()): void {
   try {
     const known: GerarPrefs = {}
-    for (const k of ['paper', 'orientation', 'basemap', 'coords', 'legendCorner', 'legendSide', 'gridLevel', 'gridNumbers', 'northStyle', 'show'] as const) {
+    for (const k of ['paper', 'orientation', 'basemap', 'coords', 'legendCorner', 'legendSide', 'gridLevel', 'gridNumbers', 'northStyle', 'legendHidden', 'show'] as const) {
       if (patch[k] !== undefined) (known as any)[k] = patch[k]
     }
     store?.setItem(GERAR_KEY, JSON.stringify({ v: VERSION, ...readGerarPrefs(store), ...known }))
@@ -223,5 +227,6 @@ export function isCustomGerar(p: GerarPrefs): boolean {
   if (p.gridLevel !== undefined && p.gridLevel !== DEFAULT_GRID_LEVEL) return true
   if (p.gridNumbers !== undefined && p.gridNumbers !== DEFAULT_GRID_NUMBERS) return true
   if (p.northStyle !== undefined && p.northStyle !== DEFAULT_NORTH_STYLE) return true
+  if (p.legendHidden && p.legendHidden.length > 0) return true
   return PART_IDS.some((id) => p.show?.[id] !== undefined && p.show[id] !== DEFAULT_SHOW[id])
 }

@@ -24,7 +24,8 @@ export interface Sheet {
 /** o que o conteúdo pede da folha: cada pedido tira um pouco de área do mapa */
 export interface SheetOptions {
   subtitle?: boolean
-  legendSide?: boolean
+  /** a coluna ao lado do mapa (legenda e/ou texto): só vale na folha deitada */
+  side?: boolean
   gridMargin?: boolean
 }
 
@@ -58,7 +59,7 @@ export function sheetLayout(paper: Paper, orientation: Orientation, options: She
   const subtitle: Rect | null = options.subtitle ? { x: MARGIN, y: top, w: inner, h: SUBTITLE } : null
   if (subtitle) top += SUBTITLE + GAP
   const area: Rect = { x: MARGIN, y: top, w: inner, h: footer.y - GAP - top }
-  const sideOn = !!options.legendSide && orientation === 'landscape'
+  const sideOn = !!options.side && orientation === 'landscape'
   if (sideOn) area.w -= SIDE_W + GAP
   const gridMargin = options.gridMargin ? GRID_MARGIN : 0
   const map: Rect = { x: area.x + gridMargin, y: area.y + gridMargin, w: area.w - gridMargin * 2, h: area.h - gridMargin * 2 }

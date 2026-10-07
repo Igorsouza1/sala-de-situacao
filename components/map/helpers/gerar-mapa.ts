@@ -83,6 +83,19 @@ export const GRID_NUMBERS = ['margin', 'inside'] as const
 export type GridNumbers = (typeof GRID_NUMBERS)[number]
 export const DEFAULT_GRID_NUMBERS: GridNumbers = 'margin'
 
-/** os três lugares do texto livre */
-export interface Notes { title: string; map: string; side: string }
-export const EMPTY_NOTES: Notes = { title: '', map: '', side: '' }
+/** os textos que têm lugar fixo na folha: logo abaixo do título e na coluna ao lado do mapa */
+export interface Notes { title: string; side: string }
+export const EMPTY_NOTES: Notes = { title: '', side: '' }
+
+/** um texto solto sobre o mapa, que a pessoa arrasta para onde quiser; x e y são o centro dele, de 0 a 1 da largura e da altura do mapa */
+export interface MapBlock { id: string; text: string; x: number; y: number }
+export const MAX_BLOCKS = 5
+const EDGE = 0.04 // o centro não chega mais perto que isto da borda: o bloco nunca some do mapa
+export const clampPos = (v: number) => Math.min(1 - EDGE, Math.max(EDGE, v))
+
+let seq = 0
+/** um bloco novo no meio do mapa; os seguintes descem um pouco, para não nascerem em cima do anterior */
+export function newBlock(existing: MapBlock[]): MapBlock {
+  seq += 1
+  return { id: `b${Date.now().toString(36)}${seq}`, text: '', x: 0.5, y: clampPos(0.35 + (existing.length % 5) * 0.1) }
+}

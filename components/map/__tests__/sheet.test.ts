@@ -141,7 +141,7 @@ describe('sheetLayout com o que o conteúdo pede', () => {
   })
 
   it('legenda ao lado na folha deitada: a coluna fica à direita do mapa, sem encostar, e o mapa perde largura', () => {
-    const s = sheetLayout('a4', 'landscape', { legendSide: true })
+    const s = sheetLayout('a4', 'landscape', { side: true })
     expect(s.side).not.toBeNull()
     expect(s.map.x + s.map.w).toBeLessThan(s.side!.x)
     expect(s.side!.x + s.side!.w).toBeLessThanOrEqual(s.width)
@@ -149,8 +149,13 @@ describe('sheetLayout com o que o conteúdo pede', () => {
     expect(s.map.h).toBe(base.map.h)
   })
 
+  it('a coluna ao lado vale para legenda e para texto, e só na folha deitada', () => {
+    expect(sheetLayout('a3', 'landscape', { side: true }).side).not.toBeNull()
+    expect(sheetLayout('a3', 'portrait', { side: true }).side).toBeNull()
+  })
+
   it('legenda ao lado não vale na folha em pé: o layout fica como era', () => {
-    expect(sheetLayout('a4', 'portrait', { legendSide: true })).toEqual(sheetLayout('a4', 'portrait'))
+    expect(sheetLayout('a4', 'portrait', { side: true })).toEqual(sheetLayout('a4', 'portrait'))
   })
 
   it('números da grade na margem: o mapa encolhe e a margem cabe dentro da folha', () => {
@@ -167,7 +172,7 @@ describe('sheetLayout com o que o conteúdo pede', () => {
   it.each(PAPERS.flatMap((p) => (['landscape', 'portrait'] as const).map((o) => [p, o] as const)))(
     '%s %s: com tudo pedido ao mesmo tempo, mapa e coluna cabem na folha sem se sobrepor',
     (paper, orientation) => {
-      const s = sheetLayout(paper, orientation, { subtitle: true, legendSide: true, gridMargin: true })
+      const s = sheetLayout(paper, orientation, { subtitle: true, side: true, gridMargin: true })
       const sheet = { x: 0, y: 0, w: s.width, h: s.height }
       for (const r of [s.map, s.subtitle!, s.footer, ...(s.side ? [s.side] : [])]) expect(inside(sheet, r)).toBe(true)
       expect(s.map.w).toBeGreaterThan(60)
