@@ -1,7 +1,9 @@
 {
   "private": true,
   "scripts": {
+    "predev": "node scripts/copy-maplibre-worker.mjs",
     "dev": "next dev --webpack",
+    "prebuild": "node scripts/copy-maplibre-worker.mjs",
     "build": "next build --webpack",
     "start": "next start",
     "test": "jest"
