@@ -37,7 +37,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" className={`${plex.variable} ${plexMono.variable}`} suppressHydrationWarning>
-      <body className="bg-background font-sans antialiased">
+      {/* extensões do navegador (ColorZilla: cz-shortcut-listen) põem atributos no body antes de o React carregar */}
+      <body className="bg-background font-sans antialiased" suppressHydrationWarning>
           <main className="">
               <div className="">
                 {children}
