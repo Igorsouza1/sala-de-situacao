@@ -3,7 +3,7 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Check, Pencil, RefreshCw, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { BASEMAP_KEYS, BASEMAP_LABELS, type BasemapKey } from './helpers/basemaps'
+import { BASEMAP_KEYS, BASEMAP_LABELS, BASEMAP_SWATCH, type BasemapKey } from './helpers/basemaps'
 import { controlItem } from './helpers/control-style'
 import { ViewSwap } from '@/components/ui/view-swap'
 import { LayerManager } from './LayerManager'
@@ -12,14 +12,6 @@ import { PanelCard } from './PanelCard'
 // Painel Camadas (DESIGN.md 13.1): o mapa base primeiro (é a camada de baixo), depois um cartão por categoria de dados.
 // O "Atualizar" fica no cabeçalho do painel, porque vale para todas as camadas e não para um cartão só.
 
-// Miniaturas feitas só de tokens: lembram a base sem baixar imagem nenhuma.
-const SWATCH: Record<BasemapKey, string> = {
-  mineral: 'linear-gradient(135deg, var(--color-map-grass) 0 55%, var(--color-map-water) 55%)',
-  'satellite-soft': 'linear-gradient(135deg, color-mix(in oklab, var(--color-muted-foreground) 45%, var(--color-ok)) 0 55%, color-mix(in oklab, var(--color-muted-foreground) 55%, var(--color-water)) 55%)',
-  satellite: 'linear-gradient(135deg, color-mix(in oklab, var(--color-foreground) 60%, var(--color-ok)) 0 55%, color-mix(in oklab, var(--color-foreground) 55%, var(--color-water)) 55%)',
-  streets: 'linear-gradient(135deg, var(--color-background) 0 55%, var(--color-border) 55%)',
-  osm: 'linear-gradient(135deg, var(--color-map-urban) 0 55%, var(--color-map-grass) 55%)',
-}
 
 // O rótulo muda no próprio botão (8.4): Atualizar → Atualizando… → Atualizado.
 export function RefreshButton({ refreshing, onRefresh }: { refreshing: boolean; onRefresh: () => void }) {
@@ -156,7 +148,7 @@ export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, e
                   selected ? 'border-primary bg-secondary font-medium text-secondary-foreground' : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',
                 )}
               >
-                <span className="h-9 w-full rounded-sm border border-border" style={{ background: SWATCH[key] }} aria-hidden />
+                <span className="h-9 w-full rounded-sm border border-border" style={{ background: BASEMAP_SWATCH[key] }} aria-hidden />
                 {BASEMAP_LABELS[key]}
               </button>
             )

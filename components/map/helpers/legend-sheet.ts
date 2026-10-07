@@ -34,6 +34,13 @@ export interface LegendEdits {
   /** ids na ordem escolhida; a ordem vale entre irmãos, e o que não está aqui vai depois */
   order: string[]
 }
+/** quantas linhas a legenda ocupa (o título de seção conta como parte de uma): a faixa de baixo calcula a altura com isto */
+export function legendRowCount(sections: LegendSection[]): number {
+  const rows = (items: LegendItem[]): number => items.reduce((n, i) => n + 1 + rows(i.children), 0)
+  // cada seção traz o respiro e o filete de cima (cerca de meia linha) e, se tem título, mais uma linha pequena
+  return sections.reduce((n, s) => n + rows(s.items) + 0.6 + (s.title ? 0.6 : 0), 0)
+}
+
 export const EMPTY_LEGEND_EDITS: LegendEdits = { title: DEFAULT_LEGEND_TITLE, labels: {}, hidden: [], order: [] }
 
 export const isLegendEdited = (e: LegendEdits) =>

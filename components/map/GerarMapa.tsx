@@ -1,7 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { ArrowLeft, FileDown, Undo2 } from 'lucide-react'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { ArrowLeft, ArrowRight, FileDown, MapPin, Undo2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,6 +17,10 @@ import { NoteCard } from './NoteCard'
 import type { LayerManagerOption } from './LayerManager'
 import { PanelCard } from './PanelCard'
 import { PropertyPicker, type PickedProperty } from './PropertyPicker'
+import { ChoiceTiles } from './ChoiceTiles'
+import { LegendOpacityPicker } from './LegendOpacityPicker'
+import { DEFAULT_SHEET_LEGEND_OPACITY, type LegendOpacity } from './helpers/legend-opacity'
+import { Notice, type NoticeData } from './Notice'
 import { Segmented } from './Segmented'
 import { SheetExport, type ExportJob } from './SheetExport'
 import { SheetPage, layoutOf, type Camera, type Json, type SheetSettings, type Size } from './SheetPage'
@@ -24,6 +28,7 @@ import { controlItem } from './helpers/control-style'
 import { collectAttributions, parseAttribution } from './helpers/attribution'
 import {
   BASEMAP_LABELS,
+  BASEMAP_SWATCH,
   DEM_MAX_ZOOM,
   DEM_TILES,
   HILLSHADE_BASEMAPS,
@@ -39,6 +44,10 @@ import {
   DEFAULT_GRID_LEVEL,
   DEFAULT_GRID_NUMBERS,
   DEFAULT_NORTH_STYLE,
+  DEFAULT_TITLE_ALIGN,
+  TITLE_ALIGNS,
+  TITLE_ALIGN_LABELS,
+  type TitleAlign,
   DEFAULT_SHOW,
   DEFAULT_LOOK,
   DEFAULT_MARKER_LOOK,
@@ -47,7 +56,7 @@ import {
   GRID_LEVEL_LABELS,
   NORTH_LABELS,
   NORTH_STYLES,
-  PRINT_BASEMAPS,
+  PRINT_BASEMAP_GROUPS,
   autoTitle,
   composeSheetStyle,
   printBasemapFor,
@@ -60,10 +69,13 @@ import {
   type MapBlock,
   type Part,
 } from './helpers/gerar-mapa'
-import { clearGerarPrefs, isCustomGerar, readGerarPrefs, saveGerarPrefs } from './helpers/map-prefs'
+import { readGerarContent, readGerarPrefs, saveGerarContent, saveGerarPrefs } from './helpers/map-prefs'
 import type { GridFormat } from './helpers/grid'
-import { EMPTY_LEGEND_EDITS, applyLegendEdits, buildLegend, type LegendEdits } from './helpers/legend-sheet'
+import { EMPTY_LEGEND_EDITS, applyLegendEdits, buildLegend, type LegendEdits, type LegendItem } from './helpers/legend-sheet'
+import { SECTION_IDS, SECTION_LABELS, SHEET_TARGETS, activeSection, autoLegendPlace, autoSheet, type SectionId, type SheetTarget } from './helpers/gerar-sections'
 import type { RuleLegendSection } from './helpers/legend-rules'
+import { LEGEND_PLACES, LEGEND_PLACE_LABELS, type LegendPlace } from './helpers/sheet'
+import { DEFAULT_DETAIL_COUNT, DEFAULT_SHEET_MODEL, DETAIL_COUNTS, SHEET_MODELS, SHEET_MODEL_LABELS, type SheetModel } from './helpers/sheet'
 import { CORNERS, CORNER_LABELS, DEFAULT_LEGEND_CORNER, DEFAULT_SHEET, ORIENTATIONS, ORIENTATION_LABELS, PAPERS, PAPER_LABELS, placeCorners, type Corner, type Orientation, type Paper } from './helpers/sheet'
 
 // Gerar mapa (DESIGN.md 13.9): uma tela sobre o mapa, com a folha ao vivo no meio e os ajustes ao lado. A folha mostra o que vai
@@ -89,30 +101,75 @@ export interface GerarMapaSession {
   regiaoId?: number
 }
 
-const SWATCH: Record<BasemapKey, string> = {
-  mineral: 'linear-gradient(135deg, var(--color-map-grass) 0 55%, var(--color-map-water) 55%)',
-  'satellite-soft': 'linear-gradient(135deg, color-mix(in oklab, var(--color-muted-foreground) 45%, var(--color-ok)) 0 55%, color-mix(in oklab, var(--color-muted-foreground) 55%, var(--color-water)) 55%)',
-  satellite: 'linear-gradient(135deg, color-mix(in oklab, var(--color-foreground) 60%, var(--color-ok)) 0 55%, color-mix(in oklab, var(--color-foreground) 55%, var(--color-water)) 55%)',
-  streets: 'linear-gradient(135deg, var(--color-background) 0 55%, var(--color-border) 55%)',
-  osm: 'linear-gradient(135deg, var(--color-map-urban) 0 55%, var(--color-map-grass) 55%)',
-}
-
 const PARTS: { id: Part; label: string }[] = [
+  { id: 'grid', label: 'Grade com coordenadas' },
   { id: 'north', label: 'Seta do norte' },
   { id: 'scale', label: 'Escala' },
-  { id: 'grid', label: 'Grade com coordenadas' },
+  { id: 'inset', label: 'Mapa de localização' },
   { id: 'datum', label: 'Datum e fuso' },
   { id: 'date', label: 'Data de hoje' },
-  { id: 'inset', label: 'Mapa de localização' },
 ]
-const COORD_OPTIONS: { value: GridFormat; label: string }[] = [{ value: 'dms', label: 'Grau-min-seg' }, { value: 'dd', label: 'Grau decimal' }, { value: 'utm', label: 'UTM' }]
-const NUMBER_OPTIONS: { value: GridNumbers; label: string }[] = [{ value: 'margin', label: 'Na margem' }, { value: 'inside', label: 'Dentro do mapa' }]
+// Os ladrilhos mostram o resultado (um exemplo, um desenho) acima do nome: a pessoa entende sem clicar (regra 1, 2.1)
+const COORD_TILES: { value: GridFormat; label: string; preview: ReactNode }[] = [
+  { value: 'dms', label: 'Graus', preview: <span className="font-mono text-[11px]">56°41′05″</span> },
+  { value: 'dd', label: 'Decimal', preview: <span className="font-mono text-[11px]">-56,6947°</span> },
+  { value: 'utm', label: 'UTM', preview: <span className="font-mono text-[11px]">547.000</span> },
+]
+const frameIcon = (frame: { x: number; y: number; w: number; h: number }, ticks: string) => (
+  <svg viewBox="0 0 40 24" className="h-6 w-10" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
+    <rect x={frame.x} y={frame.y} width={frame.w} height={frame.h} rx="1" />
+    <path d={ticks} />
+  </svg>
+)
+const NUMBER_TILES: { value: GridNumbers; label: string; preview: ReactNode }[] = [
+  { value: 'margin', label: 'Na margem', preview: frameIcon({ x: 7, y: 6, w: 26, h: 12 }, 'M14 1.5v2.5M26 1.5v2.5M14 20v2.5M26 20v2.5') },
+  { value: 'inside', label: 'Dentro', preview: frameIcon({ x: 3, y: 3, w: 34, h: 18 }, 'M12 5.5v2.5M24 5.5v2.5M12 16v2.5M24 16v2.5') },
+]
+const MARKER_PREVIEW: Record<MarkerLook, ReactNode> = {
+  auto: (
+    <span className="flex items-center gap-1.5">
+      <span className="h-2 w-2 rounded-full bg-primary" />
+      <ArrowRight className="h-3 w-3 text-muted-foreground" />
+      <MapPin className="h-5 w-5 text-primary" />
+    </span>
+  ),
+  icon: <MapPin className="h-5 w-5 text-primary" />,
+  dot: <span className="h-3.5 w-3.5 rounded-full bg-primary" />,
+}
+// o desenho de cada modelo: onde ficam os mapas na folha
+const modelIcon = (rects: [number, number, number, number][]) => (
+  <svg viewBox="0 0 40 24" className="h-6 w-10" fill="none" stroke="currentColor" strokeWidth="1.4">
+    {rects.map(([x, y, w, h], i) => <rect key={i} x={x} y={y} width={w} height={h} rx="0.8" />)}
+  </svg>
+)
+const MODEL_TILES: { value: SheetModel; label: string; preview: ReactNode }[] = [
+  { value: 'single', label: SHEET_MODEL_LABELS.single, preview: modelIcon([[4, 3, 32, 18]]) },
+  { value: 'side', label: SHEET_MODEL_LABELS.side, preview: modelIcon([[3, 3, 16, 18], [21, 3, 16, 18]]) },
+  { value: 'details', label: SHEET_MODEL_LABELS.details, preview: modelIcon([[3, 3, 24, 18], [29, 3, 8, 5], [29, 9.5, 8, 5], [29, 16, 8, 5]]) },
+]
+const placeIcon = (parts: { frame: [number, number, number, number]; box: [number, number, number, number] }) => (
+  <svg viewBox="0 0 40 24" className="h-6 w-10" fill="none" stroke="currentColor" strokeWidth="1.4">
+    <rect x={parts.frame[0]} y={parts.frame[1]} width={parts.frame[2]} height={parts.frame[3]} rx="0.8" />
+    <rect x={parts.box[0]} y={parts.box[1]} width={parts.box[2]} height={parts.box[3]} rx="0.8" fill="currentColor" fillOpacity="0.35" />
+  </svg>
+)
+const PLACE_PREVIEW: Record<LegendPlace, ReactNode> = {
+  over: placeIcon({ frame: [4, 3, 32, 18], box: [24, 12, 10, 7] }),
+  side: placeIcon({ frame: [4, 3, 22, 18], box: [28, 3, 8, 18] }),
+  below: placeIcon({ frame: [4, 3, 32, 12], box: [4, 17, 32, 4] }),
+}
+const PLACE_CAPTION: Record<LegendPlace, string> = {
+  over: 'Sobre o mapa principal, no canto que você escolher.',
+  side: 'Numa coluna ao lado dos mapas; sobra espaço embaixo para um texto.',
+  below: 'Numa faixa embaixo dos mapas, na largura toda, sem cobrir nenhum.',
+}
+const ALIGN_OPTIONS = TITLE_ALIGNS.map((value) => ({ value, label: TITLE_ALIGN_LABELS[value] }))
 const NORTH_OPTIONS = NORTH_STYLES.map((value) => ({ value, label: NORTH_LABELS[value] }))
-const MARKER_OPTIONS = MARKER_LOOKS.map((value) => ({ value, label: MARKER_LOOK_LABELS[value] }))
 const PROPERTY_MODES = [{ value: 'all', label: 'Todas' }, { value: 'some', label: 'Só algumas' }] as const
 const PROPERTY_SOURCE = 'propriedades'
-const LEGEND_PLACE_OPTIONS = [{ value: 'over', label: 'Sobre o mapa' }, { value: 'side', label: 'Ao lado do mapa' }] as const
-const todayLabel = () => new Date().toLocaleDateString('pt-BR')
+const todayLabel = () => new Date().toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })
+
+const countRows = (items: LegendItem[]): number => items.reduce((n, i) => n + 1 + countRows(i.children), 0)
 
 const PAPER_OPTIONS = PAPERS.map((value) => ({ value, label: PAPER_LABELS[value] }))
 const ORIENTATION_OPTIONS = ORIENTATIONS.map((value) => ({ value, label: ORIENTATION_LABELS[value] }))
@@ -127,14 +184,6 @@ async function loadBaseStyle(key: BasemapKey): Promise<Json> {
 }
 
 const calmMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
-
-// No celular os ajustes viram abas: o que muda a cada vez (Texto), a Legenda e a Folha. No computador, todos os cartões ficam à vista.
-type Tab = 'texto' | 'legenda' | 'folha'
-const TABS: { id: Tab; label: string }[] = [
-  { id: 'texto', label: 'Texto' },
-  { id: 'legenda', label: 'Legenda' },
-  { id: 'folha', label: 'Folha' },
-]
 
 type ExportState =
   | { status: 'idle' }
@@ -170,22 +219,35 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
   // ── escolhas da pessoa ──
   // o que a pessoa deixou da última vez (neste aparelho); título e textos da legenda não voltam: partem do automático
   const saved = useMemo(() => readGerarPrefs(), [])
+  // O que o sistema propõe olhando o mapa que a pessoa via. Só vale enquanto ela não escolheu: o que ela mexe (ou já deixou lembrado) fica
+  // fixo e nunca é reajustado, e a proposta nunca é gravada como se fosse escolha dela.
+  const legendBase = useMemo(() => buildLegend(session.legend.options, session.legend.activeLayers, session.legend.ruleLegends), [session.legend])
+  const legendRowsBase = useMemo(() => legendBase.reduce((n, sec) => n + countRows(sec.items), 0), [legendBase])
+  const [auto] = useState(() => autoSheet({ viewport: session.viewport, zoom: session.camera.zoom }))
+  const [chosen, setChosen] = useState({ orientation: saved.orientation !== undefined, inset: saved.show?.inset !== undefined })
   const [paper, setPaper] = useState<Paper>(saved.paper ?? DEFAULT_SHEET.paper)
-  const [orientation, setOrientation] = useState<Orientation>(saved.orientation ?? DEFAULT_SHEET.orientation)
+  // o modelo da folha: um mapa, dois lado a lado, ou um grande com detalhes de perto; e o painel que a pessoa está movendo
+  const [model, setModelRaw] = useState<SheetModel>(saved.model ?? DEFAULT_SHEET_MODEL)
+  const [detailCount, setDetailCount] = useState<number>(saved.details ?? DEFAULT_DETAIL_COUNT)
+  const [selectedPanel, setSelectedPanel] = useState('main')
+  const setModel = (m: SheetModel) => { setModelRaw(m); setSelectedPanel('main') }
+  const [orientation, setOrientationRaw] = useState<Orientation>(saved.orientation ?? auto.orientation)
+  const setOrientation = (v: Orientation) => { setOrientationRaw(v); setChosen((c) => ({ ...c, orientation: true })) }
   // a base parte do que o mapa mostra; só vira lembrada se a pessoa escolher uma aqui
-  const [picked, setPicked] = useState<BasemapKey | null>(saved.basemap ?? null)
   const [basemap, setBasemap] = useState<BasemapKey>(() => saved.basemap ?? printBasemapFor(session.basemap))
   const automatic = useMemo(() => autoTitle(regionName, session.layerNames), [regionName, session.layerNames])
-  const [typed, setTyped] = useState<string | null>(null) // null: segue o título automático
+  // o que a pessoa escreveu e arrumou na folha também volta (por região); só o logo não
+  const content = useMemo(() => readGerarContent(session.regiaoId), [session.regiaoId])
+  const [typed, setTyped] = useState<string | null>(content.title ?? null) // null: segue o título automático
   const title = typed ?? automatic
 
-  const [show, setShow] = useState<Record<Part, boolean>>({ ...DEFAULT_SHOW, ...saved.show })
+  const [show, setShow] = useState<Record<Part, boolean>>({ ...DEFAULT_SHOW, inset: auto.inset, ...saved.show })
   const [coords, setCoords] = useState<GridFormat>(saved.coords ?? 'dms')
   // texto livre: blocos soltos na folha, escritos e arrastados nela mesma; o jeito do último que a pessoa mexeu vale para o próximo
-  const [blocks, setBlocks] = useState<MapBlock[]>([])
+  const [blocks, setBlocks] = useState<MapBlock[]>(content.blocks ?? [])
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null)
   const [focusBlock, setFocusBlock] = useState<string | null>(null)
-  const [look, setLook] = useState<BlockLook>(DEFAULT_LOOK)
+  const [look, setLook] = useState<BlockLook>(content.look ?? DEFAULT_LOOK)
   const addBlock = () => {
     if (blocks.length >= MAX_BLOCKS) return
     const b = newBlock(blocks, look)
@@ -204,10 +266,11 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
   const [gridLevel, setGridLevel] = useState(saved.gridLevel ?? DEFAULT_GRID_LEVEL)
   const [gridNumbers, setGridNumbers] = useState<GridNumbers>(saved.gridNumbers ?? DEFAULT_GRID_NUMBERS)
   const [northStyle, setNorthStyle] = useState<NorthStyle>(saved.northStyle ?? DEFAULT_NORTH_STYLE)
+  const [titleAlign, setTitleAlign] = useState<TitleAlign>(saved.titleAlign ?? DEFAULT_TITLE_ALIGN)
   const [markerLook, setMarkerLook] = useState<MarkerLook>(saved.markerLook ?? DEFAULT_MARKER_LOOK)
   // propriedades da folha: todas, ou só as escolhidas pelo nome (a escolha é desta região e deste mapa: não fica salva)
-  const [propMode, setPropMode] = useState<'all' | 'some'>('all')
-  const [pickedProps, setPickedProps] = useState<PickedProperty[]>([])
+  const [propMode, setPropMode] = useState<'all' | 'some'>(content.propMode ?? 'all')
+  const [pickedProps, setPickedProps] = useState<PickedProperty[]>(content.props ?? [])
   const hasIcons = session.iconLayers.length > 0
   const hasProps = useMemo(
     () => session.dataSourceIds.includes(PROPERTY_SOURCE) && (session.snapshot?.layers ?? []).some((l: any) => l.source === PROPERTY_SOURCE),
@@ -220,37 +283,78 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
   // o logo não é salvo: vale enquanto esta tela está aberta
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [legendCorner, setLegendCorner] = useState<Corner>(saved.legendCorner ?? DEFAULT_LEGEND_CORNER)
-  const [legendSide, setLegendSide] = useState(saved.legendSide ?? false)
-  // ao lado do mapa só cabe na folha deitada; em pé, a escolha fica guardada e volta quando a folha voltar a ser deitada
-  const sideActive = legendSide && orientation === 'landscape'
+  // onde a legenda fica: o que a pessoa escolheu (ou deixou lembrado) ou, enquanto não escolheu, o que combina com o modelo
+  const [placeChoice, setPlaceChoice] = useState<LegendPlace | null>(saved.legendPlace ?? (saved.legendSide === undefined ? null : saved.legendSide ? 'side' : 'over'))
+  const autoPlace = autoLegendPlace(model, orientation, legendRowsBase)
+  const wantedPlace = placeChoice ?? autoPlace
+  // ao lado só cabe na folha deitada; em pé, a escolha fica guardada e volta quando a folha voltar a ser deitada
+  const legendPlace: LegendPlace = wantedPlace === 'side' && orientation !== 'landscape' ? (model === 'single' ? 'over' : 'below') : wantedPlace
+  const [legendOpacity, setLegendOpacity] = useState<LegendOpacity>(saved.legendOpacity ?? DEFAULT_SHEET_LEGEND_OPACITY)
   // os itens tirados da legenda voltam tirados; o resto das edições (nomes, ordem) parte do automático de cada dia
-  const [legendEdits, setLegendEdits] = useState<LegendEdits>(() => ({ ...EMPTY_LEGEND_EDITS, hidden: saved.legendHidden ?? [] }))
-  const legendBase = useMemo(() => buildLegend(session.legend.options, session.legend.activeLayers, session.legend.ruleLegends), [session.legend])
-  const legendSections = useMemo(() => applyLegendEdits(legendBase, legendEdits), [legendBase, legendEdits])
-  const corners = useMemo(() => placeCorners(sideActive ? null : legendCorner), [sideActive, legendCorner])
+  const [legendEdits, setLegendEdits] = useState<LegendEdits>(() => ({ ...EMPTY_LEGEND_EDITS, hidden: saved.legendHidden ?? [], ...(content.legend ?? {}) }))
   useEffect(() => {
-    saveGerarPrefs({ paper, orientation, coords, legendCorner, legendSide, gridLevel, gridNumbers, northStyle, markerLook, legendHidden: legendEdits.hidden, show })
-  }, [paper, orientation, coords, legendCorner, legendSide, gridLevel, gridNumbers, northStyle, markerLook, legendEdits.hidden, show])
-  const custom = isCustomGerar({ paper, orientation, coords, legendCorner, legendSide, gridLevel, gridNumbers, northStyle, markerLook, legendHidden: legendEdits.hidden, show, basemap: picked ?? undefined })
-  const resetChoices = () => {
-    clearGerarPrefs()
-    setPaper(DEFAULT_SHEET.paper)
-    setOrientation(DEFAULT_SHEET.orientation)
-    setCoords('dms')
-    setLegendCorner(DEFAULT_LEGEND_CORNER)
-    setLegendSide(false)
-    setGridLevel(DEFAULT_GRID_LEVEL)
-    setGridNumbers(DEFAULT_GRID_NUMBERS)
-    setNorthStyle(DEFAULT_NORTH_STYLE)
-    setMarkerLook(DEFAULT_MARKER_LOOK)
-    setLegendEdits((e) => ({ ...e, hidden: [] }))
-    setShow({ ...DEFAULT_SHOW })
-    setPicked(null)
-    setBasemap(printBasemapFor(session.basemap))
+    saveGerarContent(session.regiaoId, {
+      title: typed !== null && typed !== automatic ? typed : undefined,
+      blocks,
+      look,
+      legend: { title: legendEdits.title, labels: legendEdits.labels, order: legendEdits.order },
+      propMode,
+      props: pickedProps,
+    })
+  }, [session.regiaoId, typed, automatic, blocks, look, legendEdits.title, legendEdits.labels, legendEdits.order, propMode, pickedProps])
+  const legendSections = useMemo(() => applyLegendEdits(legendBase, legendEdits), [legendBase, legendEdits])
+  const corners = useMemo(() => placeCorners(legendPlace === 'over' ? legendCorner : null), [legendPlace, legendCorner])
+  useEffect(() => {
+    saveGerarPrefs({ paper, model, details: detailCount, orientation: chosen.orientation ? orientation : undefined, coords, legendCorner, legendPlace: placeChoice ?? undefined, gridLevel, gridNumbers, northStyle, titleAlign, legendOpacity, markerLook, legendHidden: legendEdits.hidden, show: chosen.inset ? show : { ...show, inset: undefined } })
+  }, [paper, model, detailCount, orientation, coords, legendCorner, placeChoice, gridLevel, gridNumbers, northStyle, titleAlign, legendOpacity, markerLook, legendEdits.hidden, show, chosen])
+  // a frase "Ajustamos a folha" só aparece enquanto alguma proposta diferente do padrão ainda vale
+  const autoNote = (!chosen.orientation && auto.orientation !== DEFAULT_SHEET.orientation) || (placeChoice === null && autoPlace !== 'over') || (!chosen.inset && auto.inset)
+
+  // ── o índice: a seção à vista fica marcada; tocar num rótulo (ou num elemento da folha) rola até ela e a destaca uma vez ──
+  const scroller = useRef<HTMLDivElement>(null)
+  const sections = useRef<Partial<Record<SectionId, HTMLElement | null>>>({})
+  const [current, setCurrent] = useState<SectionId>('folha')
+  const [flash, setFlash] = useState<SectionId | null>(null)
+  // aviso neutro no alto (12): diz por que uma opção não está disponível, no lugar de só esmaecê-la
+  const [notice, setNotice] = useState<NoticeData | null>(null)
+  const flashTimer = useRef<number>(0)
+  useEffect(() => () => window.clearTimeout(flashTimer.current), [])
+  const topOf = (id: SectionId) => {
+    const box = scroller.current
+    const el = sections.current[id]
+    return box && el ? el.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop : 0
   }
-  const [tab, setTab] = useState<Tab>('texto')
-  // cada cartão diz a que aba pertence: no celular só a aba aberta aparece; no computador, todas
-  const inTab = (t: Tab) => (t === tab ? 'block' : 'max-md:hidden')
+  const readSection = useCallback(() => {
+    const box = scroller.current
+    if (!box) return
+    const tops = Object.fromEntries(SECTION_IDS.map((id) => [id, topOf(id)])) as Record<SectionId, number>
+    setCurrent(activeSection(tops, box.scrollTop, box.scrollTop + box.clientHeight >= box.scrollHeight - 2))
+  }, [])
+  const goTo = (id: SectionId) => {
+    const box = scroller.current
+    if (!box) return
+    setCurrent(id)
+    box.scrollTo({ top: Math.max(0, topOf(id) - 8), behavior: calmMotion() ? 'auto' : 'smooth' })
+    setFlash(id)
+    window.clearTimeout(flashTimer.current)
+    flashTimer.current = window.setTimeout(() => setFlash(null), 1600)
+  }
+  const onTarget = (t: SheetTarget) => goTo(SHEET_TARGETS[t].section)
+  // cada seção: o nome (o mesmo do índice) e os cartões do assunto
+  const section = (id: SectionId, children: ReactNode) => (
+    <section
+      key={id}
+      ref={(el) => { sections.current[id] = el }}
+      aria-labelledby={`gerar-${id}`}
+      className={cn('rounded-xl border p-3 ring-2 transition-[background-color,border-color,box-shadow] duration-500', flash === id ? 'border-primary bg-secondary ring-primary/50' : 'border-border bg-muted ring-transparent')}
+    >
+      <h3 id={`gerar-${id}`} className="mb-3 flex items-center gap-2 px-1 text-sm font-semibold text-foreground">
+        <span aria-hidden className="h-4 w-1 rounded-full bg-primary" />
+        {SECTION_LABELS[id]}
+      </h3>
+      <div className="space-y-4">{children}</div>
+    </section>
+  )
 
   // onde o mapa está quando assenta: o fuso do rodapé vem daqui (durante o arrasto o texto não muda)
   const [center, setCenter] = useState({ lng: session.camera.lng, lat: session.camera.lat })
@@ -295,8 +399,8 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
   }, [sheetStyle])
 
   const settings = useMemo<SheetSettings>(
-    () => ({ paper, orientation, title, show, coords, gridLevel, gridNumbers, northStyle, markerLook, legendSide: sideActive, blocks, corners, legend: { title: legendEdits.title, sections: legendSections }, credits, today, logoUrl, center }),
-    [paper, orientation, title, show, coords, gridLevel, gridNumbers, northStyle, markerLook, sideActive, blocks, corners, legendEdits.title, legendSections, credits, today, logoUrl, center],
+    () => ({ paper, orientation, model, detailCount, title, show, coords, gridLevel, gridNumbers, northStyle, titleAlign, legendOpacity, markerLook, legendPlace, blocks, corners, legend: { title: legendEdits.title, sections: legendSections }, credits, today, logoUrl, center }),
+    [paper, orientation, model, detailCount, title, show, coords, gridLevel, gridNumbers, northStyle, titleAlign, legendOpacity, markerLook, legendPlace, blocks, corners, legendEdits.title, legendSections, credits, today, logoUrl, center],
   )
 
   // ── a folha cabe na área disponível; o mapa dentro dela acompanha ──
@@ -319,22 +423,28 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
   const frameW = Math.round(sheet.map.w * px)
 
   // ── baixar: a folha é desenhada fora da tela, no tamanho do papel e a 300 dpi, e fotografada ──
-  const cameraProbe = useRef<(() => Camera | null) | null>(null)
+  const cameraProbes = useRef<Record<string, () => Camera | null>>({})
   const [job, setJob] = useState<ExportJob | null>(null)
   const [exportState, setExportState] = useState<ExportState>({ status: 'idle' })
   const working = exportState.status === 'working'
   const ready = !!sheetStyle && baseState.status === 'ready'
 
   const download = (kind: ExportKind) => {
-    const cam = cameraProbe.current?.()
-    if (!cam || !sheetStyle || frameW <= 0) { setExportState({ status: 'error' }); return }
-    // o mapa da folha de exportação é maior que o da tela: o zoom sobe junto, para mostrar exatamente a mesma área
+    if (!sheetStyle || frameW <= 0) { setExportState({ status: 'error' }); return }
+    // o mapa da folha de exportação é maior que o da tela: o zoom sobe junto, para mostrar exatamente a mesma área. Cada mapa da folha
+    // (um, dois ou o grande com os detalhes) leva a sua câmera.
     const target = exportSize(sheet.width, sheet.height)
-    const zoom = cam.zoom + Math.log2(Math.round(sheet.map.w * target.pxPerMm) / frameW)
+    const cameras: Record<string, Camera> = {}
+    for (const panel of sheet.panels) {
+      const cam = cameraProbes.current[panel.id]?.()
+      const screenW = Math.round(panel.rect.w * px)
+      if (!cam || screenW <= 0) { setExportState({ status: 'error' }); return }
+      cameras[panel.id] = { lng: cam.lng, lat: cam.lat, zoom: cam.zoom + Math.log2(Math.round(panel.rect.w * target.pxPerMm) / screenW) }
+    }
     setExportState({ status: 'working', kind })
     setJob({
       kind,
-      camera: { lng: cam.lng, lat: cam.lat, zoom },
+      cameras,
       page: { settings, session, style: sheetStyle, baseStyle, basemap: baseState.shown },
     })
   }
@@ -387,63 +497,57 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
                 baseStyle={baseStyle}
                 basemap={baseState.shown}
                 px={px}
-                cameraProbe={cameraProbe}
+                cameraProbes={cameraProbes}
+                selectedPanel={selectedPanel}
+                onPanelSelect={setSelectedPanel}
                 selectedBlock={selectedBlock}
                 focusBlock={focusBlock}
                 onBlockSelect={setSelectedBlock}
                 onBlockMove={moveBlock}
                 onBlockEdit={editBlock}
+                onTarget={onTarget}
                 onSettle={onSettle}
               />
             </div>
           )}
         </div>
 
-        {/* Os ajustes: base cinza suave, um cartão por assunto (6.2); embaixo, a ação de baixar (19.2) */}
+        {/* Os ajustes: as seções na ordem em que a folha se lê, um cartão por assunto (6.2); o índice leva a cada uma; embaixo, a ação de baixar (19.2) */}
         <aside aria-label="Ajustes do mapa" className="flex max-h-[55svh] min-h-0 shrink-0 flex-col border-t border-border bg-muted/50 md:max-h-none md:w-[24rem] md:border-l md:border-t-0">
-          {/* no celular, os ajustes ficam em três abas; no computador não há abas, todos os cartões estão à vista */}
-          <div role="tablist" aria-label="Ajustes" className="grid shrink-0 grid-cols-3 gap-1 border-b border-border bg-card p-1 md:hidden">
-            {TABS.map(({ id, label }) => (
-              <button
-                key={id}
-                type="button"
-                role="tab"
-                aria-selected={tab === id}
-                onClick={() => setTab(id)}
-                className={cn('h-11 text-sm font-medium', controlItem(tab === id))}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <OverlayScroll data-panel-scroll className="min-h-0 flex-1 p-4">
+          <nav aria-label="Seções dos ajustes" className="shrink-0 border-b border-border bg-card px-2 py-1.5">
+            <div className="grid grid-cols-5 gap-1">
+              {SECTION_IDS.map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  aria-current={current === id ? 'true' : undefined}
+                  onClick={() => goTo(id)}
+                  className={cn('h-10 px-1 text-[13px] font-medium', controlItem(current === id))}
+                >
+                  {SECTION_LABELS[id]}
+                </button>
+              ))}
+            </div>
+          </nav>
+          <OverlayScroll ref={scroller} onScroll={readSection} data-panel-scroll className="min-h-0 flex-1 p-4">
             <div className="space-y-4 pb-6">
-              <Collapse open={custom} clip>
-                <div className="pb-4">
-                  <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-secondary p-3 text-secondary-foreground">
-                    <p className="text-sm">Usando suas últimas escolhas.</p>
-                    <button type="button" onClick={resetChoices} className={cn('flex h-10 shrink-0 items-center gap-2 px-3 text-sm font-medium', controlItem())}>
-                      <Undo2 className="h-4 w-4" aria-hidden />
-                      Voltar ao padrão
-                    </button>
+              <div>
+                <Collapse open={autoNote} clip>
+                  <div className="pb-4">
+                    <p role="status" className="rounded-lg border border-primary/30 bg-secondary p-3 text-sm text-secondary-foreground">Ajustamos a folha ao seu mapa. Mude o que quiser: o que você escolhe fica.</p>
                   </div>
-                </div>
-              </Collapse>
-              <div className={inTab('texto')}>
-              <PanelCard title="Título" caption="Aparece no alto da folha.">
-                <Input aria-label="Título do mapa" value={title} onChange={(e) => setTyped(e.target.value)} />
-                {typed !== null && typed !== automatic && (
-                  <button type="button" onClick={() => setTyped(null)} className={cn('mt-3 flex h-10 items-center gap-2 px-2 text-sm font-medium', controlItem())}>
-                    <Undo2 className="h-4 w-4" aria-hidden />
-                    Voltar ao título automático
-                  </button>
-                )}
+                </Collapse>
+              </div>
+              {section('folha', <>
+              <PanelCard title="Modelo" caption={model === 'single' ? 'Escolha como os mapas se distribuem na folha.' : 'Toque num mapa da folha para escolher qual mover. Cada um tem o seu zoom.'}>
+                <ChoiceTiles label="Modelo da folha" value={model} options={MODEL_TILES} onChange={setModel} />
+                <Collapse open={model === 'details'} clip>
+                  <div className="pt-4">
+                    <p className="mb-2 text-sm text-muted-foreground">Quantos detalhes</p>
+                    <Segmented label="Quantos detalhes" value={String(detailCount) as '1' | '2' | '3' | '4'} options={DETAIL_COUNTS.map((n) => ({ value: String(n) as '1' | '2' | '3' | '4', label: String(n) }))} onChange={(v) => setDetailCount(Number(v))} />
+                  </div>
+                </Collapse>
               </PanelCard>
-              </div>
-              <div className={inTab('texto')}>
-              <NoteCard blocks={blocks} selected={chosenBlock} onAdd={addBlock} onLook={lookBlock} onRemove={removeBlock} />
-              </div>
-              <div className={inTab('folha')}>
               <PanelCard title="Folha" caption="Arraste o mapa dentro da folha e use a roda do mouse para o zoom.">
                 <div className="space-y-6">
                   <div>
@@ -456,47 +560,97 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
                   </div>
                 </div>
               </PanelCard>
-              </div>
-              {(hasIcons || hasProps) && (
-                <div className={inTab('folha')}>
-                <PanelCard title="Ações e propriedades" caption="Vale só para a folha: o mapa não muda.">
-                  <div className="space-y-6">
-                    {hasIcons && (
-                      <div>
-                        <p className="mb-2 text-sm text-muted-foreground">Como as ações aparecem</p>
-                        <Segmented label="Como as ações aparecem" value={markerLook} options={MARKER_OPTIONS} onChange={setMarkerLook} />
-                        <p key={markerLook} className="animate-in fade-in mt-2 text-xs leading-snug text-muted-foreground duration-200">
-                          {markerLook === 'auto' ? 'Longe, um ponto; perto, o ícone.' : markerLook === 'icon' ? 'O ícone aparece em qualquer distância, até com o mapa longe.' : 'Só o ponto colorido, mesmo com o mapa perto.'}
-                        </p>
-                      </div>
-                    )}
-                    {hasProps && (
-                      <div>
-                        <p className="mb-2 text-sm text-muted-foreground">Quais propriedades aparecem</p>
-                        <Segmented label="Quais propriedades aparecem" value={propMode} options={[...PROPERTY_MODES]} onChange={setPropMode} />
-                        <Collapse open={propMode === 'some'} clip>
-                          <div className="pt-4">
-                            <PropertyPicker regiaoId={session.regiaoId} chosen={pickedProps} onChange={setPickedProps} />
-                            {pickedProps.length === 0 && (
-                              <p role="status" className="animate-in fade-in mt-3 text-xs leading-snug text-muted-foreground duration-200">Nenhuma escolhida ainda: a folha sai sem propriedades. Procure pelo nome e ligue as que quer.</p>
-                            )}
-                          </div>
-                        </Collapse>
-                      </div>
-                    )}
-                  </div>
-                </PanelCard>
+              </>)}
+              {section('cabecalho', <>
+              <PanelCard title="Cabeçalho" caption="Aparece na faixa do alto da folha.">
+                <p className="mb-2 text-sm text-muted-foreground">Título</p>
+                <Input aria-label="Título do mapa" value={title} onChange={(e) => setTyped(e.target.value)} />
+                {typed !== null && typed !== automatic && (
+                  <button type="button" onClick={() => setTyped(null)} className={cn('mt-3 flex h-10 items-center gap-2 px-2 text-sm font-medium', controlItem())}>
+                    <Undo2 className="h-4 w-4" aria-hidden />
+                    Voltar ao título automático
+                  </button>
+                )}
+                <div className="mt-6">
+                  <p className="mb-2 text-sm text-muted-foreground">Alinhamento</p>
+                  <Segmented label="Alinhamento do título" value={titleAlign} options={ALIGN_OPTIONS} onChange={setTitleAlign} />
                 </div>
+                <div className="mt-6 border-t border-border pt-4">
+                  <p className="text-sm text-muted-foreground">Logo</p>
+                  <p className="mb-3 mt-0.5 text-xs leading-snug text-muted-foreground">Aparece à esquerda do título. Não fica salvo: ao fechar esta tela, ele sai.</p>
+                  <LogoPicker value={logoUrl} onChange={setLogoUrl} />
+                </div>
+              </PanelCard>
+              </>)}
+              {section('textos', <NoteCard blocks={blocks} selected={chosenBlock} onAdd={addBlock} onLook={lookBlock} onRemove={removeBlock} />)}
+              {section('mapa', <>
+              <PanelCard title="Mapa de fundo">
+                <div className="space-y-5">
+                  {PRINT_BASEMAP_GROUPS.map((g) => (
+                    <div key={g.title}>
+                      <p className="mb-2 text-sm text-muted-foreground">{g.title}</p>
+                      <ChoiceTiles
+                        label={g.title}
+                        value={g.keys.includes(basemap) ? basemap : null}
+                        columns={2}
+                        options={g.keys.map((key) => ({ value: key, label: BASEMAP_LABELS[key], preview: <span className="h-full w-full" style={{ background: BASEMAP_SWATCH[key] }} /> }))}
+                        // clicar no Mineral de novo, depois de falhar, tenta outra vez: por isso o já escolhido não fica bloqueado
+                        onChange={(key) => { setBasemap(key); saveGerarPrefs({ basemap: key }); if (key === basemap) setRetry((n) => n + 1) }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div aria-live="polite">
+                  {baseState.status === 'loading' && <p className="mt-3 text-xs text-muted-foreground">Carregando o mapa de fundo…</p>}
+                  {baseState.status === 'ready' && unavailable && (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                      {BASEMAP_LABELS[basemap]} indisponível agora. Mostrando {BASEMAP_LABELS[baseState.shown]}.
+                    </p>
+                  )}
+                  {baseState.status === 'error' && (
+                    <div className="mt-3 rounded-md border border-crit/40 p-3">
+                      <p className="text-sm">Não conseguimos carregar o mapa de fundo. Veja se a internet está funcionando.</p>
+                      <button type="button" onClick={() => setRetry((n) => n + 1)} className={cn('mt-2 flex h-10 items-center px-3 text-sm font-medium', controlItem())}>
+                        Tentar de novo
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </PanelCard>
+              {hasIcons && (
+                <PanelCard title="Ações" caption="Como cada ação aparece na folha. O mapa não muda.">
+                  <ChoiceTiles
+                    label="Como as ações aparecem"
+                    value={markerLook}
+                    options={MARKER_LOOKS.map((value) => ({ value, label: MARKER_LOOK_LABELS[value], preview: MARKER_PREVIEW[value] }))}
+                    onChange={setMarkerLook}
+                  />
+                  <p key={markerLook} className="animate-in fade-in mt-3 text-xs leading-snug text-muted-foreground duration-200">
+                    {markerLook === 'auto' ? 'Longe, um ponto; perto, o ícone.' : markerLook === 'icon' ? 'O ícone aparece em qualquer distância, até com o mapa longe.' : 'Só o ponto colorido, mesmo com o mapa perto.'}
+                  </p>
+                </PanelCard>
               )}
-              <div className={inTab('folha')}>
-              <PanelCard title="O que aparece na folha" caption="Título, legenda e fonte dos dados sempre saem. Ao ligar um item, os ajustes dele aparecem logo abaixo.">
+              {hasProps && (
+                <PanelCard title="Propriedades" caption="Quais propriedades aparecem na folha. O mapa não muda.">
+                  <Segmented label="Quais propriedades aparecem" value={propMode} options={[...PROPERTY_MODES]} onChange={setPropMode} />
+                  <Collapse open={propMode === 'some'} clip>
+                    <div className="pt-4">
+                      <PropertyPicker regiaoId={session.regiaoId} chosen={pickedProps} onChange={setPickedProps} />
+                      {pickedProps.length === 0 && (
+                        <p role="status" className="animate-in fade-in mt-3 text-xs leading-snug text-muted-foreground duration-200">Nenhuma escolhida ainda: a folha sai sem propriedades. Procure pelo nome e ligue as que quer.</p>
+                      )}
+                    </div>
+                  </Collapse>
+                </PanelCard>
+              )}
+              <PanelCard title="O que aparece" caption="Ao ligar um item, os ajustes dele aparecem logo abaixo. Título, legenda e fonte dos dados sempre saem.">
                 <ul className="-my-1">
                   {PARTS.map(({ id, label }) => (
                     // a linha toda liga e desliga (19.1): o interruptor é sempre a última coluna
                     <li key={id}>
                       <label className="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-sm px-1 py-2 text-sm transition-colors duration-200 hover:bg-muted">
                         <span>{label}</span>
-                        <Switch checked={show[id]} onCheckedChange={(on) => setShow((s) => ({ ...s, [id]: on }))} aria-label={label} />
+                        <Switch checked={show[id]} onCheckedChange={(on) => { setShow((s) => ({ ...s, [id]: on })); if (id === 'inset') setChosen((c) => ({ ...c, inset: true })) }} aria-label={label} />
                       </label>
                       {id === 'north' && (
                         <Collapse open={show.north} clip>
@@ -510,7 +664,7 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
                           <div className="mb-2 ml-2 space-y-5 border-l-2 border-border py-1 pl-3">
                             <div>
                               <p className="mb-2 text-sm text-muted-foreground">Formato</p>
-                              <Segmented label="Formato das coordenadas" value={coords} options={COORD_OPTIONS} onChange={setCoords} />
+                              <ChoiceTiles label="Formato das coordenadas" value={coords} options={COORD_TILES} onChange={setCoords} />
                             </div>
                             <div>
                               <div className="flex items-center justify-between gap-3">
@@ -530,7 +684,7 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
                             </div>
                             <div>
                               <p className="mb-2 text-sm text-muted-foreground">Números</p>
-                              <Segmented label="Onde ficam os números" value={gridNumbers} options={NUMBER_OPTIONS} onChange={setGridNumbers} />
+                              <ChoiceTiles label="Onde ficam os números" value={gridNumbers} options={NUMBER_TILES} onChange={setGridNumbers} />
                             </div>
                           </div>
                         </Collapse>
@@ -539,23 +693,32 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
                   ))}
                 </ul>
               </PanelCard>
-              </div>
-              <div className={inTab('legenda')}>
+              </>)}
+              {section('legenda', <>
               <PanelCard title="Legenda" caption="Toque no nome para renomear, arraste a alça para mudar a ordem. Isto vale só para a folha: o mapa não muda.">
                 <LegendEditor sections={legendBase} edits={legendEdits} onChange={setLegendEdits} />
-              </PanelCard>
-              </div>
-              <div className={inTab('legenda')}>
-              <PanelCard title="Onde fica a legenda" caption={orientation === 'landscape' ? 'Ao lado, o mapa fica um pouco menor e sobra espaço para um texto.' : 'Ao lado do mapa só na folha deitada.'}>
-                <Segmented
+                <div className="mt-6 border-t border-border pt-4">
+                  <p className="text-sm text-muted-foreground">Onde fica</p>
+                  <p key={legendPlace} className="animate-in fade-in mb-2 mt-0.5 text-xs leading-snug text-muted-foreground duration-200">{PLACE_CAPTION[legendPlace]}</p>
+                <ChoiceTiles
                   label="Lugar da legenda"
-                  value={sideActive ? 'side' : 'over'}
-                  options={[...LEGEND_PLACE_OPTIONS]}
-                  onChange={(v) => setLegendSide(v === 'side')}
-                  disabled={orientation !== 'landscape'}
+                  value={legendPlace}
+                  options={LEGEND_PLACES.map((value) => ({
+                    value,
+                    label: LEGEND_PLACE_LABELS[value],
+                    preview: PLACE_PREVIEW[value],
+                    blocked: value === 'side' && orientation !== 'landscape' ? 'A coluna ao lado ocuparia a largura da folha em pé. Mude a posição da folha para Deitada se quiser a legenda ao lado.' : undefined,
+                  }))}
+                  onChange={setPlaceChoice}
+                  onBlocked={(reason) => setNotice({ id: Date.now(), tone: 'info', title: 'A legenda não pode ficar ao lado agora', body: reason })}
                 />
-                <Collapse open={!sideActive} clip>
-                  <div role="radiogroup" aria-label="Canto da legenda" className="grid grid-cols-2 gap-2 pt-4">
+                <Collapse open={legendPlace === 'over'} clip>
+                  <div className="pt-4">
+                    <p className="mb-2 text-sm text-muted-foreground">Fundo</p>
+                    <LegendOpacityPicker value={legendOpacity} onChange={setLegendOpacity} />
+                  </div>
+                  <p className="mb-2 mt-4 text-sm text-muted-foreground">Canto</p>
+                  <div role="radiogroup" aria-label="Canto da legenda" className="grid grid-cols-2 gap-2">
                     {CORNERS.map((c) => {
                       const selected = c === legendCorner
                       return (
@@ -576,55 +739,9 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
                     })}
                   </div>
                 </Collapse>
-              </PanelCard>
-              </div>
-              <div className={inTab('folha')}>
-              <PanelCard title="Logo" caption="Aparece à esquerda do título. Não fica salvo: ao fechar esta tela, ele sai.">
-                <LogoPicker value={logoUrl} onChange={setLogoUrl} />
-              </PanelCard>
-              </div>
-              <div className={inTab('folha')}>
-              <PanelCard title="Mapa de fundo">
-                <div role="radiogroup" aria-label="Mapa de fundo" className="grid grid-cols-3 gap-2.5">
-                  {PRINT_BASEMAPS.map((key) => {
-                    const selected = key === basemap
-                    return (
-                      // clicar no Mineral de novo, depois de falhar, tenta outra vez: por isso o já escolhido não fica bloqueado
-                      <button
-                        key={key}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        onClick={() => { setBasemap(key); setPicked(key); saveGerarPrefs({ basemap: key }); if (key === basemap) setRetry((n) => n + 1) }}
-                        className={cn(
-                          'flex flex-col items-center gap-1.5 rounded-md border p-2 text-xs transition-[background-color,border-color,color,translate,scale] duration-200 ease-spring active:scale-[0.96] focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30',
-                          selected ? 'border-primary bg-secondary font-medium text-secondary-foreground' : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',
-                        )}
-                      >
-                        <span className="h-9 w-full rounded-sm border border-border" style={{ background: SWATCH[key] }} aria-hidden />
-                        {BASEMAP_LABELS[key]}
-                      </button>
-                    )
-                  })}
-                </div>
-                <div aria-live="polite">
-                  {baseState.status === 'loading' && <p className="mt-3 text-xs text-muted-foreground">Carregando o mapa de fundo…</p>}
-                  {baseState.status === 'ready' && unavailable && (
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      {BASEMAP_LABELS[basemap]} indisponível agora. Mostrando {BASEMAP_LABELS[baseState.shown]}.
-                    </p>
-                  )}
-                  {baseState.status === 'error' && (
-                    <div className="mt-3 rounded-md border border-crit/40 p-3">
-                      <p className="text-sm">Não conseguimos carregar o mapa de fundo. Veja se a internet está funcionando.</p>
-                      <button type="button" onClick={() => setRetry((n) => n + 1)} className={cn('mt-2 flex h-10 items-center px-3 text-sm font-medium', controlItem())}>
-                        Tentar de novo
-                      </button>
-                    </div>
-                  )}
                 </div>
               </PanelCard>
-              </div>
+              </>)}
             </div>
           </OverlayScroll>
 <footer className="shrink-0 border-t border-border bg-card p-4 shadow-control">
@@ -647,6 +764,11 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
             </div>
           </footer>
         </aside>
+      </div>
+
+      {/* acima da tela (z 2500): o aviso do mapa principal fica atrás dela */}
+      <div className="pointer-events-none fixed inset-x-3 top-4 z-[2600] flex justify-center">
+        <Notice notice={notice} onClose={() => setNotice(null)} />
       </div>
 
       {job && <SheetExport job={job} onDone={onDone} onError={onFail} />}

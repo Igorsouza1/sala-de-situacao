@@ -12,6 +12,8 @@ import type { RuleLegendSection } from './helpers/legend-rules'
 import { scaleBar } from './helpers/scale'
 import { Legend, type LayerManagerOption } from './LayerManager'
 import { PanelCard } from './PanelCard'
+import { LegendOpacityPicker } from './LegendOpacityPicker'
+import { DEFAULT_MAP_LEGEND_OPACITY, isLegendOpacity, legendFillStyle, type LegendOpacity } from './helpers/legend-opacity'
 
 // O controle de canto do mapa (DESIGN.md 13.7): a escala, a legenda e os créditos juntos, num cartão só no canto de baixo à direita,
 // na linguagem dos controles (borda, sombra, raio e botões com rótulo). A legenda e os créditos abrem para cima, como os painéis do
@@ -21,6 +23,7 @@ import { PanelCard } from './PanelCard'
 // MapLibre, que abria expandido e ficava por baixo da legenda.
 
 const STORAGE_KEY = 'prisma:mapa:legenda'
+const OPACITY_KEY = 'prisma:mapa:legenda:fundo'
 const HINT = 'Toque num item para ver onde ele está no mapa.'
 
 type Panel = 'legend' | 'credits' | null
@@ -118,17 +121,21 @@ export const IconSwatch = ({ name }: { name: string }) => {
  * nunca chegar na câmera (+, −, norte, 2D e 3D, no canto de cima à direita): reservamos o card da câmera (~16rem do alto) e o controle
  * de baixo, e o que passar disso rola dentro do painel. Antes ele passava por baixo da câmera (C32).
  */
-function CornerPanel({ open, title, onClose, children }: { open: boolean; title: string; onClose: () => void; children: React.ReactNode }) {
+// `fill`: o fundo do painel (cheio, suave ou vazado); só a legenda o tem, os créditos ficam cheios
+function CornerPanel({ open, title, onClose, children, fill }: { open: boolean; title: string; onClose: () => void; children: React.ReactNode; fill?: LegendOpacity }) {
   return (
     <div
       role="dialog"
       aria-modal="false"
       aria-label={title}
       inert={!open}
+      style={fill ? legendFillStyle(fill) : undefined}
       className={cn(
         'absolute bottom-full right-0 mb-3 flex max-h-[calc(100svh-22rem)] max-[1120px]:max-h-[calc(100svh-27rem)] w-[22rem] max-w-[calc(100vw-2rem)] origin-bottom-right flex-col overflow-hidden rounded-lg',
         'transition-[opacity,translate,scale,visibility]',
-        controlSurface,
+        fill ? 'border border-border shadow-control' : controlSurface,
+        // o fundo lê as variáveis do grau escolhido; os cartões de dentro seguem o mesmo grau
+        fill && 'bg-(--legend-card) [&_section]:bg-(--legend-card)',
         open ? 'visible scale-100 opacity-100 duration-[240ms] ease-spring' : 'invisible translate-y-2 scale-95 opacity-0 duration-150 ease-in',
       )}
     >
@@ -138,7 +145,7 @@ function CornerPanel({ open, title, onClose, children }: { open: boolean; title:
           <X className="h-4 w-4" aria-hidden />
         </button>
       </header>
-      <OverlayScroll className="bg-muted/50 p-4">{children}</OverlayScroll>
+      <OverlayScroll className={cn('p-4', fill ? 'bg-(--legend-base)' : 'bg-muted/50')}>{children}</OverlayScroll>
     </div>
   )
 }
@@ -147,6 +154,17 @@ export function MapLegend({ mapRef, ready, options, activeLayers, ruleLegends, c
   const bar = useScale(mapRef, ready)
   const credits = useCredits(mapRef, ready)
   const [panel, setPanel] = useState<Panel>(null)
+  const [fill, setFill] = useState<LegendOpacity>(DEFAULT_MAP_LEGEND_OPACITY)
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(OPACITY_KEY)
+      if (isLegendOpacity(v)) setFill(v)
+    } catch { /* fica no padrão */ }
+  }, [])
+  const chooseFill = (v: LegendOpacity) => {
+    setFill(v)
+    try { localStorage.setItem(OPACITY_KEY, v) } catch { /* a escolha vale só agora */ }
+  }
 
   // a legenda abre sozinha na primeira visita em tela grande (a pessoa não precisa procurar o que é cada cor) e depois lembra a escolha
   useEffect(() => {
@@ -190,7 +208,7 @@ export function MapLegend({ mapRef, ready, options, activeLayers, ruleLegends, c
   return (
     <div className="absolute bottom-4 right-4 z-[400] max-[1120px]:bottom-24">
       <div className="relative">
-        <CornerPanel open={panel === 'legend' && hasLegend} title="Legenda" onClose={() => choose(null)}>
+        <CornerPanel open={panel === 'legend' && hasLegend} title="Legenda" onClose={() => choose(null)} fill={fill}>
           <div className="space-y-4">
             {plainEntries.length > 0 && (
               <PanelCard title="Camadas" caption={HINT}>
@@ -229,6 +247,9 @@ export function MapLegend({ mapRef, ready, options, activeLayers, ruleLegends, c
                 </div>
               </PanelCard>
             ))}
+            <PanelCard title="Fundo da legenda" caption="Quanto o mapa aparece por trás dela.">
+              <LegendOpacityPicker value={fill} onChange={chooseFill} />
+            </PanelCard>
           </div>
         </CornerPanel>
 

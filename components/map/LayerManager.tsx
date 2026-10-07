@@ -70,7 +70,11 @@ export function Legend({ option, checked }: { option: LayerManagerOption; checke
   const stroke = option.color
   const fill = option.fillColor || option.color
   const fillOpacity = option.fillOpacity ?? 1
-  const hairline = 'ring-1 ring-foreground/25'
+  // O quadrado tem borda firme: o preenchimento (que pode ser translúcido) fica só DENTRO da borda (`padding-box`); antes ele corria por
+  // baixo dos 2 px da borda e os dois se misturavam. O fio de fora (regra 5: cor clara no cartão branco nunca some) é um contorno
+  // OPACO de 1 px na cor pedra, não mais um anel de 25% de transparência, que completava o esfumaçado.
+  const inside = 'padding-box'
+  const fio = 'outline outline-1 outline-stone'
   return (
     <span className={cn('flex h-6 w-6 shrink-0 items-center justify-center transition-opacity duration-200', !checked && 'opacity-40')} aria-hidden>
       {/* ícone: a mesma cara do marcador do mapa (cor cheia e ícone branco, 6.2 regra 5); antes era só o contorno e a pessoa não via a cor */}
@@ -90,14 +94,14 @@ export function Legend({ option, checked }: { option: LayerManagerOption; checke
           <path d="M2 15 C 8 15, 12 5, 18 5" fill="none" stroke={stroke} strokeWidth="2.5" strokeLinecap="round" />
         </svg>
       )}
-      {type === 'circle' && <span className={cn('h-4 w-4 rounded-full border-2', hairline)} style={{ backgroundColor: fill, borderColor: stroke }} />}
+      {type === 'circle' && <span className={cn('h-4 w-4 rounded-full border-2', fio)} style={{ backgroundColor: fill, backgroundClip: inside, borderColor: stroke }} />}
       {type === 'polygon' && (
         <span
-          className={cn('h-4 w-4 rounded-[3px] border-2', hairline)}
-          style={{ backgroundColor: `color-mix(in srgb, ${fill} ${Math.round(fillOpacity * 100)}%, transparent)`, borderColor: stroke }}
+          className={cn('h-4 w-4 rounded-[3px] border-2', fio)}
+          style={{ backgroundColor: `color-mix(in srgb, ${fill} ${Math.round(fillOpacity * 100)}%, transparent)`, backgroundClip: inside, borderColor: stroke }}
         />
       )}
-      {type === 'heatmap' && <span className={cn('h-4 w-4 rounded-sm', hairline)} style={{ background: `linear-gradient(135deg, ${option.color || 'red'} 0%, transparent 100%)` }} />}
+      {type === 'heatmap' && <span className="h-4 w-4 rounded-sm border border-foreground/30" style={{ background: `linear-gradient(135deg, ${option.color || 'red'} 0%, transparent 100%)`, backgroundClip: inside }} />}
     </span>
   )
 }

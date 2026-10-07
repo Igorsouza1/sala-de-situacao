@@ -1,17 +1,18 @@
-import { PRINT_BASEMAPS, autoTitle, composeSheetStyle, printBasemapFor } from '../helpers/gerar-mapa'
+import { PRINT_BASEMAPS, PRINT_BASEMAP_GROUPS, autoTitle, composeSheetStyle, printBasemapFor } from '../helpers/gerar-mapa'
 
 describe('printBasemapFor', () => {
-  it('o que já é uma das três bases da folha fica como está', () => {
+  it('toda base da folha fica como está', () => {
     PRINT_BASEMAPS.forEach((key) => expect(printBasemapFor(key)).toBe(key))
   })
 
-  it('a base mais parecida entra no lugar das que a folha não oferece', () => {
-    expect(printBasemapFor('satellite')).toBe('satellite-soft')
-    expect(printBasemapFor('osm')).toBe('streets')
+  it('oferece 10 bases, cada uma em um só grupo, sem repetir', () => {
+    expect(PRINT_BASEMAPS.length).toBe(10)
+    expect(new Set(PRINT_BASEMAPS).size).toBe(PRINT_BASEMAPS.length)
+    expect(PRINT_BASEMAP_GROUPS.map((g) => g.keys.length).reduce((a, b) => a + b, 0)).toBe(PRINT_BASEMAPS.length)
   })
 
-  it('oferece no máximo 3 bases', () => {
-    expect(PRINT_BASEMAPS.length).toBeLessThanOrEqual(3)
+  it('as bases do mapa principal estão todas na folha', () => {
+    for (const key of ['satellite-soft', 'mineral', 'satellite', 'streets', 'osm'] as const) expect(PRINT_BASEMAPS).toContain(key)
   })
 })
 

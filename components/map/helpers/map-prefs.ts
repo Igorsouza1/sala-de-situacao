@@ -1,8 +1,9 @@
 import { BASEMAP_KEYS, type BasemapKey } from './basemaps'
 import type { AreaFilter, DateIntent, PresetId } from './filters'
-import { DEFAULT_GRID_LEVEL, DEFAULT_GRID_NUMBERS, DEFAULT_MARKER_LOOK, DEFAULT_NORTH_STYLE, DEFAULT_SHOW, GRID_NUMBERS, MARKER_LOOKS, NORTH_STYLES, PART_IDS, PRINT_BASEMAPS, clampGridLevel, type GridNumbers, type MarkerLook, type NorthStyle, type Part } from './gerar-mapa'
+import { BLOCK_FONTS, BLOCK_SIZES, BLOCK_STYLES, MAX_BLOCKS, MAX_BLOCK_CHARS, clampPos, type MapBlock, TITLE_ALIGNS, type TitleAlign, DEFAULT_GRID_LEVEL, DEFAULT_GRID_NUMBERS, DEFAULT_MARKER_LOOK, DEFAULT_NORTH_STYLE, DEFAULT_SHOW, GRID_NUMBERS, MARKER_LOOKS, NORTH_STYLES, PART_IDS, PRINT_BASEMAPS, clampGridLevel, type GridNumbers, type MarkerLook, type NorthStyle, type Part } from './gerar-mapa'
 import type { GridFormat } from './grid'
-import { CORNERS, DEFAULT_LEGEND_CORNER, DEFAULT_SHEET, ORIENTATIONS, PAPERS, type Corner, type Orientation, type Paper } from './sheet'
+import { isLegendOpacity, type LegendOpacity } from './legend-opacity'
+import { CORNERS, DEFAULT_LEGEND_CORNER, DEFAULT_SHEET, DETAIL_COUNTS, LEGEND_PLACES, ORIENTATIONS, PAPERS, SHEET_MODELS, type Corner, type LegendPlace, type Orientation, type Paper, type SheetModel } from './sheet'
 
 // Preferências do mapa, guardadas no navegador (DESIGN.md 13.2): a mesma pessoa, no mesmo aparelho, abre o mapa como o deixou.
 // Fica tudo neste módulo de propósito: quando as preferências do usuário forem para o banco (junto com som e cursor, 17.4),
@@ -148,15 +149,23 @@ export const isInsideBounds = (c: Camera, bbox: [number, number, number, number]
 export interface GerarPrefs {
   paper?: Paper
   orientation?: Orientation
+  /** o modelo da folha (um mapa, lado a lado, mapa e detalhes) e quantos detalhes */
+  model?: SheetModel
+  details?: number
   basemap?: BasemapKey
   coords?: GridFormat
   legendCorner?: Corner
-  /** a legenda fora do mapa, na coluna ao lado (só vale na folha deitada) */
+  /** onde a legenda fica: sobre o mapa, ao lado ou embaixo (só o que a pessoa escolheu) */
+  legendPlace?: LegendPlace
+  /** de antes do lugar da legenda: lido, nunca mais gravado */
   legendSide?: boolean
   /** o grau da linha da grade, de 0 (sem linha) a 4 */
   gridLevel?: number
   gridNumbers?: GridNumbers
   northStyle?: NorthStyle
+  titleAlign?: TitleAlign
+  /** o fundo da legenda sobre o mapa da folha */
+  legendOpacity?: LegendOpacity
   markerLook?: MarkerLook
   /** os itens que a pessoa tirou da legenda (ids): voltam tirados da próxima vez */
   legendHidden?: string[]
@@ -177,14 +186,19 @@ export function readGerarPrefs(store: Store | null = browserStore()): GerarPrefs
     const prefs: GerarPrefs = {}
     if (PAPERS.includes(json.paper)) prefs.paper = json.paper
     if (ORIENTATIONS.includes(json.orientation)) prefs.orientation = json.orientation
+    if (SHEET_MODELS.includes(json.model)) prefs.model = json.model
+    if ((DETAIL_COUNTS as readonly number[]).includes(json.details)) prefs.details = json.details
     if (PRINT_BASEMAPS.includes(json.basemap)) prefs.basemap = json.basemap
     if (COORD_FORMATS.includes(json.coords)) prefs.coords = json.coords
     if (Array.isArray(json.legendHidden)) prefs.legendHidden = json.legendHidden.filter((id: unknown) => typeof id === 'string').slice(0, MAX_HIDDEN)
     if (CORNERS.includes(json.legendCorner)) prefs.legendCorner = json.legendCorner
     if (typeof json.legendSide === 'boolean') prefs.legendSide = json.legendSide
+    if (LEGEND_PLACES.includes(json.legendPlace)) prefs.legendPlace = json.legendPlace
     if (json.gridLevel !== undefined) prefs.gridLevel = clampGridLevel(json.gridLevel)
     if (GRID_NUMBERS.includes(json.gridNumbers)) prefs.gridNumbers = json.gridNumbers
     if (NORTH_STYLES.includes(json.northStyle)) prefs.northStyle = json.northStyle
+    if (TITLE_ALIGNS.includes(json.titleAlign)) prefs.titleAlign = json.titleAlign
+    if (isLegendOpacity(json.legendOpacity)) prefs.legendOpacity = json.legendOpacity
     if (MARKER_LOOKS.includes(json.markerLook)) prefs.markerLook = json.markerLook
     if (json.show && typeof json.show === 'object') {
       const show: Partial<Record<Part, boolean>> = {}
@@ -201,7 +215,7 @@ export function readGerarPrefs(store: Store | null = browserStore()): GerarPrefs
 export function saveGerarPrefs(patch: GerarPrefs, store: Store | null = browserStore()): void {
   try {
     const known: GerarPrefs = {}
-    for (const k of ['paper', 'orientation', 'basemap', 'coords', 'legendCorner', 'legendSide', 'gridLevel', 'gridNumbers', 'northStyle', 'markerLook', 'legendHidden', 'show'] as const) {
+    for (const k of ['paper', 'orientation', 'model', 'details', 'basemap', 'coords', 'legendCorner', 'legendPlace', 'gridLevel', 'gridNumbers', 'northStyle', 'titleAlign', 'legendOpacity', 'markerLook', 'legendHidden', 'show'] as const) {
       if (patch[k] !== undefined) (known as any)[k] = patch[k]
     }
     store?.setItem(GERAR_KEY, JSON.stringify({ v: VERSION, ...readGerarPrefs(store), ...known }))
@@ -232,4 +246,78 @@ export function isCustomGerar(p: GerarPrefs): boolean {
   if (p.markerLook !== undefined && p.markerLook !== DEFAULT_MARKER_LOOK) return true
   if (p.legendHidden && p.legendHidden.length > 0) return true
   return PART_IDS.some((id) => p.show?.[id] !== undefined && p.show[id] !== DEFAULT_SHOW[id])
+}
+
+// ── O conteúdo do Gerar mapa, por região ───────────────────────────────────────────────────────────────────────────
+// Quem volta ao mapa encontra a folha como a deixou: o título escrito, os textos soltos (com o lugar e o jeito de cada um), os nomes e a
+// ordem da legenda e as propriedades escolhidas. Só o logo não fica (é um arquivo da pessoa; nunca sai do aparelho nem é guardado). Vale
+// por região porque o conteúdo é daquele mapa: o título de uma região não deve aparecer em outra. O título só é guardado se a pessoa o
+// escreveu (o automático muda com as camadas de cada dia).
+
+export interface GerarContent {
+  /** o título que a pessoa escreveu; ausente: segue o automático */
+  title?: string
+  blocks?: MapBlock[]
+  /** o jeito do último texto mexido: o próximo nasce com ele */
+  look?: { style: MapBlock['style']; size: MapBlock['size']; font: MapBlock['font'] }
+  legend?: { title: string; labels: Record<string, string>; order: string[] }
+  propMode?: 'all' | 'some'
+  props?: { id: number; nome: string }[]
+}
+
+const contentKey = (regiaoId?: number) => `prisma:mapa:gerar:conteudo:${regiaoId ?? 'padrao'}`
+const MAX_LEGEND_ENTRIES = 200
+const isStr = (v: unknown, max: number): v is string => typeof v === 'string' && v.length <= max
+
+function cleanBlocks(v: unknown): MapBlock[] | undefined {
+  if (!Array.isArray(v)) return undefined
+  const out: MapBlock[] = []
+  for (const b of v.slice(0, MAX_BLOCKS)) {
+    if (!b || typeof b !== 'object' || !isStr(b.id, 40) || typeof b.text !== 'string' || !isNum(b.x) || !isNum(b.y)) continue
+    if (!BLOCK_STYLES.includes(b.style) || !BLOCK_SIZES.includes(b.size) || !BLOCK_FONTS.includes(b.font)) continue
+    // texto vazio não sai no papel e só atrapalha ao voltar: não volta
+    if (b.text.trim() === '') continue
+    out.push({ id: b.id, text: b.text.slice(0, MAX_BLOCK_CHARS), x: clampPos(b.x), y: clampPos(b.y), style: b.style, size: b.size, font: b.font })
+  }
+  return out
+}
+
+export function readGerarContent(regiaoId?: number, store: Store | null = browserStore()): GerarContent {
+  try {
+    const raw = store?.getItem(contentKey(regiaoId))
+    if (!raw) return {}
+    const json = JSON.parse(raw)
+    if (json?.v !== VERSION) return {}
+    const out: GerarContent = {}
+    if (isStr(json.title, 200) && json.title.trim() !== '') out.title = json.title
+    const blocks = cleanBlocks(json.blocks)
+    if (blocks && blocks.length > 0) out.blocks = blocks
+    const l = json.look
+    if (l && BLOCK_STYLES.includes(l.style) && BLOCK_SIZES.includes(l.size) && BLOCK_FONTS.includes(l.font)) out.look = { style: l.style, size: l.size, font: l.font }
+    const g = json.legend
+    if (g && typeof g === 'object' && isStr(g.title, 80)) {
+      const labels: Record<string, string> = {}
+      if (g.labels && typeof g.labels === 'object') {
+        for (const [id, name] of Object.entries(g.labels).slice(0, MAX_LEGEND_ENTRIES)) if (isStr(name, 120) && name.trim() !== '') labels[id] = name
+      }
+      const order = Array.isArray(g.order) ? g.order.filter((id: unknown) => typeof id === 'string').slice(0, MAX_LEGEND_ENTRIES) : []
+      out.legend = { title: g.title, labels, order }
+    }
+    if (json.propMode === 'all' || json.propMode === 'some') out.propMode = json.propMode
+    if (Array.isArray(json.props)) {
+      out.props = json.props.filter((p: any) => p && Number.isInteger(p.id) && isStr(p.nome, 200)).slice(0, MAX_LEGEND_ENTRIES).map((p: any) => ({ id: p.id, nome: p.nome }))
+    }
+    return out
+  } catch {
+    return {}
+  }
+}
+
+/** grava o conteúdo inteiro desta região (o que não vem aqui deixa de ser lembrado) */
+export function saveGerarContent(regiaoId: number | undefined, content: GerarContent, store: Store | null = browserStore()): void {
+  try {
+    store?.setItem(contentKey(regiaoId), JSON.stringify({ v: VERSION, ...content }))
+  } catch {
+    /* sem armazenamento: o gerador funciona igual, só não lembra */
+  }
 }

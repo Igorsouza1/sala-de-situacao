@@ -1,5 +1,5 @@
 // Bases do mapa (DESIGN.md 13). O padrão é o Satélite suave; o Mineral é uma opção: o estilo "positron" do OpenFreeMap baixado e recolorido na paleta.
-export type BasemapKey = 'mineral' | 'satellite-soft' | 'satellite' | 'streets' | 'osm'
+export type BasemapKey = 'mineral' | 'satellite-soft' | 'satellite' | 'streets' | 'osm' | 'topo' | 'natgeo' | 'light' | 'voyager' | 'dark'
 
 export const DEFAULT_BASEMAP: BasemapKey = 'satellite-soft'
 export const BASEMAP_KEYS: BasemapKey[] = ['satellite-soft', 'mineral', 'satellite', 'streets', 'osm']
@@ -9,6 +9,27 @@ export const BASEMAP_LABELS: Record<BasemapKey, string> = {
   satellite: 'Satélite',
   streets: 'Ruas',
   osm: 'StreetMap',
+  topo: 'Topográfico',
+  natgeo: 'Geográfico',
+  light: 'Cinza claro',
+  voyager: 'Ruas coloridas',
+  dark: 'Escuro',
+}
+
+// As cinco primeiras são as do mapa principal (BASEMAP_KEYS); as outras só o Gerar mapa oferece (13.9), para a folha ter o estilo que combina com o assunto.
+
+// Miniaturas feitas só de tokens: lembram a base sem baixar imagem nenhuma.
+export const BASEMAP_SWATCH: Record<BasemapKey, string> = {
+  mineral: 'linear-gradient(135deg, var(--color-map-grass) 0 55%, var(--color-map-water) 55%)',
+  'satellite-soft': 'linear-gradient(135deg, color-mix(in oklab, var(--color-muted-foreground) 45%, var(--color-ok)) 0 55%, color-mix(in oklab, var(--color-muted-foreground) 55%, var(--color-water)) 55%)',
+  satellite: 'linear-gradient(135deg, color-mix(in oklab, var(--color-foreground) 60%, var(--color-ok)) 0 55%, color-mix(in oklab, var(--color-foreground) 55%, var(--color-water)) 55%)',
+  streets: 'linear-gradient(135deg, var(--color-background) 0 55%, var(--color-border) 55%)',
+  osm: 'linear-gradient(135deg, var(--color-map-urban) 0 55%, var(--color-map-grass) 55%)',
+  topo: 'linear-gradient(135deg, color-mix(in oklab, var(--color-map-grass) 70%, var(--color-warn)) 0 55%, var(--color-map-water) 55%)',
+  natgeo: 'linear-gradient(135deg, color-mix(in oklab, var(--color-ok) 35%, var(--color-warn)) 0 55%, color-mix(in oklab, var(--color-water) 55%, var(--color-card)) 55%)',
+  light: 'linear-gradient(135deg, var(--color-muted) 0 55%, var(--color-border) 55%)',
+  voyager: 'linear-gradient(135deg, color-mix(in oklab, var(--color-warn) 18%, var(--color-card)) 0 55%, color-mix(in oklab, var(--color-water) 40%, var(--color-card)) 55%)',
+  dark: 'linear-gradient(135deg, var(--color-foreground) 0 55%, color-mix(in oklab, var(--color-foreground) 70%, var(--color-water)) 55%)',
 }
 
 // Relevo sombreado médio só onde ajuda: no satélite a foto já tem as próprias sombras.
@@ -16,7 +37,7 @@ export const HILLSHADE_BASEMAPS: ReadonlySet<BasemapKey> = new Set(['mineral', '
 const HILLSHADE_EXAGGERATION = 0.7
 
 // Acima disso a imagem ampliada do satélite fica ruim demais.
-export const BASEMAP_MAX_ZOOM: Partial<Record<BasemapKey, number>> = { satellite: 19, 'satellite-soft': 19 }
+export const BASEMAP_MAX_ZOOM: Partial<Record<BasemapKey, number>> = { satellite: 19, 'satellite-soft': 19, topo: 17, natgeo: 16, light: 16 }
 
 // Elevação gratuita da AWS: serve ao relevo sombreado e ao terreno 3D.
 // Zoom máximo do DEM: acima de 12 o terreno e o sombreado só ganham malha e tiles a mais, sem relevo visível a mais (planalto e planície).
@@ -32,6 +53,8 @@ const raster = (id: string, tiles: string, attribution: string, maxzoom: number,
 const ESRI_TILES = 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}'
 const ESRI_ATTRIBUTION = 'Tiles © Esri — Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP'
 
+const esri = (service: string) => `https://server.arcgisonline.com/ArcGIS/rest/services/${service}/MapServer/tile/{z}/{y}/{x}`
+
 export const STATIC_STYLES: Record<Exclude<BasemapKey, 'mineral'>, string | object> = {
   // maxzoom 17: último nível com dados na região (13). Acima, a Esri devolve o tile "Map data not yet available".
   satellite: raster('esri-satellite', ESRI_TILES, ESRI_ATTRIBUTION, 17),
@@ -42,6 +65,12 @@ export const STATIC_STYLES: Record<Exclude<BasemapKey, 'mineral'>, string | obje
     'raster-contrast': -0.15,
   }),
   streets: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+  // Acima do último nível com dados a Esri devolve o tile "Map data not yet available": por isso o maxzoom de cada um.
+  topo: raster('esri-topo', esri('World_Topo_Map'), 'Tiles © Esri — Esri, DeLorme, NAVTEQ, TomTom, Intermap, USGS, FAO, NPS, NRCAN, GeoBase, Kadaster NL, Ordnance Survey, METI, OpenStreetMap contributors', 17),
+  natgeo: raster('esri-natgeo', esri('NatGeo_World_Map'), 'Tiles © Esri — National Geographic, Esri, DeLorme, NAVTEQ, UNEP-WCMC, USGS, NASA, ESA, METI, NRCAN, GEBCO, NOAA, iPC', 16),
+  light: raster('esri-light', esri('Canvas/World_Light_Gray_Base'), 'Tiles © Esri — Esri, DeLorme, NAVTEQ', 16),
+  voyager: 'https://basemaps.cartocdn.com/gl/voyager-gl-style/style.json',
+  dark: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
   osm: raster(
     'osm',
     'https://tile.openstreetmap.org/{z}/{x}/{y}.png',

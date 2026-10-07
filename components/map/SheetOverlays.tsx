@@ -9,9 +9,11 @@ import { ColorSwatch, IconSwatch } from './MapLegend'
 import { Legend } from './LayerManager'
 import { buildGrid, edgeCrossing, type GridFormat } from './helpers/grid'
 import { BLOCK_SIZE_MM, MAX_BLOCK_CHARS, clampPos, type MapBlock, type NorthStyle } from './helpers/gerar-mapa'
-import type { LegendItem, LegendSection } from './helpers/legend-sheet'
+import { legendRowCount, type LegendItem, type LegendSection } from './helpers/legend-sheet'
 import { paperScale, paperScaleBar, type PaperFrame } from './helpers/scale'
-import { SIDE_W, cornerAnchor, type Corner } from './helpers/sheet'
+import { BAND_HEAD_DESIGN, BAND_K, BAND_PAD_DESIGN, BAND_ROW_DESIGN, SIDE_W, bandColumns, cornerAnchor, type Corner, type Rect } from './helpers/sheet'
+import { coverageRect } from './helpers/sheet-panels'
+import { legendFillStyle, type LegendOpacity } from './helpers/legend-opacity'
 
 // O que a folha desenha por cima do mapa (Gerar mapa): seta do norte, barra de escala, grade com coordenadas, legenda, mapa de
 // localização e texto livre. Os tamanhos vêm em milímetros do papel e `pxPerMm` os leva para a tela: o desenho é o mesmo da folha
@@ -33,6 +35,17 @@ const textStyle = { paintOrder: 'stroke', stroke: HALO, strokeLinejoin: 'round' 
 const plate = 'absolute rounded-sm bg-card/85 shadow-control'
 const INSET_MM = 4 // folga entre o elemento e a borda do mapa
 
+// A placa da escala e do mapa de localização: cartão branco com sombra, título em grafite e o filete de floresta embaixo, como o painel da legenda.
+const cardPlate = 'absolute overflow-clip rounded-sm bg-card shadow-control'
+
+function PlateHead({ pxPerMm, children }: { pxPerMm: number; children: ReactNode }) {
+  return (
+    <p className="border-b-primary font-semibold uppercase leading-none tracking-wide text-foreground" style={{ fontSize: pxPerMm * 2, padding: `${pxPerMm * 1.1}px ${pxPerMm * 2}px`, borderBottomWidth: Math.max(1, pxPerMm * 0.5), borderBottomStyle: 'solid' }}>
+      {children}
+    </p>
+  )
+}
+
 /** a posição em pixels de um elemento encostado num canto do mapa */
 function anchor(corner: Corner, pxPerMm: number) {
   const a = cornerAnchor(corner, INSET_MM)
@@ -45,18 +58,18 @@ export function NorthArrow({ pxPerMm, corner, style }: { pxPerMm: number; corner
   const mm = (v: number) => v * pxPerMm
   if (style === 'prisma') {
     // eslint-disable-next-line @next/next/no-img-element
-    return <img src="/norte-prisma.webp" alt="Seta do norte" className="absolute" style={{ ...anchor(corner, pxPerMm), height: mm(14), width: 'auto' }} />
+    return <img src="/norte-prisma.webp" alt="Seta do norte" data-target="norte" className="absolute" style={{ ...anchor(corner, pxPerMm), height: mm(14), width: 'auto' }} />
   }
   if (style === 'letter') {
     return (
-      <svg className="absolute" style={anchor(corner, pxPerMm)} width={mm(8)} height={mm(12)} viewBox="0 0 16 24" role="img" aria-label="Seta do norte">
+      <svg className="absolute" data-target="norte" style={anchor(corner, pxPerMm)} width={mm(8)} height={mm(12)} viewBox="0 0 16 24" role="img" aria-label="Seta do norte">
         <polygon points="8,1 13,13 8,10.5 3,13" fill={INK} stroke={HALO} strokeWidth="2.4" strokeLinejoin="round" paintOrder="stroke" />
         <text x="8" y="22.5" textAnchor="middle" fontSize="10.5" fontWeight="700" fill={INK} stroke={HALO} strokeWidth="2.4" strokeLinejoin="round" paintOrder="stroke">N</text>
       </svg>
     )
   }
   return (
-    <div className={`${plate} flex flex-col items-center`} style={{ ...anchor(corner, pxPerMm), padding: mm(1.5), gap: mm(0.5) }} role="img" aria-label="Seta do norte">
+    <div className={`${plate} flex flex-col items-center`} data-target="norte" style={{ ...anchor(corner, pxPerMm), padding: mm(1.5), gap: mm(0.5) }} role="img" aria-label="Seta do norte">
       <span className="font-semibold leading-none text-foreground" style={{ fontSize: mm(3.2) }}>N</span>
       <svg width={mm(6)} height={mm(10)} viewBox="0 0 12 20" aria-hidden>
         <polygon points="6,0 12,20 6,15" fill={INK} stroke={INK} strokeWidth="0.8" strokeLinejoin="round" />
@@ -69,15 +82,29 @@ export function NorthArrow({ pxPerMm, corner, style }: { pxPerMm: number; corner
 // A escala: a barra alternada em quatro trechos (preto e branco), com 0, o meio e o fim embaixo, como numa carta.
 const SCALE_SEGMENTS = 4
 
-export function ScaleBlock({ view, frame, pxPerMm, corner }: { view: MapView; frame: PaperFrame; pxPerMm: number; corner: Corner }) {
+export function ScaleBlock({ view, frame, pxPerMm, corner, compact }: { view: MapView; frame: PaperFrame; pxPerMm: number; corner: Corner; compact?: boolean }) {
   const mm = (v: number) => v * pxPerMm
-  const bar = paperScaleBar(view.lat, view.zoom, frame, 40)
+  const bar = paperScaleBar(view.lat, view.zoom, frame, compact ? 18 : 40)
   const { label } = paperScale(view.lat, view.zoom, frame)
   if (bar.ticks.length === 0) return null
   const line = Math.max(1, mm(0.2))
+  // nos painéis pequenos a escala é só a barra e o que ela vale, sem o cartão com título: cada painel tem a sua porque o zoom muda
+  if (compact) {
+    return (
+      <div className="absolute rounded-sm bg-card shadow-control" style={{ ...anchor(corner, pxPerMm), padding: `${mm(1)}px ${mm(1.8)}px` }} role="img" aria-label={`Escala aproximada ${label}, barra de ${bar.ticks.at(-1)}`}>
+        <div className="flex" style={{ width: mm(bar.widthMm), height: mm(1.3), border: `${line}px solid ${INK}` }}>
+          {Array.from({ length: SCALE_SEGMENTS }, (_, i) => (
+            <div key={i} className={i % 2 === 0 ? 'bg-foreground' : 'bg-card'} style={{ width: `${100 / SCALE_SEGMENTS}%` }} />
+          ))}
+        </div>
+        <p className="text-right font-semibold leading-none text-foreground" style={{ fontSize: mm(2), marginTop: mm(0.7) }}>{bar.ticks[2]}</p>
+      </div>
+    )
+  }
   return (
-    <div className={plate} style={{ ...anchor(corner, pxPerMm), padding: `${mm(1.5)}px ${mm(4.5)}px` }} role="img" aria-label={`Escala aproximada ${label}, barra de ${bar.ticks.at(-1)}`}>
-      <p className="font-semibold leading-none text-foreground" style={{ fontSize: mm(2.6), marginBottom: mm(1.2) }}>Escala {label}</p>
+    <div className={cardPlate} style={{ ...anchor(corner, pxPerMm) }} role="img" aria-label={`Escala aproximada ${label}, barra de ${bar.ticks.at(-1)}`}>
+      <PlateHead pxPerMm={pxPerMm}>Escala {label}</PlateHead>
+      <div style={{ padding: `${mm(1.6)}px ${mm(4.5)}px ${mm(1.4)}px` }}>
       <div className="flex" style={{ width: mm(bar.widthMm), height: mm(1.8), border: `${line}px solid ${INK}` }}>
         {Array.from({ length: SCALE_SEGMENTS }, (_, i) => (
           <div key={i} className={i % 2 === 0 ? 'bg-foreground' : 'bg-card'} style={{ width: `${100 / SCALE_SEGMENTS}%` }} />
@@ -87,6 +114,7 @@ export function ScaleBlock({ view, frame, pxPerMm, corner }: { view: MapView; fr
         <span className="absolute left-0 -translate-x-1/2">{bar.ticks[0]}</span>
         <span className="absolute left-1/2 -translate-x-1/2">{bar.ticks[1]}</span>
         <span className="absolute right-0 translate-x-1/2 whitespace-nowrap">{bar.ticks[2]}</span>
+      </div>
       </div>
     </div>
   )
@@ -109,7 +137,7 @@ function Swatch({ item }: { item: LegendItem }) {
 function LegendRow({ item, depth }: { item: LegendItem; depth: number }) {
   return (
     <>
-      <li className="flex min-h-7 items-center gap-2" style={{ paddingLeft: depth * 16 }}>
+      <li className="flex min-h-7 break-inside-avoid items-center gap-2" style={{ paddingLeft: depth * 16 }}>
         <Swatch item={item} />
         <span className="min-w-0 text-[12px] leading-snug text-foreground">{item.label}</span>
       </li>
@@ -118,23 +146,61 @@ function LegendRow({ item, depth }: { item: LegendItem; depth: number }) {
   )
 }
 
-export function LegendBlock({ title, sections, corner, pxPerMm, mapHeightMm }: { title: string; sections: LegendSection[]; corner: Corner; pxPerMm: number; mapHeightMm: number }) {
+// O painel: cabeçalho de floresta com o título e corpo branco, a mesma linguagem da faixa do título da folha. Sobre o mapa ou na
+// coluna ao lado ele é o mesmo, só muda a sombra.
+function LegendCard({ title, sections }: { title: string; sections: LegendSection[] }) {
+  return (
+    <>
+      <p className="border-b-2 border-primary px-3 py-2 text-[13px] font-semibold leading-tight text-foreground">{title.trim() || 'Legenda'}</p>
+      <div className="p-3">
+        {sections.map((s) => (
+          <div key={s.id} className="mt-2 border-t border-border pt-2 first:mt-0 first:border-t-0 first:pt-0">
+            {s.title && <p className="mb-0.5 text-[10px] font-semibold uppercase leading-tight tracking-wide text-mineral">{s.title}</p>}
+            <ul>{s.items.map((i) => <LegendRow key={i.id} item={i} depth={0} />)}</ul>
+          </div>
+        ))}
+      </div>
+    </>
+  )
+}
+
+export function LegendBlock({ title, sections, corner, pxPerMm, mapHeightMm, opacity }: { title: string; sections: LegendSection[]; corner: Corner; pxPerMm: number; mapHeightMm: number; opacity: LegendOpacity }) {
   if (sections.length === 0) return null
   const k = (LEGEND_MM * pxPerMm) / LEGEND_DESIGN_W
   return (
     <div
-      className={cn(plate, 'overflow-clip p-3')}
-      style={{ ...anchor(corner, pxPerMm), width: LEGEND_DESIGN_W, maxHeight: ((mapHeightMm - INSET_MM * 2) * pxPerMm) / k, transform: `scale(${k})`, transformOrigin: ORIGIN[corner] }}
+      className="absolute overflow-clip rounded-sm bg-(--legend-card) shadow-control"
+      data-target="legenda"
+      style={{ ...legendFillStyle(opacity), ...anchor(corner, pxPerMm), width: LEGEND_DESIGN_W, maxHeight: ((mapHeightMm - INSET_MM * 2) * pxPerMm) / k, transform: `scale(${k})`, transformOrigin: ORIGIN[corner] }}
       role="group"
       aria-label={title || 'Legenda'}
     >
-      {title.trim() && <p className="mb-1.5 text-[13px] font-semibold leading-tight text-foreground">{title}</p>}
-      {sections.map((s) => (
-        <div key={s.id} className="mt-1.5 first:mt-0">
-          {s.title && <p className="mb-0.5 text-[11px] font-medium leading-tight text-muted-foreground">{s.title}</p>}
-          <ul>{s.items.map((i) => <LegendRow key={i.id} item={i} depth={0} />)}</ul>
+      <LegendCard title={title} sections={sections} />
+    </div>
+  )
+}
+
+// A legenda na faixa de baixo (modelos com mais de um mapa, ou a escolha da pessoa): o mesmo cartão, desenhado menor e em colunas na largura
+// toda da folha. Cada coluna enche até o fim antes de começar a outra (`column-fill: auto` com altura fixa), e a altura vem do mesmo cálculo
+// que o layout usou para reservar a faixa: por isso os dois sempre concordam.
+export function LegendBand({ title, sections, rect, pxPerMm }: { title: string; sections: LegendSection[]; rect: Rect; pxPerMm: number }) {
+  if (sections.length === 0) return null
+  const k = BAND_K * pxPerMm
+  const cols = bandColumns(rect.w)
+  const perColumn = Math.ceil(legendRowCount(sections) / cols) + 0.6
+  return (
+    <div className="absolute" data-target="legenda" style={{ left: rect.x * pxPerMm, top: rect.y * pxPerMm, width: rect.w * pxPerMm, height: rect.h * pxPerMm }} role="group" aria-label={title || 'Legenda'}>
+      <div className="overflow-clip rounded-sm bg-card shadow-control" style={{ width: rect.w / BAND_K, height: rect.h / BAND_K, transform: `scale(${k})`, transformOrigin: 'top left' }}>
+        <p className="border-b-2 border-primary px-3 text-[13px] font-semibold leading-tight text-foreground" style={{ height: BAND_HEAD_DESIGN, paddingTop: 8 }}>{title.trim() || 'Legenda'}</p>
+        <div style={{ padding: BAND_PAD_DESIGN, height: perColumn * BAND_ROW_DESIGN + BAND_PAD_DESIGN * 2, columnCount: cols, columnFill: 'auto', columnGap: 24 }}>
+          {sections.map((sec, i) => (
+            <div key={sec.id} className={cn('border-border pt-2', i > 0 && 'mt-2 border-t')}>
+              {sec.title && <p className="mb-0.5 break-after-avoid text-[10px] font-semibold uppercase leading-tight tracking-wide text-mineral">{sec.title}</p>}
+              <ul>{sec.items.map((it) => <LegendRow key={it.id} item={it} depth={0} />)}</ul>
+            </div>
+          ))}
         </div>
-      ))}
+      </div>
     </div>
   )
 }
@@ -157,15 +223,9 @@ export function LegendPanel({ title, sections, pxPerMm, maxHeightMm, children }:
   return (
     <div className="flex h-full flex-col" style={{ gap: 4 * pxPerMm }}>
       {sections.length > 0 && (
-        <div className="shrink-0 overflow-clip" style={{ width: SIDE_W * pxPerMm, height: Math.min(h * k, maxHeightMm * pxPerMm) }} role="group" aria-label={title || 'Legenda'}>
-          <div ref={inner} className="rounded-sm border border-border bg-card p-3" style={{ width: LEGEND_DESIGN_W, transform: `scale(${k})`, transformOrigin: 'top left' }}>
-            {title.trim() && <p className="mb-1.5 text-[13px] font-semibold leading-tight text-foreground">{title}</p>}
-            {sections.map((s) => (
-              <div key={s.id} className="mt-1.5 first:mt-0">
-                {s.title && <p className="mb-0.5 text-[11px] font-medium leading-tight text-muted-foreground">{s.title}</p>}
-                <ul>{s.items.map((i) => <LegendRow key={i.id} item={i} depth={0} />)}</ul>
-              </div>
-            ))}
+        <div className="shrink-0 overflow-clip" data-target="legenda" style={{ width: SIDE_W * pxPerMm, height: Math.min(h * k, maxHeightMm * pxPerMm) }} role="group" aria-label={title || 'Legenda'}>
+          <div ref={inner} className="overflow-clip rounded-sm bg-card shadow-control" style={{ width: LEGEND_DESIGN_W, transform: `scale(${k})`, transformOrigin: 'top left' }}>
+            <LegendCard title={title} sections={sections} />
           </div>
         </div>
       )}
@@ -189,20 +249,23 @@ export const LocationInset = memo(function LocationInset({ style, view, center, 
   }, [view.bounds])
   const crit = typeof document === 'undefined' ? 'transparent' : getComputedStyle(document.documentElement).getPropertyValue('--color-crit').trim()
   return (
-    <div className="absolute overflow-clip rounded-sm border border-foreground bg-muted shadow-control" style={{ ...anchor(corner, pxPerMm), width: mm(INSET_W_MM), height: mm(INSET_H_MM) }} role="img" aria-label="Mapa de localização">
-      <Map
-        mapStyle={style}
-        longitude={center.lng}
-        latitude={center.lat}
-        zoom={Math.max(0, view.zoom - INSET_ZOOM_OUT)}
-        interactive={false}
-        attributionControl={false}
-        style={{ width: '100%', height: '100%' }}
-      >
-        <Source id="folha" type="geojson" data={outline}>
-          <Layer id="folha-linha" type="line" paint={{ 'line-color': crit, 'line-width': 2 }} />
-        </Source>
-      </Map>
+    <div className={cn(cardPlate, 'flex flex-col bg-muted')} style={{ ...anchor(corner, pxPerMm), width: mm(INSET_W_MM), height: mm(INSET_H_MM) }} role="img" aria-label="Mapa de localização">
+      <PlateHead pxPerMm={pxPerMm}>Localização</PlateHead>
+      <div className="min-h-0 flex-1">
+        <Map
+          mapStyle={style}
+          longitude={center.lng}
+          latitude={center.lat}
+          zoom={Math.max(0, view.zoom - INSET_ZOOM_OUT)}
+          interactive={false}
+          attributionControl={false}
+          style={{ width: '100%', height: '100%' }}
+        >
+          <Source id="folha" type="geojson" data={outline}>
+            <Layer id="folha-linha" type="line" paint={{ 'line-color': crit, 'line-width': 2 }} />
+          </Source>
+        </Map>
+      </div>
     </div>
   )
 })
@@ -480,6 +543,46 @@ export function GridMarginLabels({ lines, frame, pxPerMm, marginMm }: { lines: S
           <g key={key} fontSize={font} fill={INK} textAnchor="middle">
             {left !== null && left > along && left < frame.h - along && <text transform={`translate(${m - gap} ${left + m}) rotate(-90)`}>{l.label}</text>}
             {right !== null && right > along && right < frame.h - along && <text transform={`translate(${m + frame.w + gap} ${right + m}) rotate(90)`}>{l.label}</text>}
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
+// ── Vários mapas na folha ─────────────────────────────────────────────────────────────────────────────────────────
+/** a etiqueta de um painel ("A", "B", "1"): um quadrado branco no meio de cima (os cantos são da legenda, do norte, da escala e da localização); na tela, o painel que se move fica em floresta */
+export function PanelBadge({ label, pxPerMm, selected }: { label: string; pxPerMm: number; selected?: boolean }) {
+  const mm = (v: number) => v * pxPerMm
+  return (
+    <span
+      className={cn('absolute flex items-center justify-center rounded-sm font-semibold leading-none shadow-control transition-colors duration-200', selected ? 'bg-primary text-primary-foreground' : 'bg-card text-foreground')}
+      style={{ top: mm(INSET_MM * 0.5), left: '50%', translate: '-50% 0', width: mm(5.5), height: mm(5.5), fontSize: mm(3.2) }}
+      aria-hidden
+    >
+      {label}
+    </span>
+  )
+}
+
+export interface Coverage { id: string; label: string; bounds: { west: number; south: number; east: number; north: number } }
+
+/** no mapa grande, o que cada detalhe cobre: um retângulo fino com a mesma etiqueta (só para ler, não se mexe nele) */
+export function CoverageBoxes({ map, view, items, pxPerMm }: { map: any; view: MapView; items: Coverage[]; pxPerMm: number }) {
+  const mm = (v: number) => v * pxPerMm
+  if (!map || !view) return null
+  return (
+    <svg className="pointer-events-none absolute inset-0 h-full w-full" aria-hidden>
+      {items.map((c) => {
+        const r = coverageRect(c.bounds, (lng, lat) => map.project([lng, lat]))
+        if (!(r.w > 1 && r.h > 1)) return null
+        const tag = mm(4.2)
+        return (
+          <g key={c.id}>
+            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke={HALO} strokeWidth={mm(0.8)} />
+            <rect x={r.x} y={r.y} width={r.w} height={r.h} fill="none" stroke={INK} strokeWidth={mm(0.3)} />
+            <rect x={r.x} y={r.y} width={tag} height={tag} fill={INK} />
+            <text x={r.x + tag / 2} y={r.y + tag / 2} textAnchor="middle" dominantBaseline="central" fontSize={mm(2.8)} fontWeight={600} fill={HALO}>{c.label}</text>
           </g>
         )
       })}

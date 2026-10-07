@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { Check, TriangleAlert, X } from 'lucide-react'
+import { Check, Info, TriangleAlert, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { controlItem } from './helpers/control-style'
@@ -14,7 +14,8 @@ import { controlItem } from './helpers/control-style'
 export interface NoticeData {
   /** muda a cada aviso novo: o conteúdo troca sem o cartão sair e voltar (8.4: só o texto muda) */
   id: number
-  tone: 'success' | 'error'
+  /** `info`: aviso neutro (explica por que algo não está disponível); severidade não é, por isso sem cor de alerta (4.2) */
+  tone: 'success' | 'error' | 'info'
   title: string
   body?: string
   /** com `undo`, o aviso conta os segundos e oferece o botão */
@@ -65,7 +66,7 @@ export function Notice({ notice, onClose }: { notice: NoticeData | null; onClose
   if (!shown) return null
   const n = shown
   const seconds = Math.ceil(remaining / 1000)
-  const border = n.tone === 'error' ? 'border-crit/70' : 'border-ok/70'
+  const border = n.tone === 'error' ? 'border-crit/70' : n.tone === 'info' ? 'border-stone/70' : 'border-ok/70'
 
   return (
     <div
@@ -90,8 +91,8 @@ export function Notice({ notice, onClose }: { notice: NoticeData | null; onClose
             <span className="font-mono text-sm font-semibold tabular-nums">{seconds}</span>
           </span>
         ) : (
-          <span className={cn('grid size-9 shrink-0 place-items-center rounded-full', n.tone === 'error' ? 'bg-crit/10 text-crit' : 'bg-ok/10 text-ok')} aria-hidden>
-            {n.tone === 'error' ? <TriangleAlert className="h-4 w-4" /> : <Check className="h-4 w-4" />}
+          <span className={cn('grid size-9 shrink-0 place-items-center rounded-full', n.tone === 'error' ? 'bg-crit/10 text-crit' : n.tone === 'info' ? 'bg-muted text-muted-foreground' : 'bg-ok/10 text-ok')} aria-hidden>
+            {n.tone === 'error' ? <TriangleAlert className="h-4 w-4" /> : n.tone === 'info' ? <Info className="h-4 w-4" /> : <Check className="h-4 w-4" />}
           </span>
         )}
 

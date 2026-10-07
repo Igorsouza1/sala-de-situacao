@@ -47,6 +47,9 @@
   --color-ok: #2e7d5b; /* normal */
   --color-water: #2a7da6;
   --color-recuo: #cdd2cd; /* o que não pede atenção */
+  /* Nome PRISMA (13.9): o espectro de um prisma, rosa a violeta. Só o rosa e o violeta são novos; o resto reaproveita crit, warn, ok e water. */
+  --color-prism-rosa: #d6336c;
+  --color-prism-violeta: #7048c9;
   --color-destructive: #c8431a;
   --color-destructive-foreground: #ffffff;
 

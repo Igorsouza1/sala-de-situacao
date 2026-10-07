@@ -1,4 +1,4 @@
-import { CORNERS, CORNER_LABELS, DEFAULT_LEGEND_CORNER, PAPERS, PAPER_LABELS, DEFAULT_SHEET, cornerAnchor, cornerRect, placeCorners, sheetLayout, zoomToFit } from '../helpers/sheet'
+import { CORNERS, CORNER_LABELS, DEFAULT_LEGEND_CORNER, PAPERS, PAPER_LABELS, DEFAULT_SHEET, cornerAnchor, cornerRect, placeCorners, bandHeight, sheetLayout, titleFit, titleLayout, zoomToFit } from '../helpers/sheet'
 
 describe('sheetLayout', () => {
   it('A4 paisagem tem 297 x 210 mm; A4 retrato inverte', () => {
@@ -174,5 +174,130 @@ describe('sheetLayout com o que o conteúdo pede', () => {
 describe('placeCorners com a legenda fora do mapa', () => {
   it('sem legenda sobre o mapa, os quatro cantos ficam livres e cada elemento tem o seu preferido', () => {
     expect(placeCorners(null)).toEqual({ legend: null, north: 'top-right', scale: 'bottom-left', inset: 'top-left' })
+  })
+})
+
+describe('titleFit', () => {
+  it('título curto usa o maior tamanho, em uma linha', () => {
+    expect(titleFit('Focos de calor', 150)).toEqual({ size: 7.5, lines: 1 })
+  })
+
+  it('título médio desce um degrau e continua em uma linha', () => {
+    expect(titleFit('x'.repeat(40), 150)).toEqual({ size: 6.5, lines: 1 })
+  })
+
+  it('título longo passa a duas linhas no menor tamanho, e nunca abaixo dele', () => {
+    expect(titleFit('x'.repeat(60), 150)).toEqual({ size: 5.5, lines: 2 })
+    expect(titleFit('x'.repeat(500), 150)).toEqual({ size: 5.5, lines: 2 })
+  })
+
+  it('com o logo ocupando espaço (menos largura) o título desce antes', () => {
+    expect(titleFit('x'.repeat(30), 100).size).toBeLessThan(titleFit('x'.repeat(30), 250).size)
+  })
+})
+
+describe('faixa do título com duas linhas', () => {
+  it('cresce 6 mm e leva o mapa para baixo, sem o mapa passar do rodapé', () => {
+    const one = sheetLayout('a4', 'portrait')
+    const two = sheetLayout('a4', 'portrait', { headerLines: 2 })
+    expect(two.header.h - one.header.h).toBe(6)
+    expect(two.map.y - one.map.y).toBe(6)
+    expect(two.map.y + two.map.h).toBeLessThanOrEqual(two.footer.y)
+  })
+
+  it('título que quebra em duas linhas na folha em pé cabe em uma na deitada', () => {
+    const text = 'Focos de calor e desmatamento no Pantanal Norte em setembro de 2026'
+    expect(titleLayout(text, 'a4', 'portrait', false).lines).toBe(2)
+    expect(titleLayout(text, 'a4', 'landscape', false).lines).toBe(1)
+  })
+
+  it('o logo come largura: o mesmo título pode passar a duas linhas', () => {
+    const text = 'x'.repeat(70)
+    expect(titleLayout(text, 'a4', 'landscape', true).lines).toBeGreaterThanOrEqual(titleLayout(text, 'a4', 'landscape', false).lines)
+  })
+})
+
+describe('modelos da folha', () => {
+  type R = { x: number; y: number; w: number; h: number }
+  const overlap = (a: R, b: R) => a.x < b.x + b.w - 1e-6 && b.x < a.x + a.w - 1e-6 && a.y < b.y + b.h - 1e-6 && b.y < a.y + a.h - 1e-6
+  const combos = PAPERS.flatMap((p) => (['landscape', 'portrait'] as const).flatMap((o) => [true, false].map((margin) => [p, o, margin] as const)))
+
+  it('um mapa: um painel só, o principal, igual ao mapa de sempre', () => {
+    const s = sheetLayout('a4', 'landscape')
+    expect(s.panels).toHaveLength(1)
+    expect(s.panels[0]).toMatchObject({ main: true, rect: s.map })
+  })
+
+  it.each(combos)('lado a lado, %s %s (margem da grade %s): dois painéis, dentro da folha e sem se tocar', (paper, orientation, margin) => {
+    const s = sheetLayout(paper, orientation, { model: 'side', gridMargin: margin })
+    expect(s.panels.map((p) => p.label)).toEqual(['A', 'B'])
+    expect(s.panels[0].main).toBe(true)
+    expect(overlap(s.panels[0].rect, s.panels[1].rect)).toBe(false)
+    for (const p of s.panels) {
+      expect(p.rect.y).toBeGreaterThanOrEqual(s.header.y + s.header.h)
+      expect(p.rect.y + p.rect.h).toBeLessThanOrEqual(s.footer.y + 1e-6)
+    }
+  })
+
+  it.each(combos)('mapa e detalhes, %s %s (margem %s): de 1 a 4 detalhes, nenhum sobre o outro nem sobre o mapa grande', (paper, orientation, margin) => {
+    for (const n of [1, 2, 3, 4]) {
+      const s = sheetLayout(paper, orientation, { model: 'details', details: n, gridMargin: margin })
+      expect(s.panels).toHaveLength(n + 1)
+      expect(s.panels.slice(1).map((p) => p.label)).toEqual(Array.from({ length: n }, (_, i) => String(i + 1)))
+      for (let i = 0; i < s.panels.length; i++) {
+        for (let j = i + 1; j < s.panels.length; j++) expect(overlap(s.panels[i].rect, s.panels[j].rect)).toBe(false)
+        expect(s.panels[i].rect.x + s.panels[i].rect.w).toBeLessThanOrEqual(s.width - 10 + 1e-6)
+        expect(s.panels[i].rect.y + s.panels[i].rect.h).toBeLessThanOrEqual(s.footer.y + 1e-6)
+      }
+    }
+  })
+
+  it('os detalhes vão para uma coluna na folha deitada e para uma faixa na folha em pé', () => {
+    const land = sheetLayout('a4', 'landscape', { model: 'details', details: 3 })
+    const port = sheetLayout('a4', 'portrait', { model: 'details', details: 3 })
+    expect(new Set(land.panels.slice(1).map((p) => p.rect.x)).size).toBe(1)
+    expect(new Set(port.panels.slice(1).map((p) => p.rect.y)).size).toBe(1)
+  })
+
+  it('a coluna da legenda ao lado vale em qualquer modelo, mas só na folha deitada', () => {
+    expect(sheetLayout('a4', 'landscape', { model: 'single', side: true }).side).not.toBeNull()
+    expect(sheetLayout('a4', 'landscape', { model: 'details', side: true }).side).not.toBeNull()
+    expect(sheetLayout('a4', 'landscape', { model: 'side', side: true }).side).not.toBeNull()
+    expect(sheetLayout('a4', 'portrait', { model: 'side', side: true }).side).toBeNull()
+  })
+})
+
+describe('faixa da legenda embaixo', () => {
+  const rows = 12
+  const combos = PAPERS.flatMap((p) => (['landscape', 'portrait'] as const).flatMap((o) => (['single', 'side', 'details'] as const).map((m) => [p, o, m] as const)))
+
+  it.each(combos)('%s %s %s: a faixa fica entre os mapas e o rodapé, na largura toda, sem tocar em nada', (paper, orientation, model) => {
+    const s = sheetLayout(paper, orientation, { model, below: true, legendRows: rows, gridMargin: true })
+    expect(s.band).not.toBeNull()
+    const band = s.band!
+    expect(band.w).toBe(s.header.w)
+    expect(band.y + band.h).toBeLessThanOrEqual(s.footer.y)
+    // os mapas acabam antes da faixa; os números da grade, que moram fora do mapa principal, também
+    for (const p of s.panels) expect(p.rect.y + p.rect.h).toBeLessThanOrEqual(band.y + 1e-6)
+    expect(s.panels[0].rect.y + s.panels[0].rect.h + s.gridMargin).toBeLessThanOrEqual(band.y + 1e-6)
+  })
+
+  it('sem legenda, ou com a legenda em outro lugar, não há faixa nem área perdida', () => {
+    expect(sheetLayout('a4', 'landscape', { below: true, legendRows: 0 }).band).toBeNull()
+    expect(sheetLayout('a4', 'landscape', { legendRows: rows }).band).toBeNull()
+    expect(sheetLayout('a4', 'landscape', { below: true, legendRows: 0 }).map).toEqual(sheetLayout('a4', 'landscape').map)
+  })
+
+  it('a faixa cresce com a legenda e a coluna a mais a encurta', () => {
+    expect(bandHeight(20, 277)).toBeGreaterThan(bandHeight(5, 277))
+    expect(bandHeight(12, 400)).toBeLessThan(bandHeight(12, 190))
+    expect(bandHeight(0, 277)).toBe(0)
+  })
+
+  it('tira altura do mapa em vez de empurrar para fora da folha', () => {
+    const without = sheetLayout('a4', 'landscape')
+    const withBand = sheetLayout('a4', 'landscape', { below: true, legendRows: rows })
+    expect(withBand.map.h).toBeLessThan(without.map.h)
+    expect(withBand.map.y).toBe(without.map.y)
   })
 })

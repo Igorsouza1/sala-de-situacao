@@ -1,4 +1,4 @@
-import { clearGerarPrefs, isCustomGerar, readGerarPrefs, saveGerarPrefs } from '../helpers/map-prefs'
+import { clearGerarPrefs, isCustomGerar, readGerarContent, readGerarPrefs, saveGerarContent, saveGerarPrefs } from '../helpers/map-prefs'
 import { DEFAULT_SHOW, PART_IDS } from '../helpers/gerar-mapa'
 
 const fakeStore = (initial: Record<string, string> = {}) => {
@@ -49,7 +49,7 @@ describe('preferências do Gerar mapa', () => {
         v: 1,
         paper: 'a0', // papel que não existe
         orientation: 'portrait',
-        basemap: 'osm', // a folha não oferece esta base
+        basemap: 'bussola', // a folha não oferece esta base
         coords: 'utm',
         legendCorner: 'centro',
         show: { north: false, grid: 'sim', inventado: true },
@@ -101,8 +101,13 @@ describe('isCustomGerar', () => {
 describe('preferências novas do Gerar mapa', () => {
   it('lembra o grau da grade, onde ficam os números, a legenda ao lado e o estilo da seta', () => {
     const store = fakeStore()
-    saveGerarPrefs({ gridLevel: 0, gridNumbers: 'inside', legendSide: true, northStyle: 'classic' }, store)
-    expect(readGerarPrefs(store)).toEqual({ gridLevel: 0, gridNumbers: 'inside', legendSide: true, northStyle: 'classic' })
+    saveGerarPrefs({ gridLevel: 0, gridNumbers: 'inside', legendPlace: 'below', northStyle: 'classic' }, store)
+    expect(readGerarPrefs(store)).toEqual({ gridLevel: 0, gridNumbers: 'inside', legendPlace: 'below', northStyle: 'classic' })
+    // o que foi gravado antes do lugar da legenda ainda é lido, mas nunca mais é gravado
+    const old = fakeStore({ 'prisma:mapa:gerar': JSON.stringify({ v: 1, legendSide: true }) })
+    expect(readGerarPrefs(old).legendSide).toBe(true)
+    saveGerarPrefs({ legendSide: false } as any, old)
+    expect(readGerarPrefs(old).legendSide).toBe(true)
   })
 
   it('grau fora de 0 a 4, estilo ou lugar desconhecido não entram: voltam ao padrão', () => {
@@ -176,5 +181,48 @@ describe('formato das coordenadas', () => {
     expect(readGerarPrefs(fakeStore({ 'prisma:mapa:gerar': JSON.stringify({ v: 1, markerLook: 'bolinha' }) })).markerLook).toBeUndefined()
     expect(isCustomGerar({ markerLook: 'auto' })).toBe(false)
     expect(isCustomGerar({ markerLook: 'dot' })).toBe(true)
+  })
+
+  it('o alinhamento do título é lembrado, e um valor estranho vira "não salvo"', () => {
+    const store = fakeStore()
+    saveGerarPrefs({ titleAlign: 'center' }, store)
+    expect(readGerarPrefs(store).titleAlign).toBe('center')
+    expect(readGerarPrefs(fakeStore({ 'prisma:mapa:gerar': JSON.stringify({ v: 1, titleAlign: 'justify' }) })).titleAlign).toBeUndefined()
+  })
+})
+
+describe('conteúdo do Gerar mapa, por região', () => {
+  const block = { id: 'b1', text: 'Fonte: IHP', x: 0.3, y: 0.8, style: 'outline', size: 'l', font: 'bold' } as const
+
+  it('o que a pessoa escreveu e arrumou volta, na região em que ela estava', () => {
+    const store = fakeStore()
+    const content = { title: 'Meu título', blocks: [block], look: { style: 'outline', size: 'l', font: 'bold' }, legend: { title: 'Fontes', labels: { 'layer:a': 'Água' }, order: ['layer:b', 'layer:a'] }, propMode: 'some', props: [{ id: 3, nome: 'Fazenda X' }] } as const
+    saveGerarContent(7, content as any, store)
+    expect(readGerarContent(7, store)).toEqual(content)
+  })
+
+  it('não vaza para outra região', () => {
+    const store = fakeStore()
+    saveGerarContent(7, { title: 'Região 7' }, store)
+    expect(readGerarContent(8, store)).toEqual({})
+  })
+
+  it('texto vazio não volta, e posição fora da folha volta para dentro', () => {
+    const store = fakeStore()
+    saveGerarContent(1, { blocks: [{ ...block, id: 'vazio', text: '   ' }, { ...block, x: 5, y: -2 }] }, store)
+    const [only, ...rest] = readGerarContent(1, store).blocks ?? []
+    expect(rest).toEqual([])
+    expect(only.x).toBeLessThan(1)
+    expect(only.y).toBeGreaterThan(0)
+  })
+
+  it('descarta o que está estranho, campo a campo, sem quebrar', () => {
+    const store = fakeStore({ 'prisma:mapa:gerar:conteudo:1': JSON.stringify({ v: 1, title: 5, blocks: [{ id: 'x', text: 'a', x: 0.5, y: 0.5, style: 'neon', size: 'm', font: 'normal' }, 'lixo'], legend: { title: 9 }, propMode: 'tudo', props: [{ id: 'a', nome: 'b' }] }) })
+    expect(readGerarContent(1, store)).toEqual({ props: [] })
+  })
+
+  it('sem armazenamento funciona igual, só não lembra', () => {
+    expect(() => saveGerarContent(1, { title: 'x' }, blocked())).not.toThrow()
+    expect(readGerarContent(1, blocked())).toEqual({})
   })
 })

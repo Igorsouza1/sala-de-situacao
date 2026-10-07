@@ -11,9 +11,9 @@ import { sheetLayout } from './helpers/sheet'
 export interface ExportJob {
   kind: ExportKind
   /** tudo o que a folha mostra, igual à da tela; o enquadramento vem em `camera` */
-  page: Omit<SheetPageProps, 'px' | 'interactive' | 'pixelRatio' | 'initialCamera' | 'onSettle' | 'onIdle' | 'cameraProbe'>
-  /** onde o mapa está na tela agora, já convertido para o tamanho da folha de exportação */
-  camera: Camera
+  page: Omit<SheetPageProps, 'px' | 'interactive' | 'pixelRatio' | 'initialCameras' | 'onSettle' | 'onIdle' | 'cameraProbes' | 'selectedPanel' | 'onPanelSelect'>
+  /** onde cada mapa está na tela agora, pelo id do painel, já convertido para o tamanho da folha de exportação */
+  cameras: Record<string, Camera>
 }
 
 const MAX_WAIT_MS = 60_000 // sem internet ou com tiles que não chegam, o mapa nunca fica quieto: melhor avisar do que esperar para sempre
@@ -59,7 +59,7 @@ export function SheetExport({ job, onDone, onError }: { job: ExportJob; onDone: 
         px={size.pxPerMm}
         interactive={false}
         pixelRatio={size.pixelRatio}
-        initialCamera={job.camera}
+        initialCameras={job.cameras}
         onIdle={() => {
           if (started.current) return
           started.current = true

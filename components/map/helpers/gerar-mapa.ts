@@ -3,11 +3,16 @@ import type { BasemapKey } from './basemaps'
 // Regras do Gerar mapa que não dependem da tela: qual base a folha oferece, o título que ela já traz e como se monta o estilo
 // da folha (a base escolhida + as camadas de dados que a pessoa estava vendo).
 
-// A folha oferece 3 bases (DESIGN.md regra 1: no máximo 3 escolhas). A base do mapa que não está aqui entra pela mais parecida.
-export const PRINT_BASEMAPS: BasemapKey[] = ['satellite-soft', 'streets', 'mineral']
+// A folha oferece 10 bases, em três grupos de nomes que dizem o uso (exceção à regra 1, registrada em 13.9: quem imprime escolhe o
+// estilo do papel, e cada um serve a um assunto). A base do mapa que não está aqui entra pela mais parecida.
+export const PRINT_BASEMAP_GROUPS: { title: string; keys: BasemapKey[] }[] = [
+  { title: 'Foto de satélite', keys: ['satellite-soft', 'satellite'] },
+  { title: 'Limpos', keys: ['mineral', 'light', 'streets', 'dark'] },
+  { title: 'Com mais detalhe', keys: ['voyager', 'osm', 'topo', 'natgeo'] },
+]
+export const PRINT_BASEMAPS: BasemapKey[] = PRINT_BASEMAP_GROUPS.flatMap((g) => g.keys)
 
-const NEAREST_PRINT_BASEMAP: Partial<Record<BasemapKey, BasemapKey>> = { satellite: 'satellite-soft', osm: 'streets' }
-
+const NEAREST_PRINT_BASEMAP: Partial<Record<BasemapKey, BasemapKey>> = {}
 export const printBasemapFor = (key: BasemapKey): BasemapKey => NEAREST_PRINT_BASEMAP[key] ?? key
 
 const clean = (s: string) => s.trim().replace(/\s+/g, ' ')
@@ -68,7 +73,7 @@ export function composeSheetStyle(
 export const MARKER_LOOKS = ['auto', 'icon', 'dot'] as const
 export type MarkerLook = (typeof MARKER_LOOKS)[number]
 export const DEFAULT_MARKER_LOOK: MarkerLook = 'auto'
-export const MARKER_LOOK_LABELS: Record<MarkerLook, string> = { auto: 'Pelo zoom', icon: 'Sempre ícone', dot: 'Sempre ponto' }
+export const MARKER_LOOK_LABELS: Record<MarkerLook, string> = { auto: 'Automático', icon: 'Ícone', dot: 'Ponto' }
 
 // O que a folha pode mostrar a mais: ligado por padrão, a pessoa desliga o que não quer (título, legenda e fonte dos dados não saem).
 // O mapa de localização começa desligado. O logo e os textos livres não são interruptores: aparecem quando há imagem ou texto.
@@ -81,6 +86,12 @@ export const NORTH_STYLES = ['letter', 'prisma', 'classic'] as const
 export type NorthStyle = (typeof NORTH_STYLES)[number]
 export const NORTH_LABELS: Record<NorthStyle, string> = { classic: 'Clássica', prisma: 'PRISMA', letter: 'Só o N' }
 export const DEFAULT_NORTH_STYLE: NorthStyle = 'letter'
+
+// O alinhamento do título (e da linha de apoio abaixo dele) na faixa do cabeçalho.
+export const TITLE_ALIGNS = ['left', 'center', 'right'] as const
+export type TitleAlign = (typeof TITLE_ALIGNS)[number]
+export const TITLE_ALIGN_LABELS: Record<TitleAlign, string> = { left: 'Esquerda', center: 'Centro', right: 'Direita' }
+export const DEFAULT_TITLE_ALIGN: TitleAlign = 'left'
 
 // A linha da grade em 5 graus, do 0 (sem linha: ficam só os números) ao mais forte. Sem número na tela: a pessoa vê o nome.
 export const GRID_LEVELS = [0, 0.25, 0.5, 0.75, 1] as const
