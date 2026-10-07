@@ -111,7 +111,7 @@ const UTM_STEPS = [100000, 50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100,
 const MIN_LINES = 4 // o maior intervalo que ainda deixa ao menos isso no lado menor do mapa
 const EPS = 1e-9
 const UTM_SAMPLES = 8
-const thin = ' '
+const thousandsSeparator = '.' // como se escreve em português: 584.800 (o espaço fino sumia na fonte e os números pareciam colados)
 
 /** o maior intervalo da lista que ainda cabe `MIN_LINES` vezes na menor dimensão */
 const pickStep = (steps: number[], span: number) => steps.find((s) => span / s >= MIN_LINES) ?? steps[steps.length - 1]
@@ -124,7 +124,7 @@ const multiples = (from: number, to: number, step: number) => {
   return out
 }
 
-const groupThousands = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, thin)
+const groupThousands = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, thousandsSeparator)
 
 export function buildGrid(bounds: Bounds, format: GridFormat): Grid {
   const { west, south, east, north } = bounds

@@ -174,3 +174,14 @@ describe('edgeCrossing', () => {
     expect(edgeCrossing([{ x: 10, y: 10 }, { x: 20, y: 30 }], 'y', 0)).toBeNull()
   })
 })
+
+describe('rótulos da grade UTM', () => {
+  it('escrevem os metros com ponto de milhar, como em português (584.800), e nunca colados', () => {
+    const { lines } = buildGrid({ west: -57.0, south: -21.4, east: -56.6, north: -21.0 }, 'utm')
+    expect(lines.length).toBeGreaterThan(0)
+    for (const l of lines) {
+      expect(l.label).toMatch(/^\d{1,3}(\.\d{3})+$/)
+      expect(l.label).not.toMatch(/\s/)
+    }
+  })
+})
