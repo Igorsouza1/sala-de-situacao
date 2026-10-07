@@ -124,20 +124,9 @@ describe('sheetLayout com o que o conteúdo pede', () => {
   const inside = (outer: { x: number; y: number; w: number; h: number }, r: { x: number; y: number; w: number; h: number }) =>
     r.x >= outer.x && r.y >= outer.y && r.x + r.w <= outer.x + outer.w && r.y + r.h <= outer.y + outer.h
 
-  it('sem pedidos, nada extra: sem faixa, sem coluna, sem margem', () => {
-    expect(base.subtitle).toBeNull()
+  it('sem pedidos, nada extra: sem coluna e sem margem', () => {
     expect(base.side).toBeNull()
     expect(base.gridMargin).toBe(0)
-  })
-
-  it('texto abaixo do título: a faixa fica entre o título e o mapa, e o mapa perde altura', () => {
-    const s = sheetLayout('a4', 'portrait', { subtitle: true })
-    const plain = sheetLayout('a4', 'portrait')
-    expect(s.subtitle).not.toBeNull()
-    expect(s.header.y + s.header.h).toBeLessThanOrEqual(s.subtitle!.y)
-    expect(s.subtitle!.y + s.subtitle!.h).toBeLessThanOrEqual(s.map.y)
-    expect(s.map.h).toBeLessThan(plain.map.h)
-    expect(s.map.w).toBe(plain.map.w)
   })
 
   it('legenda ao lado na folha deitada: a coluna fica à direita do mapa, sem encostar, e o mapa perde largura', () => {
@@ -172,9 +161,9 @@ describe('sheetLayout com o que o conteúdo pede', () => {
   it.each(PAPERS.flatMap((p) => (['landscape', 'portrait'] as const).map((o) => [p, o] as const)))(
     '%s %s: com tudo pedido ao mesmo tempo, mapa e coluna cabem na folha sem se sobrepor',
     (paper, orientation) => {
-      const s = sheetLayout(paper, orientation, { subtitle: true, side: true, gridMargin: true })
+      const s = sheetLayout(paper, orientation, { side: true, gridMargin: true })
       const sheet = { x: 0, y: 0, w: s.width, h: s.height }
-      for (const r of [s.map, s.subtitle!, s.footer, ...(s.side ? [s.side] : [])]) expect(inside(sheet, r)).toBe(true)
+      for (const r of [s.map, s.footer, ...(s.side ? [s.side] : [])]) expect(inside(sheet, r)).toBe(true)
       expect(s.map.w).toBeGreaterThan(60)
       expect(s.map.h).toBeGreaterThan(60)
       if (s.side) expect(s.map.x + s.map.w + s.gridMargin).toBeLessThan(s.side.x)

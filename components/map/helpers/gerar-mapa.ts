@@ -83,19 +83,37 @@ export const GRID_NUMBERS = ['margin', 'inside'] as const
 export type GridNumbers = (typeof GRID_NUMBERS)[number]
 export const DEFAULT_GRID_NUMBERS: GridNumbers = 'margin'
 
-/** os textos que têm lugar fixo na folha: logo abaixo do título e na coluna ao lado do mapa */
-export interface Notes { title: string; side: string }
-export const EMPTY_NOTES: Notes = { title: '', side: '' }
+// Texto livre: blocos soltos na folha. A pessoa adiciona, escreve direto nele e o arrasta para onde quiser (sobre o mapa, embaixo do
+// título, na coluna da legenda, na margem). Cada bloco tem um estilo, um tamanho e uma letra, escolhidos com a folha à vista.
 
-/** um texto solto sobre o mapa, que a pessoa arrasta para onde quiser; x e y são o centro dele, de 0 a 1 da largura e da altura do mapa */
-export interface MapBlock { id: string; text: string; x: number; y: number }
-export const MAX_BLOCKS = 5
-const EDGE = 0.04 // o centro não chega mais perto que isto da borda: o bloco nunca some do mapa
+/** como o bloco se destaca do que está por baixo: placa branca com sombra, letra com contorno branco (sem fundo) ou letra branca com sombra */
+export const BLOCK_STYLES = ['plate', 'outline', 'light'] as const
+export type BlockStyle = (typeof BLOCK_STYLES)[number]
+export const BLOCK_STYLE_LABELS: Record<BlockStyle, string> = { plate: 'Fundo branco', outline: 'Contorno', light: 'Letra branca' }
+
+export const BLOCK_SIZES = ['s', 'm', 'l'] as const
+export type BlockSize = (typeof BLOCK_SIZES)[number]
+export const BLOCK_SIZE_LABELS: Record<BlockSize, string> = { s: 'Pequeno', m: 'Médio', l: 'Grande' }
+/** altura da letra no papel, em mm */
+export const BLOCK_SIZE_MM: Record<BlockSize, number> = { s: 2.8, m: 3.6, l: 5 }
+
+export const BLOCK_FONTS = ['normal', 'bold', 'mono'] as const
+export type BlockFont = (typeof BLOCK_FONTS)[number]
+export const BLOCK_FONT_LABELS: Record<BlockFont, string> = { normal: 'Normal', bold: 'Negrito', mono: 'Mono' }
+
+export interface BlockLook { style: BlockStyle; size: BlockSize; font: BlockFont }
+export const DEFAULT_LOOK: BlockLook = { style: 'plate', size: 'm', font: 'normal' }
+
+/** um texto solto; x e y são o centro dele, de 0 a 1 da largura e da altura da FOLHA */
+export interface MapBlock extends BlockLook { id: string; text: string; x: number; y: number }
+export const MAX_BLOCKS = 8
+export const MAX_BLOCK_CHARS = 240
+const EDGE = 0.02 // o centro não chega mais perto que isto da borda: o bloco nunca some da folha
 export const clampPos = (v: number) => Math.min(1 - EDGE, Math.max(EDGE, v))
 
 let seq = 0
-/** um bloco novo no meio do mapa; os seguintes descem um pouco, para não nascerem em cima do anterior */
-export function newBlock(existing: MapBlock[]): MapBlock {
+/** um bloco novo no meio da folha, com o jeito do último que a pessoa mexeu; os seguintes descem um pouco, para não nascerem em cima do anterior */
+export function newBlock(existing: MapBlock[], look: BlockLook = DEFAULT_LOOK): MapBlock {
   seq += 1
-  return { id: `b${Date.now().toString(36)}${seq}`, text: '', x: 0.5, y: clampPos(0.35 + (existing.length % 5) * 0.1) }
+  return { ...look, id: `b${Date.now().toString(36)}${seq}`, text: '', x: 0.5, y: clampPos(0.4 + (existing.length % 5) * 0.08) }
 }

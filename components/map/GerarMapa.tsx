@@ -39,7 +39,7 @@ import {
   DEFAULT_GRID_NUMBERS,
   DEFAULT_NORTH_STYLE,
   DEFAULT_SHOW,
-  EMPTY_NOTES,
+  DEFAULT_LOOK,
   GRID_LEVEL_LABELS,
   NORTH_LABELS,
   NORTH_STYLES,
@@ -51,6 +51,7 @@ import {
   type NorthStyle,
   MAX_BLOCKS,
   newBlock,
+  type BlockLook,
   type MapBlock,
   type Part,
 } from './helpers/gerar-mapa'
@@ -170,20 +171,26 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
 
   const [show, setShow] = useState<Record<Part, boolean>>({ ...DEFAULT_SHOW, ...saved.show })
   const [coords, setCoords] = useState<GridFormat>(saved.coords ?? 'dms')
-  const [notes, setNotes] = useState(EMPTY_NOTES)
-  const setNote = (where: 'title' | 'side', value: string) => setNotes((n) => ({ ...n, [where]: value }))
-  // textos soltos sobre o mapa: o centro de cada um é uma fração do mapa, arrastada na própria folha
+  // texto livre: blocos soltos na folha, escritos e arrastados nela mesma; o jeito do último que a pessoa mexeu vale para o próximo
   const [blocks, setBlocks] = useState<MapBlock[]>([])
   const [selectedBlock, setSelectedBlock] = useState<string | null>(null)
+  const [focusBlock, setFocusBlock] = useState<string | null>(null)
+  const [look, setLook] = useState<BlockLook>(DEFAULT_LOOK)
   const addBlock = () => {
-    const b = newBlock(blocks)
-    setBlocks((all) => (all.length >= MAX_BLOCKS ? all : [...all, b]))
+    if (blocks.length >= MAX_BLOCKS) return
+    const b = newBlock(blocks, look)
+    setBlocks((all) => [...all, b])
     setSelectedBlock(b.id)
-    return b.id
+    setFocusBlock(b.id)
   }
-  const editBlock = (id: string, text: string) => setBlocks((all) => all.map((b) => (b.id === id ? { ...b, text } : b)))
-  const moveBlock = (id: string, x: number, y: number) => setBlocks((all) => all.map((b) => (b.id === id ? { ...b, x, y } : b)))
-  const removeBlock = (id: string) => { setBlocks((all) => all.filter((b) => b.id !== id)); setSelectedBlock((s) => (s === id ? null : s)) }
+  const editBlock = useCallback((id: string, text: string) => setBlocks((all) => all.map((b) => (b.id === id ? { ...b, text } : b))), [])
+  const moveBlock = useCallback((id: string, x: number, y: number) => setBlocks((all) => all.map((b) => (b.id === id ? { ...b, x, y } : b))), [])
+  const lookBlock = (patch: Partial<BlockLook>) => {
+    setLook((l) => ({ ...l, ...patch }))
+    setBlocks((all) => all.map((b) => (b.id === selectedBlock ? { ...b, ...patch } : b)))
+  }
+  const removeBlock = () => { setBlocks((all) => all.filter((b) => b.id !== selectedBlock)); setSelectedBlock(null) }
+  const chosenBlock = blocks.find((b) => b.id === selectedBlock) ?? null
   const [gridLevel, setGridLevel] = useState(saved.gridLevel ?? DEFAULT_GRID_LEVEL)
   const [gridNumbers, setGridNumbers] = useState<GridNumbers>(saved.gridNumbers ?? DEFAULT_GRID_NUMBERS)
   const [northStyle, setNorthStyle] = useState<NorthStyle>(saved.northStyle ?? DEFAULT_NORTH_STYLE)
@@ -223,6 +230,7 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
 
   // onde o mapa está quando assenta: o fuso do rodapé vem daqui (durante o arrasto o texto não muda)
   const [center, setCenter] = useState({ lng: session.camera.lng, lat: session.camera.lat })
+  const onSettle = useCallback((c: Camera) => setCenter({ lng: c.lng, lat: c.lat }), [])
   const today = useMemo(todayLabel, [])
 
   // ── a base da folha: a escolhida + as camadas de dados do mapa. Ao trocar, a anterior fica na tela até a nova chegar (nada pisca) ──
@@ -263,8 +271,8 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
   }, [sheetStyle])
 
   const settings = useMemo<SheetSettings>(
-    () => ({ paper, orientation, title, show, coords, gridLevel, gridNumbers, northStyle, legendSide: sideActive, notes, blocks, corners, legend: { title: legendEdits.title, sections: legendSections }, credits, today, logoUrl, center }),
-    [paper, orientation, title, show, coords, gridLevel, gridNumbers, northStyle, sideActive, notes, blocks, corners, legendEdits.title, legendSections, credits, today, logoUrl, center],
+    () => ({ paper, orientation, title, show, coords, gridLevel, gridNumbers, northStyle, legendSide: sideActive, blocks, corners, legend: { title: legendEdits.title, sections: legendSections }, credits, today, logoUrl, center }),
+    [paper, orientation, title, show, coords, gridLevel, gridNumbers, northStyle, sideActive, blocks, corners, legendEdits.title, legendSections, credits, today, logoUrl, center],
   )
 
   // ── a folha cabe na área disponível; o mapa dentro dela acompanha ──
@@ -357,9 +365,11 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
                 px={px}
                 cameraProbe={cameraProbe}
                 selectedBlock={selectedBlock}
+                focusBlock={focusBlock}
                 onBlockSelect={setSelectedBlock}
                 onBlockMove={moveBlock}
-                onSettle={(c) => setCenter({ lng: c.lng, lat: c.lat })}
+                onBlockEdit={editBlock}
+                onSettle={onSettle}
               />
             </div>
           )}
@@ -407,7 +417,7 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
               </PanelCard>
               </div>
               <div className={inTab('texto')}>
-              <NoteCard notes={notes} onNote={setNote} landscape={orientation === 'landscape'} blocks={blocks} selected={selectedBlock} onSelect={setSelectedBlock} onAdd={addBlock} onEdit={editBlock} onRemove={removeBlock} />
+              <NoteCard blocks={blocks} selected={chosenBlock} onAdd={addBlock} onLook={lookBlock} onRemove={removeBlock} />
               </div>
               <div className={inTab('folha')}>
               <PanelCard title="Folha" caption="Arraste o mapa dentro da folha e use a roda do mouse para o zoom.">

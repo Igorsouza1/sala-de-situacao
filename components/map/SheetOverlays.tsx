@@ -2,12 +2,13 @@
 
 import '@/lib/maplibre-worker'
 import Map, { Layer, Source } from 'react-map-gl/maplibre'
-import { memo, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
+import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent, type ReactNode } from 'react'
+import { GripHorizontal } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ColorSwatch, IconSwatch } from './MapLegend'
 import { Legend } from './LayerManager'
 import { buildGrid, edgeCrossing, type GridFormat } from './helpers/grid'
-import { clampPos, type MapBlock, type NorthStyle } from './helpers/gerar-mapa'
+import { BLOCK_SIZE_MM, MAX_BLOCK_CHARS, clampPos, type MapBlock, type NorthStyle } from './helpers/gerar-mapa'
 import type { LegendItem, LegendSection } from './helpers/legend-sheet'
 import { paperScale, paperScaleBar, type PaperFrame } from './helpers/scale'
 import { SIDE_W, cornerAnchor, type Corner } from './helpers/sheet'
@@ -207,47 +208,134 @@ export const LocationInset = memo(function LocationInset({ style, view, center, 
 })
 
 // ── Texto livre ───────────────────────────────────────────────────────────────────────────────────────────────────
-// Textos soltos sobre o mapa, que a pessoa arrasta para onde quiser (ou move com as setas), e dois textos de lugar fixo: abaixo do título
-// (SheetPage) e na coluna ao lado do mapa. A posição de um bloco é uma fração do mapa, então sai no papel onde está na tela.
+// Blocos de texto soltos na folha: a pessoa escreve direto neles e os arrasta para onde quiser (pela alça, ou com as setas). A posição é
+// uma fração da folha, então sai no papel onde está na tela. Na exportação não há alça, anel nem edição: só o texto.
 interface FreeBlocksProps {
   blocks: MapBlock[]
   pxPerMm: number
-  /** na folha de exportação não há arrasto nem seleção */
+  /** na folha de exportação não há arrasto, seleção nem edição */
   interactive: boolean
   selected?: string | null
-  onSelect?: (id: string) => void
+  /** o bloco que acabou de ser criado: já nasce com o cursor dentro, para escrever */
+  focusId?: string | null
+  onSelect?: (id: string | null) => void
   onMove?: (id: string, x: number, y: number) => void
+  onEdit?: (id: string, text: string) => void
 }
 
 const STEP = 0.01
+const MOVED = 4 // px: menos que isto é um toque (escrever), mais é um arrasto (mover)
+const BLOCK_MAX_MM = 60 // a largura máxima de um bloco: cabe na coluna da legenda
 
-export function FreeBlocks({ blocks, pxPerMm, interactive, selected, onSelect, onMove }: FreeBlocksProps) {
+// o texto de um bloco; editável só quando a pessoa o escolheu para escrever. O texto é escrito no elemento "por fora" do React para o
+// cursor não pular enquanto se digita.
+function Editable({ text, editing, interactive, onChange, onDone }: { text: string; editing: boolean; interactive: boolean; onChange: (t: string) => void; onDone: () => void }) {
+  const el = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const node = el.current
+    if (node && node.innerText !== text && document.activeElement !== node) node.innerText = text
+  }, [text, editing])
+  useLayoutEffect(() => {
+    const node = el.current
+    if (!editing || !node) return
+    node.focus()
+    const range = document.createRange()
+    range.selectNodeContents(node)
+    range.collapse(false)
+    const sel = window.getSelection()
+    sel?.removeAllRanges()
+    sel?.addRange(range)
+  }, [editing])
+  return (
+    <div
+      ref={el}
+      contentEditable={editing}
+      suppressContentEditableWarning
+      spellCheck={false}
+      role={editing ? 'textbox' : undefined}
+      aria-label={editing ? 'Texto sobre a folha' : undefined}
+      data-placeholder={interactive ? 'Escreva aqui' : undefined}
+      className="min-w-[4ch] whitespace-pre-wrap break-words outline-hidden empty:before:content-[attr(data-placeholder)] empty:before:opacity-60"
+      onInput={() => {
+        const node = el.current!
+        if (node.innerText.length > MAX_BLOCK_CHARS) {
+          node.innerText = node.innerText.slice(0, MAX_BLOCK_CHARS)
+          const r = document.createRange()
+          r.selectNodeContents(node)
+          r.collapse(false)
+          window.getSelection()?.removeAllRanges()
+          window.getSelection()?.addRange(r)
+        }
+        onChange(node.innerText)
+      }}
+      onPaste={(e) => {
+        e.preventDefault()
+        document.execCommand('insertText', false, e.clipboardData.getData('text/plain'))
+      }}
+      onKeyDown={(e) => { if (e.key === 'Escape') { e.preventDefault(); onDone() } }}
+      onBlur={onDone}
+    />
+  )
+}
+
+// a aparência de um bloco: o estilo (placa, contorno ou letra branca), o tamanho e a letra
+function blockLook(b: MapBlock, mm: (v: number) => number): CSSProperties {
+  const t = mm(0.3)
+  const outline = [[t, 0], [-t, 0], [0, t], [0, -t], [t, t], [-t, t], [t, -t], [-t, -t]].map(([x, y]) => `${x}px ${y}px 0 ${HALO}`).join(', ')
+  const base: CSSProperties = {
+    fontSize: mm(BLOCK_SIZE_MM[b.size]),
+    fontWeight: b.font === 'bold' ? 600 : 400,
+    fontFamily: b.font === 'mono' ? 'var(--font-mono)' : undefined,
+    lineHeight: 1.25,
+    maxWidth: mm(BLOCK_MAX_MM),
+    width: 'max-content',
+  }
+  if (b.style === 'outline') return { ...base, color: INK, textShadow: outline, padding: mm(0.5) }
+  if (b.style === 'light') return { ...base, color: HALO, textShadow: `0 ${mm(0.15)}px ${mm(0.7)}px color-mix(in srgb, ${INK} 85%, transparent), 0 0 ${mm(1.6)}px color-mix(in srgb, ${INK} 60%, transparent)`, padding: mm(0.5) }
+  return { ...base, color: INK, padding: mm(1.5) }
+}
+
+export function FreeBlocks({ blocks, pxPerMm, interactive, selected, focusId, onSelect, onMove, onEdit }: FreeBlocksProps) {
   const mm = (v: number) => v * pxPerMm
   const box = useRef<HTMLDivElement>(null)
-  const grab = useRef<{ id: string; dx: number; dy: number } | null>(null)
+  const grab = useRef<{ id: string; dx: number; dy: number; x0: number; y0: number; moved: boolean } | null>(null)
+  const [editing, setEditing] = useState<string | null>(null)
+  useEffect(() => { if (focusId) setEditing(focusId) }, [focusId])
+  // escolher outro bloco (ou nenhum) encerra a escrita do anterior
+  useEffect(() => { if (editing && selected !== editing) setEditing(null) }, [selected, editing])
 
-  const point = (e: PointerEvent) => {
+  const at = (e: PointerEvent) => {
     const r = box.current!.getBoundingClientRect()
     return { x: (e.clientX - r.left) / r.width, y: (e.clientY - r.top) / r.height }
   }
-  const down = (e: PointerEvent<HTMLDivElement>, b: MapBlock) => {
+  const down = (e: PointerEvent<HTMLElement>, b: MapBlock) => {
     if (!interactive) return
+    // com o cursor dentro do texto, o clique é de escrever (posicionar o cursor), não de arrastar
+    if (editing === b.id && !(e.target as Element).closest('[data-grip]')) return
+    e.preventDefault()
     e.currentTarget.setPointerCapture(e.pointerId)
-    const p = point(e)
-    grab.current = { id: b.id, dx: p.x - b.x, dy: p.y - b.y }
+    const p = at(e)
+    grab.current = { id: b.id, dx: p.x - b.x, dy: p.y - b.y, x0: e.clientX, y0: e.clientY, moved: false }
     onSelect?.(b.id)
   }
-  const move = (e: PointerEvent<HTMLDivElement>) => {
+  const move = (e: PointerEvent<HTMLElement>) => {
     const g = grab.current
     if (!g) return
-    const p = point(e)
+    if (!g.moved && Math.hypot(e.clientX - g.x0, e.clientY - g.y0) < MOVED) return
+    g.moved = true
+    const p = at(e)
     onMove?.(g.id, clampPos(p.x - g.dx), clampPos(p.y - g.dy))
   }
-  const up = (e: PointerEvent<HTMLDivElement>) => {
+  const up = (e: PointerEvent<HTMLElement>, b: MapBlock) => {
+    const g = grab.current
     grab.current = null
     if (e.currentTarget.hasPointerCapture(e.pointerId)) e.currentTarget.releasePointerCapture(e.pointerId)
+    // um toque, sem arrastar: é para escrever
+    if (g && !g.moved && !(e.target as Element).closest('[data-grip]')) setEditing(b.id)
   }
-  const keys = (e: KeyboardEvent<HTMLDivElement>, b: MapBlock) => {
+  const keys = (e: KeyboardEvent<HTMLElement>, b: MapBlock) => {
+    if (editing === b.id) return
+    if (e.key === 'Enter') { e.preventDefault(); setEditing(b.id); return }
     const k = e.shiftKey ? STEP * 5 : STEP
     const d = e.key === 'ArrowLeft' ? [-k, 0] : e.key === 'ArrowRight' ? [k, 0] : e.key === 'ArrowUp' ? [0, -k] : e.key === 'ArrowDown' ? [0, k] : null
     if (!d) return
@@ -259,43 +347,48 @@ export function FreeBlocks({ blocks, pxPerMm, interactive, selected, onSelect, o
     <div ref={box} className="pointer-events-none absolute inset-0">
       {blocks.map((b) => {
         const empty = b.text.trim() === ''
-        // texto vazio só aparece na tela de edição (para achar o bloco); no papel não sai nada
+        const on = interactive && selected === b.id
+        const isEditing = interactive && editing === b.id
+        // bloco vazio só existe na tela de edição (para ser achado); no papel não sai nada
         if (empty && !interactive) return null
         return (
           <div
             key={b.id}
-            role={interactive ? 'button' : undefined}
             tabIndex={interactive ? 0 : undefined}
-            aria-label={interactive ? `Texto sobre o mapa: ${empty ? 'vazio' : b.text}. Arraste ou use as setas para mover.` : undefined}
+            role={interactive ? 'group' : undefined}
+            aria-label={interactive ? `Texto sobre a folha. Arraste ou use as setas para mover, Enter para escrever.` : undefined}
             onPointerDown={(e) => down(e, b)}
             onPointerMove={move}
-            onPointerUp={up}
-            onPointerCancel={up}
+            onPointerUp={(e) => up(e, b)}
+            onPointerCancel={() => { grab.current = null }}
             onKeyDown={(e) => keys(e, b)}
-            onFocus={() => interactive && onSelect?.(b.id)}
+            onFocus={() => { if (interactive && selected !== b.id) onSelect?.(b.id) }}
             className={cn(
-              plate,
-              'whitespace-pre-line text-center text-foreground',
-              interactive && 'pointer-events-auto cursor-grab touch-none select-none transition-shadow duration-200 hover:ring-2 hover:ring-primary/40 focus-visible:outline-hidden active:cursor-grabbing',
-              interactive && selected === b.id && 'ring-2 ring-primary',
-              empty && 'text-muted-foreground',
+              'absolute',
+              b.style === 'plate' && 'rounded-sm bg-card/90 shadow-control',
+              interactive && 'pointer-events-auto touch-none transition-shadow duration-200 hover:ring-2 hover:ring-primary/40 focus-visible:outline-hidden',
+              interactive && !isEditing && 'cursor-grab select-none active:cursor-grabbing',
+              interactive && isEditing && 'cursor-text',
+              on && 'ring-2 ring-primary',
             )}
-            style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, translate: '-50% -50%', maxWidth: '40%', padding: mm(1.5), fontSize: mm(2.8) }}
+            style={{ left: `${b.x * 100}%`, top: `${b.y * 100}%`, translate: '-50% -50%', ...blockLook(b, mm) }}
           >
-            {empty ? 'Escreva o texto' : b.text}
+            <Editable text={b.text} editing={isEditing} interactive={interactive} onChange={(t) => onEdit?.(b.id, t)} onDone={() => setEditing((cur) => (cur === b.id ? null : cur))} />
+            {on && (
+              // a alça para mover (no papel não sai): o texto, quando se escreve, não arrasta
+              <span
+                data-grip
+                role="button"
+                aria-label="Mover o texto"
+                className="absolute -top-6 left-1/2 flex h-5 w-8 -translate-x-1/2 cursor-grab items-center justify-center rounded-sm bg-primary text-primary-foreground shadow-control active:cursor-grabbing"
+              >
+                <GripHorizontal className="h-3.5 w-3.5" aria-hidden />
+              </span>
+            )}
           </div>
         )
       })}
     </div>
-  )
-}
-
-export function SideNote({ text, pxPerMm }: { text: string; pxPerMm: number }) {
-  if (!text.trim()) return null
-  return (
-    <p className="min-h-0 overflow-clip whitespace-pre-line leading-snug text-foreground" style={{ fontSize: 2.8 * pxPerMm }}>
-      {text}
-    </p>
   )
 }
 

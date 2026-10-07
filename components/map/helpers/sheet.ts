@@ -13,8 +13,6 @@ export interface Sheet {
   /** o mapa em si (o quadro com borda); a grade pode ter números na margem em volta dele */
   map: Rect
   footer: Rect
-  /** a faixa do texto "abaixo do título"; null quando não há texto */
-  subtitle: Rect | null
   /** a coluna ao lado do mapa (legenda e texto), só na folha deitada com a legenda fora; null nos outros casos */
   side: Rect | null
   /** a margem em volta do mapa para os números da grade (mm); 0 quando os números ficam dentro */
@@ -23,7 +21,6 @@ export interface Sheet {
 
 /** o que o conteúdo pede da folha: cada pedido tira um pouco de área do mapa */
 export interface SheetOptions {
-  subtitle?: boolean
   /** a coluna ao lado do mapa (legenda e/ou texto): só vale na folha deitada */
   side?: boolean
   gridMargin?: boolean
@@ -44,7 +41,6 @@ const MARGIN = 10 // borda do papel que a impressora não alcança de forma segu
 const HEADER = 16 // título
 const FOOTER = 14 // fonte, créditos e data
 const GAP = 3 // respiro entre título, mapa e rodapé
-const SUBTITLE = 8 // faixa do texto abaixo do título
 export const SIDE_W = 62 // coluna ao lado do mapa: a legenda vale esta largura no papel
 const GRID_MARGIN = 7 // onde moram os números da grade quando ficam fora do mapa
 
@@ -55,16 +51,14 @@ export function sheetLayout(paper: Paper, orientation: Orientation, options: She
   const inner = width - MARGIN * 2
   const header: Rect = { x: MARGIN, y: MARGIN, w: inner, h: HEADER }
   const footer: Rect = { x: MARGIN, y: height - MARGIN - FOOTER, w: inner, h: FOOTER }
-  let top = header.y + header.h + GAP
-  const subtitle: Rect | null = options.subtitle ? { x: MARGIN, y: top, w: inner, h: SUBTITLE } : null
-  if (subtitle) top += SUBTITLE + GAP
+  const top = header.y + header.h + GAP
   const area: Rect = { x: MARGIN, y: top, w: inner, h: footer.y - GAP - top }
   const sideOn = !!options.side && orientation === 'landscape'
   if (sideOn) area.w -= SIDE_W + GAP
   const gridMargin = options.gridMargin ? GRID_MARGIN : 0
   const map: Rect = { x: area.x + gridMargin, y: area.y + gridMargin, w: area.w - gridMargin * 2, h: area.h - gridMargin * 2 }
   const side: Rect | null = sideOn ? { x: MARGIN + inner - SIDE_W, y: map.y, w: SIDE_W, h: map.h } : null
-  return { width, height, header, map, footer, subtitle, side, gridMargin }
+  return { width, height, header, map, footer, side, gridMargin }
 }
 
 /** o retângulo de um elemento (legenda, seta…) encostado no canto do mapa, com `inset` de folga; nunca maior que o mapa */
