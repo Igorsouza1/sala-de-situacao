@@ -165,7 +165,7 @@ export interface GerarPrefs {
 
 const GERAR_KEY = 'prisma:mapa:gerar'
 const MAX_HIDDEN = 200
-const COORD_FORMATS: GridFormat[] = ['dms', 'utm']
+const COORD_FORMATS: GridFormat[] = ['dms', 'dd', 'utm']
 
 export function readGerarPrefs(store: Store | null = browserStore()): GerarPrefs {
   try {

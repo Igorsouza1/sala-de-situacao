@@ -98,7 +98,7 @@ const PARTS: { id: Part; label: string }[] = [
   { id: 'date', label: 'Data de hoje' },
   { id: 'inset', label: 'Mapa de localização' },
 ]
-const COORD_OPTIONS: { value: GridFormat; label: string }[] = [{ value: 'dms', label: 'Graus' }, { value: 'utm', label: 'UTM' }]
+const COORD_OPTIONS: { value: GridFormat; label: string }[] = [{ value: 'dms', label: 'Grau-min-seg' }, { value: 'dd', label: 'Grau decimal' }, { value: 'utm', label: 'UTM' }]
 const NUMBER_OPTIONS: { value: GridNumbers; label: string }[] = [{ value: 'margin', label: 'Na margem' }, { value: 'inside', label: 'Dentro do mapa' }]
 const NORTH_OPTIONS = NORTH_STYLES.map((value) => ({ value, label: NORTH_LABELS[value] }))
 const LEGEND_PLACE_OPTIONS = [{ value: 'over', label: 'Sobre o mapa' }, { value: 'side', label: 'Ao lado do mapa' }] as const

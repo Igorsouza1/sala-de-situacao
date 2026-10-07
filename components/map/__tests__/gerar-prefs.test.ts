@@ -156,3 +156,16 @@ describe('itens tirados da legenda', () => {
     expect(isCustomGerar({ legendHidden: [] })).toBe(false)
   })
 })
+
+describe('formato das coordenadas', () => {
+  it.each(['dms', 'dd', 'utm'] as const)('lembra %s', (coords) => {
+    const store = fakeStore()
+    saveGerarPrefs({ coords }, store)
+    expect(readGerarPrefs(store).coords).toBe(coords)
+  })
+
+  it('graus decimais, como o UTM, contam como escolha diferente do padrão', () => {
+    expect(isCustomGerar({ coords: 'dd' })).toBe(true)
+    expect(isCustomGerar({ coords: 'dms' })).toBe(false)
+  })
+})

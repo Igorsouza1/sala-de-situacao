@@ -2,7 +2,8 @@
 // SIRGAS 2000, com o intervalo escolhido pelo zoom. Tudo em coordenadas geográficas [lng, lat]: quem desenha projeta na tela.
 // SIRGAS 2000 e GRS80 diferem do WGS84 em frações de milímetro no elipsoide: a mesma fórmula serve aos dois.
 
-export type GridFormat = 'dms' | 'utm'
+/** graus, minutos e segundos; graus decimais (-56,6947°); ou UTM */
+export type GridFormat = 'dms' | 'dd' | 'utm'
 export interface Bounds { west: number; south: number; east: number; north: number }
 export interface GridLine {
   /** meridiano: linha que sobe e desce (longitude, ou "leste" em UTM); paralelo: linha deitada */
@@ -105,8 +106,19 @@ export function formatDms(value: number, axis: 'lat' | 'lng', precision: Precisi
   return `${Math.floor(seconds / 3600)}°${pad(Math.floor((seconds % 3600) / 60))}'${pad(seconds % 60)}"${hemisphere}`
 }
 
+/** quantas casas o intervalo pede: 0,5 pede 1; 0,05 pede 2; 1 não pede nenhuma */
+const decimalsFor = (step: number) => Math.max(0, Math.ceil(-Math.log10(step) - 1e-9))
+
+/** graus decimais como se escreve em português: com o sinal (oeste e sul são negativos) e vírgula decimal, "-56,6947°" */
+export function formatDecimal(value: number, decimals: number): string {
+  const text = value.toFixed(decimals)
+  const signed = Number(text) === 0 ? text.replace('-', '') : text
+  return `${signed.replace('.', ',')}°`
+}
+
 // ── A grade ────────────────────────────────────────────────────────────────────────────────────────────────────────
 const DMS_STEPS = [36000, 18000, 7200, 3600, 1800, 1200, 600, 300, 120, 60, 30, 20, 10, 5, 2, 1] // segundos de arco: 10°, 5°, 2°, 1°, 30′ … 1″
+const DD_STEPS = [10, 5, 2, 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001, 0.0005, 0.0002, 0.0001] // graus
 const UTM_STEPS = [100000, 50000, 20000, 10000, 5000, 2000, 1000, 500, 200, 100, 50, 20, 10, 5, 2, 1] // metros
 const MIN_LINES = 4 // o maior intervalo que ainda deixa ao menos isso no lado menor do mapa
 const EPS = 1e-9
@@ -154,6 +166,16 @@ export function buildGrid(bounds: Bounds, format: GridFormat): Grid {
     return { format, lines }
   }
 
+  if (format === 'dd') {
+    const step = pickStep(DD_STEPS, Math.min(east - west, north - south))
+    const decimals = decimalsFor(step)
+    const lines: GridLine[] = [
+      ...multiples(west, east, step).map<GridLine>((v) => ({ axis: 'meridian', label: formatDecimal(v, decimals), points: [[v, south - padY], [v, north + padY]] })),
+      ...multiples(south, north, step).map<GridLine>((v) => ({ axis: 'parallel', label: formatDecimal(v, decimals), points: [[west - padX, v], [east + padX, v]] })),
+    ]
+    return { format, lines }
+  }
+
   // UTM: o fuso é o do centro do mapa; as linhas de leste e de norte são retas no fuso e levemente inclinadas no mapa
   const centerLng = (west + east) / 2
   const centerLat = (south + north) / 2
@@ -183,6 +205,7 @@ export function buildGrid(bounds: Bounds, format: GridFormat): Grid {
 /** a frase do rodapé: em que sistema estão as coordenadas da grade */
 export function datumLine(format: GridFormat, lng: number, lat = -1): string {
   if (format === 'dms') return 'Datum SIRGAS 2000 · coordenadas geográficas'
+  if (format === 'dd') return 'Datum SIRGAS 2000 · coordenadas geográficas em graus decimais'
   return `Datum SIRGAS 2000 · UTM fuso ${utmZone(lng)} ${lat < 0 ? 'Sul' : 'Norte'} · metros`
 }
 
