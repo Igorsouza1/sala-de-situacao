@@ -688,6 +688,25 @@ Cartão branco com sombra, ícone em círculo tingido, título e frase curta, **
 
 ---
 
+### 13.10 Situação: os números dentro do mapa
+
+**Para que serve:** responder "como está o território agora?" sem sair do mapa. Substitui o dashboard (a antiga página `/protected/dashboard`) e a barra lateral inteira: o mapa é a tela, e os dados são de lugares do mapa. **Por que um painel separado do Explorar:** o Explorar mostra registros (ações, propriedades); a Situação mostra séries e estados. Um painel que faz tudo vira um monstro e cada tipo de dado novo o incharia.
+
+- **Onde:** painel do dock (botão **Situação**, ao lado do Explorar), aberto no canto esquerdo, **mais largo (40rem)** porque tem gráfico (`side` e `wide` no `DockPanelButton`). No celular é a folha que sobe de baixo, como os outros. **Exceção à 13.5, registrada:** a largura de 26rem do Explorar não comporta os gráficos; o resto do desenho (nascer do botão, `ViewSwap`) é o mesmo.
+- **Duas visões**, trocadas por `ViewSwap`: o **resumo** e o **detalhe**. O botão "Voltar à situação" diz para onde leva (19.5).
+- **Resumo:** um cartão por assunto, com título, **frase do estado** ("Água clara", "4 focos nos últimos 30 dias"), o **estado em cor e em palavra** (a cor sozinha não diz, 4.2), a **data do dado em palavras** ("Última coleta ontem") e uma linha pequena. Seis cartões: Focos de calor, Desmatamento, Javali, Rio Formoso, Rio da Prata e Ponte do Cure. As frases e as faixas vivem em `components/situacao/estado.ts`, com teste.
+- **Detalhe:** abre pelo cartão **ou** pelo clique no mapa (focos, desmatamento, Deque de Pedras, Ponte do Cure): os dois levam ao mesmo lugar. Num foco ou polígono, o **registro clicado vem em cima** ("Este foco", "Este alerta") e a **série completa embaixo**. O **período** (ano) mora no detalhe, porque o resumo mostra sempre "agora". Os gráficos são os do dashboard antigo, **sem mudança** (a adaptação é de outro trabalho).
+- **Decisão: sem memória de "visto".** Um ponto no botão do dock e um "novo desde a última vez" foram desenhados e **tirados**: duplicariam a Notificação por e-mail (que já avisa de detecção nova) e exigiriam estado por usuário. A data do dado, dita em palavras, responde "isso é novo?" sem o sistema lembrar de nada.
+- **Estação sem sincronização** (Deque de Pedras, Ponte do Cure): o cartão e o detalhe dizem **"Sem sincronização configurada"**. Só o Rio Formoso sincroniza por planilha, e o botão **Sincronizar planilha** mora no detalhe dele, visível para Editor ou acima.
+- **Estados** (2.1): carregando = esqueleto com a forma do cartão; erro = "Não foi possível carregar." + "Tentar de novo" **no próprio cartão**, sem derrubar os outros; vazio diz o porquê ("Sem coletas nos últimos 90 dias").
+- **O conteúdo só monta na primeira abertura** do painel: antes disso o mapa não paga as leituras de dados. Fechar o painel volta ao resumo, 200 ms depois (a saída), como o Explorar.
+- **Não feito (de propósito):** destacar o item clicado dentro do gráfico (os gráficos ficam como estão); "Abrir dossiê" no foco (o foco guarda o CAR, mas não o id da propriedade); regra de "atenção" para o botão do dock.
+- **Falta olhar na tela e com leitor de tela.**
+
+### 13.11 Conta: o avatar
+
+**Para que serve:** Perfil, Sair e (só para o Superadmin) Administração. Substitui o avatar da barra lateral. **Onde:** um círculo no **canto de baixo à esquerda**, fora do dock, porque conta não é ferramenta do mapa; no celular sobe acima do dock (`max-[1120px]:bottom-24`, como a legenda). O item "Configurações", que não fazia nada, saiu. O papel vem de `/api/auth/role` (`isAdmin`, `canEdit`, `isSuperadmin`).
+
 ## 14. Referência viva e escolha final
 
 O laboratório `/dev/design-lab` (branch `proto/design-lab`, descartável, nunca vai para a `main`) é a referência visual e de comportamento enquanto as telas não são migradas. Depois da escolha abaixo, ele ganhou as seções **Estados** (2.1.1, com comportamento, som e continuidade 8.4) e **Voz e tom** (3.2). A escolha final do projeto, no formato de URL do laboratório:

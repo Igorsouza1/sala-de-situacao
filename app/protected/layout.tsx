@@ -1,8 +1,6 @@
-import { Navbar } from "@/components/Navbar";
 import "@/app/globals.css";
 import { MapProvider } from "@/context/GeoDataContext";
 import { AcoesProvider } from "@/context/AcoesContext";
-import { DequePedrasProvider } from "@/context/DequePedrasContext";
 import { RegionProvider } from "@/context/RegionContext";
 
 export const metadata = {
@@ -12,6 +10,7 @@ export const metadata = {
 
 export const dynamic = 'force-dynamic'
 
+// O mapa é a tela: sem barra lateral. Navegação, dados e conta vivem dentro do mapa (dock, painel Situação e avatar).
 export default function ProtectedLayout({
   children,
 }: {
@@ -19,11 +18,10 @@ export default function ProtectedLayout({
 }) {
   return (
     <RegionProvider>
-      <div className="flex h-screen overflow-hidden bg-background">
-        <Navbar />
+      <div className="h-screen overflow-hidden bg-background">
         <MapProvider>
           <AcoesProvider>
-            <main className="flex-1 min-w-0 overflow-hidden">{children}</main>
+            <main className="h-full min-w-0 overflow-hidden">{children}</main>
           </AcoesProvider>
         </MapProvider>
       </div>

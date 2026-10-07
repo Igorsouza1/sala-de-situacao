@@ -83,6 +83,9 @@ import { Button } from '@/components/ui/button'
 import { CameraControls } from './CameraControls'
 import { DockPanelButton, DockDivider, MapDock } from './MapDock'
 import { PrismCursor } from './PrismCursor'
+import { UserAvatarMenu } from './UserAvatarMenu'
+import { SituacaoPanel } from '@/components/situacao/SituacaoPanel'
+import { alvoDaCamada, type Alvo } from '@/components/situacao/alvo'
 import {
   BASEMAP_MAX_ZOOM,
   DEFAULT_BASEMAP,
@@ -396,6 +399,14 @@ export default function MapLibreMap({
   }, [dockOpen])
   // outra região, outro contexto: o registro aberto não vale mais
   useEffect(() => { setExploreSelection(null); setExploreFeature(null) }, [regiaoId])
+
+  // ── Situação: o detalhe aberto (um cartão do resumo ou um clique no mapa). Fechar o painel volta ao resumo, depois da saída (200 ms) ──
+  const [situacaoAlvo, setSituacaoAlvo] = useState<Alvo | null>(null)
+  useEffect(() => {
+    if (dockOpen === 'situacao') return
+    const t = setTimeout(() => setSituacaoAlvo(null), 200)
+    return () => clearTimeout(t)
+  }, [dockOpen])
 
   // ── Fetch catalog metadata (lightweight, no GeoJSON) ────────────────────
   // `fresh`: o Atualizar ignora o cache do navegador (a API guarda o catálogo por 2 minutos), senão traria a versão de antes da edição
@@ -913,6 +924,13 @@ export default function MapLibreMap({
   // ── Shared feature-click handler (usado por layers MapLibre E por icon markers) ──
   const openFeatureModal = useCallback(
     (slug: string, props: Record<string, any>) => {
+      // focos, desmatamento e estações abrem no painel Situação, no detalhe do assunto
+      const alvo = alvoDaCamada(slug, props)
+      if (alvo) {
+        setSituacaoAlvo(alvo)
+        setDockOpen('situacao')
+        return
+      }
       // ação e propriedade abrem no painel Explorar (o dossiê completo está lá, em "Abrir dossiê"); o resto segue no modal
       if ((slug === 'acoes' || slug === 'propriedades') && props.id) {
         selectExplore({ kind: slug, id: Number(props.id) })
@@ -1852,6 +1870,9 @@ export default function MapLibreMap({
             }}
           />
         </DockPanelButton>
+        <DockPanelButton id="situacao" icon={LucideIcons.Activity} label="Situação" motion="rise" side wide>
+          <SituacaoPanel open={dockOpen === 'situacao'} alvo={situacaoAlvo} onAlvo={setSituacaoAlvo} />
+        </DockPanelButton>
         <DockDivider />
         <ToolMenu
           icon={LucideIcons.Ruler}
@@ -1872,6 +1893,8 @@ export default function MapLibreMap({
         <DockDivider />
         <GerarMapaButton onOpen={openGerarMapa} />
       </MapDock>
+
+      <UserAvatarMenu />
 
       {gerarMapa && <GerarMapa session={gerarMapa} onClose={() => setGerarMapa(null)} />}
 

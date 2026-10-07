@@ -42,6 +42,12 @@ _Avoid_: Camada pública, camada base
 Camada criada e gerenciada por uma Organização específica, visível apenas aos seus usuários. Exemplos: estações meteorológicas, postos de fiscalização, pontos de monitoramento hídrico.
 _Avoid_: Camada privada, camada tenant
 
+### Painel de dados
+
+**Situação**:
+Painel do mapa que mostra o estado de agora de cada assunto monitorado (Focos de Calor, Detecção de Desmatamento, Avistamentos, Estações de Monitoramento) e, ao abrir um deles, o histórico em gráfico. Tem duas visões: o resumo (um cartão por assunto) e o detalhe. Não guarda o que cada usuário já viu; avisar de detecção nova é papel da Notificação.
+_Avoid_: Dashboard, painel de controle, alertas (ambíguo com Notificação)
+
 ### Notificações
 
 **Notificação**:

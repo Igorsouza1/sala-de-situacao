@@ -77,12 +77,6 @@
     "alertConfirm": 1,
     "transicaoV4": 0
   },
-  "components/alerts/AlertManagerModal.tsx": {
-    "selectNativo": 0,
-    "corNativa": 0,
-    "alertConfirm": 1,
-    "transicaoV4": 0
-  },
   "components/contact-modal.tsx": {
     "selectNativo": 0,
     "corNativa": 0,

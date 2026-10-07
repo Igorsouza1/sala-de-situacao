@@ -131,10 +131,6 @@
     "paleta": 41,
     "hex": 0
   },
-  "components/alerts/AlertManagerModal.tsx": {
-    "paleta": 24,
-    "hex": 0
-  },
   "components/auth/form-message.tsx": {
     "paleta": 9,
     "hex": 0
@@ -199,10 +195,6 @@
     "paleta": 3,
     "hex": 6
   },
-  "components/dashboard/dashboard.tsx": {
-    "paleta": 55,
-    "hex": 7
-  },
   "components/dashboard/kpis/KpiCard.tsx": {
     "paleta": 19,
     "hex": 4
@@ -213,38 +205,6 @@
   },
   "components/dashboard/kpis/NivelRioCard.tsx": {
     "paleta": 12,
-    "hex": 0
-  },
-  "components/data-insert/DataInsertDialog.tsx": {
-    "paleta": 5,
-    "hex": 0
-  },
-  "components/data-insert/forms/AcoesForm.tsx": {
-    "paleta": 2,
-    "hex": 0
-  },
-  "components/data-insert/forms/DynamicLayerForm.tsx": {
-    "paleta": 1,
-    "hex": 0
-  },
-  "components/data-insert/forms/EstradaForm.tsx": {
-    "paleta": 5,
-    "hex": 0
-  },
-  "components/data-insert/preview/CardsPreview.tsx": {
-    "paleta": 3,
-    "hex": 0
-  },
-  "components/data-insert/preview/MapPreview.tsx": {
-    "paleta": 2,
-    "hex": 0
-  },
-  "components/data-insert/preview/TablePreview.tsx": {
-    "paleta": 8,
-    "hex": 0
-  },
-  "components/data-insert/TypeSelector.tsx": {
-    "paleta": 8,
     "hex": 0
   },
   "components/gpx-import/GpxImportTab.tsx": {
@@ -410,10 +370,6 @@
   "components/map/ShapefileUploader.tsx": {
     "paleta": 10,
     "hex": 2
-  },
-  "components/Navbar.tsx": {
-    "paleta": 8,
-    "hex": 0
   },
   "components/ui/chart.tsx": {
     "paleta": 0,

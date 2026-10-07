@@ -47,7 +47,7 @@ describe.each([
     expect(monthly[2026]).toHaveLength(12);
     expect(monthly[2026][8]).toBe(current);
     expect(monthly[2026].reduce((a, b) => a + b, 0)).toBe(current);
-    expect(indicator).toEqual({ current, previous, deltaPct: ((current - previous) / previous) * 100, sparkline: expect.any(Array) });
+    expect(indicator).toEqual({ current, previous, deltaPct: ((current - previous) / previous) * 100, sparkline: expect.any(Array), lastDate: "2026-09-15" });
     expect(indicator.sparkline).toHaveLength(30);
     expect(indicator.sparkline[14]).toBe(current);
     expect(indicator.sparkline.reduce((a, b) => a + b, 0)).toBe(current);
@@ -71,7 +71,7 @@ test("Organização sem dados recebe séries vazias e indicador zerado", async (
   range.mockResolvedValue([]);
   expect(await getAllFirmsData("sem-dados", false)).toEqual({});
   expect(await getAllDesmatamentoDataGroupedByMonthAndYear("sem-dados", false)).toEqual({});
-  expect(await getFocosIndicador("sem-dados", false)).toEqual({ current: 0, previous: 0, deltaPct: null, sparkline: Array(30).fill(0) });
+  expect(await getFocosIndicador("sem-dados", false)).toEqual({ current: 0, previous: 0, deltaPct: null, sparkline: Array(30).fill(0), lastDate: null });
 });
 
 test("propaga Região explícita para todas as consultas, inclusive os dois períodos", async () => {

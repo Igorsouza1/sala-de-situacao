@@ -67,5 +67,8 @@ export async function getFocosIndicador(tenantId: string, isSuperadmin: boolean,
     sparkline.push(sparkMap.get(key) ?? 0);
   }
 
-  return { current, previous, deltaPct, sparkline };
+  // Data do foco mais recente da janela: o painel Situação diz "último foco há N dias" (null se não houve nenhum)
+  const lastDate = currentFirms.reduce<string | null>((last, f) => (f.acqDate && (!last || f.acqDate > last) ? f.acqDate : last), null);
+
+  return { current, previous, deltaPct, sparkline, lastDate };
 }
