@@ -14,7 +14,6 @@ import {
   useCallback,
   useRef,
   useMemo,
-  useSyncExternalStore,
 } from 'react'
 import * as LucideIcons from 'lucide-react'
 import type { LayerResponseDTO, MapFeatureCollection } from '@/types/map-dto'
@@ -272,7 +271,6 @@ export default function MapLibreMap({
   // fora do estado do mapa: o mouse sobre uma feição troca isto a cada movimento (ver hover-store.ts)
   const hover = useRef<HoverStore>(null as unknown as HoverStore)
   if (!hover.current) hover.current = createHoverStore()
-  const hasHover = useSyncExternalStore(hover.current.subscribe, () => hover.current.get().feature !== null, () => false)
 
   // ── Coordinate inspector ────────────────────────────────────────────────
   const [activeTool, setActiveTool] = useState<Tool | null>(null)
@@ -1035,9 +1033,19 @@ export default function MapLibreMap({
     if (coordInspectorActive) return 'crosshair'
     if (measureMode && measureDrawing) return 'crosshair'
     if (propertyInfoActive && hoveredPropertyId) return 'pointer'
-    if (hasHover) return 'pointer'
     return 'grab'
-  }, [coordInspectorActive, measureMode, measureDrawing, hasHover, propertyInfoActive, hoveredPropertyId])
+  }, [coordInspectorActive, measureMode, measureDrawing, propertyInfoActive, hoveredPropertyId])
+
+  // Sob o mouse há uma ação ou área: o cursor vira "mão que aponta". Isto é feito direto no mapa (não por estado): trocar o cursor
+  // por estado refaria o MapLibreMap inteiro a cada ícone que o mouse toca, e era isso que dava a travadinha ao passar sobre uma ação.
+  useEffect(() => {
+    const apply = () => {
+      const box = mapRef.current?.getMap?.()?.getCanvasContainer?.()
+      if (box) box.style.cursor = cursor === 'grab' && hover.current.get().feature ? 'pointer' : cursor
+    }
+    apply()
+    return hover.current.subscribe(apply)
+  }, [cursor, mapLoaded])
 
   // ── Measure calculations ──────────────────────────────────────────────────
   const measureDistance = useMemo(
