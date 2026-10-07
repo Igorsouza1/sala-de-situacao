@@ -25,7 +25,7 @@ export async function PUT(request: Request, context: RouteContext) {
     if (region.response) return region.response;
     const formData = await request.formData();
     const result = await updateAcaoFieldsById(numId, formData, tenantId);
-    revalidateTag("acoes");
+    revalidateTag("acoes", { expire: 0 });
     return apiSuccess(result);
   } catch (error) {
     console.error("Erro ao atualizar ação:", error);

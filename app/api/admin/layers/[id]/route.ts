@@ -31,7 +31,7 @@ export async function DELETE(request: Request, context: { params: Promise<{ id: 
     });
 
     if (layer.regiaoId) {
-       revalidateTag(`layerCatalog-${layer.regiaoId}`);
+       revalidateTag(`layerCatalog-${layer.regiaoId}`, { expire: 0 });
     }
 
     return apiSuccess({ message: "Camada excluída com sucesso." });

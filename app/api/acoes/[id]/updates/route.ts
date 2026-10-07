@@ -82,7 +82,7 @@ export async function DELETE(
     const result = await deleteAcaoItemHistoryById(acaoId, updateId)
     if (!result.length) return apiError("Registro não encontrado", 404)
 
-    revalidateTag("acoes")
+    revalidateTag("acoes", { expire: 0 })
     return apiSuccess(result)
   } catch (error) {
     console.error("Erro ao excluir update:", error)

@@ -2,6 +2,7 @@
 module.exports = {
     preset: 'ts-jest',
     testEnvironment: 'node',
+    testPathIgnorePatterns: ['/node_modules/', '/.agent/'],
     transform: {
         '^.+\\.tsx?$': ['ts-jest', { tsconfig: { jsx: 'react-jsx' } }],
     },

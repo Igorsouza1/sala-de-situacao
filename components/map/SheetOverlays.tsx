@@ -1,5 +1,6 @@
 'use client'
 
+import '@/lib/maplibre-worker'
 import Map, { Layer, Source } from 'react-map-gl/maplibre'
 import { useMemo } from 'react'
 import { cn } from '@/lib/utils'

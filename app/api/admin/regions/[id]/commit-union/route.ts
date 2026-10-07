@@ -68,7 +68,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     });
 
     // Revalidate layer catalog cache
-    revalidateTag(`layerCatalog-${regionId}`);
+    revalidateTag(`layerCatalog-${regionId}`, { expire: 0 });
 
     return apiSuccess({ message: "Operação concluída com sucesso." });
 

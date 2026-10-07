@@ -1,5 +1,6 @@
 'use client'
 
+import '@/lib/maplibre-worker'
 import Map from 'react-map-gl/maplibre'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import { forwardRef, useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject } from 'react'

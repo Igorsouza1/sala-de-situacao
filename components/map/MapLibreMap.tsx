@@ -1,5 +1,6 @@
 'use client'
 
+import '@/lib/maplibre-worker'
 import Map, {
   Source,
   Layer,

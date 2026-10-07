@@ -162,7 +162,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
                         }
                     }
 
-                    revalidateTag(`focos-${regionId}`);
+                    revalidateTag(`focos-${regionId}`, { expire: 0 });
 
                     const finalPayload = JSON.stringify({
                         type: "complete",

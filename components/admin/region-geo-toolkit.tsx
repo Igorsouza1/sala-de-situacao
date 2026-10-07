@@ -1,5 +1,6 @@
 "use client";
 
+import "@/lib/maplibre-worker";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Map, { Source, Layer, MapRef } from "react-map-gl/maplibre";

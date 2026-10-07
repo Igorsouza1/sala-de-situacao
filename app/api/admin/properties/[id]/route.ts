@@ -41,7 +41,7 @@ export async function PATCH(
       return apiError("Propriedade não encontrada.", 404);
     }
 
-    revalidateTag(`properties-${updated.regiaoId}`);
+    revalidateTag(`properties-${updated.regiaoId}`, { expire: 0 });
 
     return apiSuccess({ id: updated.id });
   } catch (error) {

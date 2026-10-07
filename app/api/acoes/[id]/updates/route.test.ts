@@ -84,7 +84,7 @@ it("deletes a history row only through the action it belongs to", async () => {
   const response = await DELETE(deleteRequest(7), context);
   expect(response.status).toBe(200);
   expect(deleteAcaoItemHistoryById).toHaveBeenCalledWith(42, 7);
-  expect(revalidateTag).toHaveBeenCalledWith("acoes");
+  expect(revalidateTag).toHaveBeenCalledWith("acoes", { expire: 0 });
 });
 
 it("returns 404 when the update does not belong to the requested action", async () => {

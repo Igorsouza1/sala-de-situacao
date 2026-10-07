@@ -1,5 +1,6 @@
 "use client";
 
+import "@/lib/maplibre-worker";
 import { useEffect, useState, useRef } from "react";
 import { FeatureCollection } from "geojson";
 import { GeoJsonUploader } from "./geojson-uploader";
