@@ -101,8 +101,8 @@ describe('isCustomGerar', () => {
 describe('preferências novas do Gerar mapa', () => {
   it('lembra o grau da grade, onde ficam os números, a legenda ao lado e o estilo da seta', () => {
     const store = fakeStore()
-    saveGerarPrefs({ gridLevel: 0, gridNumbers: 'inside', legendSide: true, northStyle: 'letter' }, store)
-    expect(readGerarPrefs(store)).toEqual({ gridLevel: 0, gridNumbers: 'inside', legendSide: true, northStyle: 'letter' })
+    saveGerarPrefs({ gridLevel: 0, gridNumbers: 'inside', legendSide: true, northStyle: 'classic' }, store)
+    expect(readGerarPrefs(store)).toEqual({ gridLevel: 0, gridNumbers: 'inside', legendSide: true, northStyle: 'classic' })
   })
 
   it('grau fora de 0 a 4, estilo ou lugar desconhecido não entram: voltam ao padrão', () => {
@@ -115,11 +115,12 @@ describe('preferências novas do Gerar mapa', () => {
   })
 
   it('o padrão não é personalizado; qualquer um dos novos diferente é', () => {
-    expect(isCustomGerar({ gridLevel: 3, gridNumbers: 'margin', legendSide: false, northStyle: 'classic' })).toBe(false)
+    expect(isCustomGerar({ gridLevel: 3, gridNumbers: 'margin', legendSide: false, northStyle: 'letter' })).toBe(false)
     expect(isCustomGerar({ gridLevel: 0 })).toBe(true)
     expect(isCustomGerar({ gridNumbers: 'inside' })).toBe(true)
     expect(isCustomGerar({ legendSide: true })).toBe(true)
     expect(isCustomGerar({ northStyle: 'prisma' })).toBe(true)
+    expect(isCustomGerar({ northStyle: 'classic' })).toBe(true)
   })
 
   it('o logo e os textos livres nunca são lembrados', () => {

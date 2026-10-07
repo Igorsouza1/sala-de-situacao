@@ -13,6 +13,7 @@ import { useRegion } from '@/context/RegionContext'
 import type { LayerResponseDTO, MapFeatureCollection } from '@/types/map-dto'
 import { LegendEditor } from './LegendEditor'
 import { LogoPicker } from './LogoPicker'
+import { NoteCard } from './NoteCard'
 import type { LayerManagerOption } from './LayerManager'
 import { PanelCard } from './PanelCard'
 import { Segmented } from './Segmented'
@@ -387,24 +388,7 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
               </PanelCard>
               </div>
               <div className={inTab('texto')}>
-              <PanelCard title="Textos livres" caption="Escreva só onde quiser: o que ficar vazio não aparece na folha.">
-                <div className="space-y-4">
-                  <div>
-                    <p className="mb-2 text-sm text-muted-foreground">Abaixo do título</p>
-                    <Input aria-label="Texto livre abaixo do título" value={notes.title} placeholder="Por exemplo, o período analisado" maxLength={240} onChange={(e) => setNote('title')(e.target.value)} />
-                  </div>
-                  <div>
-                    <p className="mb-2 text-sm text-muted-foreground">No alto do mapa</p>
-                    <Input aria-label="Texto livre no alto do mapa" value={notes.map} placeholder="Por exemplo, a fonte de uma análise" maxLength={240} onChange={(e) => setNote('map')(e.target.value)} />
-                  </div>
-                  <Collapse open={sideActive} clip>
-                    <div>
-                      <p className="mb-2 text-sm text-muted-foreground">Ao lado do mapa, abaixo da legenda</p>
-                      <Input aria-label="Texto livre ao lado do mapa" value={notes.side} placeholder="Uma observação mais longa" maxLength={240} onChange={(e) => setNote('side')(e.target.value)} />
-                    </div>
-                  </Collapse>
-                </div>
-              </PanelCard>
+              <NoteCard notes={notes} onChange={(place, text) => setNote(place)(text)} sideActive={sideActive} />
               </div>
               <div className={inTab('folha')}>
               <PanelCard title="Folha" caption="Arraste o mapa dentro da folha e use a roda do mouse para o zoom.">
@@ -421,7 +405,7 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
               </PanelCard>
               </div>
               <div className={inTab('folha')}>
-              <PanelCard title="O que aparece na folha" caption="Título, legenda e fonte dos dados sempre saem.">
+              <PanelCard title="O que aparece na folha" caption="Título, legenda e fonte dos dados sempre saem. Ao ligar um item, os ajustes dele aparecem logo abaixo.">
                 <ul className="-my-1">
                   {PARTS.map(({ id, label }) => (
                     // a linha toda liga e desliga (19.1): o interruptor é sempre a última coluna
@@ -430,6 +414,43 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
                         <span>{label}</span>
                         <Switch checked={show[id]} onCheckedChange={(on) => setShow((s) => ({ ...s, [id]: on }))} aria-label={label} />
                       </label>
+                      {id === 'north' && (
+                        <Collapse open={show.north} clip>
+                          <div className="mb-2 ml-2 border-l-2 border-border py-1 pl-3">
+                            <Segmented label="Estilo da seta do norte" value={northStyle} options={NORTH_OPTIONS} onChange={setNorthStyle} />
+                          </div>
+                        </Collapse>
+                      )}
+                      {id === 'grid' && (
+                        <Collapse open={show.grid} clip>
+                          <div className="mb-2 ml-2 space-y-5 border-l-2 border-border py-1 pl-3">
+                            <div>
+                              <p className="mb-2 text-sm text-muted-foreground">Formato</p>
+                              <Segmented label="Formato das coordenadas" value={coords} options={COORD_OPTIONS} onChange={setCoords} />
+                            </div>
+                            <div>
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="text-sm text-muted-foreground">Linha da grade</p>
+                                <p key={gridLevel} className="animate-in fade-in text-sm font-medium duration-200">{GRID_LEVEL_LABELS[gridLevel]}</p>
+                              </div>
+                              <div className="flex min-h-12 items-center">
+                                <Slider
+                                  aria-label="Força da linha da grade"
+                                  min={0}
+                                  max={GRID_LEVEL_LABELS.length - 1}
+                                  step={1}
+                                  value={[gridLevel]}
+                                  onValueChange={([v]) => setGridLevel(v)}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <p className="mb-2 text-sm text-muted-foreground">Números</p>
+                              <Segmented label="Onde ficam os números" value={gridNumbers} options={NUMBER_OPTIONS} onChange={setGridNumbers} />
+                            </div>
+                          </div>
+                        </Collapse>
+                      )}
                     </li>
                   ))}
                 </ul>
@@ -471,40 +492,6 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
                     })}
                   </div>
                 </Collapse>
-              </PanelCard>
-              </div>
-              <div className={inTab('folha')}>
-              <PanelCard title="Coordenadas" caption={show.grid ? 'Em graus, minutos e segundos, ou em UTM. Datum SIRGAS 2000.' : 'Ligue a grade para escolher como as coordenadas aparecem.'}>
-                <div className="space-y-6">
-                  <Segmented label="Formato das coordenadas" value={coords} options={COORD_OPTIONS} onChange={setCoords} disabled={!show.grid} />
-                  <div>
-                    <div className="mb-3 flex items-center justify-between gap-3">
-                      <p className="text-sm text-muted-foreground">Linha da grade</p>
-                      <p key={gridLevel} className="animate-in fade-in text-sm font-medium duration-200">{GRID_LEVEL_LABELS[gridLevel]}</p>
-                    </div>
-                    <div className={cn('flex min-h-12 items-center transition-opacity duration-300', !show.grid && 'opacity-50')}>
-                      <Slider
-                        aria-label="Força da linha da grade"
-                        min={0}
-                        max={GRID_LEVEL_LABELS.length - 1}
-                        step={1}
-                        value={[gridLevel]}
-                        onValueChange={([v]) => setGridLevel(v)}
-                        disabled={!show.grid}
-                      />
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">Os números das coordenadas não mudam.</p>
-                  </div>
-                  <div>
-                    <p className="mb-2 text-sm text-muted-foreground">Números das coordenadas</p>
-                    <Segmented label="Onde ficam os números" value={gridNumbers} options={NUMBER_OPTIONS} onChange={setGridNumbers} disabled={!show.grid} />
-                  </div>
-                </div>
-              </PanelCard>
-              </div>
-              <div className={inTab('folha')}>
-              <PanelCard title="Seta do norte" caption={show.north ? 'Três jeitos de desenhar o norte.' : 'Ligue a seta do norte para escolher o jeito.'}>
-                <Segmented label="Estilo da seta do norte" value={northStyle} options={NORTH_OPTIONS} onChange={setNorthStyle} disabled={!show.north} />
               </PanelCard>
               </div>
               <div className={inTab('folha')}>

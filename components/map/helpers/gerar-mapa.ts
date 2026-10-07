@@ -66,11 +66,11 @@ export const PART_IDS = ['north', 'scale', 'grid', 'datum', 'date', 'inset'] as 
 export type Part = (typeof PART_IDS)[number]
 export const DEFAULT_SHOW: Record<Part, boolean> = { north: true, scale: true, grid: true, datum: true, date: true, inset: false }
 
-// Estilo da seta do norte: a clássica (com placa), a do PRISMA (imagem) e só o N (sem placa, com contorno branco).
-export const NORTH_STYLES = ['classic', 'prisma', 'letter'] as const
+// Estilo da seta do norte: só o N (sem placa, com contorno branco; a mais bonita e a que vem marcada), a do PRISMA (imagem) e a clássica (com placa).
+export const NORTH_STYLES = ['letter', 'prisma', 'classic'] as const
 export type NorthStyle = (typeof NORTH_STYLES)[number]
 export const NORTH_LABELS: Record<NorthStyle, string> = { classic: 'Clássica', prisma: 'PRISMA', letter: 'Só o N' }
-export const DEFAULT_NORTH_STYLE: NorthStyle = 'classic'
+export const DEFAULT_NORTH_STYLE: NorthStyle = 'letter'
 
 // A linha da grade em 5 graus, do 0 (sem linha: ficam só os números) ao mais forte. Sem número na tela: a pessoa vê o nome.
 export const GRID_LEVELS = [0, 0.25, 0.5, 0.75, 1] as const

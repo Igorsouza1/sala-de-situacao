@@ -1,5 +1,6 @@
 'use client'
 
+import type { ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { controlItem } from './helpers/control-style'
 
@@ -7,7 +8,7 @@ import { controlItem } from './helpers/control-style'
 interface SegmentedProps<T extends string> {
   label: string
   value: T
-  options: { value: T; label: string }[]
+  options: { value: T; label: ReactNode }[]
   onChange: (value: T) => void
   /** desligado, a tela diz o porquê perto dele (2.1): nunca só esmaecido */
   disabled?: boolean
