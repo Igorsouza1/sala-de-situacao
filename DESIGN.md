@@ -659,6 +659,16 @@ Cartão branco com sombra, ícone em círculo tingido, título e frase curta, **
 - **Clicar num item** liga a camada (nas camadas com áreas, todas as áreas), **enquadra os itens novos e os destaca com a piscada** da 13.7. Não mexe nos filtros da pessoa. Se nada aparece, um aviso diz "Não achamos isto no mapa" e o motivo provável (um filtro de período ou de tamanho).
 - **Rota:** `GET /api/map/novidades` (zod, `resolveScope`, ADR 0010); sem `regiao_id`, vale a região do usuário. Sem ponto de partida só devolve de onde partir. Devolve até 500 ids por fonte, para o mapa destacar sem levar milhares de linhas.
 
+### 13.9 Gerar mapa: a folha e o que ela pede
+
+- **A folha cresce por pedido, e o mapa cede área.** Três escolhas tiram área do mapa e a folha ao vivo já mostra o resultado, **sem frase explicando** (decisão: o mapa menor se vê, não precisa ser dito): números da grade **na margem** (padrão), texto livre **abaixo do título** e legenda **ao lado do mapa**. A legenda ao lado só existe na folha **deitada**; em pé, o seletor fica desligado e o cartão diz por quê.
+- **Linha da grade em 5 graus** (do "Sem linha" ao "Forte"), num **deslize em degraus sem número**: o nome do grau aparece em palavra, com crossfade. **Exceção registrada à regra 1:** o deslize tem 5 posições, mas não é um cartão de escolhas (a pessoa arrasta e vê na folha); os botões seriam 5. Só a linha muda: os números ficam sempre nítidos. O grau 0 existe para quem quer só os números.
+- **Textos livres: três lugares** (abaixo do título, no alto do mapa, ao lado da legenda), cada um com o seu texto. Não há interruptor: **vazio não aparece**. Não são lembrados entre mapas (mudam a cada mapa).
+- **Seta do norte: três estilos** (clássica com placa, PRISMA em imagem, só o N). Os dois sem placa levam **contorno branco por fora** para ler sobre satélite. A imagem do PRISMA já traz o contorno no próprio arquivo (`public/norte-prisma.webp`).
+- **Escala:** barra alternada em quatro trechos (preto e branco), com 0, meio e fim embaixo.
+- **Logo:** um só espaço, à esquerda do título, **vazio por padrão** (o logo do PRISMA e o brasão da região saíram desta tela). A pessoa envia a imagem (PNG, JPG ou WebP, até 2 MB); **não é salva em lugar nenhum**, vale enquanto a tela está aberta. Sem imagem, o título ocupa o espaço todo.
+- **O que é lembrado** (por aparelho, e volta com "Voltar ao padrão"): papel, posição, fundo, formato das coordenadas, grau da grade, onde ficam os números, legenda sobre ou ao lado, canto da legenda, estilo da seta e o que está ligado. **Não** são lembrados: título, textos livres, edições da legenda e logo.
+
 ---
 
 ## 14. Referência viva e escolha final

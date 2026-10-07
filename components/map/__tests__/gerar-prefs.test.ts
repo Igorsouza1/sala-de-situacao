@@ -97,3 +97,36 @@ describe('isCustomGerar', () => {
     expect(Object.keys(DEFAULT_SHOW).sort()).toEqual([...PART_IDS].sort())
   })
 })
+
+describe('preferências novas do Gerar mapa', () => {
+  it('lembra o grau da grade, onde ficam os números, a legenda ao lado e o estilo da seta', () => {
+    const store = fakeStore()
+    saveGerarPrefs({ gridLevel: 0, gridNumbers: 'inside', legendSide: true, northStyle: 'letter' }, store)
+    expect(readGerarPrefs(store)).toEqual({ gridLevel: 0, gridNumbers: 'inside', legendSide: true, northStyle: 'letter' })
+  })
+
+  it('grau fora de 0 a 4, estilo ou lugar desconhecido não entram: voltam ao padrão', () => {
+    const store = fakeStore({ 'prisma:mapa:gerar': JSON.stringify({ v: 1, gridLevel: 9, gridNumbers: 'fora', northStyle: 'pirata', legendSide: 'sim' }) })
+    const prefs = readGerarPrefs(store)
+    expect(prefs.gridLevel).toBe(3)
+    expect(prefs.gridNumbers).toBeUndefined()
+    expect(prefs.northStyle).toBeUndefined()
+    expect(prefs.legendSide).toBeUndefined()
+  })
+
+  it('o padrão não é personalizado; qualquer um dos novos diferente é', () => {
+    expect(isCustomGerar({ gridLevel: 3, gridNumbers: 'margin', legendSide: false, northStyle: 'classic' })).toBe(false)
+    expect(isCustomGerar({ gridLevel: 0 })).toBe(true)
+    expect(isCustomGerar({ gridNumbers: 'inside' })).toBe(true)
+    expect(isCustomGerar({ legendSide: true })).toBe(true)
+    expect(isCustomGerar({ northStyle: 'prisma' })).toBe(true)
+  })
+
+  it('o logo e os textos livres nunca são lembrados', () => {
+    const store = fakeStore()
+    saveGerarPrefs({ paper: 'a3', logoUrl: 'data:image/png;base64,AAAA', notes: { title: 'a', map: 'b', side: 'c' } } as any, store)
+    const raw = JSON.parse(store.data['prisma:mapa:gerar'])
+    expect(raw.logoUrl).toBeUndefined()
+    expect(raw.notes).toBeUndefined()
+  })
+})

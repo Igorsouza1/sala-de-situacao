@@ -61,7 +61,28 @@ export function composeSheetStyle(
 }
 
 // O que a folha pode mostrar a mais: ligado por padrão, a pessoa desliga o que não quer (título, legenda e fonte dos dados não saem).
-// O mapa de localização e o texto livre começam desligados.
-export const PART_IDS = ['north', 'scale', 'grid', 'datum', 'date', 'logos', 'inset', 'note'] as const
+// O mapa de localização começa desligado. O logo e os textos livres não são interruptores: aparecem quando há imagem ou texto.
+export const PART_IDS = ['north', 'scale', 'grid', 'datum', 'date', 'inset'] as const
 export type Part = (typeof PART_IDS)[number]
-export const DEFAULT_SHOW: Record<Part, boolean> = { north: true, scale: true, grid: true, datum: true, date: true, logos: true, inset: false, note: false }
+export const DEFAULT_SHOW: Record<Part, boolean> = { north: true, scale: true, grid: true, datum: true, date: true, inset: false }
+
+// Estilo da seta do norte: a clássica (com placa), a do PRISMA (imagem) e só o N (sem placa, com contorno branco).
+export const NORTH_STYLES = ['classic', 'prisma', 'letter'] as const
+export type NorthStyle = (typeof NORTH_STYLES)[number]
+export const NORTH_LABELS: Record<NorthStyle, string> = { classic: 'Clássica', prisma: 'PRISMA', letter: 'Só o N' }
+export const DEFAULT_NORTH_STYLE: NorthStyle = 'classic'
+
+// A linha da grade em 5 graus, do 0 (sem linha: ficam só os números) ao mais forte. Sem número na tela: a pessoa vê o nome.
+export const GRID_LEVELS = [0, 0.25, 0.5, 0.75, 1] as const
+export const GRID_LEVEL_LABELS = ['Sem linha', 'Bem suave', 'Suave', 'Média', 'Forte'] as const
+export const DEFAULT_GRID_LEVEL = 3
+export const clampGridLevel = (n: unknown) => (typeof n === 'number' && Number.isInteger(n) && n >= 0 && n < GRID_LEVELS.length ? n : DEFAULT_GRID_LEVEL)
+
+// Onde ficam os números da grade: na margem da folha (padrão, como numa carta) ou dentro do mapa.
+export const GRID_NUMBERS = ['margin', 'inside'] as const
+export type GridNumbers = (typeof GRID_NUMBERS)[number]
+export const DEFAULT_GRID_NUMBERS: GridNumbers = 'margin'
+
+/** os três lugares do texto livre */
+export interface Notes { title: string; map: string; side: string }
+export const EMPTY_NOTES: Notes = { title: '', map: '', side: '' }

@@ -5,17 +5,19 @@ import { ArrowLeft, FileDown, Undo2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Slider } from '@/components/ui/slider'
 import { Switch } from '@/components/ui/switch'
 import { Collapse } from '@/components/ui/collapse'
 import { OverlayScroll } from '@/components/ui/overlay-scroll'
 import { useRegion } from '@/context/RegionContext'
 import type { LayerResponseDTO, MapFeatureCollection } from '@/types/map-dto'
 import { LegendEditor } from './LegendEditor'
+import { LogoPicker } from './LogoPicker'
 import type { LayerManagerOption } from './LayerManager'
 import { PanelCard } from './PanelCard'
 import { Segmented } from './Segmented'
 import { SheetExport, type ExportJob } from './SheetExport'
-import { SheetPage, type Camera, type Json, type SheetSettings, type Size } from './SheetPage'
+import { SheetPage, layoutOf, type Camera, type Json, type SheetSettings, type Size } from './SheetPage'
 import { controlItem } from './helpers/control-style'
 import { collectAttributions, parseAttribution } from './helpers/attribution'
 import {
@@ -31,12 +33,29 @@ import {
   type BasemapKey,
 } from './helpers/basemaps'
 import { exportFileName, exportSize, saveBlob, type ExportKind } from './helpers/export-sheet'
-import { DEFAULT_SHOW, PRINT_BASEMAPS, autoTitle, composeSheetStyle, printBasemapFor, type Part } from './helpers/gerar-mapa'
+import {
+  DEFAULT_GRID_LEVEL,
+  DEFAULT_GRID_NUMBERS,
+  DEFAULT_NORTH_STYLE,
+  DEFAULT_SHOW,
+  EMPTY_NOTES,
+  GRID_LEVEL_LABELS,
+  NORTH_LABELS,
+  NORTH_STYLES,
+  PRINT_BASEMAPS,
+  autoTitle,
+  composeSheetStyle,
+  printBasemapFor,
+  type GridNumbers,
+  type NorthStyle,
+  type Notes,
+  type Part,
+} from './helpers/gerar-mapa'
 import { clearGerarPrefs, isCustomGerar, readGerarPrefs, saveGerarPrefs } from './helpers/map-prefs'
 import type { GridFormat } from './helpers/grid'
 import { EMPTY_LEGEND_EDITS, applyLegendEdits, buildLegend, type LegendEdits } from './helpers/legend-sheet'
 import type { RuleLegendSection } from './helpers/legend-rules'
-import { CORNERS, CORNER_LABELS, DEFAULT_LEGEND_CORNER, DEFAULT_SHEET, ORIENTATIONS, ORIENTATION_LABELS, PAPERS, PAPER_LABELS, placeCorners, sheetLayout, type Corner, type Orientation, type Paper } from './helpers/sheet'
+import { CORNERS, CORNER_LABELS, DEFAULT_LEGEND_CORNER, DEFAULT_SHEET, ORIENTATIONS, ORIENTATION_LABELS, PAPERS, PAPER_LABELS, placeCorners, type Corner, type Orientation, type Paper } from './helpers/sheet'
 
 // Gerar mapa (DESIGN.md 13.9): uma tela sobre o mapa, com a folha ao vivo no meio e os ajustes ao lado. A folha mostra o que vai
 // para o papel: o mapa que a pessoa estava vendo, enquadrado na proporção do papel, com título e créditos.
@@ -73,10 +92,12 @@ const PARTS: { id: Part; label: string }[] = [
   { id: 'grid', label: 'Grade com coordenadas' },
   { id: 'datum', label: 'Datum e fuso' },
   { id: 'date', label: 'Data de hoje' },
-  { id: 'logos', label: 'Brasão e logo' },
   { id: 'inset', label: 'Mapa de localização' },
 ]
 const COORD_OPTIONS: { value: GridFormat; label: string }[] = [{ value: 'dms', label: 'Graus' }, { value: 'utm', label: 'UTM' }]
+const NUMBER_OPTIONS: { value: GridNumbers; label: string }[] = [{ value: 'margin', label: 'Na margem' }, { value: 'inside', label: 'Dentro do mapa' }]
+const NORTH_OPTIONS = NORTH_STYLES.map((value) => ({ value, label: NORTH_LABELS[value] }))
+const LEGEND_PLACE_OPTIONS = [{ value: 'over', label: 'Sobre o mapa' }, { value: 'side', label: 'Ao lado do mapa' }] as const
 const todayLabel = () => new Date().toLocaleDateString('pt-BR')
 
 const PAPER_OPTIONS = PAPERS.map((value) => ({ value, label: PAPER_LABELS[value] }))
@@ -146,22 +167,35 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
 
   const [show, setShow] = useState<Record<Part, boolean>>({ ...DEFAULT_SHOW, ...saved.show })
   const [coords, setCoords] = useState<GridFormat>(saved.coords ?? 'dms')
-  const [note, setNote] = useState('')
+  const [notes, setNotes] = useState<Notes>(EMPTY_NOTES)
+  const setNote = (where: keyof Notes) => (value: string) => setNotes((n) => ({ ...n, [where]: value }))
+  const [gridLevel, setGridLevel] = useState(saved.gridLevel ?? DEFAULT_GRID_LEVEL)
+  const [gridNumbers, setGridNumbers] = useState<GridNumbers>(saved.gridNumbers ?? DEFAULT_GRID_NUMBERS)
+  const [northStyle, setNorthStyle] = useState<NorthStyle>(saved.northStyle ?? DEFAULT_NORTH_STYLE)
+  // o logo não é salvo: vale enquanto esta tela está aberta
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [legendCorner, setLegendCorner] = useState<Corner>(saved.legendCorner ?? DEFAULT_LEGEND_CORNER)
+  const [legendSide, setLegendSide] = useState(saved.legendSide ?? false)
+  // ao lado do mapa só cabe na folha deitada; em pé, a escolha fica guardada e volta quando a folha voltar a ser deitada
+  const sideActive = legendSide && orientation === 'landscape'
   const [legendEdits, setLegendEdits] = useState<LegendEdits>(EMPTY_LEGEND_EDITS)
   const legendBase = useMemo(() => buildLegend(session.legend.options, session.legend.activeLayers, session.legend.ruleLegends), [session.legend])
   const legendSections = useMemo(() => applyLegendEdits(legendBase, legendEdits), [legendBase, legendEdits])
-  const corners = useMemo(() => placeCorners(legendCorner), [legendCorner])
+  const corners = useMemo(() => placeCorners(sideActive ? null : legendCorner), [sideActive, legendCorner])
   useEffect(() => {
-    saveGerarPrefs({ paper, orientation, coords, legendCorner, show })
-  }, [paper, orientation, coords, legendCorner, show])
-  const custom = isCustomGerar({ paper, orientation, coords, legendCorner, show, basemap: picked ?? undefined })
+    saveGerarPrefs({ paper, orientation, coords, legendCorner, legendSide, gridLevel, gridNumbers, northStyle, show })
+  }, [paper, orientation, coords, legendCorner, legendSide, gridLevel, gridNumbers, northStyle, show])
+  const custom = isCustomGerar({ paper, orientation, coords, legendCorner, legendSide, gridLevel, gridNumbers, northStyle, show, basemap: picked ?? undefined })
   const resetChoices = () => {
     clearGerarPrefs()
     setPaper(DEFAULT_SHEET.paper)
     setOrientation(DEFAULT_SHEET.orientation)
     setCoords('dms')
     setLegendCorner(DEFAULT_LEGEND_CORNER)
+    setLegendSide(false)
+    setGridLevel(DEFAULT_GRID_LEVEL)
+    setGridNumbers(DEFAULT_GRID_NUMBERS)
+    setNorthStyle(DEFAULT_NORTH_STYLE)
     setShow({ ...DEFAULT_SHOW })
     setPicked(null)
     setBasemap(printBasemapFor(session.basemap))
@@ -212,8 +246,8 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
   }, [sheetStyle])
 
   const settings = useMemo<SheetSettings>(
-    () => ({ paper, orientation, title, show, coords, note, corners, legend: { title: legendEdits.title, sections: legendSections }, credits, today, brasaoUrl: region?.brasaoUrl ?? null, center }),
-    [paper, orientation, title, show, coords, note, corners, legendEdits.title, legendSections, credits, today, region?.brasaoUrl, center],
+    () => ({ paper, orientation, title, show, coords, gridLevel, gridNumbers, northStyle, legendSide: sideActive, notes, corners, legend: { title: legendEdits.title, sections: legendSections }, credits, today, logoUrl, center }),
+    [paper, orientation, title, show, coords, gridLevel, gridNumbers, northStyle, sideActive, notes, corners, legendEdits.title, legendSections, credits, today, logoUrl, center],
   )
 
   // ── a folha cabe na área disponível; o mapa dentro dela acompanha ──
@@ -229,7 +263,8 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
     return () => ro.disconnect()
   }, [])
 
-  const sheet = useMemo(() => sheetLayout(paper, orientation), [paper, orientation])
+  // a mesma folha que a SheetPage desenha: o que o conteúdo pede (texto abaixo do título, legenda ao lado, números na margem) já entra
+  const sheet = useMemo(() => layoutOf(settings), [settings])
   const PAD = 24
   const px = Math.max(0, Math.min((room.w - PAD * 2) / sheet.width, (room.h - PAD * 2) / sheet.height)) // pixels por milímetro
   const frameW = Math.round(sheet.map.w * px)
@@ -352,16 +387,23 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
               </PanelCard>
               </div>
               <div className={inTab('texto')}>
-              <PanelCard title="Texto livre" caption="Uma observação curta no alto do mapa, por exemplo a fonte de uma análise.">
-                <label className="flex min-h-12 cursor-pointer items-center justify-between gap-3 rounded-sm px-1 py-2 text-sm transition-colors duration-200 hover:bg-muted">
-                  <span>Mostrar na folha</span>
-                  <Switch checked={show.note} onCheckedChange={(on) => setShow((s) => ({ ...s, note: on }))} aria-label="Mostrar o texto livre na folha" />
-                </label>
-                <Collapse open={show.note} clip>
-                  <div className="pt-3">
-                    <Input aria-label="Texto livre da folha" value={note} placeholder="Escreva uma observação" maxLength={240} onChange={(e) => setNote(e.target.value)} />
+              <PanelCard title="Textos livres" caption="Escreva só onde quiser: o que ficar vazio não aparece na folha.">
+                <div className="space-y-4">
+                  <div>
+                    <p className="mb-2 text-sm text-muted-foreground">Abaixo do título</p>
+                    <Input aria-label="Texto livre abaixo do título" value={notes.title} placeholder="Por exemplo, o período analisado" maxLength={240} onChange={(e) => setNote('title')(e.target.value)} />
                   </div>
-                </Collapse>
+                  <div>
+                    <p className="mb-2 text-sm text-muted-foreground">No alto do mapa</p>
+                    <Input aria-label="Texto livre no alto do mapa" value={notes.map} placeholder="Por exemplo, a fonte de uma análise" maxLength={240} onChange={(e) => setNote('map')(e.target.value)} />
+                  </div>
+                  <Collapse open={sideActive} clip>
+                    <div>
+                      <p className="mb-2 text-sm text-muted-foreground">Ao lado do mapa, abaixo da legenda</p>
+                      <Input aria-label="Texto livre ao lado do mapa" value={notes.side} placeholder="Uma observação mais longa" maxLength={240} onChange={(e) => setNote('side')(e.target.value)} />
+                    </div>
+                  </Collapse>
+                </div>
               </PanelCard>
               </div>
               <div className={inTab('folha')}>
@@ -399,32 +441,75 @@ export function GerarMapa({ session, onClose }: { session: GerarMapaSession; onC
               </PanelCard>
               </div>
               <div className={inTab('legenda')}>
-              <PanelCard title="Onde fica a legenda">
-                <div role="radiogroup" aria-label="Canto da legenda" className="grid grid-cols-2 gap-2">
-                  {CORNERS.map((c) => {
-                    const selected = c === legendCorner
-                    return (
-                      <button
-                        key={c}
-                        type="button"
-                        role="radio"
-                        aria-checked={selected}
-                        onClick={() => setLegendCorner(c)}
-                        className={cn(
-                          'flex min-h-12 items-center justify-center rounded-md border px-2 text-center text-sm transition-[background-color,border-color,color,translate,scale] duration-200 ease-spring active:scale-[0.96] focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30',
-                          selected ? 'border-primary bg-secondary font-medium text-secondary-foreground' : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',
-                        )}
-                      >
-                        {CORNER_LABELS[c]}
-                      </button>
-                    )
-                  })}
-                </div>
+              <PanelCard title="Onde fica a legenda" caption={orientation === 'landscape' ? 'Ao lado, o mapa fica um pouco menor e sobra espaço para um texto.' : 'Ao lado do mapa só na folha deitada.'}>
+                <Segmented
+                  label="Lugar da legenda"
+                  value={sideActive ? 'side' : 'over'}
+                  options={[...LEGEND_PLACE_OPTIONS]}
+                  onChange={(v) => setLegendSide(v === 'side')}
+                  disabled={orientation !== 'landscape'}
+                />
+                <Collapse open={!sideActive} clip>
+                  <div role="radiogroup" aria-label="Canto da legenda" className="grid grid-cols-2 gap-2 pt-4">
+                    {CORNERS.map((c) => {
+                      const selected = c === legendCorner
+                      return (
+                        <button
+                          key={c}
+                          type="button"
+                          role="radio"
+                          aria-checked={selected}
+                          onClick={() => setLegendCorner(c)}
+                          className={cn(
+                            'flex min-h-12 items-center justify-center rounded-md border px-2 text-center text-sm transition-[background-color,border-color,color,translate,scale] duration-200 ease-spring active:scale-[0.96] focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/30',
+                            selected ? 'border-primary bg-secondary font-medium text-secondary-foreground' : 'border-border text-muted-foreground hover:bg-muted hover:text-foreground',
+                          )}
+                        >
+                          {CORNER_LABELS[c]}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </Collapse>
               </PanelCard>
               </div>
               <div className={inTab('folha')}>
               <PanelCard title="Coordenadas" caption={show.grid ? 'Em graus, minutos e segundos, ou em UTM. Datum SIRGAS 2000.' : 'Ligue a grade para escolher como as coordenadas aparecem.'}>
-                <Segmented label="Formato das coordenadas" value={coords} options={COORD_OPTIONS} onChange={setCoords} disabled={!show.grid} />
+                <div className="space-y-6">
+                  <Segmented label="Formato das coordenadas" value={coords} options={COORD_OPTIONS} onChange={setCoords} disabled={!show.grid} />
+                  <div>
+                    <div className="mb-3 flex items-center justify-between gap-3">
+                      <p className="text-sm text-muted-foreground">Linha da grade</p>
+                      <p key={gridLevel} className="animate-in fade-in text-sm font-medium duration-200">{GRID_LEVEL_LABELS[gridLevel]}</p>
+                    </div>
+                    <div className={cn('flex min-h-12 items-center transition-opacity duration-300', !show.grid && 'opacity-50')}>
+                      <Slider
+                        aria-label="Força da linha da grade"
+                        min={0}
+                        max={GRID_LEVEL_LABELS.length - 1}
+                        step={1}
+                        value={[gridLevel]}
+                        onValueChange={([v]) => setGridLevel(v)}
+                        disabled={!show.grid}
+                      />
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">Os números das coordenadas não mudam.</p>
+                  </div>
+                  <div>
+                    <p className="mb-2 text-sm text-muted-foreground">Números das coordenadas</p>
+                    <Segmented label="Onde ficam os números" value={gridNumbers} options={NUMBER_OPTIONS} onChange={setGridNumbers} disabled={!show.grid} />
+                  </div>
+                </div>
+              </PanelCard>
+              </div>
+              <div className={inTab('folha')}>
+              <PanelCard title="Seta do norte" caption={show.north ? 'Três jeitos de desenhar o norte.' : 'Ligue a seta do norte para escolher o jeito.'}>
+                <Segmented label="Estilo da seta do norte" value={northStyle} options={NORTH_OPTIONS} onChange={setNorthStyle} disabled={!show.north} />
+              </PanelCard>
+              </div>
+              <div className={inTab('folha')}>
+              <PanelCard title="Logo" caption="Aparece à esquerda do título. Não fica salvo: ao fechar esta tela, ele sai.">
+                <LogoPicker value={logoUrl} onChange={setLogoUrl} />
               </PanelCard>
               </div>
               <div className={inTab('folha')}>

@@ -118,3 +118,67 @@ describe('placeCorners', () => {
     CORNERS.forEach((c) => expect(CORNER_LABELS[c]).toBeTruthy())
   })
 })
+
+describe('sheetLayout com o que o conteúdo pede', () => {
+  const base = sheetLayout('a4', 'landscape')
+  const inside = (outer: { x: number; y: number; w: number; h: number }, r: { x: number; y: number; w: number; h: number }) =>
+    r.x >= outer.x && r.y >= outer.y && r.x + r.w <= outer.x + outer.w && r.y + r.h <= outer.y + outer.h
+
+  it('sem pedidos, nada extra: sem faixa, sem coluna, sem margem', () => {
+    expect(base.subtitle).toBeNull()
+    expect(base.side).toBeNull()
+    expect(base.gridMargin).toBe(0)
+  })
+
+  it('texto abaixo do título: a faixa fica entre o título e o mapa, e o mapa perde altura', () => {
+    const s = sheetLayout('a4', 'portrait', { subtitle: true })
+    const plain = sheetLayout('a4', 'portrait')
+    expect(s.subtitle).not.toBeNull()
+    expect(s.header.y + s.header.h).toBeLessThanOrEqual(s.subtitle!.y)
+    expect(s.subtitle!.y + s.subtitle!.h).toBeLessThanOrEqual(s.map.y)
+    expect(s.map.h).toBeLessThan(plain.map.h)
+    expect(s.map.w).toBe(plain.map.w)
+  })
+
+  it('legenda ao lado na folha deitada: a coluna fica à direita do mapa, sem encostar, e o mapa perde largura', () => {
+    const s = sheetLayout('a4', 'landscape', { legendSide: true })
+    expect(s.side).not.toBeNull()
+    expect(s.map.x + s.map.w).toBeLessThan(s.side!.x)
+    expect(s.side!.x + s.side!.w).toBeLessThanOrEqual(s.width)
+    expect(s.map.w).toBeLessThan(base.map.w)
+    expect(s.map.h).toBe(base.map.h)
+  })
+
+  it('legenda ao lado não vale na folha em pé: o layout fica como era', () => {
+    expect(sheetLayout('a4', 'portrait', { legendSide: true })).toEqual(sheetLayout('a4', 'portrait'))
+  })
+
+  it('números da grade na margem: o mapa encolhe e a margem cabe dentro da folha', () => {
+    const s = sheetLayout('a3', 'portrait', { gridMargin: true })
+    const plain = sheetLayout('a3', 'portrait')
+    expect(s.gridMargin).toBeGreaterThan(0)
+    expect(s.map.w).toBe(plain.map.w - s.gridMargin * 2)
+    expect(s.map.h).toBe(plain.map.h - s.gridMargin * 2)
+    const margin = { x: s.map.x - s.gridMargin, y: s.map.y - s.gridMargin, w: s.map.w + s.gridMargin * 2, h: s.map.h + s.gridMargin * 2 }
+    expect(inside({ x: 0, y: 0, w: s.width, h: s.height }, margin)).toBe(true)
+    expect(margin.y + margin.h).toBeLessThanOrEqual(s.footer.y)
+  })
+
+  it.each(PAPERS.flatMap((p) => (['landscape', 'portrait'] as const).map((o) => [p, o] as const)))(
+    '%s %s: com tudo pedido ao mesmo tempo, mapa e coluna cabem na folha sem se sobrepor',
+    (paper, orientation) => {
+      const s = sheetLayout(paper, orientation, { subtitle: true, legendSide: true, gridMargin: true })
+      const sheet = { x: 0, y: 0, w: s.width, h: s.height }
+      for (const r of [s.map, s.subtitle!, s.footer, ...(s.side ? [s.side] : [])]) expect(inside(sheet, r)).toBe(true)
+      expect(s.map.w).toBeGreaterThan(60)
+      expect(s.map.h).toBeGreaterThan(60)
+      if (s.side) expect(s.map.x + s.map.w + s.gridMargin).toBeLessThan(s.side.x)
+    },
+  )
+})
+
+describe('placeCorners com a legenda fora do mapa', () => {
+  it('sem legenda sobre o mapa, os quatro cantos ficam livres e cada elemento tem o seu preferido', () => {
+    expect(placeCorners(null)).toEqual({ legend: null, north: 'top-right', scale: 'bottom-left', inset: 'top-left' })
+  })
+})

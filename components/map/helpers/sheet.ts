@@ -10,8 +10,22 @@ export interface Sheet {
   width: number
   height: number
   header: Rect
+  /** o mapa em si (o quadro com borda); a grade pode ter números na margem em volta dele */
   map: Rect
   footer: Rect
+  /** a faixa do texto "abaixo do título"; null quando não há texto */
+  subtitle: Rect | null
+  /** a coluna ao lado do mapa (legenda e texto), só na folha deitada com a legenda fora; null nos outros casos */
+  side: Rect | null
+  /** a margem em volta do mapa para os números da grade (mm); 0 quando os números ficam dentro */
+  gridMargin: number
+}
+
+/** o que o conteúdo pede da folha: cada pedido tira um pouco de área do mapa */
+export interface SheetOptions {
+  subtitle?: boolean
+  legendSide?: boolean
+  gridMargin?: boolean
 }
 
 export const PAPERS: Paper[] = ['a4', 'a3']
@@ -29,17 +43,27 @@ const MARGIN = 10 // borda do papel que a impressora não alcança de forma segu
 const HEADER = 16 // título
 const FOOTER = 14 // fonte, créditos e data
 const GAP = 3 // respiro entre título, mapa e rodapé
+const SUBTITLE = 8 // faixa do texto abaixo do título
+export const SIDE_W = 62 // coluna ao lado do mapa: a legenda vale esta largura no papel
+const GRID_MARGIN = 7 // onde moram os números da grade quando ficam fora do mapa
 
-export function sheetLayout(paper: Paper, orientation: Orientation): Sheet {
+export function sheetLayout(paper: Paper, orientation: Orientation, options: SheetOptions = {}): Sheet {
   const { w, h } = PAPER_MM[paper]
   const width = orientation === 'landscape' ? h : w
   const height = orientation === 'landscape' ? w : h
   const inner = width - MARGIN * 2
   const header: Rect = { x: MARGIN, y: MARGIN, w: inner, h: HEADER }
   const footer: Rect = { x: MARGIN, y: height - MARGIN - FOOTER, w: inner, h: FOOTER }
-  const top = header.y + header.h + GAP
-  const map: Rect = { x: MARGIN, y: top, w: inner, h: footer.y - GAP - top }
-  return { width, height, header, map, footer }
+  let top = header.y + header.h + GAP
+  const subtitle: Rect | null = options.subtitle ? { x: MARGIN, y: top, w: inner, h: SUBTITLE } : null
+  if (subtitle) top += SUBTITLE + GAP
+  const area: Rect = { x: MARGIN, y: top, w: inner, h: footer.y - GAP - top }
+  const sideOn = !!options.legendSide && orientation === 'landscape'
+  if (sideOn) area.w -= SIDE_W + GAP
+  const gridMargin = options.gridMargin ? GRID_MARGIN : 0
+  const map: Rect = { x: area.x + gridMargin, y: area.y + gridMargin, w: area.w - gridMargin * 2, h: area.h - gridMargin * 2 }
+  const side: Rect | null = sideOn ? { x: MARGIN + inner - SIDE_W, y: map.y, w: SIDE_W, h: map.h } : null
+  return { width, height, header, map, footer, subtitle, side, gridMargin }
 }
 
 /** o retângulo de um elemento (legenda, seta…) encostado no canto do mapa, com `inset` de folga; nunca maior que o mapa */
@@ -91,8 +115,9 @@ const PREFERRED: Record<'north' | 'scale' | 'inset', Corner[]> = {
   inset: ['top-left', 'bottom-left', 'top-right', 'bottom-right'],
 }
 
-export function placeCorners(legend: Corner): { legend: Corner; north: Corner; scale: Corner; inset: Corner } {
-  const taken = new Set<Corner>([legend])
+/** `legend` null: a legenda está fora do mapa (na coluna ao lado) e os quatro cantos ficam livres */
+export function placeCorners(legend: Corner | null): { legend: Corner | null; north: Corner; scale: Corner; inset: Corner } {
+  const taken = new Set<Corner>(legend ? [legend] : [])
   const pick = (who: 'north' | 'scale' | 'inset') => {
     const corner = PREFERRED[who].find((c) => !taken.has(c)) ?? PREFERRED[who][0]
     taken.add(corner)

@@ -7,12 +7,13 @@ import { forwardRef, useCallback, useEffect, useMemo, useRef, useState, type Mut
 import { cn } from '@/lib/utils'
 import type { GerarMapaSession } from './GerarMapa'
 import { MaplibreIconMarkers } from './MaplibreIconMarkers'
-import { GridOverlay, LegendBlock, LocationInset, NoteBlock, NorthArrow, ScaleBlock, type MapView } from './SheetOverlays'
+import { GridLines, GridMarginLabels, LegendBlock, LegendPanel, LocationInset, NoteBlock, NorthArrow, ScaleBlock, SideNote, projectGrid, type MapView } from './SheetOverlays'
 import { BASEMAP_MAX_ZOOM, type BasemapKey } from './helpers/basemaps'
-import type { Part } from './helpers/gerar-mapa'
+import { GRID_LEVELS, type GridNumbers, type NorthStyle, type Notes, type Part } from './helpers/gerar-mapa'
 import { datumLine, type GridFormat } from './helpers/grid'
 import type { LegendSection } from './helpers/legend-sheet'
-import { sheetLayout, zoomToFit, type Corner, type Orientation, type Paper, type placeCorners } from './helpers/sheet'
+import { DRAG_PAN } from './helpers/map-feel'
+import { sheetLayout, zoomToFit, type Orientation, type Paper, type Sheet, type placeCorners } from './helpers/sheet'
 import { useSmoothWheelZoom } from './helpers/use-smooth-wheel-zoom'
 
 // A folha (Gerar mapa): título, mapa com tudo por cima e rodapé, no tamanho do papel. O mesmo componente desenha a folha da tela
@@ -30,14 +31,30 @@ export interface SheetSettings {
   title: string
   show: Record<Part, boolean>
   coords: GridFormat
-  note: string
+  /** o grau da linha da grade (0 a 4, índice de GRID_LEVELS) e onde ficam os números */
+  gridLevel: number
+  gridNumbers: GridNumbers
+  northStyle: NorthStyle
+  /** a legenda fora do mapa, na coluna ao lado (só na folha deitada) */
+  legendSide: boolean
+  notes: Notes
   corners: ReturnType<typeof placeCorners>
   legend: { title: string; sections: LegendSection[] }
   credits: string
   today: string
-  brasaoUrl: string | null
+  /** o logo que a pessoa enviou (data URL); sem ele, o título ocupa o espaço */
+  logoUrl: string | null
   /** onde o mapa está quando assenta: o fuso do rodapé vem daqui */
   center: { lng: number; lat: number }
+}
+
+/** a folha que estas escolhas pedem: texto abaixo do título, legenda ao lado e números da grade na margem tiram área do mapa */
+export function layoutOf(s: Pick<SheetSettings, 'paper' | 'orientation' | 'notes' | 'legendSide' | 'show' | 'gridNumbers'>): Sheet {
+  return sheetLayout(s.paper, s.orientation, {
+    subtitle: s.notes.title.trim() !== '',
+    legendSide: s.legendSide,
+    gridMargin: s.show.grid && s.gridNumbers === 'margin',
+  })
 }
 
 export interface SheetPageProps {
@@ -66,7 +83,11 @@ export const SheetPage = forwardRef<HTMLDivElement, SheetPageProps>(function She
   ref,
 ) {
   const { show, corners } = settings
-  const sheet = useMemo(() => sheetLayout(settings.paper, settings.orientation), [settings.paper, settings.orientation])
+  const hasSubtitle = settings.notes.title.trim() !== ''
+  const sheet = useMemo(
+    () => layoutOf({ paper: settings.paper, orientation: settings.orientation, notes: { title: hasSubtitle ? 'x' : '', map: '', side: '' }, legendSide: settings.legendSide, show: settings.show, gridNumbers: settings.gridNumbers }),
+    [settings.paper, settings.orientation, hasSubtitle, settings.legendSide, settings.show, settings.gridNumbers],
+  )
   const mm = (v: number) => v * px
   const frame: Size = { w: Math.round(sheet.map.w * px), h: Math.round(sheet.map.h * px) }
 
@@ -77,21 +98,26 @@ export const SheetPage = forwardRef<HTMLDivElement, SheetPageProps>(function She
       style={{ width: mm(sheet.width), height: mm(sheet.height) }}
     >
       <div className="absolute flex items-end" style={{ left: mm(sheet.header.x), top: mm(sheet.header.y), width: mm(sheet.header.w), height: mm(sheet.header.h) }}>
+        {settings.logoUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={settings.logoUrl} alt="Logo" className="w-auto shrink-0 object-contain" style={{ height: mm(12), marginRight: mm(4) }} />
+        )}
         <h1 className="line-clamp-2 min-w-0 flex-1 font-semibold leading-tight text-foreground" style={{ fontSize: mm(6) }}>
           {settings.title}
         </h1>
-        {show.logos && (
-          <div className="flex shrink-0 items-center" style={{ gap: mm(3), marginLeft: mm(4), height: mm(12) }}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            {settings.brasaoUrl && <img src={settings.brasaoUrl} alt="Brasão" className="h-full w-auto object-contain" />}
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/prisma_logo_revert.png" alt="GEO PRISMA" className="h-full w-auto object-contain" />
-          </div>
-        )}
       </div>
 
+      {sheet.subtitle && (
+        <p
+          className="absolute line-clamp-2 flex items-center whitespace-pre-line leading-snug text-foreground"
+          style={{ left: mm(sheet.subtitle.x), top: mm(sheet.subtitle.y), width: mm(sheet.subtitle.w), height: mm(sheet.subtitle.h), fontSize: mm(2.8) }}
+        >
+          {settings.notes.title}
+        </p>
+      )}
+
       <div
-        className="absolute overflow-clip border border-foreground bg-muted [&_.maplibregl-marker]:pointer-events-none"
+        className="absolute [&_.maplibregl-marker]:pointer-events-none"
         style={{ left: mm(sheet.map.x), top: mm(sheet.map.y), width: mm(sheet.map.w), height: mm(sheet.map.h) }}
       >
         {frame.w > 0 && frame.h > 0 && (
@@ -103,12 +129,16 @@ export const SheetPage = forwardRef<HTMLDivElement, SheetPageProps>(function She
             frameMm={sheet.map.w}
             pxPerMm={px}
             grid={show.grid ? settings.coords : null}
+            gridLevel={GRID_LEVELS[settings.gridLevel] ?? 1}
+            gridNumbers={settings.gridNumbers}
+            gridMarginMm={sheet.gridMargin}
             north={show.north}
+            northStyle={settings.northStyle}
             scale={show.scale}
             inset={show.inset}
             insetStyle={baseStyle}
-            note={show.note ? settings.note : ''}
-            legend={settings.legend}
+            note={settings.notes.map}
+            legend={sheet.side ? null : settings.legend}
             corners={corners}
             mapHeightMm={sheet.map.h}
             initialCamera={initialCamera}
@@ -120,6 +150,14 @@ export const SheetPage = forwardRef<HTMLDivElement, SheetPageProps>(function She
           />
         )}
       </div>
+
+      {sheet.side && (
+        <div className="absolute" style={{ left: mm(sheet.side.x), top: mm(sheet.side.y), width: mm(sheet.side.w), height: mm(sheet.side.h) }}>
+          <LegendPanel title={settings.legend.title} sections={settings.legend.sections} pxPerMm={px} maxHeightMm={sheet.side.h}>
+            <SideNote text={settings.notes.side} pxPerMm={px} />
+          </LegendPanel>
+        </div>
+      )}
 
       <div
         className="absolute flex flex-col justify-start text-muted-foreground"
@@ -135,6 +173,10 @@ export const SheetPage = forwardRef<HTMLDivElement, SheetPageProps>(function She
   )
 })
 
+const MAP_BOX = { width: '100%', height: '100%' } as const
+const CANVAS = { preserveDrawingBuffer: true, antialias: true } as const
+const NO_CLICK = () => {}
+
 // O mapa dentro da moldura da folha. Quando a moldura muda de tamanho (outro papel, outra posição, janela maior), o zoom
 // acompanha: o que a pessoa via continua à vista, em vez de o mapa mostrar mais ou menos terra sem aviso.
 interface SheetMapProps {
@@ -147,12 +189,19 @@ interface SheetMapProps {
   pxPerMm: number
   /** formato da grade; null: sem grade */
   grid: GridFormat | null
+  /** 0 a 1: só a linha da grade */
+  gridLevel: number
+  gridNumbers: GridNumbers
+  /** a margem (mm) onde moram os números fora do mapa */
+  gridMarginMm: number
   north: boolean
+  northStyle: NorthStyle
   scale: boolean
   inset: boolean
   insetStyle: Json | null
   note: string
-  legend: { title: string; sections: LegendSection[] }
+  /** null: a legenda está na coluna ao lado, não sobre o mapa */
+  legend: { title: string; sections: LegendSection[] } | null
   corners: ReturnType<typeof placeCorners>
   mapHeightMm: number
   initialCamera?: Camera
@@ -163,7 +212,7 @@ interface SheetMapProps {
   cameraProbe?: MutableRefObject<(() => Camera | null) | null>
 }
 
-function SheetMap({ session, style, basemap, frame, frameMm, pxPerMm, grid, north, scale, inset, insetStyle, note, legend, corners, mapHeightMm, initialCamera, interactive, pixelRatio, onSettle, onIdle, cameraProbe }: SheetMapProps) {
+function SheetMap({ session, style, basemap, frame, frameMm, pxPerMm, grid, gridLevel, gridNumbers, gridMarginMm, north, northStyle, scale, inset, insetStyle, note, legend, corners, mapHeightMm, initialCamera, interactive, pixelRatio, onSettle, onIdle, cameraProbe }: SheetMapProps) {
   const [settled, setSettled] = useState({ lng: initialCamera?.lng ?? session.camera.lng, lat: initialCamera?.lat ?? session.camera.lat })
   const mapRef = useRef<any>(null)
   const [loaded, setLoaded] = useState(false)
@@ -182,18 +231,30 @@ function SheetMap({ session, style, basemap, frame, frameMm, pxPerMm, grid, nort
 
   // a vista ao vivo: a escala e a grade se refazem a cada quadro do movimento (no máximo um por quadro de tela)
   const [view, setView] = useState<MapView | null>(null)
+  // a vista de quando o mapa parou: o mapa de localização (um segundo mapa WebGL) e os marcadores só se refazem aqui, não a cada quadro do arrasto
+  const [restView, setRestView] = useState<MapView | null>(null)
   const raf = useRef(0)
+  const measure = useCallback((): MapView | null => {
+    const map = mapRef.current?.getMap()
+    if (!map) return null
+    const b = map.getBounds()
+    return { lat: map.getCenter().lat, zoom: map.getZoom(), bounds: { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() } }
+  }, [])
   const readView = useCallback(() => {
     raf.current = 0
-    const map = mapRef.current?.getMap()
-    if (!map) return
-    const b = map.getBounds()
-    setView({ lat: map.getCenter().lat, zoom: map.getZoom(), bounds: { west: b.getWest(), south: b.getSouth(), east: b.getEast(), north: b.getNorth() } })
-  }, [])
+    const v = measure()
+    if (v) setView(v)
+  }, [measure])
   const scheduleView = useCallback(() => { if (!raf.current) raf.current = requestAnimationFrame(readView) }, [readView])
   useEffect(() => () => { if (raf.current) cancelAnimationFrame(raf.current) }, [])
   // a moldura mudou de tamanho: a vista (limites e escala) muda junto
-  useEffect(() => { if (loaded) scheduleView() }, [frame.w, frame.h, loaded, scheduleView])
+  useEffect(() => { if (loaded) { scheduleView(); setRestView(measure()) } }, [frame.w, frame.h, loaded, scheduleView, measure])
+
+  // a grade desta vista, em pixels da tela: as linhas e os números (dentro ou na margem) saem da mesma conta
+  const gridLines = useMemo(() => {
+    const map = mapRef.current?.getMap()
+    return view && grid && map ? projectGrid(map, view, grid) : null
+  }, [view, grid])
 
   const initial = useMemo(
     () => ({
@@ -208,6 +269,12 @@ function SheetMap({ session, style, basemap, frame, frameMm, pxPerMm, grid, nort
     [],
   )
 
+  // os marcadores não dependem da vista: o mesmo elemento a cada quadro faz o React pular a refazê-los
+  const markers = useMemo(
+    () => session.iconLayers.map(({ layer, data }) => <MaplibreIconMarkers key={layer.slug} layer={layer} data={data} onFeatureClick={NO_CLICK} onFeatureHover={NO_CLICK} />),
+    [session.iconLayers],
+  )
+
   const previous = useRef(frame)
   useEffect(() => {
     const map = mapRef.current?.getMap()
@@ -220,13 +287,16 @@ function SheetMap({ session, style, basemap, frame, frameMm, pxPerMm, grid, nort
 
   return (
     <div className="relative h-full w-full">
+      <div className="absolute inset-0 overflow-clip border border-foreground bg-muted">
       <Map
         ref={mapRef}
         initialViewState={initial}
-        style={{ width: '100%', height: '100%' }}
+        style={MAP_BOX}
         mapStyle={style as any}
         maxZoom={BASEMAP_MAX_ZOOM[basemap]}
         interactive={interactive}
+        // o mesmo toque de arrastar do mapa principal (inércia ao soltar)
+        dragPan={DRAG_PAN as any}
         // a roda tem zoom próprio (13.7); a folha é sempre com o norte para cima (a seta do norte depende disso)
         scrollZoom={false}
         dragRotate={false}
@@ -236,7 +306,7 @@ function SheetMap({ session, style, basemap, frame, frameMm, pxPerMm, grid, nort
         attributionControl={false}
         // a folha de exportação precisa de pixels para ler do mapa e de resolução de 300 dpi
         pixelRatio={pixelRatio}
-        canvasContextAttributes={{ preserveDrawingBuffer: true, antialias: true }}
+        canvasContextAttributes={CANVAS}
         onLoad={(e) => { e.target.touchZoomRotate.disableRotation(); setLoaded(true) }}
         onIdle={() => onIdle?.()}
         onMove={scheduleView}
@@ -245,19 +315,20 @@ function SheetMap({ session, style, basemap, frame, frameMm, pxPerMm, grid, nort
           if (!map) return
           const c = map.getCenter()
           setSettled({ lng: c.lng, lat: c.lat })
+          setRestView(measure())
           onSettle?.({ lng: c.lng, lat: c.lat, zoom: map.getZoom() })
         }}
       >
-        {session.iconLayers.map(({ layer, data }) => (
-          <MaplibreIconMarkers key={layer.slug} layer={layer} data={data} onFeatureClick={() => {}} onFeatureHover={() => {}} />
-        ))}
+        {markers}
       </Map>
-      {view && grid && <GridOverlay map={mapRef.current.getMap()} view={view} format={grid} frame={frame} pxPerMm={pxPerMm} />}
-      {view && north && <NorthArrow pxPerMm={pxPerMm} corner={corners.north} />}
+      {gridLines && <GridLines lines={gridLines} frame={frame} pxPerMm={pxPerMm} level={gridLevel} numbers={gridNumbers} />}
+      {view && north && <NorthArrow pxPerMm={pxPerMm} corner={corners.north} style={northStyle} />}
       {view && scale && <ScaleBlock view={view} frame={{ mm: frameMm, px: frame.w }} pxPerMm={pxPerMm} corner={corners.scale} />}
-      <LegendBlock title={legend.title} sections={legend.sections} corner={corners.legend} pxPerMm={pxPerMm} mapHeightMm={mapHeightMm} />
-      {view && inset && insetStyle && <LocationInset style={insetStyle} view={view} center={settled} pxPerMm={pxPerMm} corner={corners.inset} />}
+      {legend && corners.legend && <LegendBlock title={legend.title} sections={legend.sections} corner={corners.legend} pxPerMm={pxPerMm} mapHeightMm={mapHeightMm} />}
+      {restView && inset && insetStyle && <LocationInset style={insetStyle} view={restView} center={settled} pxPerMm={pxPerMm} corner={corners.inset} />}
       <NoteBlock text={note} pxPerMm={pxPerMm} />
+      </div>
+      {gridLines && gridNumbers === 'margin' && gridMarginMm > 0 && <GridMarginLabels lines={gridLines} frame={frame} pxPerMm={pxPerMm} marginMm={gridMarginMm} />}
     </div>
   )
 }
