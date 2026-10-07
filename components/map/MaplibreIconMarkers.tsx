@@ -25,7 +25,11 @@ const PIN_HEIGHT = 44 // px: onde o cartão de hover ancora acima do pino
 const DOT_HEIGHT = 14
 
 // translate e scale precisam estar na lista da transição (no Tailwind v4 não entram em transition-transform: caso C6)
-const motion = 'transition-[translate,scale,box-shadow] duration-300 ease-spring active:scale-95 focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/40'
+const motion = 'transition-[translate,scale,box-shadow] duration-300 ease-spring'
+// quem recebe o mouse é uma caixa parada (a área do ícone); o movimento do hover fica numa caixa de dentro. Se a mesma caixa recebesse
+// o mouse e saísse do lugar (subir 2 px, crescer), a borda dela fugiria do cursor e o cartão piscaria.
+// a entrada (nascer pequeno) não deve segurar a escala depois de acabar: senão o aumento do hover nunca aparece (fill-mode backwards)
+const hit = 'group relative cursor-pointer focus-visible:outline-hidden focus-visible:ring-[3px] focus-visible:ring-ring/40'
 
 const Halo = ({ top }: { top: string }) => (
   <span
@@ -157,41 +161,50 @@ export function MaplibreIconMarkers({ layer, data, onFeatureClick, onFeatureHove
                 role="button"
                 tabIndex={0}
                 aria-label={label}
-                style={{ opacity: first.opacity }}
-                className={cn('animate-pin-in relative h-11 w-8 origin-bottom cursor-pointer hover:-translate-y-0.5 hover:scale-110', motion)}
+                className={cn(hit, 'h-11 w-8')}
                 onKeyDown={keys}
                 onMouseEnter={enter}
                 onMouseLeave={leave}
                 onFocus={enter}
                 onBlur={leave}
               >
-                <svg viewBox="0 0 32 44" className="absolute inset-0 h-full w-full drop-shadow-md" aria-hidden>
-                  <path d={PIN_PATH} style={{ fill: first.color }} stroke="white" strokeWidth="2" strokeLinejoin="round" />
-                </svg>
-                {blinking && <Halo top="16px" />}
-                <span className="absolute left-1/2 top-[16px] -translate-x-1/2 -translate-y-1/2" aria-hidden>
-                  <Icon size={16} color="white" stroke={ICON_STROKE} />
-                </span>
-                {extra > 0 && (
-                  <span aria-hidden className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-foreground px-1 text-[10px] font-semibold leading-none text-background ring-2 ring-white">
-                    +{extra}
+                <div
+                  style={{ opacity: first.opacity }}
+                  className={cn('animate-pin-in [animation-fill-mode:backwards] absolute inset-0 origin-bottom group-hover:-translate-y-0.5 group-hover:scale-110 group-active:scale-95', motion)}
+                >
+                  <svg viewBox="0 0 32 44" className="absolute inset-0 h-full w-full drop-shadow-md" aria-hidden>
+                    <path d={PIN_PATH} style={{ fill: first.color }} stroke="white" strokeWidth="2" strokeLinejoin="round" />
+                  </svg>
+                  {blinking && <Halo top="16px" />}
+                  <span className="absolute left-1/2 top-[16px] -translate-x-1/2 -translate-y-1/2" aria-hidden>
+                    <Icon size={16} color="white" stroke={ICON_STROKE} />
                   </span>
-                )}
+                  {extra > 0 && (
+                    <span aria-hidden className="absolute -right-2 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-foreground px-1 text-[10px] font-semibold leading-none text-background ring-2 ring-white">
+                      +{extra}
+                    </span>
+                  )}
+                </div>
               </div>
             ) : (
               <div
                 role="button"
                 tabIndex={0}
                 aria-label={label}
-                style={{ opacity: first.opacity, backgroundColor: first.color }}
-                className={cn('animate-pop relative h-3.5 w-3.5 cursor-pointer rounded-full shadow-control ring-2 ring-white hover:scale-150', motion)}
+                // o ponto é pequeno (14 px): a área do mouse é maior que o desenho, para não exigir pontaria
+                className={cn(hit, 'flex h-6 w-6 items-center justify-center rounded-full')}
                 onKeyDown={keys}
                 onMouseEnter={enter}
                 onMouseLeave={leave}
                 onFocus={enter}
                 onBlur={leave}
               >
-                {blinking && <Halo top="50%" />}
+                <div
+                  style={{ opacity: first.opacity, backgroundColor: first.color }}
+                  className={cn('animate-pop [animation-fill-mode:backwards] relative h-3.5 w-3.5 rounded-full shadow-control ring-2 ring-white group-hover:scale-150 group-active:scale-95', motion)}
+                >
+                  {blinking && <Halo top="50%" />}
+                </div>
               </div>
             )}
           </Marker>

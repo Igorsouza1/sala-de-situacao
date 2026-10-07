@@ -983,6 +983,9 @@ export default function MapLibreMap({
 
   const handleMouseMove = useCallback(
     (e: any) => {
+      // o mouse está sobre um ícone de ação (elemento HTML): o próprio ícone cuida do cartão. O movimento sobe até o mapa, e sem esta
+      // guarda o mapa acharia "nenhuma feição aqui" e apagaria o cartão: só ficava de pé com o mouse bem na ponta do pino (o ponto).
+      if ((e.originalEvent?.target as Element | null)?.closest?.('.maplibregl-marker')) return
       if (measureMode && measureDrawing) {
         setMeasureCursorPos([e.lngLat.lng, e.lngLat.lat])
         hover.current.set(null, null)
