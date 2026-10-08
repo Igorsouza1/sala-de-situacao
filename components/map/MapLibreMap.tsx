@@ -234,7 +234,7 @@ export default function MapLibreMap({
   // ── Context / auth ──────────────────────────────────────────────────────
   const { modalData, openModal, closeModal, dateFilter, setDateFilter } =
     useMapContext()
-  const { isAdmin } = useUserRole()
+  const { isAdmin, canEdit, isSuperadmin } = useUserRole()
   const [selectedAcao, setSelectedAcao] = useState<any | null>(null)
   const [isEditOpen, setIsEditOpen] = useState(false)
 
@@ -1863,6 +1863,9 @@ export default function MapLibreMap({
             selection={exploreSelection}
             onSelect={selectExplore}
             onFocus={focusExplore}
+            canEdit={canEdit}
+            isSuperadmin={isSuperadmin}
+            onNotice={setNotice}
             getBounds={getExploreBounds}
             onDossie={(selection) => {
               setSelectedAcao(selection.kind === 'acoes' ? { id: selection.id } : null)

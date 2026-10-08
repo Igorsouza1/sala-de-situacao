@@ -2,6 +2,7 @@ import { db } from '@/db'
 import { sql } from 'drizzle-orm'
 import type { ConsultaItem } from '@/types/map-consulta'
 import type { ConsultaQuery } from '@/lib/validations/map-consulta'
+import type { AcaoFields, PropriedadeFields } from '@/lib/validations/map-consulta-edit'
 
 const PAGE_SIZE = 20
 // Dados de Base são autorizados pela interseção com as Regiões da Organização.
@@ -46,7 +47,8 @@ export async function queryMapConsulta(tenantId: string, regiaoId: number, query
         AND (c.tenant_id IS NULL OR c.tenant_id = ${tenantId}::uuid)
         AND (d.tenant_id IS NULL OR d.tenant_id = ${tenantId}::uuid)
         AND (c.regiao_id IS NULL OR c.regiao_id = ${regiaoId})
-        AND ST_Intersects(d.geom, ${geom})), '[]'::jsonb) AS bacias` : sql``
+        AND ST_Intersects(d.geom, ${geom})), '[]'::jsonb) AS bacias,
+    ${sql.identifier(alias)}.${sql.raw(action ? 'name' : 'nome')} AS nome_registrado` : sql``
   const columns = action ? sql`a.id, COALESCE(NULLIF(a.name, ''), a.tipo, a.categoria::text, 'Ação') AS nome,
     a.time AS data, TO_CHAR(a.time, 'DD/MM/YYYY') AS data_texto, a.categoria::text AS categoria, a.descricao, a.status::text AS status,
     a.eixo_tematico, a.tipo_tecnico, a.carater,
@@ -64,4 +66,55 @@ export async function queryMapConsulta(tenantId: string, regiaoId: number, query
     ORDER BY ${action ? sql`a.id DESC` : sql`${propertyName} ASC, p.id ASC`}
     LIMIT ${query.id ? 1 : PAGE_SIZE + 1} OFFSET ${query.id ? 0 : query.offset}`)
   return { items: result.rows.slice(0, PAGE_SIZE), hasMore: result.rows.length > PAGE_SIZE }
+}
+
+export type EditableValues = Record<string, string | null>
+
+/**
+ * Grava os campos editados de um registro do Explorar e devolve o que havia antes (para o "Desfazer").
+ * Devolve null quando o registro não está nesta Região (ou, nas Ações, nesta Organização): nada é gravado.
+ * Propriedade é Dado de Base (ADR 0008): vale para toda Organização que a enxerga; a autorização é pela Região (ADR 0012).
+ */
+export async function updateMapConsultaItem(
+  tenantId: string,
+  regiaoId: number,
+  target: { kind: 'acoes'; id: number; fields: AcaoFields } | { kind: 'propriedades'; id: number; fields: PropriedadeFields },
+): Promise<{ previous: EditableValues } | null> {
+  if (target.kind === 'acoes') {
+    const f = target.fields
+    const result = await db.execute<{ nome: string | null; descricao: string | null; status: string | null; categoria: string | null }>(sql`
+      WITH old AS (
+        SELECT a.id, a.name, a.descricao, a.status::text AS status, a.categoria::text AS categoria
+        FROM monitoramento.acoes a
+        WHERE a.id = ${target.id} AND a.tenant_id = ${tenantId}::uuid AND ${inRegion('a', tenantId, regiaoId)}
+        FOR UPDATE)
+      UPDATE monitoramento.acoes a SET
+        name = ${f.nome !== undefined ? f.nome : sql`a.name`},
+        descricao = ${f.descricao !== undefined ? f.descricao : sql`a.descricao`},
+        status = ${f.status !== undefined ? sql`${f.status}::monitoramento.status_acoes` : sql`a.status`},
+        categoria = ${f.categoria !== undefined ? sql`${f.categoria}::monitoramento.categoria_acao` : sql`a.categoria`}
+      FROM old WHERE a.id = old.id
+      RETURNING old.name AS nome, old.descricao, old.status, old.categoria`)
+    const row = result.rows[0]
+    return row ? { previous: { nome: row.nome, descricao: row.descricao, status: row.status, categoria: row.categoria } } : null
+  }
+  const f = target.fields
+  const result = await db.execute<{ nome: string | null; titular: string | null; municipio: string | null; car: string | null }>(sql`
+    WITH old AS (
+      SELECT p.id, p.nome, p.properties->>'titular_nome' AS titular, p.municipio, p.cod_imovel AS car
+      FROM monitoramento.propriedades p
+      WHERE p.id = ${target.id} AND ${inRegion('p', tenantId, regiaoId)}
+      FOR UPDATE)
+    UPDATE monitoramento.propriedades p SET
+      nome = ${f.nome !== undefined ? f.nome : sql`p.nome`},
+      municipio = ${f.municipio !== undefined ? f.municipio : sql`p.municipio`},
+      cod_imovel = ${f.car !== undefined ? f.car : sql`p.cod_imovel`},
+      properties = ${f.titular !== undefined
+        ? sql`CASE WHEN ${f.titular}::text IS NULL THEN COALESCE(p.properties, '{}'::jsonb) - 'titular_nome'
+            ELSE jsonb_set(COALESCE(p.properties, '{}'::jsonb), '{titular_nome}', to_jsonb(${f.titular}::text)) END`
+        : sql`p.properties`}
+    FROM old WHERE p.id = old.id
+    RETURNING old.nome, old.titular, old.municipio, old.car`)
+  const row = result.rows[0]
+  return row ? { previous: { nome: row.nome, titular: row.titular, municipio: row.municipio, car: row.car } } : null
 }

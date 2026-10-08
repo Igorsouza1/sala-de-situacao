@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowUpRight, ChevronRight, ClipboardList, House, MapPin, Search, X } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, ChevronRight, ClipboardList, House, MapPin, Pencil, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -11,9 +11,12 @@ import { cn } from '@/lib/utils'
 import type { ConsultaBounds, ConsultaItem, ConsultaKind, ConsultaSelection } from '@/types/map-consulta'
 import type { LayerVisualConfig } from '@/types/map-dto'
 import { ConnectionProblem } from './ConnectionProblem'
+import { ExploreEditForm } from './ExploreEditForm'
+import type { NoticeData } from './Notice'
 import { PanelCard } from './PanelCard'
 import { GENERIC_LIST_ERROR, GENERIC_OPEN_ERROR } from './helpers/network'
 import { areaText, dateText, listParams, placeText, propertyNames } from './helpers/explore'
+import { saveConsultaEdit } from './helpers/explore-edit'
 import { ICON_STROKE, resolveLayerIcon } from './helpers/layer-icons'
 import { resolveFeatureStyle } from './helpers/map-visuals'
 import { tidyText } from './helpers/text'
@@ -135,9 +138,13 @@ interface ExplorePanelProps {
   onFocus: (item: ConsultaItem) => void
   getBounds: () => ConsultaBounds | null
   onDossie: (selection: ConsultaSelection) => void
+  /** Editor, Owner e Superadmin veem o botão Editar; os demais só leem */
+  canEdit?: boolean
+  isSuperadmin?: boolean
+  onNotice?: (notice: NoticeData) => void
 }
 
-export function ExplorePanel({ regiaoId, regionName, actionVisualConfig, selection, onSelect, onFocus, getBounds, onDossie }: ExplorePanelProps) {
+export function ExplorePanel({ regiaoId, regionName, actionVisualConfig, selection, onSelect, onFocus, getBounds, onDossie, canEdit = false, isSuperadmin = false, onNotice }: ExplorePanelProps) {
   const [kind, setKind] = useState<ConsultaKind>('acoes')
   const [draft, setDraft] = useState('')
   const [query, setQuery] = useState('')
@@ -156,7 +163,7 @@ export function ExplorePanel({ regiaoId, regionName, actionVisualConfig, selecti
   const trail = useRef<{ selection: ConsultaSelection; label: string }[]>([])
   const expected = useRef<string | null | undefined>(undefined)
   const keyOf = (s: ConsultaSelection | null) => (s ? `${s.kind}:${s.id}` : null)
-  const { item, error, offline, retry } = useConsultaDetail(selection, regiaoId, onFocus)
+  const { item, error, offline, retry, replace } = useConsultaDetail(selection, regiaoId, onFocus)
   const selectionKey = keyOf(selection)
   useEffect(() => {
     if (expected.current !== selectionKey) trail.current = []
@@ -171,6 +178,36 @@ export function ExplorePanel({ regiaoId, regionName, actionVisualConfig, selecti
   }
   const back = () => go(trail.current.pop()?.selection ?? null)
   const backLabel = trail.current.length ? `Voltar a ${trail.current[trail.current.length - 1].label}` : kind === 'acoes' ? 'Voltar às ações' : 'Voltar às propriedades'
+
+  // Salvar uma edição (19.3): o registro novo vale na hora, a lista recarrega e o aviso no alto oferece 10 s para desfazer (regra 13)
+  const saveEdit = async (fields: Record<string, string | null>) => {
+    if (!selection || !regiaoId) throw new Error('Escolha uma região no mapa para editar.')
+    const { kind: editedKind, id } = selection
+    const saved = await saveConsultaEdit(editedKind, id, regiaoId, fields)
+    if (saved.item) replace(editedKind, saved.item)
+    list.reload()
+    const name = tidyText(saved.item?.nome ?? item?.nome)
+    const back = Object.fromEntries(Object.keys(fields).map((k) => [k, saved.previous[k] ?? null]).filter(([k, v]) => k !== 'nome' || v))
+    onNotice?.({
+      id: Date.now(),
+      tone: 'success',
+      title: `Salvamos “${name}”`,
+      body: editedKind === 'acoes' ? 'Quem atualizar o mapa já vê a mudança.' : 'Vale para todas as organizações que veem esta propriedade.',
+      undo: {
+        seconds: 10,
+        onUndo: async () => {
+          try {
+            const undone = await saveConsultaEdit(editedKind, id, regiaoId, back)
+            if (undone.item) replace(editedKind, undone.item)
+            list.reload()
+            onNotice?.({ id: Date.now(), tone: 'success', title: 'Desfeito', body: `“${tidyText(undone.item?.nome ?? name)}” voltou a ser como era.` })
+          } catch {
+            onNotice?.({ id: Date.now(), tone: 'error', title: 'Não conseguimos desfazer', body: 'Abra o registro e edite de novo.' })
+          }
+        },
+      },
+    })
+  }
 
   const clearSearch = () => { setDraft(''); setQuery('') }
   const hasFilter = !!query || !!bounds
@@ -254,7 +291,7 @@ export function ExplorePanel({ regiaoId, regionName, actionVisualConfig, selecti
           <section aria-hidden className="space-y-3 rounded-lg border border-border bg-card p-4"><Skeleton className="h-3.5 w-1/3" /><Skeleton className="h-3 w-2/3" /><Skeleton className="h-3 w-1/2" /></section>
         </div>
       ) : (
-        <Detail item={item} selection={selection} regiaoId={regiaoId} visualConfig={actionVisualConfig} onRelated={openRelated} onFocus={onFocus} onDossie={onDossie} />
+        <Detail key={`${selection.kind}:${selection.id}`} item={item} selection={selection} regiaoId={regiaoId} visualConfig={actionVisualConfig} onRelated={openRelated} onFocus={onFocus} onDossie={onDossie} canEdit={canEdit && !!regiaoId} canEditCar={isSuperadmin} onSave={saveEdit} />
       )}
     </div>
   ) : null
@@ -262,7 +299,8 @@ export function ExplorePanel({ regiaoId, regionName, actionVisualConfig, selecti
   return <ViewSwap view={selection ? 'detail' : 'list'} views={{ list: listView, detail: detailView }} />
 }
 
-function Detail({ item, selection, regiaoId, visualConfig, onRelated, onFocus, onDossie }: { item: ConsultaItem; selection: ConsultaSelection; regiaoId?: number; visualConfig?: LayerVisualConfig; onRelated: (s: ConsultaSelection) => void; onFocus: (item: ConsultaItem) => void; onDossie: (s: ConsultaSelection) => void }) {
+function Detail({ item, selection, regiaoId, visualConfig, onRelated, onFocus, onDossie, canEdit, canEditCar, onSave }: { item: ConsultaItem; selection: ConsultaSelection; regiaoId?: number; visualConfig?: LayerVisualConfig; onRelated: (s: ConsultaSelection) => void; onFocus: (item: ConsultaItem) => void; onDossie: (s: ConsultaSelection) => void; canEdit: boolean; canEditCar: boolean; onSave: (fields: Record<string, string | null>) => Promise<void> }) {
+  const [editing, setEditing] = useState(false)
   const action = selection.kind === 'acoes'
   const date = dateText(item)
   const place = placeText(item)
@@ -287,8 +325,21 @@ function Detail({ item, selection, regiaoId, visualConfig, onRelated, onFocus, o
             )}
             {action && date && <p className="mt-0.5 text-xs leading-snug text-muted-foreground">Registrada em {date}</p>}
           </div>
+          {editing ? (
+            <span className="inline-flex h-8 shrink-0 items-center gap-1.5 rounded-sm bg-secondary px-2.5 text-xs font-medium text-secondary-foreground"><Pencil className="h-3.5 w-3.5" aria-hidden />Editando</span>
+          ) : canEdit && (
+            <Button variant="outline" size="sm" className="shrink-0" onClick={() => setEditing(true)}>
+              <Pencil className="h-3.5 w-3.5" aria-hidden />
+              Editar
+            </Button>
+          )}
         </div>
       </section>
+
+      {editing ? (
+        <ExploreEditForm item={item} kind={selection.kind} canEditCar={canEditCar} onCancel={() => setEditing(false)} onSubmit={async (fields) => { await onSave(fields); setEditing(false) }} />
+      ) : (
+        <>
 
       {!action && (item.titular || item.car || item.area != null) && (
         <PanelCard title="Sobre a propriedade">
@@ -358,6 +409,8 @@ function Detail({ item, selection, regiaoId, visualConfig, onRelated, onFocus, o
         <ListCard title="Ações nesta propriedade" caption="As últimas registradas vêm primeiro.">
           <Results list={relatedList} kind="acoes" visualConfig={visualConfig} onSelect={onRelated} empty={{ title: 'Nenhuma ação aqui ainda', phrase: 'Quando uma ação for registrada nesta propriedade, ela aparece aqui.' }} />
         </ListCard>
+      )}
+        </>
       )}
     </>
   )

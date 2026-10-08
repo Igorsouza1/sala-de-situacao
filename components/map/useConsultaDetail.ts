@@ -14,6 +14,8 @@ export function useConsultaDetail(selection: ConsultaSelection | null, regiaoId:
   const cache = useRef(new Map<string, ConsultaItem>())
   const loaded = useRef(onLoaded)
   loaded.current = onLoaded
+  const current = useRef(selection)
+  current.current = selection
 
   useEffect(() => {
     setItem(null)
@@ -53,5 +55,12 @@ export function useConsultaDetail(selection: ConsultaSelection | null, regiaoId:
     return () => window.removeEventListener('online', back)
   }, [offline])
 
-  return { item, error, offline, retry: () => setAttempt((n) => n + 1) }
+  // depois de salvar, o registro novo vale na hora e fica guardado no lugar do antigo. Lê a seleção de agora (e não a de quando
+  // foi chamado): o "Desfazer" chega até 10 s depois, quando a pessoa pode já ter aberto outro registro.
+  const replace = (kind: ConsultaSelection['kind'], next: ConsultaItem) => {
+    cache.current.set(`${kind}:${next.id}`, next)
+    if (current.current?.kind === kind && current.current.id === next.id) setItem(next)
+  }
+
+  return { item, error, offline, retry: () => setAttempt((n) => n + 1), replace }
 }

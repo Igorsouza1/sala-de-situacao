@@ -5,6 +5,8 @@ export type ConsultaBounds = [number, number, number, number]
 export interface ConsultaItem {
   id: number
   nome: string
+  /** o nome como está gravado (sem o apoio de tipo/CAR que a lista usa); só no registro aberto, para o formulário de edição */
+  nome_registrado?: string | null
   municipio: string | null
   data: string | null
   /** dd/mm/aaaa, formatado no banco (a data bruta muda de dia conforme o fuso) */

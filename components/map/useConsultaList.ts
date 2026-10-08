@@ -59,5 +59,5 @@ export function useConsultaList(params: string, enabled = true) {
     return () => window.removeEventListener('online', back)
   }, [offline])
 
-  return { items, hasMore, loading, error, offline, loadMore: () => { if (!busy.current) void load(items.length) }, retry: () => void load(items.length) }
+  return { items, hasMore, loading, error, offline, loadMore: () => { if (!busy.current) void load(items.length) }, retry: () => void load(items.length), reload: () => void load(0) }
 }

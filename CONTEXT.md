@@ -79,11 +79,11 @@ Papel de escopo global — vê e opera todas as Organizações e todos os dados 
 _Avoid_: Admin (ambíguo), root
 
 **Owner**:
-Papel de escopo de Organização com controle total sobre ela. Pode fazer qualquer operação dentro das Regiões do tenant — criar e gerenciar Camadas de Organização, registrar Ações, adicionar Anotações a dados de base — com duas exceções: não altera a geometria de uma Região (responsabilidade do Superadmin) e não edita dados de tabelas de base imutáveis (Propriedades, Detecções de Desmatamento, Focos de Calor). Gerencia todos os usuários da Org, incluindo criar outros Owners.
+Papel de escopo de Organização com controle total sobre ela. Pode fazer qualquer operação dentro das Regiões do tenant — criar e gerenciar Camadas de Organização, registrar Ações, adicionar Anotações a dados de base — com duas exceções: não altera a geometria de uma Região (responsabilidade do Superadmin) e não edita dados de tabelas de base imutáveis (Detecções de Desmatamento, Focos de Calor); edita campos descritivos de Propriedades, exceto o CAR (ADR 0012). Gerencia todos os usuários da Org, incluindo criar outros Owners.
 _Avoid_: Admin (quando se refere ao dono da Org)
 
 **Editor**:
-Papel de escopo de Organização. Cria e edita Acões, sobe arquivos de campo e pode fazer Importações de dados externos. Não gerencia usuários.
+Papel de escopo de Organização. Cria e edita Acões e campos descritivos de Propriedades (ADR 0012), sobe arquivos de campo e pode fazer Importações de dados externos. Não gerencia usuários.
 _Avoid_: Operador
 
 **Viewer**:
