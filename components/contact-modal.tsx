@@ -16,10 +16,11 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 
 interface ContactModalProps {
-  children: React.ReactNode
+  triggerLabel: string
+  triggerClassName: string
 }
 
-export function ContactModal({ children }: ContactModalProps) {
+export function ContactModal({ triggerLabel, triggerClassName }: ContactModalProps) {
   const [open, setOpen] = useState(false)
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -34,8 +35,8 @@ export function ContactModal({ children }: ContactModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children}
+      <DialogTrigger type="button" className={triggerClassName}>
+        {triggerLabel}
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px] bg-slate-900 border-white/10 text-slate-200">
         <DialogHeader>

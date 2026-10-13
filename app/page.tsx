@@ -19,7 +19,7 @@ export default function LandingPage() {
               alt="PRISMA"
               width={26}
               height={26}
-              className="rounded-md object-cover"
+              className="h-[26px] w-[26px] rounded-md object-cover"
             />
             <span className="text-sm font-semibold tracking-tight text-[#1d1d1f]">
               Prisma
@@ -32,11 +32,10 @@ export default function LandingPage() {
             >
               Acesso Seguro
             </Link>
-            <ContactModal>
-              <button className="text-[11px] font-medium text-white bg-[#1d1d1f] hover:bg-black active:scale-95 transition-all px-4 py-1.5 rounded-full">
-                Agendar Demonstração
-              </button>
-            </ContactModal>
+            <ContactModal
+              triggerLabel="Agendar Demonstração"
+              triggerClassName="text-[11px] font-medium text-white bg-[#1d1d1f] hover:bg-black active:scale-95 transition-all px-4 py-1.5 rounded-full"
+            />
           </div>
         </div>
       </header>
@@ -83,11 +82,10 @@ export default function LandingPage() {
             <p className="text-base md:text-lg text-[#1d1d1f]/70 xl:text-[#1d1d1f]/50 font-normal xl:font-light max-w-2xl mx-auto mb-10 leading-relaxed">
               O Prisma integra dados de satélite, registros ambientais e sensores de campo em uma única plataforma geoespacial. Feito para quem precisa analisar, gerenciar e auditar áreas com o máximo de precisão.
             </p>
-            <ContactModal>
-              <button className="inline-flex items-center text-sm font-medium text-white bg-[#1d1d1f] hover:bg-black active:scale-95 transition-all px-8 py-3.5 rounded-full">
-                Solicitar Demonstração Técnica
-              </button>
-            </ContactModal>
+            <ContactModal
+              triggerLabel="Solicitar Demonstração Técnica"
+              triggerClassName="inline-flex items-center text-sm font-medium text-white bg-[#1d1d1f] hover:bg-black active:scale-95 transition-all px-8 py-3.5 rounded-full"
+            />
 
             {/* Social Proof Discreto */}
             <div className="mt-20 flex flex-col items-center gap-4">
@@ -100,6 +98,7 @@ export default function LandingPage() {
                     src="/ihp-logo.png"
                     alt="Instituto Homem Pantaneiro"
                     fill
+                    sizes="112px"
                     className="object-contain"
                   />
                 </div>
@@ -109,6 +108,7 @@ export default function LandingPage() {
                     src="/logo_riodaprata.png"
                     alt="Grupo Rio da Prata"
                     fill
+                    sizes="112px"
                     className="object-contain"
                   />
                 </div>
@@ -147,11 +147,10 @@ export default function LandingPage() {
             <p className="text-base md:text-lg text-[#1d1d1f]/50 font-light max-w-xl mx-auto mb-10 leading-relaxed">
               Centralize seus mapas, análises e relatórios em uma plataforma robusta e escalável.
             </p>
-            <ContactModal>
-              <button className="inline-flex items-center text-sm font-medium text-[#1d1d1f] border border-[#1d1d1f]/20 bg-white hover:bg-[#1d1d1f]/5 active:scale-95 transition-all px-10 py-4 rounded-full">
-                Conhecer a Plataforma
-              </button>
-            </ContactModal>
+            <ContactModal
+              triggerLabel="Conhecer a Plataforma"
+              triggerClassName="inline-flex items-center text-sm font-medium text-[#1d1d1f] border border-[#1d1d1f]/20 bg-white hover:bg-[#1d1d1f]/5 active:scale-95 transition-all px-10 py-4 rounded-full"
+            />
           </div>
         </section>
 
