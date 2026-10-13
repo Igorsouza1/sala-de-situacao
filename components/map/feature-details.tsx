@@ -23,6 +23,7 @@ import { formatTime } from "@/lib/helpers/formatter/formatTime"
 import { formatDuration } from "@/lib/helpers/formatter/formatDuration"
 import { AcaoDossie } from "./acaoDossie"
 import { PropriedadeDossie } from "./PropriedadeDossie"
+import { propertyRows } from "@/lib/geo-import/properties"
 
 // Style configuration for each layer type
 const layerStyles: { [key: string]: { icon: React.ElementType; title: string; color: string; bgColor: string } } = {
@@ -134,13 +135,28 @@ export function FeatureDetails({ layerType, properties }: { layerType: string; p
           return (
             <AcaoDossie acaoId={properties.id} />
           )
-      default:
+      default: {
+        // camada sem tela própria (as importadas por arrastar e soltar entram aqui): mostra tudo o que o arquivo trouxe
+        const rows = propertyRows(properties)
+        if (rows.length === 0) {
+          return (
+            <div className="col-span-full text-center py-8">
+              <Info className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground">Esta feição não trouxe nenhuma informação no arquivo.</p>
+            </div>
+          )
+        }
         return (
-          <div className="col-span-full text-center py-8">
-            <Info className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-500">Nenhuma informação detalhada disponível para esta camada.</p>
-          </div>
+          <dl className="space-y-4 rounded-lg border border-border bg-card p-4 shadow-card">
+            {rows.map((row) => (
+              <div key={row.key} className="space-y-0.5">
+                <dt className="text-sm font-medium text-muted-foreground">{row.label}</dt>
+                <dd className="break-words text-base font-semibold text-foreground">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
         )
+      }
     }
   }
 

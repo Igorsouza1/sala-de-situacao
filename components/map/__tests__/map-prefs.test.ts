@@ -39,6 +39,19 @@ describe('preferências por região', () => {
     expect(readRegionPrefs(1, store)).toEqual({ layers: [], date: { kind: 'none' }, fauna: { heatmap: false, locations: false } })
   })
 
+  it('lembra a ordem das camadas e esquece só ela quando a pessoa volta à ordem padrão', () => {
+    const store = fakeStore()
+    saveRegionPrefs(1, { layers: ['a'], order: ['b', 'a'] }, store)
+    expect(readRegionPrefs(1, store).order).toEqual(['b', 'a'])
+    saveRegionPrefs(1, { order: undefined }, store)
+    expect(readRegionPrefs(1, store)).toEqual({ layers: ['a'] })
+  })
+
+  it('ordem com algo que não é texto não vale', () => {
+    const store = fakeStore({ 'prisma:mapa:regiao:1': JSON.stringify({ v: 1, order: ['a', 3] }) })
+    expect(readRegionPrefs(1, store)).toEqual({})
+  })
+
   it('"voltar ao padrão" apaga tudo da região', () => {
     const store = fakeStore()
     saveRegionPrefs(1, { layers: ['a'] }, store)

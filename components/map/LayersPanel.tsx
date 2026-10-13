@@ -7,6 +7,7 @@ import { BASEMAP_KEYS, BASEMAP_LABELS, BASEMAP_SWATCH, type BasemapKey } from '.
 import { controlItem } from './helpers/control-style'
 import { ViewSwap } from '@/components/ui/view-swap'
 import { LayerManager } from './LayerManager'
+import { LayerOrder, LayerOrderEntry, type LayerOrderProps } from './LayerOrder'
 import { PanelCard } from './PanelCard'
 
 // Painel Camadas (DESIGN.md 13.1): o mapa base primeiro (é a camada de baixo), depois um cartão por categoria de dados.
@@ -87,7 +88,7 @@ function ResetButton({ onReset }: { onReset: () => void }) {
         <span aria-live="polite">{done ? 'Voltou ao padrão' : 'Voltar ao padrão do mapa'}</span>
       </button>
       <p className="mt-1 px-2 text-center text-xs leading-snug text-muted-foreground">
-        Camadas, mapa base, filtros e posição voltam a como o Prisma abre pela primeira vez.
+        Camadas, ordem, mapa base, filtros e posição voltam a como o Prisma abre pela primeira vez.
       </p>
     </div>
   )
@@ -104,14 +105,20 @@ interface LayersPanelProps extends LayerManagerProps {
   onReset: () => void
   /** o editor de uma camada: quando existe, ocupa o painel no lugar da lista (a pessoa vê de onde veio: 8.4) */
   editing?: ReactNode
+  /** a ordem das camadas no mapa (13.1); sem ela (ou com uma camada só) não há o que ordenar e a entrada não aparece */
+  order?: Omit<LayerOrderProps, 'onBack' | 'activeLayers'>
 }
 
-export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, editing, ...layerProps }: LayersPanelProps) {
+export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, editing, order, ...layerProps }: LayersPanelProps) {
   const unavailable = basemap !== shownBasemap
   // quais camadas com áreas estão abertas: vive aqui (e não na lista) porque a lista é desmontada enquanto o editor está aberto,
   // e a pessoa precisa voltar para onde estava (8.4)
   const [expanded, setExpanded] = useState<string[]>([])
   const toggleExpanded = (id: string) => setExpanded((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]))
+  // a ordem é uma visão do painel (como o editor): entra pela direita e a lista volta pela esquerda. Editar camadas tem prioridade.
+  const [ordering, setOrdering] = useState(false)
+  const editMode = !!editing || !!layerProps.onPick
+  useEffect(() => { if (editMode) setOrdering(false) }, [editMode])
   // Escolher o que editar: só a lista, em botões, com o aviso do modo em cima. O modo fica dito, em cor e em frase, mesmo depois de salvar
   // ou cancelar: sem isso a lista parecia a lista normal e a pessoa não sabia se ainda estava editando (2.1). A frase diz o próximo passo.
   const pickView = layerProps.onPick ? (
@@ -163,11 +170,14 @@ export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, e
 
       <LayerManager {...layerProps} expanded={expanded} onToggleExpanded={toggleExpanded} />
 
+      {order && order.items.length > 1 && <LayerOrderEntry onOpen={() => setOrdering(true)} />}
+
       <ResetButton onReset={onReset} />
     </div>
   )
 
-  // As três visões ficam no mesmo painel e trocam com a altura acompanhando (8.4): a lista, a escolha do que editar e o editor.
-  const view = editing ? 'editor' : layerProps.onPick ? 'pick' : 'list'
-  return <ViewSwap view={view} views={{ list: listView, pick: pickView, editor: editing ?? null }} />
+  // As quatro visões ficam no mesmo painel e trocam com a altura acompanhando (8.4): a lista, a escolha do que editar, o editor e a ordem.
+  const orderView = order ? <LayerOrder {...order} activeLayers={layerProps.activeLayers} onBack={() => setOrdering(false)} /> : null
+  const view = editing ? 'editor' : layerProps.onPick ? 'pick' : ordering && order ? 'order' : 'list'
+  return <ViewSwap view={view} views={{ list: listView, pick: pickView, editor: editing ?? null, order: orderView }} />
 }

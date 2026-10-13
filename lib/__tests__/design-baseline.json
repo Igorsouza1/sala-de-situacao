@@ -316,7 +316,7 @@
     "hex": 2
   },
   "components/map/feature-details.tsx": {
-    "paleta": 24,
+    "paleta": 22,
     "hex": 0
   },
   "components/map/FilterPopover.tsx": {

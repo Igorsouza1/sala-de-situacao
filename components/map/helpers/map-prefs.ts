@@ -21,6 +21,8 @@ export interface Camera {
 
 export interface RegionPrefs {
   layers?: string[]
+  /** a ordem das camadas no mapa, de baixo para cima (13.1); sem ela vale a do catálogo */
+  order?: string[]
   fauna?: { heatmap: boolean; locations: boolean }
   date?: DateIntent
   area?: AreaFilter
@@ -78,6 +80,7 @@ export function readRegionPrefs(regiaoId?: number, store: Store | null = browser
     if (json?.v !== VERSION) return {}
     const prefs: RegionPrefs = {}
     if (Array.isArray(json.layers) && json.layers.every((s: unknown) => typeof s === 'string')) prefs.layers = json.layers
+    if (Array.isArray(json.order) && json.order.every((s: unknown) => typeof s === 'string')) prefs.order = json.order
     if (json.fauna && typeof json.fauna.heatmap === 'boolean' && typeof json.fauna.locations === 'boolean') {
       prefs.fauna = { heatmap: json.fauna.heatmap, locations: json.fauna.locations }
     }

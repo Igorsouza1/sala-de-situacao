@@ -32,7 +32,7 @@ import { Notice, type NoticeData } from './Notice'
 import { Reveal } from '@/components/ui/collapse'
 import { LayerEditor } from './LayerEditor'
 import { GroupIconEditor } from './GroupIconEditor'
-import { applyEdit, readEdit, ruleIcon, type LayerEdit } from '@/lib/layer-style'
+import { applyEdit, readEdit, readStyle, ruleIcon, type LayerEdit } from '@/lib/layer-style'
 import { FiltersPanel } from './FiltersPanel'
 import { activeFilterCount, datesFromIntent, intentFromDates } from './helpers/filters'
 import {
@@ -57,7 +57,10 @@ import {
 import { Modal } from './Modal'
 import { EditAcaoModal } from './EditAcaoModal'
 import { FeatureDetails } from './feature-details'
-import { ShapefileUploader } from './ShapefileUploader'
+import { DropImport, type ImportPreview } from './DropImport'
+import { RasterLayers, type RasterSpec } from './RasterLayers'
+import { YearRangeCard, type YearRangeItem } from './YearRangeCard'
+import { featureDate } from '@/lib/geo-import/geojson'
 import { GerarMapa, type GerarMapaSession } from './GerarMapa'
 import { GerarMapaButton } from './GerarMapaButton'
 import { MaplibreIconMarkers } from './MaplibreIconMarkers'
@@ -70,6 +73,8 @@ import type { NewsItem } from './helpers/novidades'
 import { buildRuleLegend, featuresForLegendEntry } from './helpers/legend-rules'
 import { DRAG_PAN, KEY_MOVE_MS, mapKeyAction } from './helpers/map-feel'
 import { useSmoothWheelZoom } from './helpers/use-smooth-wheel-zoom'
+import { sameOrder, stackOrder } from './helpers/layer-order'
+import { useLayerStack } from './useLayerStack'
 import { ExploreHighlight } from './ExploreHighlight'
 import type { ConsultaBounds, ConsultaItem, ConsultaSelection } from '@/types/map-consulta'
 import bbox from '@turf/bbox'
@@ -205,6 +210,8 @@ export default function MapLibreMap({
   const [layers, setLayers] = useState<LayerResponseDTO[]>(() => _cache.layers)
   const [layerData, setLayerData] = useState<Record<string, MapFeatureCollection>>(() => ({ ..._cache.data }))
   const [visibleLayers, setVisibleLayers] = useState<string[]>([])
+  // a ordem que a pessoa escolheu para as camadas, de baixo para cima (13.1); vazia = a do catálogo
+  const [layerOrder, setLayerOrder] = useState<string[]>([])
   const [loadingLayers, setLoadingLayers] = useState(_cache.layers.length === 0)
   const [error, setError] = useState<string | null>(null)
   const [failedLayers, setFailedLayers] = useState<string[]>([])
@@ -267,11 +274,12 @@ export default function MapLibreMap({
     [regiaoId],
   )
 
-  // ── Shapefile preview ───────────────────────────────────────────────────
-  const [previewGeoJSON, setPreviewGeoJSON] = useState<{
-    data: any
-    color: string
-  } | null>(null)
+  // ── Prévia de um arquivo solto no mapa (DropImport) ─────────────────────
+  const [importPreview, setImportPreview] = useState<ImportPreview | null>(null)
+  const previewGeoJSON = importPreview?.kind === 'vetor' ? importPreview : null
+
+  // ── Camadas importadas com anos: o período de cada uma (padrão: o período todo) ──
+  const [yearRanges, setYearRanges] = useState<Record<string, [number, number]>>({})
 
   // ── Hover tooltip ───────────────────────────────────────────────────────
   // fora do estado do mapa: o mouse sobre uma feição troca isto a cada movimento (ver hover-store.ts)
@@ -509,6 +517,7 @@ export default function MapLibreMap({
     setLayers([])
     setLayerData({})
     setVisibleLayers([])
+    setLayerOrder([])
     setLoadingLayers(true)
   }, [regiaoId])
 
@@ -568,7 +577,9 @@ export default function MapLibreMap({
   // Initialize all layers as visible once catalog arrives
   useEffect(() => {
     if (!initializedRef.current && layers.length > 0) {
-      setVisibleLayers(restoreVisibleSlugs(layers, readRegionPrefs(regiaoId).layers))
+      const prefs = readRegionPrefs(regiaoId)
+      setVisibleLayers(restoreVisibleSlugs(layers, prefs.layers))
+      setLayerOrder(prefs.order ?? [])
       initializedRef.current = true
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -725,6 +736,7 @@ export default function MapLibreMap({
     clearBasemap()
     clearMode()
     prefsTouched.current = false
+    setLayerOrder([])
     setVisibleLayers(initialVisibleSlugs(layers))
     setFaunaHeatmapActive(false)
     setFaunaLocationsActive(false)
@@ -796,6 +808,38 @@ export default function MapLibreMap({
         : layers,
     [layers, draft],
   )
+
+  // ── Ordem das camadas no mapa (DESIGN.md 13.1) ───────────────────────────
+  // De baixo para cima: quem vem depois fica por cima. Os ícones (Ações) são elementos HTML e ficam sempre por cima, então não entram na
+  // conta. No padrão, o raster importado fica no fundo: uma mancha de fogo não pode cobrir os alertas que estão sobre ela.
+  const isImportedRaster = useCallback((l: LayerResponseDTO) => {
+    const sc = l.schemaConfig as { source?: string; kind?: string } | undefined
+    return sc?.source === 'drop-import' && sc.kind === 'raster'
+  }, [])
+  const { stacked, icons } = useMemo(() => {
+    const flat = renderLayers.filter((l) => !isIconLayer(l.visualConfig))
+    return { stacked: stackOrder(flat, layerOrder, isImportedRaster), icons: renderLayers.filter((l) => isIconLayer(l.visualConfig)) }
+  }, [renderLayers, layerOrder, isImportedRaster])
+  const orderedLayers = useMemo(() => [...stacked, ...icons], [stacked, icons])
+  const stackSlugs = useMemo(() => stacked.map((l) => l.slug), [stacked])
+  const defaultStackSlugs = useMemo(
+    () => stackOrder(renderLayers.filter((l) => !isIconLayer(l.visualConfig)), undefined, isImportedRaster).map((l) => l.slug),
+    [renderLayers, isImportedRaster],
+  )
+  useLayerStack(mapRef, mapLoaded, stackSlugs)
+
+  const handleOrderChange = useCallback(
+    (topToBottom: string[]) => {
+      const next = [...topToBottom].reverse()
+      setLayerOrder(next)
+      saveRegionPrefs(regiaoId, { order: next })
+    },
+    [regiaoId],
+  )
+  const handleOrderReset = useCallback(() => {
+    setLayerOrder([])
+    saveRegionPrefs(regiaoId, { order: undefined })
+  }, [regiaoId])
 
   const handleEditLayer = useCallback(
     (slug: string) => {
@@ -888,7 +932,7 @@ export default function MapLibreMap({
   // the correct MapLibre stack position from the first render, so late-arriving
   // data (e.g. propriedades at 10s) does not push layers to the top of the stack.
   const processedLayers = useMemo(() => {
-    return renderLayers.map((layer) => {
+    return orderedLayers.map((layer) => {
       const data = layerData[layer.slug]
       const vc = layer.visualConfig
       const ruleField = vc?.rules?.[0]?.field
@@ -911,6 +955,18 @@ export default function MapLibreMap({
 
       // Use loaded data or empty collection — either way Source is registered in order
       let displayData: MapFeatureCollection = data ?? EMPTY_FC
+      // camada importada com anos: só as feições do período escolhido (o período todo é o padrão)
+      const imp = layer.schemaConfig as { source?: string; kind?: string; years?: [number, number]; dateField?: string; yearField?: string } | undefined
+      const range = yearRanges[layer.slug]
+      if (imp?.source === 'drop-import' && imp.kind !== 'raster' && imp.years && range && data) {
+        displayData = {
+          ...data,
+          features: data.features.filter((f) => {
+            const y = featureDate(f.properties as Record<string, unknown>, imp, new Date(NaN)).getUTCFullYear()
+            return Number.isNaN(y) || (y >= range[0] && y <= range[1])
+          }),
+        }
+      }
       if (groupByColumn && activeValues.length > 0 && data) {
         displayData = {
           ...data,
@@ -922,7 +978,27 @@ export default function MapLibreMap({
 
       return { layer, displayData, isIcon: isIconLayer(layer.visualConfig) }
     }).filter((item): item is NonNullable<typeof item> => item !== null)
-  }, [renderLayers, visibleLayers, layerData, EMPTY_FC, draft?.slug])
+  }, [orderedLayers, visibleLayers, layerData, EMPTY_FC, draft?.slug, yearRanges])
+
+  // ── Camadas importadas: rasters ligados (a imagem é pintada com o período) e o controle de período ──
+  const importedYears = useMemo(() => {
+    const items: YearRangeItem[] = []
+    const rasters: RasterSpec[] = []
+    for (const layer of layers) {
+      const sc = layer.schemaConfig as { source?: string; kind?: string; years?: [number, number]; raster?: Omit<RasterSpec, 'key' | 'source' | 'color' | 'years'> } | undefined
+      if (sc?.source !== 'drop-import' || !visibleLayers.includes(layer.slug)) continue
+      const value = yearRanges[layer.slug] ?? sc.years
+      if (sc.years && sc.years[0] < sc.years[1] && value) items.push({ slug: layer.slug, name: layer.name, min: sc.years[0], max: sc.years[1], value })
+      if (sc.kind === 'raster' && sc.raster) {
+        rasters.push({ ...sc.raster, key: layer.slug, source: `/api/layers/${layer.slug}/raster`, color: readStyle(layer.visualConfig as any).fillColor, years: value })
+      }
+    }
+    return { items, rasters }
+  }, [layers, visibleLayers, yearRanges])
+  const rasterSpecs = useMemo(
+    () => (importPreview?.kind === 'raster' ? [...importedYears.rasters, importPreview.spec] : importedYears.rasters),
+    [importedYears.rasters, importPreview],
+  )
 
   // ── interactiveLayerIds for click/hover ───────────────────────────────────
   const interactiveLayerIds = useMemo(
@@ -954,9 +1030,10 @@ export default function MapLibreMap({
       }
       if (slug === 'acoes') setSelectedAcao(props)
       else setSelectedAcao(null)
-      openModal('', <FeatureDetails layerType={slug} properties={props} />)
+      // o título é o nome da camada: sem ele a pessoa não sabe de qual camada são os dados que está lendo
+      openModal(layers.find((l) => l.slug === slug)?.name ?? '', <FeatureDetails layerType={slug} properties={props} />)
     },
-    [openModal, selectExplore, mostrarSituacao]
+    [openModal, selectExplore, mostrarSituacao, layers]
   )
 
   // ── Hover handler para icon markers (HTML Markers não disparam onMouseMove do Map) ──
@@ -1267,6 +1344,12 @@ export default function MapLibreMap({
     ]
   }, [layerManagerOptions])
 
+  // A lista da ordem, de cima para baixo (a de cima da lista é a de cima do mapa)
+  const orderItems = useMemo(
+    () => [...stackSlugs].reverse().map((slug) => layerManagerOptions.find((o) => o.slug === slug)).filter((o): o is LayerManagerOption => !!o),
+    [stackSlugs, layerManagerOptions],
+  )
+
   // A legenda das camadas de pinos (Ações), das regras do catálogo e do que está no mapa agora: a cor e o ícone dizem coisas diferentes
   const ruleLegends = useMemo(() => {
     const out: Record<string, ReturnType<typeof buildRuleLegend>> = {}
@@ -1418,6 +1501,13 @@ export default function MapLibreMap({
     setFaunaFailed(false)
     fetchCatalog(true)
   }, [fetchCatalog])
+
+  // Um arquivo foi salvo como camada: o catálogo é lido de novo (sem o cache) e a camada já nasce ligada, para a pessoa vê-la no mapa
+  const handleImported = useCallback((slug: string) => {
+    prefsTouched.current = true
+    setVisibleLayers((prev) => (prev.includes(slug) ? prev : [...prev, slug]))
+    handleReload()
+  }, [handleReload])
 
   const handleRetryLayer = useCallback((slug: string) => {
     if (slug === 'fauna') { setFaunaFailed(false); return }
@@ -1609,7 +1699,10 @@ export default function MapLibreMap({
                           />
           ))}
 
-        {/* ── Shapefile preview ── */}
+        {/* ── Rasters importados e a prévia de um raster solto no mapa ── */}
+        <RasterLayers specs={rasterSpecs} vectorSlugs={processedLayers.map(({ layer }) => layer.slug)} />
+
+        {/* ── Prévia de um arquivo solto no mapa ── */}
         {previewGeoJSON && (
           <>
             <Source id="preview" type="geojson" data={previewGeoJSON.data} />
@@ -1756,20 +1849,17 @@ export default function MapLibreMap({
       <MapLegend mapRef={mapRef} ready={mapLoaded} options={panelOptions} activeLayers={panelActiveLayers} ruleLegends={ruleLegends} counts={layerCounts} onShow={handleLegendShow} />
       <CameraControls mapRef={mapRef} onZoom={zoomBy} ready={mapLoaded} viewMode={viewMode} onViewModeChange={handleViewModeChange} canFitRegion={!!regionBounds} onFitRegion={handleFitRegion} />
 
-      {/* Shapefile uploader */}
-      {/* <ShapefileUploader
-        onPreview={(data, color) => setPreviewGeoJSON({ data, color })}
-        onClearPreview={() => setPreviewGeoJSON(null)}
-        onSaveSuccess={() => {
-          _cache.data = {}
-          _cache.layers = []
-          pendingBatch.current = {}
-          if (batchTimer.current) { clearTimeout(batchTimer.current); batchTimer.current = null }
-          setLayerData({})
-          fetchingRef.current.clear()
-          fetchCatalog()
-        }}
-      /> */}
+      <YearRangeCard items={importedYears.items} onChange={(slug, value) => setYearRanges((prev) => ({ ...prev, [slug]: value }))} />
+
+      {/* Soltar um arquivo no mapa: mostra a prévia e pede para salvar como camada */}
+      <DropImport
+        regiaoId={regiaoId ?? null}
+        canEdit={canEdit}
+        mapRef={mapRef}
+        onPreview={setImportPreview}
+        onSaved={handleImported}
+        onNotice={setNotice}
+      />
 
       {/* Dock: o que o mapa mostra (Camadas, Filtros), ferramentas (Medir, Consultar) e Imprimir */}
       <MapDock
@@ -1815,6 +1905,13 @@ export default function MapLibreMap({
             shownBasemap={shownBasemap}
             onBasemapChange={handleBasemapChange}
             onReset={handleResetPrefs}
+            order={{
+              items: orderItems,
+              onChange: handleOrderChange,
+              isDefault: sameOrder(stackSlugs, defaultStackSlugs),
+              onReset: handleOrderReset,
+              hasIcons: icons.length > 0,
+            }}
             onPick={isAdmin && picking ? handleEditLayer : undefined}
             onPickGroup={isAdmin && picking ? handleEditGroup : undefined}
             flashSlug={flashSlug}

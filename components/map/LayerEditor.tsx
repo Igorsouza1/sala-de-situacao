@@ -92,7 +92,7 @@ function Segmented({ label, levels, value, onChange }: { label: string; levels: 
   )
 }
 
-function ColorField({ value, onChange }: { value: string; onChange: (hex: string) => void }) {
+export function ColorField({ value, onChange }: { value: string; onChange: (hex: string) => void }) {
   const palette = useMemo(readPalette, [])
   const current = value.toLowerCase()
   const index = palette.findIndex((p) => p.hex === current)
