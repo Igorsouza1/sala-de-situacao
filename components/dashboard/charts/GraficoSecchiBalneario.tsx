@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo } from "react"
+import { periodoHistorico, useHistorico } from "./use-historico"
 import {
   BarChart,
   Bar,
@@ -11,7 +12,7 @@ import {
   ReferenceLine,
   ReferenceArea,
   Cell,
-  ResponsiveContainer,
+  
 } from "recharts"
 import { format, parseISO } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -151,21 +152,8 @@ function StatBadge({ label, value, unit, color }: { label: string; value: string
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-export function GraficoSecchiBalneario() {
-  const [raw, setRaw] = useState<{ periodo: string; secchi: number | null }[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    fetch("/api/balneario-municipal/historico/secchi")
-      .then((r) => r.json())
-      .then((json) => {
-        if (json?.success) setRaw(json.data)
-        else setError("Falha ao carregar dados")
-      })
-      .catch(() => setError("Erro de conexão"))
-      .finally(() => setLoading(false))
-  }, [])
+export function GraficoSecchiBalneario({ year }: { year: string }) {
+  const { raw, loading, error } = useHistorico<{ periodo: string; secchi: number | null }>("/api/balneario-municipal/historico/secchi", year)
 
   const data = useMemo(
     () =>
@@ -237,7 +225,7 @@ export function GraficoSecchiBalneario() {
                 Disco de Secchi — Série Histórica
               </CardTitle>
               <CardDescription className="text-xs mt-0.5">
-                Balneário Municipal · Transparência da água (média mensal) · Jan/2024–{new Date().getFullYear()}
+                Balneário Municipal · Transparência da água (média mensal) · {periodoHistorico(year)}
               </CardDescription>
             </div>
           </div>
@@ -269,7 +257,6 @@ export function GraficoSecchiBalneario() {
           config={{ secchi: { label: "Secchi (m)", color: "#06b6d4" } }}
           className="h-[300px] w-full"
         >
-          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 24 }} barCategoryGap="30%">
 
               {/* Bandas de qualidade no fundo */}
@@ -370,7 +357,6 @@ export function GraficoSecchiBalneario() {
               </Bar>
 
             </BarChart>
-          </ResponsiveContainer>
         </ChartContainer>
 
         {/* Legenda de qualidade */}

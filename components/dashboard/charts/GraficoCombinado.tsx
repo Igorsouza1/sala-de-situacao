@@ -8,7 +8,7 @@ import {
   CartesianGrid,
   XAxis,
   YAxis,
-  ResponsiveContainer,
+  
   ReferenceArea,
   Tooltip,
 } from "recharts"
@@ -241,7 +241,6 @@ function ChartDeque({ data }: { data: DequePoint[] }) {
       }}
       className="h-[380px]"
     >
-      <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 16, right: 56, left: 12, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" opacity={0.25} vertical={false} />
 
@@ -326,7 +325,6 @@ function ChartDeque({ data }: { data: DequePoint[] }) {
             cursor={{ stroke: "var(--color-muted-foreground)", strokeWidth: 1, strokeDasharray: "4 4" }}
           />
         </ComposedChart>
-      </ResponsiveContainer>
     </ChartContainer>
   )
 }
@@ -340,7 +338,6 @@ function ChartPonte({ data }: { data: PontePoint[] }) {
       }}
       className="h-[380px]"
     >
-      <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 16, right: 56, left: 12, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" opacity={0.25} vertical={false} />
 
@@ -395,7 +392,6 @@ function ChartPonte({ data }: { data: PontePoint[] }) {
             cursor={{ stroke: "var(--color-muted-foreground)", strokeWidth: 1, strokeDasharray: "4 4" }}
           />
         </ComposedChart>
-      </ResponsiveContainer>
     </ChartContainer>
   )
 }
@@ -410,7 +406,6 @@ function ChartBalneario({ data }: { data: BalnearioPoint[] }) {
       }}
       className="h-[380px]"
     >
-      <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 16, right: 56, left: 12, bottom: 8 }}>
           <CartesianGrid strokeDasharray="3 3" opacity={0.25} vertical={false} />
 
@@ -474,7 +469,6 @@ function ChartBalneario({ data }: { data: BalnearioPoint[] }) {
             cursor={{ stroke: "var(--color-muted-foreground)", strokeWidth: 1, strokeDasharray: "4 4" }}
           />
         </ComposedChart>
-      </ResponsiveContainer>
     </ChartContainer>
   )
 }

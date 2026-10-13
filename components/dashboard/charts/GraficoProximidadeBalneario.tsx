@@ -328,18 +328,20 @@ function PainelSecchi({ data, preset }: { data: DataPoint[]; preset: Preset }) {
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-export function GraficoProximidadeBalneario() {
+export function GraficoProximidadeBalneario({ year }: { year: string }) {
   const [preset, setPreset]   = useState<Preset>(30)
   const [raw,    setRaw]      = useState<RawRow[]>([])
   const [loading, setLoading] = useState(true)
   const [error,   setError]   = useState<string | null>(null)
 
   useEffect(() => {
+    let active = true
     setLoading(true)
     setError(null)
 
-    const end   = new Date()
-    const start = subDays(end, preset)
+    const now = new Date()
+    const end = year === "todos" || Number(year) === now.getFullYear() ? now : new Date(Number(year), 11, 31)
+    const start = year === "todos" ? subDays(end, preset) : new Date(Math.max(subDays(end, preset).getTime(), new Date(Number(year), 0, 1).getTime()))
     const params = new URLSearchParams({
       startDate: fmtDate(start),
       endDate:   fmtDate(end),
@@ -348,12 +350,14 @@ export function GraficoProximidadeBalneario() {
     fetch(`/api/balneario-municipal/daily?${params}`)
       .then((r) => r.json())
       .then((json) => {
+        if (!active) return
         if (json?.success) setRaw(json.data)
         else setError("Falha ao carregar dados")
       })
-      .catch(() => setError("Erro de conexão"))
-      .finally(() => setLoading(false))
-  }, [preset])
+      .catch(() => { if (active) setError("Erro de conexão") })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
+  }, [preset, year])
 
   const data: DataPoint[] = useMemo(() => {
     const toN = (v: string | null) => (v == null ? NaN : Number(v))

@@ -17,8 +17,8 @@ export async function getAllDequeDataGroupedByMonth(tenantId: string){
         (acc, item) => {
           if (item.data) {
             const date = new Date(item.data)
-            const year = date.getFullYear()
-            const month = date.getMonth()
+            const year = date.getUTCFullYear()
+            const month = date.getUTCMonth()
   
             if (!acc[year]) {
               acc[year] = Array(12)
@@ -187,60 +187,68 @@ function iterMonths(startYear: number, endYear: number, endMonth: number) {
   return months
 }
 
-export async function getTurbidezDequeHistorico(tenantId: string) {
-  const data = await findAllDequeData(tenantId)
+function mesesHistorico(year?: number) {
+  const now = new Date()
+  return iterMonths(year ?? 2024, year ?? now.getFullYear(), year === undefined || year === now.getFullYear() ? now.getMonth() + 1 : 12)
+}
+
+function dadosHistorico(tenantId: string, year?: number) {
+  return year === undefined
+    ? findAllDequeData(tenantId)
+    : findDequeDataByDateRange(tenantId, `${year}-01-01`, `${year}-12-31`)
+}
+
+export async function getTurbidezDequeHistorico(tenantId: string, year?: number) {
+  const data = await dadosHistorico(tenantId, year)
   const byMonth: Record<string, number[]> = {}
   for (const row of data) {
     if (!row.data || row.turbidez == null) continue
     const d = new Date(row.data)
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
     const v = Number(row.turbidez)
     if (Number.isFinite(v)) {
       if (!byMonth[key]) byMonth[key] = []
       byMonth[key].push(v)
     }
   }
-  const now = new Date()
-  return iterMonths(2024, now.getFullYear(), now.getMonth() + 1).map(({ key }) => {
+  return mesesHistorico(year).map(({ key }) => {
     const vals = byMonth[key] ?? []
     const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
     return { periodo: key, turbidez: avg !== null ? Math.round(avg * 100) / 100 : null }
   })
 }
 
-export async function getSecchiDequeHistorico(tenantId: string) {
-  const data = await findAllDequeData(tenantId)
+export async function getSecchiDequeHistorico(tenantId: string, year?: number) {
+  const data = await dadosHistorico(tenantId, year)
   const byMonth: Record<string, number[]> = {}
   for (const row of data) {
     if (!row.data || row.secchiVertical == null) continue
     const d = new Date(row.data)
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
     const v = Number(row.secchiVertical)
     if (Number.isFinite(v) && v > 0) {
       if (!byMonth[key]) byMonth[key] = []
       byMonth[key].push(v)
     }
   }
-  const now = new Date()
-  return iterMonths(2024, now.getFullYear(), now.getMonth() + 1).map(({ key }) => {
+  return mesesHistorico(year).map(({ key }) => {
     const vals = byMonth[key] ?? []
     const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
     return { periodo: key, secchi: avg !== null ? Math.round(avg * 100) / 100 : null }
   })
 }
 
-export async function getPluviometriaDequeHistorico(tenantId: string) {
-  const data = await findAllDequeData(tenantId)
+export async function getPluviometriaDequeHistorico(tenantId: string, year?: number) {
+  const data = await dadosHistorico(tenantId, year)
   const byMonth: Record<string, number> = {}
   for (const row of data) {
     if (!row.data || row.chuva == null) continue
     const d = new Date(row.data)
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
     const v = Number(row.chuva)
     if (Number.isFinite(v)) byMonth[key] = (byMonth[key] ?? 0) + v
   }
-  const now = new Date()
-  return iterMonths(2024, now.getFullYear(), now.getMonth() + 1).map(({ key }) => ({
+  return mesesHistorico(year).map(({ key }) => ({
     periodo: key,
     pluviometria: Math.round((byMonth[key] ?? 0) * 10) / 10,
   }))

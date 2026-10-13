@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { TrendingUp } from "lucide-react"
-import { Pie, PieChart, ResponsiveContainer, Label } from "recharts"
+import { Pie, PieChart, Label } from "recharts"
 import { type ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { useAcoes } from "@/context/AcoesContext"
 
@@ -83,7 +83,6 @@ export function GraficoAcoes() {
   return (
     <div className="w-full">
       <ChartContainer config={chartConfig} className="w-full aspect-[4/3]">
-        <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <ChartTooltip
               cursor={false}
@@ -126,7 +125,6 @@ export function GraficoAcoes() {
               />
             </Pie>
           </PieChart>
-        </ResponsiveContainer>
       </ChartContainer>
       <div className="mt-4 flex items-center justify-center gap-2 text-sm">
         <TrendingUp className="h-4 w-4 text-muted-foreground" />

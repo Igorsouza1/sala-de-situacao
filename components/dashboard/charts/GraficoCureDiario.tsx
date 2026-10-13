@@ -1,6 +1,6 @@
 "use client"
 
-import { ComposedChart, Line, Bar, CartesianGrid, XAxis, YAxis, ResponsiveContainer, Tooltip } from "recharts"
+import { ComposedChart, Line, Bar, CartesianGrid, XAxis, YAxis, Tooltip } from "recharts"
 import { useMemo, useState, useCallback, type JSX } from "react"
 import { format, parseISO, differenceInCalendarDays } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -225,7 +225,6 @@ export function GraficoPonteCure(): JSX.Element {
             }}
             className="h-[400px]"
           >
-            <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={displayData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
 
@@ -300,7 +299,6 @@ export function GraficoPonteCure(): JSX.Element {
 
                 <Tooltip content={<CustomTooltip />} />
               </ComposedChart>
-            </ResponsiveContainer>
           </ChartContainer>
 
           <div className="flex flex-wrap gap-4 justify-center text-sm">

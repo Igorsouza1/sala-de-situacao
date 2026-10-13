@@ -7,6 +7,8 @@ import Map, {
   Popup,
   Marker,
 } from 'react-map-gl/maplibre'
+import { FadeLayer } from './FadeLayer'
+import { useRegion } from '@/context/RegionContext'
 import 'maplibre-gl/dist/maplibre-gl.css'
 import {
   useEffect,
@@ -71,6 +73,7 @@ import { useSmoothWheelZoom } from './helpers/use-smooth-wheel-zoom'
 import { ExploreHighlight } from './ExploreHighlight'
 import type { ConsultaBounds, ConsultaItem, ConsultaSelection } from '@/types/map-consulta'
 import bbox from '@turf/bbox'
+import type { Geometry } from 'geojson'
 import { MapHoverPopups } from './MapHoverPopups'
 import { createHoverStore, type HoverStore } from './helpers/hover-store'
 import { ToolFeedback } from './ToolFeedback'
@@ -348,11 +351,8 @@ export default function MapLibreMap({
   const [mapLoaded, setMapLoaded] = useState(false)
   const zoomBy = useSmoothWheelZoom(mapRef, mapLoaded)
   const fitBoundsDone = useRef(false)
-  const [regionBounds, setRegionBounds] = useState<{
-    nome?: string | null
-    center: [number, number]
-    bbox: [number, number, number, number]
-  } | null>(null)
+  // o perfil da região vem do RegionProvider (um pedido só, também usado pela identidade da tela)
+  const { region: regionBounds } = useRegion()
 
   // ── Explorar (DESIGN.md 13.5): o registro aberto no painel e o que ele desenha no mapa ──────────────────────────
   const [dockOpen, setDockOpen] = useState<string | null>(null)
@@ -407,6 +407,29 @@ export default function MapLibreMap({
     const t = setTimeout(() => setSituacaoAlvo(null), 200)
     return () => clearTimeout(t)
   }, [dockOpen])
+
+  // O alerta (ou área) que a Situação está mostrando: o mapa o enquadra no espaço livre ao lado do painel e o desenha (a mesma
+  // linguagem do Explorar, 13.5). Sai quando a pessoa volta ao resumo ou fecha o painel.
+  const [situacaoDestaque, setSituacaoDestaque] = useState<Geometry | null>(null)
+  useEffect(() => { if (!situacaoAlvo) setSituacaoDestaque(null) }, [situacaoAlvo])
+  const mostrarSituacao = useCallback((geometry: Geometry, mover = true) => {
+    setSituacaoDestaque(geometry)
+    const map = mapRef.current
+    if (!mover || !map) return
+    const [w, s, e, n] = bbox(geometry)
+    if (![w, s, e, n].every(Number.isFinite)) return
+    const height = map.getContainer().clientHeight
+    const width = map.getContainer().clientWidth
+    // o painel Situação é largo (40rem) e fica à esquerda; no celular sobe de baixo e ocupa até 55% da altura
+    const padding = width < 640
+      ? { top: 80, bottom: Math.round(height * 0.6), left: 40, right: 40 }
+      : { top: 80, bottom: 110, left: Math.min(700, Math.round(width * 0.6)), right: 40 }
+    map.fitBounds([[w, s], [e, n]], {
+      padding,
+      maxZoom: geometry.type === 'Point' ? Math.min(16, map.getZoom() + 1.25) : 16,
+      duration: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 1200,
+    })
+  }, [])
 
   // ── Fetch catalog metadata (lightweight, no GeoJSON) ────────────────────
   // `fresh`: o Atualizar ignora o cache do navegador (a API guarda o catálogo por 2 minutos), senão traria a versão de antes da edição
@@ -493,15 +516,6 @@ export default function MapLibreMap({
   useEffect(() => {
     fetchCatalog()
   }, [fetchCatalog])
-
-  // ── Fetch region bounds for initial map positioning ──────────────────────
-  useEffect(() => {
-    const url = regiaoId ? `/api/map/region?regiao_id=${regiaoId}` : '/api/map/region'
-    fetch(url)
-      .then((r) => r.ok ? r.json() : null)
-      .then((data) => { if (data) setRegionBounds(data) })
-      .catch(() => { /* silent: falls back to default center */ })
-  }, [regiaoId])
 
   // Fit map to region once both map and region data are ready (fires once)
   useEffect(() => {
@@ -923,12 +937,14 @@ export default function MapLibreMap({
 
   // ── Shared feature-click handler (usado por layers MapLibre E por icon markers) ──
   const openFeatureModal = useCallback(
-    (slug: string, props: Record<string, any>) => {
+    (slug: string, props: Record<string, any>, geometry?: Geometry) => {
       // focos, desmatamento e estações abrem no painel Situação, no detalhe do assunto
       const alvo = alvoDaCamada(slug, props)
       if (alvo) {
         setSituacaoAlvo(alvo)
         setDockOpen('situacao')
+        // clicar num alerta leva o mapa até ele: sem isso a pessoa lê sobre um lugar que não está vendo
+        if (alvo.tipo === 'desmatamento' && geometry) mostrarSituacao(geometry)
         return
       }
       // ação e propriedade abrem no painel Explorar (o dossiê completo está lá, em "Abrir dossiê"); o resto segue no modal
@@ -940,7 +956,7 @@ export default function MapLibreMap({
       else setSelectedAcao(null)
       openModal('', <FeatureDetails layerType={slug} properties={props} />)
     },
-    [openModal, selectExplore]
+    [openModal, selectExplore, mostrarSituacao]
   )
 
   // ── Hover handler para icon markers (HTML Markers não disparam onMouseMove do Map) ──
@@ -994,7 +1010,7 @@ export default function MapLibreMap({
       if (!e.features?.length) return
       const feature = e.features[0]
       const slug = feature.layer.id.replace(/-(fill|circle|line|hover-circle)$/, '')
-      openFeatureModal(slug, feature.properties ?? {})
+      openFeatureModal(slug, feature.properties ?? {}, feature.geometry)
     },
     [coordInspectorActive, propertyInfoActive, selectProperty, measureMode, measureDrawing, openFeatureModal]
   )
@@ -1527,14 +1543,14 @@ export default function MapLibreMap({
             const outlineOpacity: number = mlConfig?.outlinePaint?.['line-opacity'] ?? style?.opacity ?? 0.8
             return [
               source,
-              <Layer
+              <FadeLayer
                 key={`${layer.slug}-fill`}
                 id={`${layer.slug}-fill`}
                 source={layer.slug}
                 type="fill"
                 paint={fillPaint as any}
               />,
-              <Layer
+              <FadeLayer
                 key={`${layer.slug}-outline`}
                 id={`${layer.slug}-outline`}
                 source={layer.slug}
@@ -1552,7 +1568,7 @@ export default function MapLibreMap({
             const paint = mlConfig?.paint ?? toCirclePaint(style)
             return [
               source,
-              <Layer
+              <FadeLayer
                 key={`${layer.slug}-circle`}
                 id={`${layer.slug}-circle`}
                 source={layer.slug}
@@ -1565,7 +1581,7 @@ export default function MapLibreMap({
           const paint = mlConfig?.paint ?? toLinePaint(style)
           return [
             source,
-            <Layer
+            <FadeLayer
               key={`${layer.slug}-line`}
               id={`${layer.slug}-line`}
               source={layer.slug}
@@ -1575,7 +1591,7 @@ export default function MapLibreMap({
           ]
         })}
 
-        {exploreFeature?.geometry && <ExploreHighlight geometry={exploreFeature.geometry} basemap={shownBasemap} />}
+        {(exploreFeature?.geometry ?? situacaoDestaque) && <ExploreHighlight geometry={(exploreFeature?.geometry ?? situacaoDestaque)!} basemap={shownBasemap} />}
         {legendFlash && !legendFlash.blink && <LegendFlash features={legendFlash.features} on={legendFlash.on} basemap={shownBasemap} />}
 
         {/* ── Icon layers (HTML Markers com ícones Lucide por feature) ── */}
@@ -1874,7 +1890,7 @@ export default function MapLibreMap({
           />
         </DockPanelButton>
         <DockPanelButton id="situacao" icon={LucideIcons.Activity} label="Situação" motion="rise" side wide>
-          <SituacaoPanel open={dockOpen === 'situacao'} alvo={situacaoAlvo} onAlvo={setSituacaoAlvo} />
+          <SituacaoPanel open={dockOpen === 'situacao'} alvo={situacaoAlvo} onAlvo={setSituacaoAlvo} regiaoId={regiaoId} onMostrar={mostrarSituacao} />
         </DockPanelButton>
         <DockDivider />
         <ToolMenu

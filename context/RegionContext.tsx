@@ -1,6 +1,7 @@
 "use client"
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react"
+import { useSearchParams } from "next/navigation"
 
 /**
  * Perfil da Região do usuário logado — identidade exibida na UI
@@ -24,27 +25,42 @@ interface RegionContextValue {
 
 const RegionContext = createContext<RegionContextValue>({ region: null, loading: true })
 
+// Uma consulta por endereço, mesmo que dois componentes (ou o Strict Mode em desenvolvimento) peçam ao mesmo tempo.
+const emAndamento = new Map<string, Promise<RegionProfile | null>>()
+
+function carregarRegiao(url: string): Promise<RegionProfile | null> {
+  let p = emAndamento.get(url)
+  if (!p) {
+    p = fetch(url)
+      .then((res) => (res.ok ? (res.json() as Promise<RegionProfile | null>) : null))
+      .catch(() => null)
+      .finally(() => emAndamento.delete(url))
+    emAndamento.set(url, p)
+  }
+  return p
+}
+
+// Quem navega para uma região específica (`?regiao_id=`) vê o perfil dela; sem o parâmetro, o conjunto das regiões da pessoa.
+// O mapa usa este mesmo perfil para enquadrar a câmera: um pedido só para os dois.
 export function RegionProvider({ children }: { children: ReactNode }) {
+  const regiaoId = useSearchParams().get("regiao_id")
+  const url = regiaoId ? `/api/map/region?regiao_id=${encodeURIComponent(regiaoId)}` : "/api/map/region"
   const [region, setRegion] = useState<RegionProfile | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     let cancelled = false
-    fetch("/api/map/region")
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (!cancelled) setRegion(data ?? null)
-      })
-      .catch(() => {
-        if (!cancelled) setRegion(null)
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
+    setRegion(null)
+    setLoading(true)
+    carregarRegiao(url).then((data) => {
+      if (cancelled) return
+      setRegion(data)
+      setLoading(false)
+    })
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [url])
 
   return <RegionContext.Provider value={{ region, loading }}>{children}</RegionContext.Provider>
 }

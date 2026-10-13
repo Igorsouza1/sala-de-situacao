@@ -19,8 +19,8 @@ export async function getAllBalnearioDataGroupedByMonth(tenantId: string) {
     (acc, item) => {
       if (item.data) {
         const date = new Date(item.data)
-        const year = date.getFullYear()
-        const month = date.getMonth()
+        const year = date.getUTCFullYear()
+        const month = date.getUTCMonth()
 
         if (!acc[year]) {
           acc[year] = Array(12)
@@ -193,15 +193,34 @@ export async function getSecchiBalnearioIndicador(tenantId: string) {
   return { current, mtdAtual, mtdPassado, deltaPct, lastDate: lastRow?.data ?? null }
 }
 
-export async function getSecchiBalnearioHistorico(tenantId: string) {
-  const data = await findAllBalnearioData(tenantId)
+function dadosHistorico(tenantId: string, year?: number) {
+  return year === undefined
+    ? findAllBalnearioData(tenantId)
+    : findBalnearioDataByDateRange(tenantId, `${year}-01-01`, `${year}-12-31`)
+}
+
+function mesesHistorico(year?: number) {
+  const now = new Date()
+  const lastYear = year ?? now.getFullYear()
+  const lastMonth = year === undefined || year === now.getFullYear() ? now.getMonth() + 1 : 12
+  const months: string[] = []
+  for (let y = year ?? 2024; y <= lastYear; y++) {
+    for (let m = 1; m <= (y === lastYear ? lastMonth : 12); m++) {
+      months.push(`${y}-${String(m).padStart(2, "0")}`)
+    }
+  }
+  return months
+}
+
+export async function getSecchiBalnearioHistorico(tenantId: string, year?: number) {
+  const data = await dadosHistorico(tenantId, year)
 
   const byMonth: Record<string, number[]> = {}
 
   for (const row of data) {
     if (!row.data || row.secchiVertical == null) continue
     const d = new Date(row.data)
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
     const v = Number(row.secchiVertical)
     if (Number.isFinite(v) && v > 0) {
       if (!byMonth[key]) byMonth[key] = []
@@ -210,31 +229,24 @@ export async function getSecchiBalnearioHistorico(tenantId: string) {
   }
 
   const result: { periodo: string; secchi: number | null }[] = []
-  const now = new Date()
-  let y = 2024
-  let m = 1
-
-  while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
-    const key = `${y}-${String(m).padStart(2, "0")}`
+  for (const key of mesesHistorico(year)) {
     const vals = byMonth[key] ?? []
     const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
     result.push({ periodo: key, secchi: avg !== null ? Math.round(avg * 100) / 100 : null })
-    m++
-    if (m > 12) { m = 1; y++ }
   }
 
   return result
 }
 
-export async function getPluviometriaBalnearioHistorico(tenantId: string) {
-  const data = await findAllBalnearioData(tenantId)
+export async function getPluviometriaBalnearioHistorico(tenantId: string, year?: number) {
+  const data = await dadosHistorico(tenantId, year)
 
   const byMonth: Record<string, number> = {}
 
   for (const row of data) {
     if (!row.data || row.pluviometria == null) continue
     const d = new Date(row.data)
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
     const v = Number(row.pluviometria)
     if (Number.isFinite(v)) {
       byMonth[key] = (byMonth[key] ?? 0) + v
@@ -242,29 +254,22 @@ export async function getPluviometriaBalnearioHistorico(tenantId: string) {
   }
 
   const result: { periodo: string; pluviometria: number }[] = []
-  const now = new Date()
-  let y = 2024
-  let m = 1
-
-  while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
-    const key = `${y}-${String(m).padStart(2, "0")}`
+  for (const key of mesesHistorico(year)) {
     result.push({ periodo: key, pluviometria: Math.round((byMonth[key] ?? 0) * 10) / 10 })
-    m++
-    if (m > 12) { m = 1; y++ }
   }
 
   return result
 }
 
-export async function getNivelRioBalnearioHistorico(tenantId: string) {
-  const data = await findAllBalnearioData(tenantId)
+export async function getNivelRioBalnearioHistorico(tenantId: string, year?: number) {
+  const data = await dadosHistorico(tenantId, year)
 
   const byMonth: Record<string, number[]> = {}
 
   for (const row of data) {
     if (!row.data || row.nivelAgua == null) continue
     const d = new Date(row.data)
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+    const key = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`
     const v = Number(row.nivelAgua)
     if (Number.isFinite(v)) {
       if (!byMonth[key]) byMonth[key] = []
@@ -273,17 +278,10 @@ export async function getNivelRioBalnearioHistorico(tenantId: string) {
   }
 
   const result: { periodo: string; nivelAgua: number | null }[] = []
-  const now = new Date()
-  let y = 2024
-  let m = 1
-
-  while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth() + 1)) {
-    const key = `${y}-${String(m).padStart(2, "0")}`
+  for (const key of mesesHistorico(year)) {
     const vals = byMonth[key] ?? []
     const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null
     result.push({ periodo: key, nivelAgua: avg !== null ? Math.round(avg * 100) / 100 : null })
-    m++
-    if (m > 12) { m = 1; y++ }
   }
 
   return result

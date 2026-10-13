@@ -6,8 +6,8 @@ import { firmsRepository, findAllFirmsData } from "../repositories/firmsReposito
 // Supabase Edge Functions (supabase/functions/firms-sync|firms-notify,
 // ADR 0009). Este service atende só os indicadores do dashboard.
 
-export async function getAllFirmsData(tenantId: string, isSuperadmin: boolean, regiaoIds?: number | number[]) {
-  const result = await findAllFirmsData(tenantId, isSuperadmin, regiaoIds);
+export async function getAllFirmsData(tenantId: string, isSuperadmin: boolean, regiaoIds?: number | number[], year?: number) {
+  const result = await findAllFirmsData(tenantId, isSuperadmin, regiaoIds, year);
   const rows = result.rows;
 
   const data: Record<number, number[]> = {};
@@ -17,8 +17,8 @@ export async function getAllFirmsData(tenantId: string, isSuperadmin: boolean, r
     if (!dateStr) continue;
 
     const date = new Date(dateStr);
-    const year = date.getFullYear();
-    const month = date.getMonth(); // 0-11
+    const year = date.getUTCFullYear();
+    const month = date.getUTCMonth(); // 0-11
 
     if (!data[year]) {
       data[year] = Array(12).fill(0);

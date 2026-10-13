@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo } from "react"
+import { periodoHistorico, useHistorico } from "./use-historico"
 import {
   AreaChart,
   Area,
@@ -9,7 +10,7 @@ import {
   YAxis,
   Tooltip,
   ReferenceLine,
-  ResponsiveContainer,
+  
 } from "recharts"
 import { format, parseISO } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -131,21 +132,8 @@ function StatBadge({ label, value, unit }: { label: string; value: string; unit?
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-export function GraficoNivelRioBalneario() {
-  const [raw, setRaw] = useState<{ periodo: string; nivelAgua: number | null }[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    fetch("/api/balneario-municipal/historico/nivel-rio")
-      .then((r) => r.json())
-      .then((json) => {
-        if (json?.success) setRaw(json.data)
-        else setError("Falha ao carregar dados")
-      })
-      .catch(() => setError("Erro de conexão"))
-      .finally(() => setLoading(false))
-  }, [])
+export function GraficoNivelRioBalneario({ year }: { year: string }) {
+  const { raw, loading, error } = useHistorico<{ periodo: string; nivelAgua: number | null }>("/api/balneario-municipal/historico/nivel-rio", year)
 
   // Enriquecer os dados com labels e flags
   const data: DataPoint[] = useMemo(
@@ -240,7 +228,7 @@ export function GraficoNivelRioBalneario() {
                 Nível da Água — Série Histórica
               </CardTitle>
               <CardDescription className="text-xs mt-0.5">
-                Balneário Municipal · Médias mensais · Jan/2024–{new Date().getFullYear()}
+                Balneário Municipal · Médias mensais · {periodoHistorico(year)}
               </CardDescription>
             </div>
           </div>
@@ -268,7 +256,6 @@ export function GraficoNivelRioBalneario() {
           config={{ nivelAgua: { label: "Nível da Água (cm)", color: "hsl(217, 91%, 60%)" } }}
           className="h-[300px] w-full"
         >
-          <ResponsiveContainer width="100%" height="100%">
             <AreaChart
               data={data}
               margin={{ top: 8, right: 8, left: 0, bottom: 24 }}
@@ -352,7 +339,6 @@ export function GraficoNivelRioBalneario() {
                 }}
               />
             </AreaChart>
-          </ResponsiveContainer>
         </ChartContainer>
 
         {/* Legenda de referência */}

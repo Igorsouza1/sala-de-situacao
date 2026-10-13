@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useState, type ReactNode } from "react"
-import { ArrowLeft, CloudRain, Droplet, Droplets, Eye, Flame, PawPrint, RefreshCw, TreePine, Waves, type LucideIcon } from "lucide-react"
+import { ArrowLeft, CloudRain, Droplet, Droplets, Eye, Flame, Info, PawPrint, RefreshCw, TriangleAlert, TreePine, Waves, type LucideIcon } from "lucide-react"
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -23,12 +23,12 @@ import { GraficoSecchiBalneario } from "@/components/dashboard/charts/GraficoSec
 import { GraficoSaudeRio } from "@/components/dashboard/charts/GraficoSaudeRio"
 import { GraficoProximidadeBalneario } from "@/components/dashboard/charts/GraficoProximidadeBalneario"
 import { GraficoPonteCure } from "@/components/dashboard/charts/GraficoCureDiario"
-import { useBalnearioMunicipal } from "@/context/BalnearioMunicipalContext"
-import { useDequePedras } from "@/context/DequePedrasContext"
 import { useDesmatamento } from "@/context/DesmatamentoContext"
 import { useFogo } from "@/context/FogoContext"
 import { useJson } from "./use-json"
+import { RelatorioDesmatamento } from "./relatorio-desmatamento"
 import type { Alvo, TipoAlvo } from "./alvo"
+import type { OnMostrar } from "./SituacaoPanel"
 
 const SEM_SYNC = "Esta estação ainda não recebe leituras novas: o que aparece é o que já estava guardado."
 
@@ -58,10 +58,11 @@ function SeletorAno({ ano, onChange }: { ano: string; onChange: (ano: string) =>
   const anos = Array.from({ length: new Date().getFullYear() - 2020 }, (_, i) => String(new Date().getFullYear() - i))
   return (
     <Select value={ano} onValueChange={onChange}>
-      <SelectTrigger aria-label="Período" className="h-10 w-44 rounded-sm bg-card text-sm">
+      <SelectTrigger aria-label="Período" className="h-10 w-44 rounded-sm bg-card text-sm focus:ring-inset focus:ring-offset-0">
         <SelectValue />
       </SelectTrigger>
-      <SelectContent>
+      {/* acima do dock do mapa (z-[1000]); sem isso a lista abre por trás e o seletor parece morto */}
+      <SelectContent className="z-[1200]">
         <SelectItem value="todos">Todo o período</SelectItem>
         {anos.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
       </SelectContent>
@@ -93,8 +94,22 @@ function Moldura({ tipo, voltar, acao, children }: { tipo: TipoAlvo; voltar: () 
   )
 }
 
-function Aviso({ children }: { children: ReactNode }) {
-  return <p className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-muted-foreground">{children}</p>
+// O aviso diz o tom em cor e em ícone (4.2): atenção é âmbar, informação é neutra. O texto fica na cor normal (o âmbar nunca é texto).
+const TONS_AVISO = {
+  atencao: { Icone: TriangleAlert, borda: "border-warn/50", fundo: "bg-warn/15", cor: "text-warn" },
+  info: { Icone: Info, borda: "border-border", fundo: "bg-muted", cor: "text-muted-foreground" },
+} as const
+
+function Aviso({ tom = "info", children }: { tom?: keyof typeof TONS_AVISO; children: ReactNode }) {
+  const { Icone, borda, fundo, cor } = TONS_AVISO[tom]
+  return (
+    <div role={tom === "atencao" ? "alert" : "status"} className={`flex items-start gap-3 rounded-lg border bg-card p-4 ${borda}`}>
+      <span aria-hidden className={`flex h-8 w-8 flex-none items-center justify-center rounded-full ${fundo} ${cor}`}>
+        <Icone className="h-4 w-4" />
+      </span>
+      <p className="min-w-0 flex-1 self-center text-sm">{children}</p>
+    </div>
+  )
 }
 
 // o registro clicado no mapa, dito em frases (nenhum nome de coluna na tela)
@@ -138,22 +153,23 @@ function DetalheFocos({ item, voltar }: { item?: Record<string, unknown>; voltar
   )
 }
 
-function DetalheDesmatamento({ item, voltar }: { item?: Record<string, unknown>; voltar: () => void }) {
+function DetalheDesmatamentoSerie({ voltar }: { voltar: () => void }) {
   const { selectedYear, setSelectedYear } = useDesmatamento()
-  const ha = Number(item?.alertha)
   return (
     <Moldura tipo="desmatamento" voltar={voltar} acao={<SeletorAno ano={selectedYear} onChange={setSelectedYear} />}>
-      {item && (
-        <Registro
-          titulo="Este alerta"
-          linhas={[
-            ["Área", Number.isFinite(ha) ? `${ha.toLocaleString("pt-BR", { maximumFractionDigits: 2 })} hectares` : null],
-            ["Detectado em", item.detectat ? formatDate(String(item.detectat)) : null],
-            ["Estado", txt(item.state)],
-          ]}
-        />
-      )}
       <GraficoDesmatamento />
+    </Moldura>
+  )
+}
+
+function DetalheDesmatamento({ item, voltar, regiaoId, onMostrar }: { item?: Record<string, unknown>; voltar: () => void; regiaoId?: number; onMostrar?: OnMostrar }) {
+  if (!item) return <DetalheDesmatamentoSerie voltar={voltar} />
+  const alertaId = Number(item.id)
+  return (
+    <Moldura tipo="desmatamento" voltar={voltar}>
+      {Number.isSafeInteger(alertaId) && alertaId > 0
+        ? <RelatorioDesmatamento alertaId={alertaId} regiaoId={regiaoId} onMostrar={onMostrar} />
+        : <Aviso>Este alerta não tem um identificador válido para consultar a propriedade.</Aviso>}
     </Moldura>
   )
 }
@@ -195,26 +211,26 @@ function DetalheJavali({ voltar }: { voltar: () => void }) {
 }
 
 function DetalhePrata({ voltar }: { voltar: () => void }) {
-  const { selectedYear, setSelectedYear } = useDequePedras()
+  const [selectedYear, setSelectedYear] = useState(() => String(new Date().getFullYear()))
   const turbidez = useJson<{ current: number | null; deltaPct: number | null; sparkline: number[]; status: "normal" | "atencao" | "critico"; secchiVertical: number | null; lastDate: string | null }>("/api/deque-pedras/indicadores/turbidez")
   const chuva = useJson<{ mtdAtual: number | null; deltaPct: number | null }>("/api/deque-pedras/indicadores/chuva")
   const t = turbidez.data
   return (
     <Moldura tipo="prata" voltar={voltar} acao={<SeletorAno ano={selectedYear} onChange={setSelectedYear} />}>
-      <Aviso>{SEM_SYNC}</Aviso>
+      <Aviso tom="atencao">{SEM_SYNC}</Aviso>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <KpiCard title="Turbidez" icon={Droplets} value={t?.current ?? null} unit="NTU" trend={trend(t?.deltaPct)} trendSemantic="negativo" trendLabel={pct(t?.deltaPct, "vs semana anterior")} sparklineData={t?.sparkline} colorScheme={t ? (t.status === "critico" ? "danger" : t.status === "atencao" ? "warning" : "success") : "info"} loading={turbidez.estado === "carregando"} />
         <KpiCard title="Pluviometria" icon={CloudRain} value={chuva.data?.mtdAtual ?? null} unit="mm" trend={trend(chuva.data?.deltaPct)} trendSemantic="neutro" trendLabel={pct(chuva.data?.deltaPct, "vs mesmo período ano passado")} colorScheme="info" loading={chuva.estado === "carregando"} />
       </div>
-      <GraficoTurbidezDeque />
-      <GraficoSecchiDeque />
-      <GraficoPluviometriaDeque />
+      <GraficoTurbidezDeque year={selectedYear} />
+      <GraficoSecchiDeque year={selectedYear} />
+      <GraficoPluviometriaDeque year={selectedYear} />
     </Moldura>
   )
 }
 
 function DetalheFormoso({ voltar }: { voltar: () => void }) {
-  const { selectedYear, setSelectedYear } = useBalnearioMunicipal()
+  const [selectedYear, setSelectedYear] = useState(() => String(new Date().getFullYear()))
   const { canEdit } = useUserRole()
   const { toast } = useToast()
   const [sincronizando, setSincronizando] = useState(false)
@@ -253,11 +269,11 @@ function DetalheFormoso({ voltar }: { voltar: () => void }) {
         <KpiCard title="Pluviometria" icon={CloudRain} value={chuva.data?.mtdAtual ?? null} unit="mm" trend={trend(chuva.data?.deltaPct)} trendSemantic="neutro" trendLabel={pct(chuva.data?.deltaPct, "vs mesmo período ano passado")} colorScheme="info" loading={chuva.estado === "carregando"} />
         <KpiCard title="Secchi vertical" icon={Eye} value={secchi.data?.current ?? null} unit="m" trend={trend(secchi.data?.deltaPct)} trendSemantic="neutro" trendLabel={pct(secchi.data?.deltaPct, "vs mesmo período ano passado")} colorScheme="info" loading={secchi.estado === "carregando"} />
       </div>
-      <GraficoNivelRioBalneario />
-      <GraficoPluviometriaBalneario />
-      <GraficoSecchiBalneario />
-      <GraficoSaudeRio />
-      <GraficoProximidadeBalneario />
+      <GraficoNivelRioBalneario year={selectedYear} />
+      <GraficoPluviometriaBalneario year={selectedYear} />
+      <GraficoSecchiBalneario year={selectedYear} />
+      <GraficoSaudeRio key={`saude-${selectedYear}`} year={selectedYear} />
+      <GraficoProximidadeBalneario key={`proximidade-${selectedYear}`} year={selectedYear} />
     </Moldura>
   )
 }
@@ -265,16 +281,16 @@ function DetalheFormoso({ voltar }: { voltar: () => void }) {
 function DetalheCure({ voltar }: { voltar: () => void }) {
   return (
     <Moldura tipo="cure" voltar={voltar}>
-      <Aviso>{SEM_SYNC}</Aviso>
+      <Aviso tom="atencao">{SEM_SYNC}</Aviso>
       <GraficoPonteCure />
     </Moldura>
   )
 }
 
-export function Detalhe({ alvo, voltar }: { alvo: Alvo; voltar: () => void }) {
+export function Detalhe({ alvo, voltar, regiaoId, onMostrar }: { alvo: Alvo; voltar: () => void; regiaoId?: number; onMostrar?: OnMostrar }) {
   switch (alvo.tipo) {
     case "focos": return <DetalheFocos item={alvo.item} voltar={voltar} />
-    case "desmatamento": return <DetalheDesmatamento item={alvo.item} voltar={voltar} />
+    case "desmatamento": return <DetalheDesmatamento item={alvo.item} voltar={voltar} regiaoId={regiaoId} onMostrar={onMostrar} />
     case "javali": return <DetalheJavali voltar={voltar} />
     case "formoso": return <DetalheFormoso voltar={voltar} />
     case "prata": return <DetalhePrata voltar={voltar} />

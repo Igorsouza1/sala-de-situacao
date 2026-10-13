@@ -21,11 +21,12 @@ function firmsReadScope(tenantId: string, isSuperadmin: boolean, regiaoIds?: num
   )`;
 }
 
-export async function findAllFirmsData(tenantId: string, isSuperadmin: boolean, regiaoIds?: number | number[]) {
+export async function findAllFirmsData(tenantId: string, isSuperadmin: boolean, regiaoIds?: number | number[], year?: number) {
   const result = await db.execute(sql`
       SELECT id, acq_date, acq_time, frp, satellite, cod_imovel
       FROM "monitoramento"."raw_firms"
       WHERE ${firmsReadScope(tenantId, isSuperadmin, regiaoIds)}
+        ${year == null ? sql`` : sql`AND acq_date >= ${`${year}-01-01`} AND acq_date < ${`${year + 1}-01-01`}`}
     `)
 
   return result

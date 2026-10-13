@@ -1,16 +1,10 @@
 import { db } from "@/db"
 import { javaliAvistamentosInMonitoramento } from "@/db/schema"
-import { gte, lte, and } from "drizzle-orm"
+import { gte, lte, and, count } from "drizzle-orm"
 
-export async function findAllJavaliAvistamentos() {
-  return db
-    .select({
-      id: javaliAvistamentosInMonitoramento.id,
-      tipo: javaliAvistamentosInMonitoramento.tipo,
-      createdAt: javaliAvistamentosInMonitoramento.createdAt,
-    })
-    .from(javaliAvistamentosInMonitoramento)
-    .execute()
+export async function countJavaliAvistamentos() {
+  const [row] = await db.select({ total: count() }).from(javaliAvistamentosInMonitoramento)
+  return row?.total ?? 0
 }
 
 export async function findJavaliAvistamentosByDateRange(startDate: string, endDate: string) {

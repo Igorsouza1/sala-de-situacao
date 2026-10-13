@@ -7,7 +7,7 @@ import {
   CartesianGrid,
   XAxis,
   YAxis,
-  ResponsiveContainer,
+  
   ReferenceArea,
   Tooltip,
 } from "recharts"
@@ -164,7 +164,6 @@ export function GraficoTurbidezDiario(): JSX.Element {
             }}
             className="h-[400px]"
           >
-            <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={displayData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                 <CartesianGrid strokeDasharray="3 3" opacity={0.3} vertical={false} />
                 <XAxis
@@ -237,7 +236,6 @@ export function GraficoTurbidezDiario(): JSX.Element {
                     cursor={{ stroke: "var(--color-muted-foreground)", strokeWidth: 1, strokeDasharray: "4 4" }}
                 />
               </ComposedChart>
-            </ResponsiveContainer>
           </ChartContainer>
 
           <div className="flex flex-wrap gap-4 justify-center text-sm">

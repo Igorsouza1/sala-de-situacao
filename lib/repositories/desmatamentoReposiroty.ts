@@ -26,7 +26,7 @@ export async function findExistingDesmatamentoAlertids(
   return new Set(rows.map((r) => r.alertid).filter((id): id is string => id !== null));
 }
 
-export async function findAllDesmatamentoData(tenantId: string, isSuperadmin: boolean, regiaoIds?: number | number[]) {
+export async function findAllDesmatamentoData(tenantId: string, isSuperadmin: boolean, regiaoIds?: number | number[], year?: number) {
   // A associação pode existir em várias Regiões; hectares contam uma única vez.
   const regionFilter = regiaoIds == null ? sql`` : Array.isArray(regiaoIds)
     ? regiaoIds.length ? sql`AND r.id IN (${sql.join(regiaoIds.map(id => sql`${id}`), sql`, `)})` : sql`AND false`
@@ -47,7 +47,10 @@ export async function findAllDesmatamentoData(tenantId: string, isSuperadmin: bo
       state: desmatamentoInMonitoramento.state,
       stateha: desmatamentoInMonitoramento.stateha,
     }
-  ).from(desmatamentoInMonitoramento).where(scope).execute()
+  ).from(desmatamentoInMonitoramento).where(and(
+    scope,
+    year == null ? undefined : sql`${desmatamentoInMonitoramento.detectat} >= ${`${year}-01-01`} AND ${desmatamentoInMonitoramento.detectat} < ${`${year + 1}-01-01`}`,
+  )).execute()
 
   return result
 }

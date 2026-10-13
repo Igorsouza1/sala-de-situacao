@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Area, AreaChart, Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis } from "recharts"
+import { Area, AreaChart, Bar, BarChart, CartesianGrid, XAxis, YAxis } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useDequePedras } from "@/context/DequePedrasContext"
@@ -111,7 +111,6 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
             }}
             className="h-[300px]"
           >
-            <ResponsiveContainer width="100%" height="100%">
               <BarChart data={dadosChuva}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
@@ -130,7 +129,6 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
                 <ChartTooltip content={<ChartTooltipContent />} />
                 <Bar dataKey="chuva" fill="var(--color-chuva)" radius={[4, 4, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
           </ChartContainer>
         </TabsContent>
 
@@ -153,7 +151,6 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
               }}
               className="h-[300px]"
             >
-              <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={dadosTurbidez}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis
@@ -174,7 +171,6 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
                   <Area type="monotone" dataKey="turbidezMin" stroke="var(--color-turbidezMin)" fill="var(--color-turbidezMin)" fillOpacity={0.3} />
                   <Area type="monotone" dataKey="turbidezMedia" stroke="var(--color-turbidezMedia)" fill="var(--color-turbidezMedia)" fillOpacity={0.3} />
                 </AreaChart>
-              </ResponsiveContainer>
             </ChartContainer>
           </TabsContent>
         )}
@@ -198,7 +194,6 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
               }}
               className="h-[300px]"
             >
-              <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={dadosVisibilidade}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis
@@ -219,7 +214,6 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
                   <Bar dataKey="turvo" stackId="a" fill="var(--color-turvo)" />
                   <Bar dataKey="muitoTurvo" stackId="a" fill="var(--color-muitoTurvo)" />
                 </BarChart>
-              </ResponsiveContainer>
             </ChartContainer>
           </TabsContent>
         )}
@@ -235,7 +229,6 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
               }}
               className="h-[300px]"
             >
-              <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={dadosNivel}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="mes" tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: 'var(--color-muted-foreground)' }} />
@@ -243,7 +236,6 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Area type="monotone" dataKey="nivel" stroke="var(--color-nivel)" fill="var(--color-nivel)" fillOpacity={0.3} />
                 </AreaChart>
-              </ResponsiveContainer>
             </ChartContainer>
           </TabsContent>
         )}
@@ -259,7 +251,6 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
               }}
               className="h-[300px]"
             >
-              <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={dadosNivelBalneario}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} />
                   <XAxis dataKey="mes" tickLine={false} axisLine={false} tickMargin={10} tick={{ fill: 'var(--color-muted-foreground)' }} />
@@ -267,7 +258,6 @@ export function GraficoPontos({ ponto, ano }: { ponto: "deque" | "ponte" | "baln
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Area type="monotone" dataKey="nivel" stroke="var(--color-nivel)" fill="var(--color-nivel)" fillOpacity={0.3} />
                 </AreaChart>
-              </ResponsiveContainer>
             </ChartContainer>
           </TabsContent>
         )}

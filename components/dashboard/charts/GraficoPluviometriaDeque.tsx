@@ -1,6 +1,7 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useMemo } from "react"
+import { periodoHistorico, useHistorico } from "./use-historico"
 import {
   BarChart,
   Bar,
@@ -10,7 +11,7 @@ import {
   Tooltip,
   ReferenceLine,
   Cell,
-  ResponsiveContainer,
+  
 } from "recharts"
 import { format, parseISO } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -110,21 +111,8 @@ function StatBadge({ label, value, unit }: { label: string; value: string; unit?
 
 // ─── Componente principal ─────────────────────────────────────────────────────
 
-export function GraficoPluviometriaDeque() {
-  const [raw, setRaw] = useState<{ periodo: string; pluviometria: number }[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    fetch("/api/deque-pedras/historico/pluviometria")
-      .then((r) => r.json())
-      .then((json) => {
-        if (json?.success) setRaw(json.data)
-        else setError("Falha ao carregar dados")
-      })
-      .catch(() => setError("Erro de conexão"))
-      .finally(() => setLoading(false))
-  }, [])
+export function GraficoPluviometriaDeque({ year }: { year: string }) {
+  const { raw, loading, error } = useHistorico<{ periodo: string; pluviometria: number }>("/api/deque-pedras/historico/pluviometria", year)
 
   const data: DataPoint[] = useMemo(
     () => raw.map((d) => {
@@ -189,7 +177,7 @@ export function GraficoPluviometriaDeque() {
                 Pluviometria — Série Histórica
               </CardTitle>
               <CardDescription className="text-xs mt-0.5">
-                Deque de Pedras · Acumulado mensal · Jan/2024–{new Date().getFullYear()}
+                Deque de Pedras · Acumulado mensal · {periodoHistorico(year)}
               </CardDescription>
             </div>
           </div>
@@ -208,7 +196,6 @@ export function GraficoPluviometriaDeque() {
           config={{ pluviometria: { label: "Pluviometria (mm)", color: "hsl(217, 91%, 55%)" } }}
           className="h-[260px] w-full"
         >
-          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 24 }} barCategoryGap="30%">
 
               <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" strokeOpacity={0.5} vertical={false} />
@@ -242,7 +229,6 @@ export function GraficoPluviometriaDeque() {
               </Bar>
 
             </BarChart>
-          </ResponsiveContainer>
         </ChartContainer>
 
         <div className="flex items-center justify-center gap-4 mt-1 flex-wrap">

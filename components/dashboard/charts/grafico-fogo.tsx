@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, XAxis, YAxis, Tooltip, Cell } from "recharts"
+import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Tooltip, Cell } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer } from "@/components/ui/chart"
 import { Flame } from "lucide-react"
@@ -132,7 +132,6 @@ export function GraficoFogo() {
           config={{ focos: { label: "Focos de Incêndio", color: "#ef4444" } }}
           className="h-[260px] w-full"
         >
-          <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 8 }} barCategoryGap="30%">
               <CartesianGrid
                 strokeDasharray="3 3"
@@ -163,7 +162,6 @@ export function GraficoFogo() {
                 ))}
               </Bar>
             </BarChart>
-          </ResponsiveContainer>
         </ChartContainer>
 
         {/* Legend */}

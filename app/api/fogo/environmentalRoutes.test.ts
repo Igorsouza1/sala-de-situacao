@@ -136,3 +136,20 @@ describe.each([
     expect(service).toHaveBeenCalledWith("org-b", true, 22);
   });
 });
+
+describe.each([
+  { path: "/api/fogo", handler: fogo, service: getAllFirmsData },
+  { path: "/api/desmatamento", handler: desmatamento, service: getAllDesmatamentoDataGroupedByMonthAndYear },
+])("histórico anual $path", ({ path, handler, service }) => {
+  test("envia o ano ao serviço sem alterar o escopo da Organização", async () => {
+    const response = await handler(new Request(`http://localhost${path}?year=2026`));
+    expect(response.status).toBe(200);
+    expect(service).toHaveBeenCalledWith("org-a", false, undefined, 2026);
+  });
+
+  test("rejeita ano inválido antes da consulta histórica", async () => {
+    const response = await handler(new Request(`http://localhost${path}?year=2026oops`));
+    expect(response.status).toBe(400);
+    expect(service).not.toHaveBeenCalled();
+  });
+});

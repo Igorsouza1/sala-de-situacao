@@ -22,31 +22,36 @@ export function DesmatamentoProvider({ children }: { children: ReactNode }) {
   const [filteredDesmatamentoData, setFilteredDesmatamentoData] = useState<number[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedYear, setSelectedYear] = useState<string>("todos")
+  const [selectedYear, setSelectedYear] = useState<string>(() => String(new Date().getFullYear()))
 
   useEffect(() => {
+    const controller = new AbortController()
     async function fetchDesmatamentoData() {
+      setIsLoading(true)
+      setError(null)
       try {
-        const response = await fetch("/api/desmatamento")
+        const response = await fetch(`/api/desmatamento?year=${selectedYear}`, { signal: controller.signal })
         if (!response.ok) {
           throw new Error("Falha ao buscar dados")
         }
         const apiResponse = await response.json()
         if(apiResponse.success){
-          setDesmatamentoData(apiResponse.data)
+          if (!controller.signal.aborted) setDesmatamentoData(apiResponse.data)
         } else {
           throw new Error(apiResponse.error?.message || "Erro retornado pela API")
         }
       } catch (err) {
+        if (controller.signal.aborted) return
         setError("Erro ao carregar dados de desmatamento")
         console.error(err)
       } finally {
-        setIsLoading(false)
+        if (!controller.signal.aborted) setIsLoading(false)
       }
     }
 
     fetchDesmatamentoData()
-  }, [])
+    return () => controller.abort()
+  }, [selectedYear])
 
   useEffect(() => {
     if (selectedYear === "todos") {

@@ -39,7 +39,7 @@ describe.each([
     const monthly = await getAllFirmsData(tenantId, superadmin);
     const indicator = await getFocosIndicador(tenantId, superadmin);
 
-    expect(allFirms).toHaveBeenCalledWith(tenantId, superadmin, undefined);
+    expect(allFirms).toHaveBeenCalledWith(tenantId, superadmin, undefined, undefined);
     expect(range.mock.calls).toEqual([
       [tenantId, superadmin, "2026-08-31", "2026-09-30", undefined],
       [tenantId, superadmin, "2026-08-01", "2026-08-31", undefined],
@@ -58,7 +58,7 @@ describe.each([
       alertid: `alerta-${i}`, alertha, detectat: "2026-09-15", detectyear: 2026, state: null, stateha: null,
     })));
     const monthly = await getAllDesmatamentoDataGroupedByMonthAndYear(tenantId, superadmin);
-    expect(desmatamento).toHaveBeenCalledWith(tenantId, superadmin, undefined);
+    expect(desmatamento).toHaveBeenCalledWith(tenantId, superadmin, undefined, undefined);
     expect(monthly[2026]).toHaveLength(12);
     expect(monthly[2026][8]).toBe(hectares.reduce((a, b) => a + b, 0));
     expect(monthly[2026].filter(value => value !== 0)).toHaveLength(1);
@@ -81,7 +81,7 @@ test("propaga Região explícita para todas as consultas, inclusive os dois per�
   await getAllFirmsData("org-a", false, 12);
   await getAllDesmatamentoDataGroupedByMonthAndYear("org-a", false, 12);
   await getFocosIndicador("org-a", false, 12);
-  expect(allFirms).toHaveBeenCalledWith("org-a", false, 12);
-  expect(desmatamento).toHaveBeenCalledWith("org-a", false, 12);
+  expect(allFirms).toHaveBeenCalledWith("org-a", false, 12, undefined);
+  expect(desmatamento).toHaveBeenCalledWith("org-a", false, 12, undefined);
   expect(range.mock.calls.every(call => call[0] === "org-a" && call[1] === false && call[4] === 12)).toBe(true);
 });

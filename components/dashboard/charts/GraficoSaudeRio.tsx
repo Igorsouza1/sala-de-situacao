@@ -5,13 +5,14 @@ import {
   ComposedChart, Bar, Area,
   CartesianGrid, XAxis, YAxis, Tooltip, ReferenceLine,
   ScatterChart, Scatter,
-  ResponsiveContainer,
+  
 } from "recharts"
 import { format, parseISO, subDays } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer } from "@/components/ui/chart"
 import { Activity, Droplets, Eye, TrendingDown } from "lucide-react"
+import { periodoHistorico, useHistorico } from "./use-historico"
 
 // ─── Estatística ──────────────────────────────────────────────────────────────
 
@@ -271,7 +272,6 @@ function GraficoComposto({ data, xKey, XTick, TooltipComp, gradId, extraChildren
       }}
       className="h-[300px] w-full"
     >
-      <ResponsiveContainer width="100%" height="100%">
         <ComposedChart data={data} margin={{ top: 8, right: 48, left: 0, bottom: 24 }}>
           <defs>
             <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
@@ -311,7 +311,6 @@ function GraficoComposto({ data, xKey, XTick, TooltipComp, gradId, extraChildren
             activeDot={{ r: 5, fill: "#06b6d4", stroke: "var(--color-background)", strokeWidth: 2 }}
           />
         </ComposedChart>
-      </ResponsiveContainer>
     </ChartContainer>
   )
 }
@@ -405,7 +404,6 @@ function VistaCorrelacao({ pairs, r, reg, scope }: {
         config={{ secchi: { label: "Secchi (m)", color: "#06b6d4" } }}
         className="h-[240px] w-full"
       >
-        <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 8, right: 16, left: 0, bottom: 24 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" strokeOpacity={0.4} />
             <XAxis type="number" dataKey="x" domain={[0, xMax]}
@@ -427,7 +425,6 @@ function VistaCorrelacao({ pairs, r, reg, scope }: {
             )}
             <Scatter data={pairs} fill="#06b6d4" fillOpacity={0.7} stroke="#06b6d4" strokeOpacity={0.3} r={scope === "diario" ? 4 : 5} />
           </ScatterChart>
-        </ResponsiveContainer>
       </ChartContainer>
       <p className="text-center text-[10px] text-muted-foreground/60">
         Cada ponto = {scope === "diario" ? "um dia com leitura" : "um mês"}. Linha tracejada = regressão linear.
@@ -477,29 +474,16 @@ function LegendaComposto() {
 
 // ─── Componente principal ──────────────────────────────────────────────────────
 
-export function GraficoSaudeRio() {
+export function GraficoSaudeRio({ year }: { year: string }) {
   const [view, setView] = useState<ViewMode>("temporal")
 
   // ── Dados mensais ────────────────────────────────────────────────────────────
-  const [secchiRaw, setSecchiRaw] = useState<{ periodo: string; secchi: number | null }[]>([])
-  const [chuvaRaw,  setChuvaRaw]  = useState<{ periodo: string; pluviometria: number }[]>([])
-  const [loadingMes, setLoadingMes] = useState(true)
-  const [errorMes,   setErrorMes]   = useState<string | null>(null)
-
-  useEffect(() => {
-    Promise.all([
-      fetch("/api/balneario-municipal/historico/secchi").then((r) => r.json()),
-      fetch("/api/balneario-municipal/historico/pluviometria").then((r) => r.json()),
-    ])
-      .then(([s, c]) => {
-        if (s?.success) setSecchiRaw(s.data)
-        else setErrorMes("Falha ao carregar Secchi mensal")
-        if (c?.success) setChuvaRaw(c.data)
-        else setErrorMes("Falha ao carregar chuva mensal")
-      })
-      .catch(() => setErrorMes("Erro de conexão"))
-      .finally(() => setLoadingMes(false))
-  }, [])
+  const secchi = useHistorico<{ periodo: string; secchi: number | null }>("/api/balneario-municipal/historico/secchi", year)
+  const chuva = useHistorico<{ periodo: string; pluviometria: number }>("/api/balneario-municipal/historico/pluviometria", year)
+  const secchiRaw = secchi.raw
+  const chuvaRaw = chuva.raw
+  const loadingMes = secchi.loading || chuva.loading
+  const errorMes = secchi.error || chuva.error
 
   const combined = useMemo(() => {
     const chuvaMap = Object.fromEntries(chuvaRaw.map((d) => [d.periodo, d.pluviometria]))
@@ -538,25 +522,31 @@ export function GraficoSaudeRio() {
     setLoadingDia(true)
     setErrorDia(null)
 
-    const end   = new Date()
-    const start = subDays(end, 60)
+    const now = new Date()
+    const end = year === "todos" || Number(year) === now.getFullYear() ? now : new Date(Number(year), 11, 31)
+    const start = year === "todos" ? subDays(end, 60) : new Date(Math.max(subDays(end, 60).getTime(), new Date(Number(year), 0, 1).getTime()))
     const p = new URLSearchParams({
       startDate: fmtDate(start),
       endDate:   fmtDate(end),
     })
 
+    let active = true
     fetch(`/api/balneario-municipal/daily?${p}`)
       .then((r) => r.json())
       .then((json) => {
+        if (!active) return
         if (json?.success) setDailyRaw(json.data)
         else setErrorDia("Falha ao carregar dados diários")
       })
-      .catch(() => setErrorDia("Erro de conexão"))
+      .catch(() => { if (active) setErrorDia("Erro de conexão") })
       .finally(() => {
-        setLoadingDia(false)
-        setDailyLoaded(true)
+        if (active) {
+          setLoadingDia(false)
+          setDailyLoaded(true)
+        }
       })
-  }, [view, dailyLoaded])
+    return () => { active = false }
+  }, [view, dailyLoaded, year])
 
   const toN = (v: any) => { const n = Number(v); return Number.isFinite(n) ? n : null }
 
@@ -624,7 +614,7 @@ export function GraficoSaudeRio() {
               <CardDescription className="text-xs mt-0.5">
                 {view === "diario"
                   ? "Balneário Municipal · Dados diários · últimos 60 dias"
-                  : "Balneário Municipal · Médias mensais · Jan/2024–" + new Date().getFullYear()}
+                  : "Balneário Municipal · Médias mensais · " + periodoHistorico(year)}
               </CardDescription>
             </div>
           </div>

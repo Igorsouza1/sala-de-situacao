@@ -28,7 +28,8 @@ export function DailyPonteCureProvider({ children }: { children: ReactNode }) {
   const fetchData = async () => {
     setIsLoading(true)
     try {
-      const res = await fetch("/api/ponte-cure/daily")
+      const year = new Date().getFullYear()
+      const res = await fetch(`/api/ponte-cure/daily?startDate=${year}-01-01&endDate=${year}-12-31`)
       if (!res.ok) throw new Error("Falha ao buscar dados diários")
       const apiResponse = await res.json()
       setRaw(apiResponse.data)

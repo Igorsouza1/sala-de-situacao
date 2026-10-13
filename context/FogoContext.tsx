@@ -22,27 +22,32 @@ export function FogoProvider({ children }: { children: ReactNode }) {
   const [filteredFogoData, setFilteredFogoData] = useState<number[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [selectedYear, setSelectedYear] = useState<string>("todos")
+  const [selectedYear, setSelectedYear] = useState<string>(() => String(new Date().getFullYear()))
 
   useEffect(() => {
+    const controller = new AbortController()
     async function fetchFogoData() {
+      setIsLoading(true)
+      setError(null)
       try {
-        const response = await fetch("/api/fogo")
+        const response = await fetch(`/api/fogo?year=${selectedYear}`, { signal: controller.signal })
         if (!response.ok) {
           throw new Error("Falha ao buscar dados")
         }
         const apiResponse = await response.json()
-        setFogoData(apiResponse.data)
+        if (!controller.signal.aborted) setFogoData(apiResponse.data)
       } catch (err) {
+        if (controller.signal.aborted) return
         setError("Erro ao carregar dados de focos de incêndio")
         console.error(err)
       } finally {
-        setIsLoading(false)
+        if (!controller.signal.aborted) setIsLoading(false)
       }
     }
 
     fetchFogoData()
-  }, [])
+    return () => controller.abort()
+  }, [selectedYear])
 
   useEffect(() => {
     if (selectedYear === "todos") {
