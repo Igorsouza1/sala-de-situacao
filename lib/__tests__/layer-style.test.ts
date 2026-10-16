@@ -1,4 +1,4 @@
-import { hasIconRule, ruleIcon, FILL_LEVELS, LINE_WEIGHTS, POINT_SIZES, applyEdit, applyStyle, deriveOutline, editableFields, isHexColor, layerShape, mainColor, nearestLevel, readEdit, readStyle, withMainColor, type LayerEdit } from '../layer-style'
+import { colorLocked, personalCaps, personalize, hasIconRule, ruleIcon, FILL_LEVELS, LINE_WEIGHTS, POINT_SIZES, applyEdit, applyStyle, deriveOutline, editableFields, isHexColor, layerShape, mainColor, nearestLevel, readEdit, readStyle, withMainColor, type LayerEdit } from '../layer-style'
 
 // As camadas abaixo são cópias reduzidas das reais do catálogo (região 1, Bonito).
 const propriedades = {
@@ -270,5 +270,92 @@ describe('ícone por área (regra por valor)', () => {
   it('camada sem regra ignora ruleIcons', () => {
     const out = applyEdit(estradas, { ...readEdit({ name: 'Estradas', visualConfig: estradas }), ruleIcons: { x: 'trees' } })
     expect(out.rules).toBeUndefined()
+  })
+})
+
+describe('cor e transparência da pessoa', () => {
+  const acoesComCor = {
+    ...acoes,
+    rules: [
+      ...acoes.rules,
+      { field: 'status', styleProperty: 'color', values: { Resolvido: '#16a34a', Identificado: '#dc2626' } },
+      { field: 'carater', values: { Ativo: { color: '#15803d', iconName: 'sprout' } } },
+    ],
+  }
+
+  it('a cor que diz a situação (Ações) é travada; as outras camadas, não', () => {
+    expect(colorLocked(acoesComCor)).toBe(true)
+    expect(colorLocked(acoes)).toBe(false)
+    expect(colorLocked(propriedades)).toBe(false)
+    expect(colorLocked(null)).toBe(false)
+  })
+
+  it('o que a pessoa pode ajustar: tudo, só a transparência (cor travada) ou nada (mapa de calor)', () => {
+    expect(personalCaps(estradas)).toEqual({ color: true, opacity: true })
+    expect(personalCaps(acoesComCor)).toEqual({ color: false, opacity: true })
+    expect(personalCaps({ baseStyle: { type: 'heatmap' } })).toEqual({ color: false, opacity: false })
+  })
+
+  it('sem nada a mudar devolve o MESMO objeto', () => {
+    expect(personalize(estradas, {})).toBe(estradas)
+    expect(personalize(estradas, { opacity: 1 })).toBe(estradas)
+    expect(personalize(estradas, { color: 'vermelho' })).toBe(estradas)
+    expect(personalize(null, { opacity: 0.5 })).toBeNull()
+  })
+
+  it('não altera o original', () => {
+    const before = JSON.stringify(propriedades)
+    personalize(propriedades, { color: '#ff0000', opacity: 0.5 })
+    expect(JSON.stringify(propriedades)).toBe(before)
+  })
+
+  it('linha: a cor e a transparência chegam onde o mapa lê', () => {
+    const out = personalize(estradas, { color: '#112233', opacity: 0.5 })!
+    expect(out.maplibre.paint).toMatchObject({ 'line-color': '#112233', 'line-opacity': 0.45 })
+    expect(out.baseStyle).toMatchObject({ color: '#112233', opacity: 0.45 })
+    expect(readStyle(out)).toMatchObject({ color: '#112233', opacity: 0.45 })
+  })
+
+  it('polígono: o miolo, o contorno (derivado da cor) e as duas transparências', () => {
+    const out = personalize(propriedades, { color: '#00ff00', opacity: 0.5 })!
+    expect(out.maplibre.paint).toMatchObject({ 'fill-color': '#00ff00', 'fill-opacity': 0.1 })
+    expect(out.maplibre.outlinePaint).toMatchObject({ 'line-color': deriveOutline('#00ff00'), 'line-opacity': 0.5 })
+  })
+
+  it('só a transparência não mexe na cor', () => {
+    const out = personalize(propriedades, { opacity: 0.5 })!
+    expect(out.maplibre.paint['fill-color']).toBe('#32a852')
+    expect(out.maplibre.outlinePaint['line-color']).toBe('#000000')
+  })
+
+  it('ponto: o miolo e a borda ficam mais leves juntos, e a borda branca das nascentes continua branca', () => {
+    const out = personalize(nascentes, { color: '#ff8800', opacity: 0.4 })!
+    expect(out.maplibre.paint).toMatchObject({ 'circle-color': '#ff8800', 'circle-opacity': 0.4, 'circle-stroke-opacity': 0.4, 'circle-stroke-color': '#ffffff' })
+  })
+
+  it('ícone: a cor vai no baseStyle e a transparência multiplica a que existe (sem ela, parte de cheia)', () => {
+    const out = personalize(acoes, { color: '#ff0000', opacity: 0.5 })!
+    expect(out.baseStyle).toMatchObject({ color: '#ff0000', opacity: 0.5 })
+    const dim = personalize({ ...acoes, baseStyle: { ...acoes.baseStyle, opacity: 0.8 } }, { opacity: 0.5 })!
+    expect(dim.baseStyle.opacity).toBeCloseTo(0.4)
+  })
+
+  it('cor travada: a cor pedida é ignorada e a transparência vale', () => {
+    const out = personalize(acoesComCor, { color: '#ff0000', opacity: 0.5 })!
+    expect(out.baseStyle.color).toBe('#64748b')
+    expect(out.baseStyle.opacity).toBe(0.5)
+    expect(personalize(acoesComCor, { color: '#ff0000' })).toBe(acoesComCor)
+  })
+
+  it('multiplica a transparência que a camada já tem e preserva o que não é aparência', () => {
+    const out = personalize(propriedades, { opacity: 0.5 })!
+    expect(out.maplibre.paint['fill-opacity']).toBeCloseTo(0.1)
+    expect(out.popupFields).toEqual(propriedades.popupFields)
+    expect(out.category).toBe('Base Territorial')
+  })
+
+  it('camada sem a configuração do mapa também muda', () => {
+    const out = personalize(semMaplibre, { color: '#ff0000', opacity: 0.5 })!
+    expect(out.baseStyle).toMatchObject({ fillColor: '#ff0000', opacity: 0.5 })
   })
 })

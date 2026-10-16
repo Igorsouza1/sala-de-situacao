@@ -1,43 +1,20 @@
 'use client'
 
 import { useEffect, useState, type ReactNode } from 'react'
-import { Check, Pencil, RefreshCw, RotateCcw } from 'lucide-react'
+import { Check, Pencil, RotateCcw } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { BASEMAP_KEYS, BASEMAP_LABELS, BASEMAP_SWATCH, type BasemapKey } from './helpers/basemaps'
 import { controlItem } from './helpers/control-style'
 import { ViewSwap } from '@/components/ui/view-swap'
 import { LayerManager } from './LayerManager'
-import { LayerOrder, LayerOrderEntry, type LayerOrderProps } from './LayerOrder'
+import { LayerTree, type LayerTreeProps } from './LayerTree'
+import type { MapLayout } from './helpers/layer-layout'
+import type { SyncStatus } from './helpers/layout-sync'
 import { PanelCard } from './PanelCard'
 
-// Painel Camadas (DESIGN.md 13.1): o mapa base primeiro (é a camada de baixo), depois um cartão por categoria de dados.
+// Painel Camadas (DESIGN.md 13.1): o mapa base primeiro (é a camada de baixo), depois as pastas de camadas da pessoa (uma por categoria, até ela organizar).
 // O "Atualizar" fica no cabeçalho do painel, porque vale para todas as camadas e não para um cartão só.
 
-
-// O rótulo muda no próprio botão (8.4): Atualizar → Atualizando… → Atualizado.
-export function RefreshButton({ refreshing, onRefresh }: { refreshing: boolean; onRefresh: () => void }) {
-  const [clicked, setClicked] = useState(false)
-  const [done, setDone] = useState(false)
-  useEffect(() => {
-    if (!clicked || refreshing) return
-    setClicked(false)
-    setDone(true)
-    const t = setTimeout(() => setDone(false), 2500)
-    return () => clearTimeout(t)
-  }, [clicked, refreshing])
-
-  return (
-    <button
-      type="button"
-      aria-disabled={refreshing}
-      onClick={() => { if (refreshing) return; setClicked(true); onRefresh() }}
-      className={cn('flex h-8 items-center gap-1.5 px-2.5 text-xs font-medium aria-disabled:opacity-45 aria-disabled:hover:bg-transparent', controlItem())}
-    >
-      {done ? <Check className="h-3.5 w-3.5 text-ok" aria-hidden /> : <RefreshCw className={cn('h-3.5 w-3.5', refreshing && 'animate-spin')} aria-hidden />}
-      <span aria-live="polite">{refreshing ? 'Atualizando…' : done ? 'Atualizado' : 'Atualizar'}</span>
-    </button>
-  )
-}
 
 // Entrada da edição de camadas (13.3): UM botão com rótulo no cabeçalho, só para quem pode editar. A lista não ganha um ícone
 // em cada linha (apertava e pedia para decifrar um lápis sem texto). Ligado, a lista vira "escolha a camada".
@@ -88,9 +65,49 @@ function ResetButton({ onReset }: { onReset: () => void }) {
         <span aria-live="polite">{done ? 'Voltou ao padrão' : 'Voltar ao padrão do mapa'}</span>
       </button>
       <p className="mt-1 px-2 text-center text-xs leading-snug text-muted-foreground">
-        Camadas, ordem, mapa base, filtros e posição voltam a como o Prisma abre pela primeira vez.
+        Camadas, pastas, ordem, mapa base, filtros e posição voltam a como o Prisma abre pela primeira vez.
       </p>
     </div>
+  )
+}
+
+// Diz o que está acontecendo com a organização (2.1): salvando, salvo, tentando de novo, erro, ou só neste aparelho.
+// Fica quieta quando nada mudou. "Salvo" aparece uns segundos e se apaga; o erro fica até a pessoa agir, e o que ela fez continua na tela.
+function LayoutStatusLine({ status, onRetry }: { status: SyncStatus; onRetry: () => void }) {
+  const [savedShown, setSavedShown] = useState(false)
+  const [left, setLeft] = useState(0)
+  useEffect(() => {
+    if (status.kind !== 'saved') { setSavedShown(false); return }
+    setSavedShown(true)
+    const t = setTimeout(() => setSavedShown(false), 2500)
+    return () => clearTimeout(t)
+  }, [status])
+  useEffect(() => {
+    if (status.kind !== 'retrying') return
+    const tick = () => setLeft(Math.max(0, Math.ceil((status.at - Date.now()) / 1000)))
+    tick()
+    const t = setInterval(tick, 500)
+    return () => clearInterval(t)
+  }, [status])
+
+  const action = (label: string) => (
+    <button type="button" onClick={onRetry} className="underline underline-offset-2 hover:text-foreground">
+      {label}
+    </button>
+  )
+  let content: ReactNode = null
+  let tone = 'text-muted-foreground'
+  if (status.kind === 'saving') content = 'Salvando…'
+  else if (status.kind === 'saved' && savedShown) content = <span className="inline-flex items-center gap-1"><Check className="h-3.5 w-3.5 text-ok" aria-hidden />Salvo na sua conta</span>
+  else if (status.kind === 'retrying') content = <>Não salvou. Tentando de novo em {left} s. {action('Tentar agora')}</>
+  else if (status.kind === 'error') { tone = 'text-crit'; content = <>Não salvou. O que você fez continua aqui. {action('Tentar de novo')}</> }
+  else if (status.kind === 'local') content = 'A organização fica só neste aparelho.'
+
+  // a linha ocupa sempre o mesmo lugar: quando não há o que dizer, o cartão não pula (8.4)
+  return (
+    <p role="status" aria-live="polite" className={cn('min-h-4 px-2 text-center text-xs leading-snug transition-opacity duration-300', tone, content ? 'opacity-100' : 'opacity-0')}>
+      {content}
+    </p>
   )
 }
 
@@ -105,20 +122,23 @@ interface LayersPanelProps extends LayerManagerProps {
   onReset: () => void
   /** o editor de uma camada: quando existe, ocupa o painel no lugar da lista (a pessoa vê de onde veio: 8.4) */
   editing?: ReactNode
-  /** a ordem das camadas no mapa (13.1); sem ela (ou com uma camada só) não há o que ordenar e a entrada não aparece */
-  order?: Omit<LayerOrderProps, 'onBack' | 'activeLayers'>
+  /** a organização da pessoa (13.1): pastas e ordem. Sem ela (o catálogo ainda chega) a lista agrupa por categoria. */
+  tree?: {
+    layout: MapLayout
+    onChange: (change: (layout: MapLayout) => MapLayout) => void
+    onFolderToggle: (folderId: string) => void
+    actions: LayerTreeProps['actions']
+    status: SyncStatus
+    onRetrySave: () => void
+  }
 }
 
-export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, editing, order, ...layerProps }: LayersPanelProps) {
+export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, editing, tree, ...layerProps }: LayersPanelProps) {
   const unavailable = basemap !== shownBasemap
   // quais camadas com áreas estão abertas: vive aqui (e não na lista) porque a lista é desmontada enquanto o editor está aberto,
   // e a pessoa precisa voltar para onde estava (8.4)
   const [expanded, setExpanded] = useState<string[]>([])
   const toggleExpanded = (id: string) => setExpanded((prev) => (prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]))
-  // a ordem é uma visão do painel (como o editor): entra pela direita e a lista volta pela esquerda. Editar camadas tem prioridade.
-  const [ordering, setOrdering] = useState(false)
-  const editMode = !!editing || !!layerProps.onPick
-  useEffect(() => { if (editMode) setOrdering(false) }, [editMode])
   // Escolher o que editar: só a lista, em botões, com o aviso do modo em cima. O modo fica dito, em cor e em frase, mesmo depois de salvar
   // ou cancelar: sem isso a lista parecia a lista normal e a pessoa não sabia se ainda estava editando (2.1). A frase diz o próximo passo.
   const pickView = layerProps.onPick ? (
@@ -132,7 +152,7 @@ export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, e
           <p className="mt-0.5 text-sm">Escolha a que quer mudar. Quando terminar, toque em Concluir.</p>
         </div>
       </div>
-      <LayerManager {...layerProps} expanded={expanded} onToggleExpanded={toggleExpanded} />
+      <LayerManager {...layerProps} layout={tree?.layout} expanded={expanded} onToggleExpanded={toggleExpanded} />
     </div>
   ) : null
 
@@ -168,16 +188,36 @@ export function LayersPanel({ basemap, shownBasemap, onBasemapChange, onReset, e
         )}
       </PanelCard>
 
-      <LayerManager {...layerProps} expanded={expanded} onToggleExpanded={toggleExpanded} />
+      {tree && layerProps.options.length > 0 ? (
+        <LayerTree
+          options={layerProps.options}
+          layout={tree.layout}
+          activeLayers={layerProps.activeLayers}
+          onLayerToggle={layerProps.onLayerToggle}
+          onGroupToggle={layerProps.onGroupToggle}
+          onFolderToggle={tree.onFolderToggle}
+          actions={tree.actions}
+          onHideAll={layerProps.onHideAll}
+          onLayoutChange={tree.onChange}
+          status={layerProps.status}
+          onRetry={layerProps.onRetry}
+          counts={layerProps.counts}
+          filterNotes={layerProps.filterNotes}
+          flashSlug={layerProps.flashSlug}
+          expanded={expanded}
+          onToggleExpanded={toggleExpanded}
+        />
+      ) : (
+        <LayerManager {...layerProps} expanded={expanded} onToggleExpanded={toggleExpanded} />
+      )}
 
-      {order && order.items.length > 1 && <LayerOrderEntry onOpen={() => setOrdering(true)} />}
+      {tree && <LayoutStatusLine status={tree.status} onRetry={tree.onRetrySave} />}
 
       <ResetButton onReset={onReset} />
     </div>
   )
 
-  // As quatro visões ficam no mesmo painel e trocam com a altura acompanhando (8.4): a lista, a escolha do que editar, o editor e a ordem.
-  const orderView = order ? <LayerOrder {...order} activeLayers={layerProps.activeLayers} onBack={() => setOrdering(false)} /> : null
-  const view = editing ? 'editor' : layerProps.onPick ? 'pick' : ordering && order ? 'order' : 'list'
-  return <ViewSwap view={view} views={{ list: listView, pick: pickView, editor: editing ?? null, order: orderView }} />
+  // As três visões ficam no mesmo painel e trocam com a altura acompanhando (8.4): a lista, a escolha do que editar e o editor.
+  const view = editing ? 'editor' : layerProps.onPick ? 'pick' : 'list'
+  return <ViewSwap view={view} views={{ list: listView, pick: pickView, editor: editing ?? null }} />
 }

@@ -206,9 +206,11 @@
 @keyframes popover-out {
   to { opacity: 0; scale: 0.95; translate: 0 -4px; }
 }
-.popover-spring { transform-origin: var(--radix-popover-content-transform-origin); }
-.popover-spring[data-state='open'] { animation: popover-in 260ms var(--ease-spring) both; }
-.popover-spring[data-state='closed'] { animation: popover-out 150ms ease-in forwards; }
+/* A origem vem do Radix: do cartão, do menu do "⋯" ou do menu do botão direito. A classe repetida dá a este movimento precedência sobre
+   as animações genéricas dos menus, que também escrevem `animation`. */
+.popover-spring { transform-origin: var(--radix-popover-content-transform-origin, var(--radix-dropdown-menu-content-transform-origin, var(--radix-context-menu-content-transform-origin))); }
+.popover-spring.popover-spring[data-state='open'] { animation: popover-in 260ms var(--ease-spring) both; }
+.popover-spring.popover-spring[data-state='closed'] { animation: popover-out 150ms ease-in forwards; }
 
 /* Cartão de hover da ação (13.4): sobe do marcador com a mola do projeto. O atraso de 120 ms (com opacidade 0 até lá) impede que
    passar o mouse rápido pelo mapa pisque cartões; o fundo fica invisível até começar. */

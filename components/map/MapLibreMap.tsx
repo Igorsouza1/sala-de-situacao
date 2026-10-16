@@ -27,12 +27,13 @@ import {
   type MapLibreLayerType,
 } from './helpers/maplibre-layer'
 import type { LayerManagerOption, LayerStatus } from './LayerManager'
-import { EditModeButton, LayersPanel, RefreshButton } from './LayersPanel'
+import { EditModeButton, LayersPanel } from './LayersPanel'
+import { LayersMenu } from './LayersMenu'
 import { Notice, type NoticeData } from './Notice'
 import { Reveal } from '@/components/ui/collapse'
 import { LayerEditor } from './LayerEditor'
 import { GroupIconEditor } from './GroupIconEditor'
-import { applyEdit, readEdit, readStyle, ruleIcon, type LayerEdit } from '@/lib/layer-style'
+import { applyEdit, mainColor, personalCaps, personalize, readEdit, readStyle, ruleIcon, type LayerEdit } from '@/lib/layer-style'
 import { FiltersPanel } from './FiltersPanel'
 import { activeFilterCount, datesFromIntent, intentFromDates } from './helpers/filters'
 import {
@@ -73,7 +74,24 @@ import type { NewsItem } from './helpers/novidades'
 import { buildRuleLegend, featuresForLegendEntry } from './helpers/legend-rules'
 import { DRAG_PAN, KEY_MOVE_MS, mapKeyAction } from './helpers/map-feel'
 import { useSmoothWheelZoom } from './helpers/use-smooth-wheel-zoom'
-import { sameOrder, stackOrder } from './helpers/layer-order'
+import { stackOrder } from './helpers/layer-order'
+import {
+  createFolder,
+  deleteFolder,
+  effectiveOpacity,
+  layerStyleOf,
+  moveLayer,
+  nextFolderName,
+  planFolderToggle,
+  renameFolder,
+  restoreFolder,
+  setFolderOpen,
+  stackFromLayout,
+  type CatalogLayer,
+  type LayoutFolder,
+} from './helpers/layer-layout'
+import { useFinePointer } from './helpers/use-fine-pointer'
+import { useLayerLayout } from './useLayerLayout'
 import { useLayerStack } from './useLayerStack'
 import { ExploreHighlight } from './ExploreHighlight'
 import type { ConsultaBounds, ConsultaItem, ConsultaSelection } from '@/types/map-consulta'
@@ -210,8 +228,6 @@ export default function MapLibreMap({
   const [layers, setLayers] = useState<LayerResponseDTO[]>(() => _cache.layers)
   const [layerData, setLayerData] = useState<Record<string, MapFeatureCollection>>(() => ({ ..._cache.data }))
   const [visibleLayers, setVisibleLayers] = useState<string[]>([])
-  // a ordem que a pessoa escolheu para as camadas, de baixo para cima (13.1); vazia = a do catálogo
-  const [layerOrder, setLayerOrder] = useState<string[]>([])
   const [loadingLayers, setLoadingLayers] = useState(_cache.layers.length === 0)
   const [error, setError] = useState<string | null>(null)
   const [failedLayers, setFailedLayers] = useState<string[]>([])
@@ -517,7 +533,6 @@ export default function MapLibreMap({
     setLayers([])
     setLayerData({})
     setVisibleLayers([])
-    setLayerOrder([])
     setLoadingLayers(true)
   }, [regiaoId])
 
@@ -579,7 +594,6 @@ export default function MapLibreMap({
     if (!initializedRef.current && layers.length > 0) {
       const prefs = readRegionPrefs(regiaoId)
       setVisibleLayers(restoreVisibleSlugs(layers, prefs.layers))
-      setLayerOrder(prefs.order ?? [])
       initializedRef.current = true
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -736,7 +750,6 @@ export default function MapLibreMap({
     clearBasemap()
     clearMode()
     prefsTouched.current = false
-    setLayerOrder([])
     setVisibleLayers(initialVisibleSlugs(layers))
     setFaunaHeatmapActive(false)
     setFaunaLocationsActive(false)
@@ -801,7 +814,7 @@ export default function MapLibreMap({
   )
 
   // ── Edição de camada (DESIGN.md 13.3) ────────────────────────────────────
-  const renderLayers = useMemo(
+  const draftedLayers = useMemo(
     () =>
       draft
         ? layers.map((l) => (l.slug === draft.slug ? { ...l, name: draft.edit.name, visualConfig: applyEdit(l.visualConfig as any, draft.edit) as any } : l))
@@ -810,36 +823,63 @@ export default function MapLibreMap({
   )
 
   // ── Ordem das camadas no mapa (DESIGN.md 13.1) ───────────────────────────
-  // De baixo para cima: quem vem depois fica por cima. Os ícones (Ações) são elementos HTML e ficam sempre por cima, então não entram na
-  // conta. No padrão, o raster importado fica no fundo: uma mancha de fogo não pode cobrir os alertas que estão sobre ela.
+  // A organização da pessoa (pastas e ordem) é uma pilha única, de cima para baixo: o que está em cima na lista está em cima no mapa.
+  // Os ícones (Ações) são elementos HTML e ficam sempre por cima, então não entram na conta. No padrão, o raster importado fica no
+  // fundo: uma mancha de fogo não pode cobrir os alertas.
   const isImportedRaster = useCallback((l: LayerResponseDTO) => {
     const sc = l.schemaConfig as { source?: string; kind?: string } | undefined
     return sc?.source === 'drop-import' && sc.kind === 'raster'
   }, [])
+  const layoutCatalogNow = useMemo((): CatalogLayer[] | null => {
+    if (draftedLayers.length === 0) return null
+    return [
+      ...draftedLayers.map((l) => ({
+        slug: l.slug,
+        category: l.visualConfig?.category as string | undefined,
+        under: isImportedRaster(l),
+        imported: (l.schemaConfig as { source?: string } | undefined)?.source === 'drop-import',
+      })),
+      // a Fauna não é uma camada do catálogo, mas mora na lista, na categoria de Monitoramento
+      { slug: 'fauna', category: 'Monitoramento' },
+    ]
+  }, [draftedLayers, isImportedRaster])
+  // editar uma camada refaz `draftedLayers` a cada tecla; a organização só precisa saber se as camadas, as categorias ou os rótulos mudaram
+  const layoutCatalogKey = JSON.stringify(layoutCatalogNow)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const layoutCatalog = useMemo(() => layoutCatalogNow, [layoutCatalogKey])
+  const layoutApi = useLayerLayout(regiaoId, layoutCatalog)
+
+  // ── Cor e transparência da PESSOA (13.1) ──────────────────────────────────
+  // A pessoa ajusta como vê cada camada (e cada pasta) sem mexer no catálogo. O ajuste entra no `visual_config` pelo mesmo caminho do
+  // editor, então o mapa, a legenda, os ícones e a folha de Gerar mapa leem o mesmo valor. Em edição (o rascunho do administrador),
+  // a camada fica como o rascunho a mostra: senão a cor pessoal esconderia o que ele está mexendo.
+  const geomKey = JSON.stringify(Object.fromEntries(Object.entries(layerData).map(([slug, fc]) => [slug, (fc.features[0]?.geometry as { type?: string } | undefined)?.type ?? null])))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const geomTypes = useMemo(() => JSON.parse(geomKey) as Record<string, string | null>, [geomKey])
+  const renderLayers = useMemo(() => {
+    const layout = layoutApi.layout
+    if (!layout) return draftedLayers
+    let changed = false
+    const out = draftedLayers.map((l) => {
+      if (draft?.slug === l.slug) return l
+      const own = layerStyleOf(layout, l.slug)
+      const opacity = effectiveOpacity(layout, l.slug)
+      if (own.color === undefined && opacity >= 1) return l
+      const visualConfig = personalize(l.visualConfig as any, { color: own.color, opacity }, geomTypes[l.slug])
+      if (visualConfig === l.visualConfig) return l
+      changed = true
+      return { ...l, visualConfig: visualConfig as any }
+    })
+    return changed ? out : draftedLayers
+  }, [draftedLayers, layoutApi.layout, geomTypes, draft?.slug])
+  const layoutStack = useMemo(() => (layoutApi.layout ? stackFromLayout(layoutApi.layout) : undefined), [layoutApi.layout])
   const { stacked, icons } = useMemo(() => {
     const flat = renderLayers.filter((l) => !isIconLayer(l.visualConfig))
-    return { stacked: stackOrder(flat, layerOrder, isImportedRaster), icons: renderLayers.filter((l) => isIconLayer(l.visualConfig)) }
-  }, [renderLayers, layerOrder, isImportedRaster])
+    return { stacked: stackOrder(flat, layoutStack, isImportedRaster), icons: renderLayers.filter((l) => isIconLayer(l.visualConfig)) }
+  }, [renderLayers, layoutStack, isImportedRaster])
   const orderedLayers = useMemo(() => [...stacked, ...icons], [stacked, icons])
   const stackSlugs = useMemo(() => stacked.map((l) => l.slug), [stacked])
-  const defaultStackSlugs = useMemo(
-    () => stackOrder(renderLayers.filter((l) => !isIconLayer(l.visualConfig)), undefined, isImportedRaster).map((l) => l.slug),
-    [renderLayers, isImportedRaster],
-  )
   useLayerStack(mapRef, mapLoaded, stackSlugs)
-
-  const handleOrderChange = useCallback(
-    (topToBottom: string[]) => {
-      const next = [...topToBottom].reverse()
-      setLayerOrder(next)
-      saveRegionPrefs(regiaoId, { order: next })
-    },
-    [regiaoId],
-  )
-  const handleOrderReset = useCallback(() => {
-    setLayerOrder([])
-    saveRegionPrefs(regiaoId, { order: undefined })
-  }, [regiaoId])
 
   const handleEditLayer = useCallback(
     (slug: string) => {
@@ -984,17 +1024,17 @@ export default function MapLibreMap({
   const importedYears = useMemo(() => {
     const items: YearRangeItem[] = []
     const rasters: RasterSpec[] = []
-    for (const layer of layers) {
-      const sc = layer.schemaConfig as { source?: string; kind?: string; years?: [number, number]; raster?: Omit<RasterSpec, 'key' | 'source' | 'color' | 'years'> } | undefined
+    for (const layer of renderLayers) {
+      const sc = layer.schemaConfig as { source?: string; kind?: string; years?: [number, number]; raster?: Omit<RasterSpec, 'key' | 'source' | 'color' | 'opacity' | 'years'> } | undefined
       if (sc?.source !== 'drop-import' || !visibleLayers.includes(layer.slug)) continue
       const value = yearRanges[layer.slug] ?? sc.years
       if (sc.years && sc.years[0] < sc.years[1] && value) items.push({ slug: layer.slug, name: layer.name, min: sc.years[0], max: sc.years[1], value })
       if (sc.kind === 'raster' && sc.raster) {
-        rasters.push({ ...sc.raster, key: layer.slug, source: `/api/layers/${layer.slug}/raster`, color: readStyle(layer.visualConfig as any).fillColor, years: value })
+        rasters.push({ ...sc.raster, key: layer.slug, source: `/api/layers/${layer.slug}/raster`, color: readStyle(layer.visualConfig as any).fillColor, opacity: layoutApi.layout ? effectiveOpacity(layoutApi.layout, layer.slug) : 1, years: value })
       }
     }
     return { items, rasters }
-  }, [layers, visibleLayers, yearRanges])
+  }, [renderLayers, layoutApi.layout, visibleLayers, yearRanges])
   const rasterSpecs = useMemo(
     () => (importPreview?.kind === 'raster' ? [...importedYears.rasters, importPreview.spec] : importedYears.rasters),
     [importedYears.rasters, importPreview],
@@ -1325,13 +1365,31 @@ export default function MapLibreMap({
   }, [renderLayers])
 
   // A Fauna fecha a lista, junto das camadas de monitoramento (a lista agrupa por categoria)
+  // O que a pessoa pode ajustar em cada camada (cor e transparência) e a cor que ela vê agora: o cartão da amostra parte daí
+  const personalInfo = useMemo(() => {
+    const out: Record<string, NonNullable<LayerManagerOption['personal']>> = {}
+    for (const l of draftedLayers) {
+      const geom = geomTypes[l.slug]
+      const caps = personalCaps(l.visualConfig as any, geom)
+      if (!caps.color && !caps.opacity) continue
+      const shown = renderLayers.find((r) => r.slug === l.slug) ?? l
+      out[l.slug] = { ...caps, mainColor: mainColor(readStyle(shown.visualConfig as any, geom)) }
+    }
+    return out
+  }, [draftedLayers, renderLayers, geomTypes])
+
   const panelOptions = useMemo((): LayerManagerOption[] => {
-          return [
-      ...layerManagerOptions,
+    return [
+      // Os ícones (Ações) o mapa desenha sempre por cima: a lista diz isso e não oferece arrastar (13.1)
+      ...layerManagerOptions.map((o) => {
+        const layer = renderLayers.find((l) => l.slug === o.slug)
+        return { ...o, ...(layer && isIconLayer(layer.visualConfig) && { pinnedOnTop: true }), ...(personalInfo[o.slug] && { personal: personalInfo[o.slug] }) }
+      }),
       {
         id: 'fauna',
         slug: 'fauna',
         editable: false,
+        orderable: false,
         label: 'Fauna exótica (javali)',
         color: 'var(--color-crit)',
         icon: 'paw-print',
@@ -1342,13 +1400,7 @@ export default function MapLibreMap({
         ],
       },
     ]
-  }, [layerManagerOptions])
-
-  // A lista da ordem, de cima para baixo (a de cima da lista é a de cima do mapa)
-  const orderItems = useMemo(
-    () => [...stackSlugs].reverse().map((slug) => layerManagerOptions.find((o) => o.slug === slug)).filter((o): o is LayerManagerOption => !!o),
-    [stackSlugs, layerManagerOptions],
-  )
+  }, [layerManagerOptions, renderLayers, personalInfo])
 
   // A legenda das camadas de pinos (Ações), das regras do catálogo e do que está no mapa agora: a cor e o ícone dizem coisas diferentes
   const ruleLegends = useMemo(() => {
@@ -1442,6 +1494,76 @@ export default function MapLibreMap({
     ],
     [visibleLayers, faunaHeatmapActive, faunaLocationsActive],
   )
+
+  // O interruptor da pasta (13.1): liga ou desliga o que há nela. "Ligada" depende da camada: uma com grupos vale se algum grupo está ligado.
+  // Ao ligar de novo, voltam só as que estavam ligadas antes de a pasta ser desligada.
+  const { layout: currentLayout, update: updateLayout } = layoutApi
+  const handleFolderToggle = useCallback(
+    (folderId: string) => {
+      if (!currentLayout) return
+      const plan = planFolderToggle(currentLayout, folderId, (slug) => isLayerOn(slug, panelActiveLayers))
+      const apply = (slug: string, on: boolean) => {
+        const option = panelOptions.find((o) => o.slug === slug)
+        if (option?.subOptions?.length) handleGroupToggle(option.subOptions.map((s) => s.slug), on)
+        else handleLayerToggle(slug, on)
+      }
+      plan.off.forEach((slug) => apply(slug, false))
+      plan.on.forEach((slug) => apply(slug, true))
+      if (plan.layout !== currentLayout) updateLayout(() => plan.layout)
+    },
+    [currentLayout, updateLayout, panelActiveLayers, panelOptions, handleGroupToggle, handleLayerToggle],
+  )
+  // ── Pastas (13.1): criar, renomear, apagar e mover. Tudo passa por `updateLayout`, que guarda no aparelho e na conta. ──────────────────
+  const finePointer = useFinePointer()
+  const [renamingId, setRenamingId] = useState<string | null>(null)
+  const handleNewFolder = useCallback(
+    (slugs?: string[]) => {
+      const id = `pasta-${crypto.randomUUID().slice(0, 8)}`
+      updateLayout((l) => createFolder(l, id, nextFolderName(l), slugs))
+      setRenamingId(id) // a pasta nasce com o nome aberto para escrever
+    },
+    [updateLayout],
+  )
+  const handleRenameFolder = useCallback((id: string, name: string) => updateLayout((l) => renameFolder(l, id, name)), [updateLayout])
+  // Apagar pasta não perde nenhuma camada (elas sobem para a pilha), mas perde o agrupamento: por isso o aviso com desfazer (12)
+  const handleDeleteFolder = useCallback(
+    (id: string) => {
+      if (!currentLayout) return
+      const index = currentLayout.items.findIndex((i) => i.kind === 'folder' && i.id === id)
+      const folder = currentLayout.items[index] as LayoutFolder | undefined
+      if (!folder || folder.kind !== 'folder') return
+      updateLayout((l) => deleteFolder(l, id))
+      setNotice({
+        id: Date.now(),
+        tone: 'success',
+        title: `Apagamos a pasta “${folder.name}”`,
+        body: folder.layers.length > 0 ? 'As camadas dela continuam no mapa, soltas.' : undefined,
+        undo: { seconds: 10, onUndo: () => updateLayout((l) => restoreFolder(l, folder, index)) },
+      })
+    },
+    [currentLayout, updateLayout],
+  )
+  // Levar a camada para uma pasta (ou para fora delas): no fim da pasta, que abre para a pessoa ver onde ela foi parar (8.4)
+  const handleMoveTo = useCallback(
+    (slug: string, folderId: string | null) => {
+      updateLayout((l) => {
+        const moved = moveLayer(l, slug, { folderId, index: folderId === null ? 0 : Number.MAX_SAFE_INTEGER })
+        return folderId === null ? moved : setFolderOpen(moved, folderId, true)
+      })
+      flash(slug)
+    },
+    [updateLayout, flash],
+  )
+
+  // "Voltar ao padrão do mapa" também desfaz as pastas e a ordem, aqui e na conta
+  const resetLayout = layoutApi.reset
+  // a janela do painel (lugar e tamanho) também volta ao de origem
+  const [windowReset, setWindowReset] = useState(0)
+  const handleReset = useCallback(() => {
+    handleResetPrefs()
+    resetLayout()
+    setWindowReset((n) => n + 1)
+  }, [handleResetPrefs, resetLayout])
 
   // Quantas feições cada camada tem no mapa, e quais estão sendo mexidas por um filtro (as duas coisas aparecem na linha)
   const dateOn = !!(dateFilter.startDate || dateFilter.endDate)
@@ -1882,21 +2004,29 @@ export default function MapLibreMap({
           accent={!!(isAdmin && (picking || draft))}
           icon={LucideIcons.Layers}
           label="Camadas"
+          movable
+          resetWindow={windowReset}
           motion="rise"
           alert={basemap !== shownBasemap || !!draft}
           action={
             <>
-              {/* "Editar" só para quem pode, e some enquanto há um editor aberto (lá dentro já há Salvar e Cancelar). O "Atualizar" sai do
-                  cabeçalho enquanto se edita: com o título "Editar camadas" e o "Concluir", o cabeçalho ficava pesado e o título quebrava.
+              {/* O "⋯" reúne Editar, Atualizar e Nova pasta; enquanto se edita ele encolhe e some, e entra o "Concluir" (o modo é dito, 19.5).
                   Quem sai encolhe e some, quem entra cresce (8.4): nada pula. */}
+              <Reveal show={!(isAdmin && (picking || !!draft))}>
+                <LayersMenu
+                  canEdit={isAdmin}
+                  onEdit={() => setPicking(true)}
+                  refreshing={refreshing}
+                  onRefresh={handleReload}
+                  canCreateFolder={finePointer && !!currentLayout}
+                  onNewFolder={() => handleNewFolder()}
+                />
+              </Reveal>
               {isAdmin && (
-                <Reveal show={!draft}>
+                <Reveal show={picking && !draft}>
                   <EditModeButton active={picking} onToggle={() => setPicking((v) => !v)} />
                 </Reveal>
               )}
-              <Reveal show={!(isAdmin && (picking || !!draft))}>
-                <RefreshButton refreshing={refreshing} onRefresh={handleReload} />
-              </Reveal>
             </>
           }
         >
@@ -1904,14 +2034,8 @@ export default function MapLibreMap({
             basemap={basemap}
             shownBasemap={shownBasemap}
             onBasemapChange={handleBasemapChange}
-            onReset={handleResetPrefs}
-            order={{
-              items: orderItems,
-              onChange: handleOrderChange,
-              isDefault: sameOrder(stackSlugs, defaultStackSlugs),
-              onReset: handleOrderReset,
-              hasIcons: icons.length > 0,
-            }}
+            onReset={handleReset}
+            tree={layoutApi.layout ? { layout: layoutApi.layout, onChange: layoutApi.update, onFolderToggle: handleFolderToggle, actions: { renamingId, onRenamingDone: () => setRenamingId(null), onStartRename: setRenamingId, onNewFolder: handleNewFolder, onRename: handleRenameFolder, onDelete: handleDeleteFolder, onMoveTo: handleMoveTo }, status: layoutApi.status, onRetrySave: layoutApi.retry } : undefined}
             onPick={isAdmin && picking ? handleEditLayer : undefined}
             onPickGroup={isAdmin && picking ? handleEditGroup : undefined}
             flashSlug={flashSlug}

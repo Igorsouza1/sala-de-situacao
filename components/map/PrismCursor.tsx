@@ -3,7 +3,7 @@
 // Cursor "Prisma aurora" (DESIGN.md, seção 10): um elemento desenhado pelo site que segue o ponteiro.
 // Custo: roda código a cada movimento e some em touch; por isso o cursor nativo só é escondido DEPOIS do
 // primeiro movimento (data-pc-ready no <html>). Estados: default · link (verde + borda em degradê) · no (bloqueado)
-// · text (some; fica o I-beam) · native (mira de medir/inspecionar: some; fica o crosshair do mapa).
+// · text (some; fica o I-beam) · native (mira de medir/inspecionar e alças de redimensionar: some; fica o cursor do sistema).
 import { useEffect, useRef, useState } from 'react'
 
 const PRISM = 'M4.5 3 L21 11 L13 13 L10 21.5 Z'
@@ -58,6 +58,8 @@ export function PrismCursor() {
       if (!t) return 'default'
       if (t.closest(TEXT)) return 'text'
       if (blocked) return 'no'
+      // as alças de redimensionar pedem o cursor do sistema (as setas de redimensionar): o prisma não tem direção
+      if (t.closest('[data-native-cursor]')) return 'native'
       const mc = mapCursor(t)
       if (mc === 'crosshair') return 'native'
       if (mc === 'pointer' || t.closest(CLICKABLE)) return 'link'

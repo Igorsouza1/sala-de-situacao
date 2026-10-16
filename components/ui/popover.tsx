@@ -9,6 +9,9 @@ const Popover = PopoverPrimitive.Root
 
 const PopoverTrigger = PopoverPrimitive.Trigger
 
+// Ancora o cartão num elemento que não é o gatilho (a amostra de uma camada aberta pelo menu do botão direito)
+const PopoverAnchor = PopoverPrimitive.Anchor
+
 const PopoverContent = React.forwardRef<
   React.ComponentRef<typeof PopoverPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof PopoverPrimitive.Content>
@@ -28,4 +31,4 @@ const PopoverContent = React.forwardRef<
 ))
 PopoverContent.displayName = PopoverPrimitive.Content.displayName
 
-export { Popover, PopoverTrigger, PopoverContent }
+export { Popover, PopoverTrigger, PopoverAnchor, PopoverContent }

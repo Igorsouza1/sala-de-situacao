@@ -5,6 +5,7 @@ import { X, type LucideIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { OverlayScroll } from '@/components/ui/overlay-scroll'
 import { controlItem, controlSurface } from './helpers/control-style'
+import { clampRect, clearWindow, moveRect, readWindow, resizeRect, saveWindow, type ResizeDir, type Viewport, type WinRect } from './helpers/window-rect'
 
 // Dock do mapa (DESIGN.md 13): uma barra só, embaixo e centralizada, onde moram os grupos de funções (Camadas, Filtros…).
 // Rótulo sempre visível: no celular não existe hover para o tooltip (11). Os painéis abrem para cima, a partir do botão
@@ -96,13 +97,98 @@ export const DockButton = forwardRef<HTMLButtonElement, DockButtonProps>(functio
 })
 
 // Botão do dock que abre um painel. O conteúdo fica montado mesmo fechado: os filtros guardam o que a pessoa escolheu.
-export function DockPanelButton({ id, icon, label, side, wide, accentTitle, titleIcon: TitleIcon, accent, motion, badge, alert, action, children }: { id: string; /** o painel abre no canto esquerdo, e não centrado no botão: para o que mostra algo que precisa do mapa ao lado (Explorar, 13.5) */ side?: boolean; /** painel mais largo (40rem) para conteúdo com gráficos: a Situação */ wide?: boolean; icon: LucideIcon; label: string; /** título do painel no modo especial (ex.: "Editar camadas"): o título troca em crossfade, não de uma vez */ accentTitle?: string; titleIcon?: LucideIcon; /** o painel está num modo especial (ex.: editando): o cabeçalho ganha cor, para o modo ser visto sem ler */ accent?: boolean; motion?: DockMotion; badge?: number; alert?: boolean; action?: ReactNode; children: ReactNode }) {
+// As oito alças da janela (borda e canto). Fininhas, dentro do painel, e com o cursor do sistema (setas de redimensionar).
+const HANDLES: Record<ResizeDir, { box: string; cursor: string }> = {
+  n: { box: 'inset-x-3 top-0 h-1.5', cursor: 'ns-resize' },
+  s: { box: 'inset-x-3 bottom-0 h-1.5', cursor: 'ns-resize' },
+  e: { box: 'inset-y-3 right-0 w-1.5', cursor: 'ew-resize' },
+  w: { box: 'inset-y-3 left-0 w-1.5', cursor: 'ew-resize' },
+  ne: { box: 'right-0 top-0 size-3.5', cursor: 'nesw-resize' },
+  sw: { box: 'bottom-0 left-0 size-3.5', cursor: 'nesw-resize' },
+  nw: { box: 'left-0 top-0 size-3.5', cursor: 'nwse-resize' },
+  se: { box: 'bottom-0 right-0 size-3.5', cursor: 'nwse-resize' },
+}
+
+export function DockPanelButton({ id, icon, label, side, wide, movable, resetWindow, accentTitle, titleIcon: TitleIcon, accent, motion, badge, alert, action, children }: { id: string; /** o painel abre no canto esquerdo, e não centrado no botão: para o que mostra algo que precisa do mapa ao lado (Explorar, 13.5) */ side?: boolean; /** painel mais largo (40rem) para conteúdo com gráficos: a Situação */ wide?: boolean; /** a janela se move pelo cabeçalho e se redimensiona pelas bordas (a partir de sm); lugar e tamanho ficam no aparelho e a janela reabre onde estava (13.1) */ movable?: boolean; /** muda a cada "Voltar ao padrão do mapa": a janela volta ao lugar e ao tamanho de origem */ resetWindow?: number; icon: LucideIcon; label: string; /** título do painel no modo especial (ex.: "Editar camadas"): o título troca em crossfade, não de uma vez */ accentTitle?: string; titleIcon?: LucideIcon; /** o painel está num modo especial (ex.: editando): o cabeçalho ganha cor, para o modo ser visto sem ler */ accent?: boolean; motion?: DockMotion; badge?: number; alert?: boolean; action?: ReactNode; children: ReactNode }) {
   const { open, setOpen } = useContext(DockContext)
   const isOpen = open === id
   const trigger = useRef<HTMLButtonElement>(null)
   const panel = useRef<HTMLDivElement>(null)
   const wasOpen = useRef(false)
   const panelId = useId()
+
+  // ── Janela móvel (opcional) ────────────────────────────────────────────────────────────────────────────────────
+  // `rect` é o que a pessoa escolheu; o que se mostra é sempre esse retângulo DENTRO da tela de agora (encolher o navegador não apaga o
+  // lugar que ela deu à janela). Sem escolha, vale a posição de sempre: centrada acima do botão. Fechar e abrir de novo não mexe em nada.
+  const [roomy, setRoomy] = useState(false)
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 640px)')
+    const on = () => setRoomy(media.matches)
+    on()
+    media.addEventListener('change', on)
+    return () => media.removeEventListener('change', on)
+  }, [])
+  const canMove = !!movable && !side && roomy
+  const [vp, setVp] = useState<Viewport>({ w: 1280, h: 800 })
+  useEffect(() => {
+    const on = () => setVp({ w: window.innerWidth, h: window.innerHeight })
+    on()
+    window.addEventListener('resize', on)
+    return () => window.removeEventListener('resize', on)
+  }, [])
+  const [rect, setRect] = useState<WinRect | null>(null)
+  useEffect(() => { if (movable) setRect(readWindow(id)) }, [id, movable])
+  const shown = canMove && rect ? clampRect(rect, vp) : null
+  const firstReset = useRef(true)
+  useEffect(() => {
+    if (firstReset.current) { firstReset.current = false; return }
+    clearWindow(id)
+    setRect(null)
+  }, [resetWindow, id])
+
+  const gesture = useRef<{ mode: 'move' | ResizeDir; x: number; y: number; start: WinRect } | null>(null)
+  const live = useRef<WinRect | null>(null)
+  const vpRef = useRef(vp)
+  vpRef.current = vp
+  const idRef = useRef(id)
+  idRef.current = id
+  useEffect(() => {
+    const move = (e: PointerEvent) => {
+      const g = gesture.current
+      if (!g) return
+      const dx = e.clientX - g.x
+      const dy = e.clientY - g.y
+      const next = g.mode === 'move' ? moveRect(g.start, dx, dy, vpRef.current) : resizeRect(g.start, g.mode, dx, dy, vpRef.current)
+      live.current = next
+      setRect(next)
+    }
+    const up = () => {
+      if (!gesture.current) return
+      gesture.current = null
+      document.body.style.userSelect = ''
+      if (live.current) saveWindow(idRef.current, live.current) // só grava o que a pessoa mexeu; um clique no cabeçalho não grava nada
+      live.current = null
+    }
+    window.addEventListener('pointermove', move)
+    window.addEventListener('pointerup', up)
+    window.addEventListener('pointercancel', up)
+    return () => {
+      window.removeEventListener('pointermove', move)
+      window.removeEventListener('pointerup', up)
+      window.removeEventListener('pointercancel', up)
+      document.body.style.userSelect = ''
+    }
+  }, [])
+  const beginGesture = (e: React.PointerEvent, mode: 'move' | ResizeDir) => {
+    const el = panel.current
+    if (!el || !canMove || (e.pointerType === 'mouse' && e.button !== 0)) return
+    e.preventDefault()
+    const r = el.getBoundingClientRect()
+    // a primeira vez parte de onde a janela está agora (a posição de sempre), e só vira "escolha" se a pessoa mexer
+    const start = shown ?? { x: r.left, y: r.top, w: r.width, h: r.height }
+    gesture.current = { mode, x: e.clientX, y: e.clientY, start }
+    document.body.style.userSelect = 'none'
+  }
 
   // O painel lateral nasce do botão e VIAJA até o canto (8.4: a pessoa vê de onde veio): fechado, ele fica pequeno em cima do botão;
   // o deslocamento é medido entre o botão e o canto onde o painel para. No celular o painel é de largura toda e não viaja.
@@ -156,12 +242,15 @@ export function DockPanelButton({ id, icon, label, side, wide, accentTitle, titl
         // fechado, o painel fica `inert` (sem foco nem clique, 8.4) e invisível; abre de baixo com leve subida e escala (200 ms) e fecha mais rápido (150 ms)
         inert={!isOpen}
         data-open={isOpen}
-        style={side && travel && !isOpen ? { translate: `${travel.x}px ${travel.y}px`, scale: 0.2 } : undefined}
+        style={shown ? { left: shown.x, top: shown.y, width: shown.w, height: shown.h } : side && travel && !isOpen ? { translate: `${travel.x}px ${travel.y}px`, scale: 0.2 } : undefined}
         className={cn(
-          'absolute z-10 flex flex-col overflow-hidden rounded-lg outline-hidden',
-          'bottom-full mb-3 max-sm:inset-x-3',
-          // centrado no botão (o padrão) ou no canto esquerdo, deixando o mapa livre ao lado (lateral); no celular o lateral é mais baixo
-          side ? cn('origin-bottom-left max-h-[55svh] sm:left-3 sm:max-h-[calc(100svh-10rem)]', wide ? 'sm:w-[40rem] sm:max-w-[calc(100vw-1.5rem)]' : 'sm:w-[26rem]') : 'origin-bottom max-h-[75vh] sm:left-1/2 sm:w-[22rem] sm:-translate-x-1/2',
+          'z-10 flex flex-col overflow-hidden rounded-lg outline-hidden',
+          // movida ou redimensionada pela pessoa: solta na tela, no lugar e com o tamanho que ela deu (inline)
+          shown ? 'fixed origin-bottom' : cn(
+            'absolute bottom-full mb-3 max-sm:inset-x-3',
+            // centrado no botão (o padrão) ou no canto esquerdo, deixando o mapa livre ao lado (lateral); no celular o lateral é mais baixo
+            side ? cn('origin-bottom-left max-h-[55svh] sm:left-3 sm:max-h-[calc(100svh-10rem)]', wide ? 'sm:w-[40rem] sm:max-w-[calc(100vw-1.5rem)]' : 'sm:w-[26rem]') : 'origin-bottom max-h-[75vh] sm:left-1/2 sm:w-[22rem] sm:-translate-x-1/2',
+          ),
           'transition-[opacity,translate,scale,visibility]',
           controlSurface,
           // abre com leve mola (a mesma curva dos botões); fecha mais rápido e sem mola, para não demorar a sair da frente (8.1)
@@ -170,9 +259,25 @@ export function DockPanelButton({ id, icon, label, side, wide, accentTitle, titl
             : cn('invisible opacity-0 ease-in', side ? 'duration-200' : 'duration-150', !(side && travel) && 'translate-y-2 scale-95'),
         )}
       >
-        <header className={cn('flex items-center justify-between gap-2 border-b py-2.5 pl-5 pr-3 transition-colors duration-300', accent ? 'border-primary/30 bg-secondary text-secondary-foreground' : 'border-border')}>
+        {/* as alças de redimensionar: fininhas, só no computador; o cursor do sistema (data-native-cursor) mostra a seta certa */}
+        {canMove && (Object.keys(HANDLES) as ResizeDir[]).map((dir) => (
+          <div
+            key={dir}
+            aria-hidden
+            data-native-cursor
+            onPointerDown={(e) => beginGesture(e, dir)}
+            style={{ cursor: HANDLES[dir].cursor }}
+            className={cn('absolute z-20 touch-none', HANDLES[dir].box)}
+          />
+        ))}
+        <header
+          onPointerDown={canMove ? (e) => { if (!(e.target as HTMLElement).closest('button, a, input, [role="switch"], [data-nodrag]')) beginGesture(e, 'move') } : undefined}
+          title={canMove ? 'Arraste para mover' : undefined}
+          className={cn('relative flex items-center justify-between gap-2 border-b py-2.5 pl-5 pr-3 transition-colors duration-300', canMove && 'touch-none select-none', accent ? 'border-primary/30 bg-secondary text-secondary-foreground' : 'border-border')}>
           {/* A troca "Camadas" → "Editar camadas" se VÊ acontecer (8.4): os dois títulos ocupam o mesmo lugar, um sobe e some enquanto o
               outro sobe e aparece; o lápis cresce em largura em vez de pular. Nunca quebra em duas linhas. */}
+          {/* a alça de mover: uma barrinha no alto, que não toma lugar de nada no cabeçalho */}
+          {canMove && <span aria-hidden className="pointer-events-none absolute left-1/2 top-1 h-1 w-8 -translate-x-1/2 rounded-full bg-border" />}
           <h3 className="flex items-center whitespace-nowrap text-base font-semibold">
             {TitleIcon && (
               <span aria-hidden className={cn('grid transition-[grid-template-columns,opacity] duration-300 ease-out', accent ? 'grid-cols-[1fr] opacity-100' : 'grid-cols-[0fr] opacity-0')}>
@@ -202,7 +307,12 @@ export function DockPanelButton({ id, icon, label, side, wide, accentTitle, titl
         </header>
         {/* base em cinza suave: os cartões brancos de dentro mostram onde cada assunto começa e termina (6.2) */}
         {/* rolagem com a barra do projeto: a barra nativa não aceita o cursor Prisma (10) */}
-        <OverlayScroll data-panel-scroll className="bg-muted/50 p-4">{children}</OverlayScroll>
+        <OverlayScroll data-panel-scroll rootClassName={shown ? 'flex-1' : undefined} className="bg-muted/50 p-4">{children}</OverlayScroll>
+        {canMove && (
+          <svg aria-hidden viewBox="0 0 12 12" className="pointer-events-none absolute bottom-1 right-1 z-10 size-3 text-muted-foreground/60">
+            <path d="M11 3 3 11M11 7 7 11" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        )}
       </div>
     </div>
   )

@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 const THUMB_MIN = 36
 const INSET = 4
 
-const OverlayScroll = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(({ className, children, onScroll, ...props }, forwardedRef) => {
+const OverlayScroll = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement> & { rootClassName?: string }>(({ className, rootClassName, children, onScroll, ...props }, forwardedRef) => {
   const scroller = React.useRef<HTMLDivElement | null>(null)
   const [thumb, setThumb] = React.useState<{ top: number; height: number } | null>(null)
   const [awake, setAwake] = React.useState(false)
@@ -84,7 +84,7 @@ const OverlayScroll = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTML
   }
 
   return (
-    <div className="relative flex min-h-0 flex-col" onPointerEnter={wake} onPointerMove={() => { if (!awake) wake() }}>
+    <div className={cn("relative flex min-h-0 flex-col", rootClassName)} onPointerEnter={wake} onPointerMove={() => { if (!awake) wake() }}>
       <div
         ref={setRefs}
         onScroll={(e) => { measure(); wake(); onScroll?.(e) }}

@@ -290,3 +290,62 @@ export function withMainColor(style: LayerStyle, color: string): LayerStyle {
       return style
   }
 }
+
+// ── Cor e transparência da PESSOA (DESIGN.md 13.1) ───────────────────────────────────────────────────────────────
+// A pessoa ajusta como VÊ uma camada sem mexer no catálogo (o catálogo é de todos e só o Editar o muda). O ajuste passa pelo mesmo
+// caminho do editor (`readStyle` → `applyStyle`), então o mapa, a legenda, os ícones e a folha de Gerar mapa leem o mesmo valor.
+
+/**
+ * A cor desta camada diz algo (Ações: a cor é a situação de cada ação)? Então a pessoa não a troca: só a transparência.
+ * Vale quando alguma regra por valor define a cor, direta (`styleProperty: 'color'`) ou dentro do valor.
+ */
+export function colorLocked(vc: Json | null | undefined): boolean {
+  const rules: Json[] = Array.isArray(vc?.rules) ? vc!.rules : []
+  return rules.some(
+    (r) => r?.styleProperty === 'color' || Object.values(r?.values ?? {}).some((v) => !!v && typeof v === 'object' && 'color' in (v as Json)),
+  )
+}
+
+/** O que a pessoa pode ajustar nesta camada. O mapa de calor (e o que não é polígono, linha, ponto ou ícone) fica como está. */
+export function personalCaps(vc: Json | null | undefined, geometryType?: string | null): { color: boolean; opacity: boolean } {
+  if (layerShape(vc, geometryType) === 'other') return { color: false, opacity: false }
+  return { color: !colorLocked(vc), opacity: true }
+}
+
+export interface Personal {
+  /** #rrggbb: vira a cor principal da camada */
+  color?: string
+  /** de 0 a 1: multiplica a transparência que a camada já tem (cheia, ou ausente, não muda nada) */
+  opacity?: number
+}
+
+/**
+ * A aparência da camada como a PESSOA a quer ver. Devolve o MESMO `visual_config` quando não há o que mudar.
+ * A opacidade multiplica a que a camada já tem (uma camada a 40% a 50% da pessoa fica a 20%): ela leva o preenchimento, o contorno,
+ * a borda do ponto e o ícone juntos, para a camada inteira ficar mais leve e não só o miolo.
+ */
+export function personalize(vc: Json | null | undefined, personal: Personal, geometryType?: string | null): Json | null | undefined {
+  if (!vc) return vc
+  const caps = personalCaps(vc, geometryType)
+  const color = caps.color && isHexColor(personal.color) ? personal.color : undefined
+  const k = caps.opacity && typeof personal.opacity === 'number' && Number.isFinite(personal.opacity) && personal.opacity < 1 ? Math.max(0, personal.opacity) : undefined
+  if (color === undefined && k === undefined) return vc
+
+  const shape = layerShape(vc, geometryType)
+  let style = readStyle(vc, geometryType)
+  if (color !== undefined) style = withMainColor(style, color)
+  if (k !== undefined) style = { ...style, fillOpacity: style.fillOpacity * k, opacity: style.opacity * k }
+  const out = applyStyle(vc, style)
+
+  if (k !== undefined) {
+    const paint: Json | undefined = out.maplibre?.paint
+    // a borda do ponto tem opacidade própria (circle-opacity só leva o miolo)
+    if (shape === 'circle' && paint) paint['circle-stroke-opacity'] = k * (typeof paint['circle-stroke-opacity'] === 'number' ? paint['circle-stroke-opacity'] : 1)
+    // o marcador de ícone lê `opacity` do baseStyle e, sem ela, desenha cheio
+    if (shape === 'icon') {
+      const before = (vc.baseStyle ?? vc).opacity
+      out.baseStyle.opacity = (typeof before === 'number' ? before : 1) * k
+    }
+  }
+  return out
+}

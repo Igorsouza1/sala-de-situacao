@@ -22,6 +22,8 @@ export interface RasterSpec {
   max: number
   /** a cor da camada */
   color: string
+  /** a transparência que a pessoa escolheu para a camada (e para a pasta dela); ausente: cheia */
+  opacity?: number
   firstYear: number | null
   /** o período mostrado, em anos (modo "bandas") */
   years?: [number, number]
@@ -109,7 +111,7 @@ function RasterLayer({ spec, beforeSlugs }: { spec: RasterSpec; beforeSlugs: str
   return (
     // react-map-gl não tipa a fonte "canvas" (o MapLibre a tem); ela recebe as props como estão
     <Source {...({ id: sourceId, type: 'canvas', canvas, coordinates: [[w, n], [e, n], [e, s], [w, s]], animate: false } as unknown as SourceProps)}>
-      <Layer id={`${sourceId}-layer`} type="raster" beforeId={before} paint={{ 'raster-opacity': 0.9, 'raster-resampling': 'nearest', 'raster-fade-duration': 0 }} />
+      <Layer id={`${sourceId}-layer`} type="raster" beforeId={before} paint={{ 'raster-opacity': 0.9 * (spec.opacity ?? 1), 'raster-resampling': 'nearest', 'raster-fade-duration': 0 }} />
     </Source>
   )
 }
