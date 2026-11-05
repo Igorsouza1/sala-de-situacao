@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { PATCH } from './route'
 import { resolveScope } from '@/lib/api/scope'
 import { requireWriteRegion } from '@/lib/api/require-write-region'
+import { apiError } from '@/lib/api/responses'
 import { queryMapConsulta, updateMapConsultaItem } from '@/lib/repositories/mapConsultaRepository'
 
 jest.mock('@/lib/api/scope', () => ({ resolveScope: jest.fn() }))
@@ -34,7 +35,7 @@ test('salva só os campos descritivos, limpa o vazio e devolve o que havia antes
 })
 
 test('Viewer e Auditor (sem escrita na Região) não gravam', async () => {
-  write.mockResolvedValue({ regionId: 1, tenantId: 'org', response: NextResponse.json({}, { status: 403 }) })
+  write.mockResolvedValue({ regionId: 1, tenantId: 'org', response: apiError('Sem permissao de escrita nesta regiao.', 403) })
   expect((await PATCH(patch(acao))).status).toBe(403)
   expect(update).not.toHaveBeenCalled()
 })
