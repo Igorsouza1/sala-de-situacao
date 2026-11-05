@@ -9,6 +9,8 @@ export const SERIES_FORMAT = "classes-delta-v1";
 export const MAX_SERIES_STORED_BYTES = 4_000_000;
 /** a amostra da camada na lista de Camadas: o verde da formação florestal do MapBiomas (o mapa usa a cor de cada classe) */
 export const SERIES_SWATCH = "#1f8d49";
+/** a amostra de uma série de fogo por mês: a cor de fogo do projeto (DESIGN.md 4.2, crítico e fogo) */
+export const FIRE_SWATCH = "#c8431a";
 export const MAX_SERIES_YEARS = 80;
 const MAX_CLASSES = 64;
 
@@ -25,6 +27,8 @@ export const seriesMetaSchema = z
       ha: z.array(z.array(z.number().min(0))),
     }),
     mapbiomas: z.boolean(),
+    /** como ler as classes: uso do solo do MapBiomas, mês do fogo ou classes sem legenda (ausente: pelo `mapbiomas`) */
+    legend: z.enum(["mapbiomas", "meses", "classes"]).optional(),
   })
   .superRefine((m, ctx) => {
     if (m.bounds[0] >= m.bounds[2] || m.bounds[1] >= m.bounds[3]) ctx.addIssue({ code: "custom", message: "Os limites do raster não fecham uma área." });

@@ -6,12 +6,14 @@ import { cn } from '@/lib/utils'
 import type { SeriesStats } from '@/lib/geo-import/class-series'
 import { controlSurface } from './helpers/control-style'
 import { ClassSeriesView } from './ClassSeries'
+import { FireSeriesView } from './FireSeries'
+import type { SeriesLegend } from '@/lib/geo-import/class-series-read'
 
 // Período de cada camada importada que tem anos (DESIGN.md 13): fica no mapa enquanto a camada está ligada, para a pessoa ver e
 // mexer no recorte sem abrir painel. Uma linha por camada, com o nome, o período em palavras e o controle de dois pontos.
 // Cada camada tem o seu período: o filtro de datas do mapa (Este ano…) não mexe nas camadas importadas.
-// Uma série de anos de classes (uso do solo) mostra UM ano por vez, com o gráfico da divisão da área: um cartão por série,
-// na mesma coluna (um canto, um controle só: caso C30).
+// Uma série de anos de classes (uso do solo) mostra UM ano por vez, com o gráfico da divisão da área; a de fogo por mês, o ano e,
+// se a pessoa quiser, um mês, com o gráfico de quanto queimou. Um cartão por série, na mesma coluna (um canto, um controle só: C30).
 
 export interface YearRangeItem {
   slug: string
@@ -27,17 +29,21 @@ export interface SeriesItem {
   years: number[]
   stats: SeriesStats
   year: number
+  legend?: SeriesLegend
+  /** fogo por mês: o mês mostrado (null: o ano todo) */
+  month?: number | null
 }
 
 interface YearRangeCardProps {
   items: YearRangeItem[]
   series?: SeriesItem[]
   onChange: (slug: string, value: [number, number]) => void
+  onMonth?: (slug: string, month: number | null) => void
 }
 
 const label = ([a, b]: [number, number]) => (a === b ? `${a}` : `${a} a ${b}`)
 
-export function YearRangeCard({ items, series = [], onChange }: YearRangeCardProps) {
+export function YearRangeCard({ items, series = [], onChange, onMonth }: YearRangeCardProps) {
   const open = items.length > 0 || series.length > 0
   return (
     <div
@@ -77,7 +83,19 @@ export function YearRangeCard({ items, series = [], onChange }: YearRangeCardPro
           {series.map((s) => (
             <section key={s.slug} aria-label={s.name} className={cn('pointer-events-auto rounded-lg p-4', controlSurface)}>
               <h3 className="mb-3 truncate text-sm font-semibold">{s.name}</h3>
-              <ClassSeriesView name={s.name} stats={s.stats} years={s.years} year={s.year} onYear={(y) => onChange(s.slug, [y, y])} />
+              {s.legend === 'meses' ? (
+                <FireSeriesView
+                  name={s.name}
+                  stats={s.stats}
+                  years={s.years}
+                  year={s.year}
+                  onYear={(y) => onChange(s.slug, [y, y])}
+                  month={s.month ?? null}
+                  onMonth={(m) => onMonth?.(s.slug, m)}
+                />
+              ) : (
+                <ClassSeriesView name={s.name} stats={s.stats} years={s.years} year={s.year} onYear={(y) => onChange(s.slug, [y, y])} />
+              )}
             </section>
           ))}
         </div>

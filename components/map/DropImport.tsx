@@ -12,11 +12,13 @@ import { colorFromFile, isSidecarFile, kindOfFile, nameFromFile } from '@/lib/ge
 import { MAX_MB, problemMessage, readGeoJson, type GeoJsonSummary } from '@/lib/geo-import/geojson'
 import { RasterProblemError, convertRaster, inspectRaster, rasterProblemMessage, type RasterConversion, type RasterInfo } from '@/lib/geo-import/raster'
 import { groupSeries, shareInside, type Bounds } from '@/lib/geo-import/class-series'
-import { SeriesProblemError, convertSeries, inspectSeries, probeClasses, seriesProblemMessage, type SeriesConversion, type SeriesInspection } from '@/lib/geo-import/class-series-read'
+import { SeriesProblemError, convertSeries, inspectBandSeries, inspectSeries, probeClasses, seriesProblemMessage, type SeriesConversion, type SeriesInspection } from '@/lib/geo-import/class-series-read'
+import { compareSummary, parseMonthlySummary, type SummaryCheck } from '@/lib/geo-import/months'
 import { ZipProblemError, isZip, readZip } from '@/lib/geo-import/zip'
 import { SaveLayerError, saveGeoJsonLayer, saveRasterLayer, saveSeriesLayer } from '@/lib/geo-import/upload'
 import { controlItem, controlSurface } from './helpers/control-style'
 import { ClassSeriesView } from './ClassSeries'
+import { FireSeriesView } from './FireSeries'
 import { ColorField } from './LayerEditor'
 import { PanelCard } from './PanelCard'
 import type { NoticeData } from './Notice'
@@ -53,7 +55,15 @@ type Item =
   | { kind: 'serie'; conversion: SeriesConversion }
 
 /** o que espera a vez na fila: um arquivo, ou os arquivos de uma série de anos (ou um .zip que não abriu, com o motivo) */
-type Job = { name: string; files: File[]; problem?: string; /** um .zip ainda sendo aberto */ opening?: boolean }
+type Job = {
+  name: string
+  files: File[]
+  problem?: string
+  /** um .zip ainda sendo aberto */
+  opening?: boolean
+  /** o que veio junto para conferir (o resumo .csv de área por ano e mês) */
+  companions?: File[]
+}
 
 type Step =
   | { phase: 'lendo' }
@@ -83,8 +93,29 @@ const mb = (bytes: number) => `${(bytes / 1_000_000).toLocaleString('pt-BR', { m
 
 /** O que foi solto vira a fila: as séries primeiro (um item cada), depois os arquivos soltos. */
 function jobsFrom(files: File[]): Job[] {
-  const { series, singles } = groupSeries(files.filter((f) => !isSidecarFile(f.name)))
-  return [...series.map((g) => ({ name: g[0].name, files: g })), ...singles.map((f) => ({ name: f.name, files: [f] }))]
+  const useful = files.filter((f) => !isSidecarFile(f.name))
+  // um .csv que vem junto de um raster é a conferência dele (o resumo de área), não uma camada: acompanha cada raster da leva
+  const csvs = useful.filter((f) => f.name.toLowerCase().endsWith('.csv'))
+  const hasRaster = useful.some((f) => kindOfFile(f.name) === 'raster')
+  const rest = hasRaster ? useful.filter((f) => !csvs.includes(f)) : useful
+  const companions = hasRaster && csvs.length ? csvs : undefined
+  const { series, singles } = groupSeries(rest)
+  return [
+    ...series.map((g) => ({ name: g[0].name, files: g, companions })),
+    ...singles.map((f) => ({ name: f.name, files: [f], ...(kindOfFile(f.name) === 'raster' && { companions }) })),
+  ]
+}
+
+/** Confere a área de cada ano com o resumo .csv que veio junto, se algum deles é um resumo mensal. */
+async function checkWithSummary(c: SeriesConversion, companions: File[] | undefined): Promise<{ file: string; check: SummaryCheck } | null> {
+  for (const f of companions ?? []) {
+    const summary = parseMonthlySummary(await f.text().catch(() => ''))
+    if (!summary) continue
+    const computed = new Map(c.years.map((y, k) => [y.year, c.stats.ha[k].reduce((a, b) => a + b, 0)]))
+    const check = compareSummary(computed, summary)
+    if (check.compared > 0) return { file: f.name, check }
+  }
+  return null
 }
 
 /** Uma linha da conferência: o ícone diz se passou ou se pede atenção, e a frase diz o quê (nunca só a cor). */
@@ -102,7 +133,7 @@ function CheckRow({ ok, children }: { ok: boolean; children: React.ReactNode }) 
 }
 
 /** A conferência da série: o que passou e o que pede atenção, cada coisa numa frase com o próximo passo. */
-function SeriesChecks({ c, region }: { c: SeriesConversion; region: { bbox: Bounds; nome: string | null } | null }) {
+function SeriesChecks({ c, region, summary }: { c: SeriesConversion; region: { bbox: Bounds; nome: string | null } | null; summary: { file: string; check: SummaryCheck } | null }) {
   const inside = region ? shareInside(c.grid.bounds, region.bbox) : null
   const where = region?.nome ? `de ${region.nome}` : 'aberta no mapa'
   const adjusted = c.adjusted.map((a) => a.year)
@@ -110,7 +141,11 @@ function SeriesChecks({ c, region }: { c: SeriesConversion; region: { bbox: Boun
   const single = c.years.length === 1
   return (
     <ul className="space-y-3">
-      {single ? (
+      {c.legend === 'meses' ? (
+        <CheckRow ok>
+          {c.years.length} anos, de {c.years[0].year} a {c.years[c.years.length - 1].year}, uma banda por ano (o período veio do nome do arquivo).
+        </CheckRow>
+      ) : single ? (
         <CheckRow ok>O ano {c.years[0].year}, achado no nome do arquivo. Para ver a mudança ao longo do tempo, solte a pasta ou o .zip com todos os anos.</CheckRow>
       ) : c.missing.length ? (
         <CheckRow ok={false}>Faltam {yearsLabel(c.missing)}. O gráfico e o mapa pulam {c.missing.length === 1 ? 'esse ano' : 'esses anos'}.</CheckRow>
@@ -133,15 +168,27 @@ function SeriesChecks({ c, region }: { c: SeriesConversion; region: { bbox: Boun
         ) : (
           <CheckRow ok={false}>O raster fica fora da região {where}. Confira se é a área certa antes de salvar.</CheckRow>
         ))}
-      {c.mapbiomas ? (
+      {c.legend === 'meses' ? (
+        <CheckRow ok>Cada pixel diz o mês em que queimou; o que não queimou fica sem cor.</CheckRow>
+      ) : c.mapbiomas ? (
         <CheckRow ok>Classes do MapBiomas, com os nomes e as cores oficiais.</CheckRow>
       ) : (
         <CheckRow ok={false}>Algumas classes não estão na legenda do MapBiomas e aparecem como “Classe” seguida do número.</CheckRow>
       )}
+      {summary &&
+        (summary.check.differ.length === 0 ? (
+          <CheckRow ok>Conferimos com o resumo que veio junto ({summary.file}): a área queimada de cada ano bate.</CheckRow>
+        ) : (
+          <CheckRow ok={false}>
+            Em {yearsLabel(summary.check.differ)} a área não bate com o resumo que veio junto ({summary.file}). Confira se o raster e o resumo são do mesmo recorte.
+          </CheckRow>
+        ))}
       <CheckRow ok>
-        {single
-          ? `Guardamos compactado: os ${mb(c.sourceBytes)} do arquivo viram ${mb(c.data.size)}.`
-          : `Guardamos só o que muda de um ano para o outro: os ${mb(c.sourceBytes)} dos arquivos viram ${mb(c.data.size)}.`}
+        {c.data.size >= c.sourceBytes * 0.8
+          ? `Vai ocupar ${mb(c.data.size)}, quase o mesmo que ${c.years.length > 1 && c.years[0].file !== c.years[1].file ? 'os arquivos' : 'o arquivo'}, que já vinha compactado.`
+          : single
+            ? `Guardamos compactado: os ${mb(c.sourceBytes)} do arquivo viram ${mb(c.data.size)}.`
+            : `Guardamos só o que muda de um ano para o outro: os ${mb(c.sourceBytes)} ${c.years[0].file === c.years[1]?.file ? 'do arquivo' : 'dos arquivos'} viram ${mb(c.data.size)}.`}
       </CheckRow>
     </ul>
   )
@@ -154,6 +201,10 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
   const [color, setColor] = useState(() => colorFromFile(''))
   /** série de anos: o ano que a prévia mostra no mapa */
   const [previewYear, setPreviewYear] = useState<number | null>(null)
+  /** fogo por mês: o mês que a prévia mostra (null: o ano todo) */
+  const [previewMonth, setPreviewMonth] = useState<number | null>(null)
+  /** a conferência com o resumo .csv que veio junto, quando veio */
+  const [summary, setSummary] = useState<{ file: string; check: SummaryCheck } | null>(null)
   const { region } = useRegion()
   const [entered, setEntered] = useState(false)
   const [leaving, setLeaving] = useState(false)
@@ -191,6 +242,8 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
     setName(nameFromFile(file.name))
     setColor(colorFromFile(file.name))
     setPreviewYear(null)
+    setPreviewMonth(null)
+    setSummary(null)
     setLeaving(false)
 
     if (file.opening) return // fica em "lendo" até o .zip abrir
@@ -200,14 +253,16 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
     }
 
     // uso do solo (classes): um arquivo ou vários, sempre o mesmo caminho, com as cores da legenda e sem pedir cor
-    const runSeries = async (files: File[]) => {
+    const runSeries = async (source: File[] | SeriesInspection) => {
       try {
-        const insp = await inspectSeries(files)
+        const insp = Array.isArray(source) ? await inspectSeries(source) : source
         if (!alive) return
         setName(insp.name)
         setStep({ phase: 'preparando', info: insp, fraction: 0 })
         const conversion = await convertSeries(insp, (fraction) => alive && setStep({ phase: 'preparando', info: insp, fraction }))
+        const checked = await checkWithSummary(conversion, file.companions)
         if (!alive) return
+        setSummary(checked)
         setPreviewYear(conversion.years[conversion.years.length - 1].year)
         setStep({ phase: 'pronto', item: { kind: 'serie', conversion } })
       } catch (e) {
@@ -224,16 +279,28 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
     const single = file.files[0]
     const kind = kindOfFile(single.name)
     if (kind === 'desconhecido') {
-      setStep({ phase: 'problema', message: `“${single.name}” não é um formato que o mapa lê. Use GeoJSON (.geojson), raster (.tif) ou um .zip com eles.` })
+      setStep({
+        phase: 'problema',
+        message: single.name.toLowerCase().endsWith('.gpkg')
+          ? `“${single.name}” é um GeoPackage, que o mapa ainda não lê. Se ele traz o mesmo que o raster que veio junto, pode fechar; para trazê-lo como camada, exporte como GeoJSON.`
+          : `“${single.name}” não é um formato que o mapa lê. Use GeoJSON (.geojson), raster (.tif) ou um .zip com eles.`,
+      })
       return
     }
 
     if (kind === 'raster') {
       ;(async () => {
         try {
+          // a tela vê pelo que o arquivo É, não pelo jeito que chegou: uma banda por ano com o mês do fogo vira série de fogo;
+          // uma banda com classes do uso do solo vira série de um ano; o resto segue o caminho de antes
+          const bands = await inspectBandSeries(single)
+          if (!alive) return
+          if (bands) {
+            await runSeries(bands)
+            return
+          }
           const info = await inspectRaster(single)
           if (!alive) return
-          // um raster de uma banda pode ser de classes (um ano de uso do solo): a tela vê pelos valores, não pelo jeito que chegou
           if (info.mode === 'valores' && (await probeClasses(single))) {
             if (alive) await runSeries([single])
             return
@@ -244,7 +311,7 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
           if (alive) setStep({ phase: 'pronto', item: { kind: 'raster', conversion } })
         } catch (e) {
           if (!alive) return
-          setStep({ phase: 'problema', message: e instanceof RasterProblemError ? e.message : rasterProblemMessage({ code: 'ilegivel' }) })
+          setStep({ phase: 'problema', message: e instanceof RasterProblemError || e instanceof SeriesProblemError ? e.message : rasterProblemMessage({ code: 'ilegivel' }) })
         }
       })()
       return () => { alive = false }
@@ -290,7 +357,10 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
       const year = previewYear ?? seriesYears[seriesYears.length - 1]
       previewRef.current({
         kind: 'raster',
-        spec: { key: 'preview', source: c.data, bounds: c.grid.bounds, width: c.grid.width, height: c.grid.height, mode: 'classes', max: 1, color, firstYear: seriesYears[0], seriesYears, years: [year, year] },
+        spec: {
+          key: 'preview', source: c.data, bounds: c.grid.bounds, width: c.grid.width, height: c.grid.height, mode: 'classes', max: 1, color,
+          firstYear: seriesYears[0], seriesYears, years: [year, year], legend: c.legend, month: previewMonth,
+        },
       })
       return
     }
@@ -299,7 +369,7 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
       kind: 'raster',
       spec: { key: 'preview', source: c.png, bounds: c.bounds, width: c.width, height: c.height, mode: c.mode, max: c.max, color, firstYear: c.firstYear },
     })
-  }, [item, color, previewYear])
+  }, [item, color, previewYear, previewMonth])
   useEffect(() => () => previewRef.current(null), [])
 
   // enquadra o que chegou, deixando o cartão (à esquerda) fora da área da câmera
@@ -359,6 +429,7 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
           years: c.years.map((y) => y.year),
           stats: c.stats,
           mapbiomas: c.mapbiomas,
+          legend: c.legend,
           data: c.data,
         }))
       } else {
@@ -491,14 +562,21 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
                 >
                   {item.kind === 'serie' ? (
                     <>
-                      <p className="mb-4 text-sm">
-                        <strong className="font-semibold">Uso do solo</strong>
-                        {item.conversion.years.length === 1
-                          ? ` de ${item.conversion.years[0].year}`
-                          : `, um mapa por ano, de ${period(item.conversion.years[0].year, item.conversion.years[item.conversion.years.length - 1].year)}`}
-                        , com {item.conversion.stats.classes.length} {item.conversion.stats.classes.length === 1 ? 'classe' : 'classes'}. Cada classe já vem com a sua cor.
-                      </p>
-                      <SeriesChecks c={item.conversion} region={region ? { bbox: region.bbox, nome: region.nome } : null} />
+                      {item.conversion.legend === 'meses' ? (
+                        <p className="mb-4 text-sm">
+                          <strong className="font-semibold">Fogo por mês</strong>, um mapa por ano, de{' '}
+                          {period(item.conversion.years[0].year, item.conversion.years[item.conversion.years.length - 1].year)}. O pixel que queimou fica na cor de fogo.
+                        </p>
+                      ) : (
+                        <p className="mb-4 text-sm">
+                          <strong className="font-semibold">Uso do solo</strong>
+                          {item.conversion.years.length === 1
+                            ? ` de ${item.conversion.years[0].year}`
+                            : `, um mapa por ano, de ${period(item.conversion.years[0].year, item.conversion.years[item.conversion.years.length - 1].year)}`}
+                          , com {item.conversion.stats.classes.length} {item.conversion.stats.classes.length === 1 ? 'classe' : 'classes'}. Cada classe já vem com a sua cor.
+                        </p>
+                      )}
+                      <SeriesChecks c={item.conversion} region={region ? { bbox: region.bbox, nome: region.nome } : null} summary={summary} />
                     </>
                   ) : item.kind === 'vetor' ? (
                     <>
@@ -527,7 +605,21 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
                   )}
                 </PanelCard>
 
-                {item.kind === 'serie' && (
+                {item.kind === 'serie' && item.conversion.legend === 'meses' && (
+                  <PanelCard title="Quanto queimou" caption="Clique num ano ou num mês para ver no mapa." icon={ChartColumnStacked}>
+                    <FireSeriesView
+                      name={name}
+                      stats={item.conversion.stats}
+                      years={item.conversion.years.map((y) => y.year)}
+                      year={previewYear ?? item.conversion.years[item.conversion.years.length - 1].year}
+                      onYear={setPreviewYear}
+                      month={previewMonth}
+                      onMonth={setPreviewMonth}
+                    />
+                  </PanelCard>
+                )}
+
+                {item.kind === 'serie' && item.conversion.legend !== 'meses' && (
                   <PanelCard
                     title={item.conversion.years.length === 1 ? 'Como a área se divide' : 'Como a área mudou'}
                     caption={item.conversion.years.length === 1 ? 'Quanto da área cada classe ocupa.' : 'Cada barra é um ano. Clique numa barra ou arraste para ver o ano no mapa.'}
@@ -545,7 +637,7 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
 
                 <PanelCard
                   title="Como vai aparecer"
-                  caption={item.kind === 'serie' ? 'A prévia já está no mapa, com a cor de cada classe.' : 'A prévia já está no mapa.'}
+                  caption={item.kind === 'serie' ? (item.conversion.legend === 'meses' ? 'A prévia já está no mapa, na cor de fogo.' : 'A prévia já está no mapa, com a cor de cada classe.') : 'A prévia já está no mapa.'}
                   icon={Palette}
                 >
                   <div className="space-y-5">

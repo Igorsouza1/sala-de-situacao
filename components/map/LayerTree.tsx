@@ -76,6 +76,8 @@ export interface LayerTreeProps {
     onRename: (id: string, name: string) => void
     onDelete: (id: string) => void
     onMoveTo: (slug: string, folderId: string | null) => void
+    /** "Excluir" no botão direito de uma camada: quem tem o mapa pergunta, pede o arrasto e oferece o desfazer (13.1) */
+    onDeleteLayer?: (slug: string) => void
   }
 }
 
@@ -432,6 +434,20 @@ export function LayerTree({ options, layout, activeLayers, onLayerToggle, onGrou
                 )}
               </ContextMenuSubContent>
             </ContextMenuSub>
+          )}
+          {option.deletable && actions.onDeleteLayer && (
+            <>
+              <ContextMenuSeparator />
+              {/* por último e separado; em cinza quando não se exclui (o clique diz o porquê, 2.1 bloqueado) */}
+              <ContextMenuItem
+                danger={option.deletable.ok}
+                className={option.deletable.ok ? undefined : 'text-muted-foreground'}
+                onSelect={() => openFromMenu(() => actions.onDeleteLayer?.(option.slug))}
+              >
+                <Trash2 aria-hidden />
+                Excluir
+              </ContextMenuItem>
+            </>
           )}
         </ContextMenuContent>
       </ContextMenu>

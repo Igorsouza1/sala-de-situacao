@@ -30,6 +30,8 @@ import type { LayerManagerOption, LayerStatus } from './LayerManager'
 import { EditModeButton, LayersPanel } from './LayersPanel'
 import { LayersMenu } from './LayersMenu'
 import { Notice, type NoticeData } from './Notice'
+import { DeleteLayerDialog, type DeleteLayerTarget } from './DeleteLayerDialog'
+import { layerDeletability } from '@/lib/layer-delete'
 import { Reveal } from '@/components/ui/collapse'
 import { LayerEditor } from './LayerEditor'
 import { GroupIconEditor } from './GroupIconEditor'
@@ -140,6 +142,11 @@ import {
 
 // ── Module-level cache — persists across SPA navigation within the same tab ──
 // Cleared only on hard reload. Shared by all MapLibreMap mounts.
+/** uma exclusão de camada esperando o aviso acabar (13.1): o que mostrar se voltar, e quais chaves estavam ligadas */
+type PendingDelete = DeleteLayerTarget & { noticeId: number; wasOn: string[] }
+/** a chave ligada é da camada (ela mesma ou uma área dela, "slug__área") */
+const ownsKey = (slug: string, key: string) => key === slug || key.startsWith(`${slug}__`)
+
 const _cache: {
   layers: LayerResponseDTO[]
   data: Record<string, MapFeatureCollection>
@@ -230,6 +237,8 @@ export default function MapLibreMap({
   const [layers, setLayers] = useState<LayerResponseDTO[]>(() => _cache.layers)
   const [layerData, setLayerData] = useState<Record<string, MapFeatureCollection>>(() => ({ ..._cache.data }))
   const [visibleLayers, setVisibleLayers] = useState<string[]>([])
+  // camadas que a pessoa acabou de excluir e que ainda podem voltar (o aviso com desfazer conta): fora da lista e do mapa
+  const [hiddenSlugs, setHiddenSlugs] = useState<string[]>([])
   const [loadingLayers, setLoadingLayers] = useState(_cache.layers.length === 0)
   const [error, setError] = useState<string | null>(null)
   const [failedLayers, setFailedLayers] = useState<string[]>([])
@@ -298,6 +307,8 @@ export default function MapLibreMap({
 
   // ── Camadas importadas com anos: o período de cada uma (padrão: o período todo) ──
   const [yearRanges, setYearRanges] = useState<Record<string, [number, number]>>({})
+  // série de fogo por mês: o mês que cada uma mostra (ausente ou null: o ano todo)
+  const [seriesMonths, setSeriesMonths] = useState<Record<string, number | null>>({})
 
   // ── Hover tooltip ───────────────────────────────────────────────────────
   // fora do estado do mapa: o mouse sobre uma feição troca isto a cada movimento (ver hover-store.ts)
@@ -1051,12 +1062,13 @@ export default function MapLibreMap({
       const sc = layer.schemaConfig as { source?: string; kind?: string; years?: [number, number]; raster?: Omit<RasterSpec, 'key' | 'source' | 'color' | 'opacity' | 'years' | 'seriesYears'> & { years?: number[]; stats?: SeriesStats } } | undefined
       if (sc?.source !== 'drop-import' || !visibleLayers.includes(layer.slug)) continue
       const opacity = layoutApi.layout ? effectiveOpacity(layoutApi.layout, layer.slug) : 1
-      // série de classes (uso do solo): um ano por vez, o último no começo
+      // série de classes (uso do solo, fogo por mês): um ano por vez, o último no começo; no fogo, também um mês, se escolhido
       if (sc.kind === 'raster' && sc.raster?.mode === 'classes' && sc.raster.years && sc.raster.stats) {
         const { years: seriesYears, stats, ...raster } = sc.raster
         const year = yearRanges[layer.slug]?.[1] ?? seriesYears[seriesYears.length - 1]
-        series.push({ slug: layer.slug, name: layer.name, years: seriesYears, stats, year })
-        rasters.push({ ...raster, key: layer.slug, source: `/api/layers/${layer.slug}/raster`, color: readStyle(layer.visualConfig as any).fillColor, opacity, seriesYears, years: [year, year] })
+        const month = seriesMonths[layer.slug] ?? null
+        series.push({ slug: layer.slug, name: layer.name, years: seriesYears, stats, year, legend: raster.legend, month })
+        rasters.push({ ...raster, key: layer.slug, source: `/api/layers/${layer.slug}/raster`, color: readStyle(layer.visualConfig as any).fillColor, opacity, seriesYears, years: [year, year], month })
         continue
       }
       const value = yearRanges[layer.slug] ?? sc.years
@@ -1066,7 +1078,7 @@ export default function MapLibreMap({
       }
     }
     return { items, series, rasters }
-  }, [renderLayers, layoutApi.layout, visibleLayers, yearRanges])
+  }, [renderLayers, layoutApi.layout, visibleLayers, yearRanges, seriesMonths])
   const rasterSpecs = useMemo(
     () => (importPreview?.kind === 'raster' ? [...importedYears.rasters, importPreview.spec] : importedYears.rasters),
     [importedYears.rasters, importPreview],
@@ -1419,9 +1431,18 @@ export default function MapLibreMap({
   const panelOptions = useMemo((): LayerManagerOption[] => {
     return [
       // Os ícones (Ações) o mapa desenha sempre por cima: a lista diz isso e não oferece arrastar (13.1)
-      ...layerManagerOptions.map((o) => {
+      // a camada sendo excluída (o aviso com desfazer ainda conta) já saiu da lista
+      ...layerManagerOptions.filter((o) => !hiddenSlugs.includes(o.slug)).map((o) => {
         const layer = renderLayers.find((l) => l.slug === o.slug)
-        return { ...o, ...(layer && isIconLayer(layer.visualConfig) && { pinnedOnTop: true }), ...(personalInfo[o.slug] && { personal: personalInfo[o.slug] }) }
+        // Excluir (13.1): a mesma regra do servidor; quem não escreve na região vê o item e o motivo
+        const rule = layer ? layerDeletability({ slug: layer.slug, scope: layer.scope, schemaConfig: layer.schemaConfig }) : null
+        const deletable = rule && (!rule.ok || canEdit ? rule : { ok: false as const, reason: 'Seu perfil não exclui camadas desta região. Fale com quem administra a região.' })
+        return {
+          ...o,
+          ...(layer && isIconLayer(layer.visualConfig) && { pinnedOnTop: true }),
+          ...(personalInfo[o.slug] && { personal: personalInfo[o.slug] }),
+          ...(deletable && { deletable }),
+        }
       }),
       {
         id: 'fauna',
@@ -1438,7 +1459,7 @@ export default function MapLibreMap({
         ],
       },
     ]
-  }, [layerManagerOptions, renderLayers, personalInfo])
+  }, [layerManagerOptions, renderLayers, personalInfo, hiddenSlugs, canEdit])
 
   // As Ações que o mapa mostra agora (com os filtros e as áreas desligadas), para o resumo; null enquanto os dados não chegaram
   const acoesLayer = useMemo(() => {
@@ -1512,6 +1533,11 @@ export default function MapLibreMap({
     }
     showFeatures(features, markers)
   }, [processedLayers, faunaGeoJSON, showFeatures])
+
+  // Trocou de Região pelo menu da conta (13.11): o mapa voa até ela e o aviso diz, em frase, onde a pessoa chegou
+  const handleRegionChanged = useCallback((region: { nome: string }) => {
+    setNotice({ id: Date.now(), tone: 'success', title: `Agora em “${region.nome}”`, body: 'O mapa, as camadas e os números passam a ser desta região.' })
+  }, [])
 
   // ── Novidades (13.8): o sino e o que o clique num item faz ──────────────────────────────────────────────────
   const news = useNovidades(regiaoId)
@@ -1603,6 +1629,108 @@ export default function MapLibreMap({
     },
     [updateLayout, flash],
   )
+
+  // ── Excluir camada (DESIGN.md 13.1) ─────────────────────────────────────────────────────────────────────────────────
+  // Depois da pergunta e do arrasto (`DeleteLayerDialog`), a camada sai da lista e do mapa na hora, mas o servidor só apaga quando o
+  // aviso acaba sem "Desfazer": o tempo acabou, a pessoa fechou o aviso, outro aviso tomou o lugar, trocou de região ou fechou a página.
+  const [deleting, setDeleting] = useState<DeleteLayerTarget | null>(null)
+  const pendingDelete = useRef<PendingDelete | null>(null)
+
+  const handleDeleteLayer = useCallback(
+    (slug: string) => {
+      const option = panelOptions.find((o) => o.slug === slug)
+      if (!option?.deletable) return
+      if (!option.deletable.ok) {
+        setNotice({ id: Date.now(), tone: 'info', title: `“${option.label}” não se exclui`, body: option.deletable.reason })
+        return
+      }
+      setDeleting({ slug, label: option.label })
+    },
+    [panelOptions],
+  )
+
+  const restoreDeleted = useCallback((p: PendingDelete) => {
+    setHiddenSlugs((prev) => prev.filter((s) => s !== p.slug))
+    setVisibleLayers((prev) => [...prev, ...p.wasOn.filter((s) => !prev.includes(s))])
+  }, [])
+
+  const commitDelete = useCallback(
+    (p: PendingDelete, keepalive = false) => {
+      if (pendingDelete.current === p) pendingDelete.current = null
+      fetch(`/api/layers/${encodeURIComponent(p.slug)}`, { method: 'DELETE', keepalive })
+        .then(async (res) => {
+          if (res.ok) return
+          const body = await res.json().catch(() => null)
+          throw new Error(body?.error?.message || '')
+        })
+        .then(() => {
+          // saiu de vez: do catálogo da tela, dos dados e da lista escondida (a organização da pessoa esquece a camada sozinha)
+          _cache.layers = _cache.layers.filter((l) => l.slug !== p.slug)
+          delete _cache.data[p.slug]
+          setLayers((prev) => prev.filter((l) => l.slug !== p.slug))
+          setLayerData((prev) => {
+            if (!(p.slug in prev)) return prev
+            const next = { ...prev }
+            delete next[p.slug]
+            return next
+          })
+          setHiddenSlugs((prev) => prev.filter((s) => s !== p.slug))
+        })
+        .catch((err: Error) => {
+          restoreDeleted(p)
+          setNotice({
+            id: Date.now(),
+            tone: 'error',
+            title: `Não conseguimos excluir “${p.label}”`,
+            body: err.message ? `${err.message} A camada voltou para a lista.` : 'A camada voltou para a lista. Tente de novo daqui a pouco.',
+          })
+        })
+    },
+    [restoreDeleted],
+  )
+
+  const startDelete = useCallback(
+    (target: DeleteLayerTarget) => {
+      setDeleting(null)
+      // uma exclusão por vez: a que ainda contava vai de vez antes de a nova tomar o aviso
+      if (pendingDelete.current) commitDelete(pendingDelete.current)
+      const wasOn = visibleLayers.filter((s) => ownsKey(target.slug, s))
+      const noticeId = Date.now()
+      const pending: PendingDelete = { ...target, noticeId, wasOn }
+      pendingDelete.current = pending
+      setHiddenSlugs((prev) => (prev.includes(target.slug) ? prev : [...prev, target.slug]))
+      if (wasOn.length) setVisibleLayers((prev) => prev.filter((s) => !ownsKey(target.slug, s)))
+      setNotice({
+        id: noticeId,
+        tone: 'success',
+        title: `Excluímos “${target.label}”`,
+        body: 'Já saiu do mapa. Quando o contador acabar, sai para todos e não volta mais.',
+        undo: {
+          seconds: 10,
+          onUndo: () => {
+            if (pendingDelete.current !== pending) return
+            pendingDelete.current = null
+            restoreDeleted(pending)
+            flash(pending.slug)
+            setNotice({ id: Date.now(), tone: 'success', title: 'Desfeito', body: `“${pending.label}” continua no mapa, como estava.` })
+          },
+        },
+      })
+    },
+    [commitDelete, restoreDeleted, visibleLayers, flash],
+  )
+
+  // o aviso da exclusão acabou (tempo, X ou outro aviso) sem "Desfazer": agora o servidor apaga
+  useEffect(() => {
+    const p = pendingDelete.current
+    if (p && notice?.id !== p.noticeId) commitDelete(p)
+  }, [notice, commitDelete])
+  // fechar a página ou sair do mapa no meio do contador também conclui (keepalive: o pedido sobrevive à página)
+  useEffect(() => {
+    const flush = () => { if (pendingDelete.current) commitDelete(pendingDelete.current, true) }
+    window.addEventListener('pagehide', flush)
+    return () => { window.removeEventListener('pagehide', flush); flush() }
+  }, [commitDelete])
 
   // "Voltar ao padrão do mapa" também desfaz as pastas e a ordem, aqui e na conta
   const resetLayout = layoutApi.reset
@@ -2039,7 +2167,12 @@ export default function MapLibreMap({
       <MapLegend mapRef={mapRef} ready={mapLoaded} options={panelOptions} activeLayers={panelActiveLayers} ruleLegends={ruleLegends} counts={layerCounts} onShow={handleLegendShow} />
       <CameraControls mapRef={mapRef} onZoom={zoomBy} ready={mapLoaded} viewMode={viewMode} onViewModeChange={handleViewModeChange} canFitRegion={!!regionBounds} onFitRegion={handleFitRegion} />
 
-      <YearRangeCard items={importedYears.items} series={importedYears.series} onChange={(slug, value) => setYearRanges((prev) => ({ ...prev, [slug]: value }))} />
+      <YearRangeCard
+        items={importedYears.items}
+        series={importedYears.series}
+        onChange={(slug, value) => setYearRanges((prev) => ({ ...prev, [slug]: value }))}
+        onMonth={(slug, month) => setSeriesMonths((prev) => ({ ...prev, [slug]: month }))}
+      />
 
       {/* Soltar um arquivo no mapa: mostra a prévia e pede para salvar como camada */}
       <DropImport
@@ -2104,7 +2237,7 @@ export default function MapLibreMap({
             shownBasemap={shownBasemap}
             onBasemapChange={handleBasemapChange}
             onReset={handleReset}
-            tree={layoutApi.layout ? { layout: layoutApi.layout, onChange: layoutApi.update, onFolderToggle: handleFolderToggle, actions: { renamingId, onRenamingDone: () => setRenamingId(null), onStartRename: setRenamingId, onNewFolder: handleNewFolder, onRename: handleRenameFolder, onDelete: handleDeleteFolder, onMoveTo: handleMoveTo }, status: layoutApi.status, onRetrySave: layoutApi.retry } : undefined}
+            tree={layoutApi.layout ? { layout: layoutApi.layout, onChange: layoutApi.update, onFolderToggle: handleFolderToggle, actions: { renamingId, onRenamingDone: () => setRenamingId(null), onStartRename: setRenamingId, onNewFolder: handleNewFolder, onRename: handleRenameFolder, onDelete: handleDeleteFolder, onMoveTo: handleMoveTo, onDeleteLayer: handleDeleteLayer }, status: layoutApi.status, onRetrySave: layoutApi.retry } : undefined}
             onPick={isAdmin && picking ? handleEditLayer : undefined}
             onPickGroup={isAdmin && picking ? handleEditGroup : undefined}
             flashSlug={flashSlug}
@@ -2203,7 +2336,7 @@ export default function MapLibreMap({
         <GerarMapaButton onOpen={openGerarMapa} />
       </MapDock>
 
-      <UserAvatarMenu />
+      <UserAvatarMenu onRegionChanged={handleRegionChanged} />
 
       {gerarMapa && <GerarMapa session={gerarMapa} onClose={() => setGerarMapa(null)} />}
 
@@ -2211,6 +2344,9 @@ export default function MapLibreMap({
       <div className="pointer-events-none absolute inset-x-3 top-4 z-[2000] flex justify-center">
         <Notice notice={notice} onClose={() => setNotice(null)} />
       </div>
+
+      {/* Excluir camada: a pergunta e o arrasto, antes do aviso com desfazer (13.1) */}
+      <DeleteLayerDialog target={deleting} onCancel={() => setDeleting(null)} onConfirm={startDelete} />
 
       {/* Modal */}
       <Modal

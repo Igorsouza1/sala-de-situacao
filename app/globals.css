@@ -258,6 +258,22 @@
 .animate-notice-in { animation: notice-in 400ms var(--ease-spring) both; }
 .animate-notice-out { animation: notice-out 190ms ease-in forwards; }
 
+/* Janela no meio da tela (8.1, "Diálogo"): sobe um pouco e cresce com a mola (260 ms), sai mais rápido (150 ms). Centrada por um
+   invólucro em grade, e não por `translate(-50%, -50%)`, porque a animação usa a propriedade `translate` (16). */
+@keyframes dialog-in {
+  from { opacity: 0; scale: 0.96; translate: 0 10px; }
+  to { opacity: 1; scale: 1; translate: 0 0; }
+}
+@keyframes dialog-out {
+  to { opacity: 0; scale: 0.97; translate: 0 6px; }
+}
+@keyframes veil-in { from { opacity: 0; } }
+@keyframes veil-out { to { opacity: 0; } }
+.dialog-spring[data-state='open'] { animation: dialog-in 260ms var(--ease-spring) both; }
+.dialog-spring[data-state='closed'] { animation: dialog-out 150ms ease-in forwards; }
+.dialog-veil[data-state='open'] { animation: veil-in 200ms ease-out both; }
+.dialog-veil[data-state='closed'] { animation: veil-out 150ms ease-in forwards; }
+
 /* Movimento reduzido (8.3): as trocas acontecem, sem animação. O destaque do que mudou fica fixo (8.4, regra 3). */
 @media (prefers-reduced-motion: reduce) {
   *,

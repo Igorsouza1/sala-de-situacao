@@ -407,3 +407,22 @@ export function parseLayout(raw: unknown): MapLayout | undefined {
   }
   return { v: 1, items: items.slice(0, MAX_LAYERS) }
 }
+
+/** Tira uma camada do layout inteiro: solta, dentro de pasta ou lembrada no interruptor da pasta (a camada foi excluída). */
+export function removeLayerFromLayout(layout: MapLayout, slug: string): MapLayout {
+  let changed = false
+  const items: LayoutItem[] = []
+  for (const item of layout.items) {
+    if (!isFolder(item)) {
+      if (item.slug === slug) changed = true
+      else items.push(item)
+      continue
+    }
+    const layers = item.layers.filter((l) => l.slug !== slug)
+    const remembered = item.remembered?.filter((s) => s !== slug)
+    if (layers.length === item.layers.length && remembered?.length === item.remembered?.length) { items.push(item); continue }
+    changed = true
+    items.push({ ...item, layers, ...(item.remembered && { remembered }) })
+  }
+  return changed ? { v: 1, items } : layout
+}

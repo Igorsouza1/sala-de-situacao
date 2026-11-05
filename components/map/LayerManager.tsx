@@ -34,6 +34,8 @@ export interface LayerManagerOption {
   /** o que a pessoa pode ajustar só para si (cor e transparência) e a cor que ela vê agora; ausente: nada a ajustar (a Fauna, o mapa de calor) */
   /** `colorReason`: por que a cor não muda, quando não muda (o cartão diz isso no lugar da cor) */
   personal?: { color: boolean; opacity: boolean; mainColor: string; colorReason?: string }
+  /** "Excluir" no botão direito (13.1): ausente, o item não aparece (a Fauna); com `ok: false`, aparece em cinza e o clique diz o motivo */
+  deletable?: { ok: true } | { ok: false; reason: string }
 }
 
 export type LayerStatus = 'loading' | 'error'

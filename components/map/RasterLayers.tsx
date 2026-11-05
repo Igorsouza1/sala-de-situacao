@@ -7,6 +7,8 @@ import type { RasterMode } from '@/lib/geo-import/raster-pack'
 import { decodeSeries } from '@/lib/geo-import/class-series-read'
 import type { SeriesFrames } from '@/lib/geo-import/class-series'
 import { classInfo } from '@/lib/geo-import/mapbiomas'
+import { monthLut } from '@/lib/geo-import/months'
+import type { SeriesLegend } from '@/lib/geo-import/class-series-read'
 
 // Camadas raster no mapa (importadas por arrastar e soltar). Cada uma é uma imagem empacotada (um bit por ano, ver
 // lib/geo-import/raster-pack.ts) que aqui é PINTADA com o período pedido numa tela (canvas) e entregue ao MapLibre.
@@ -25,6 +27,10 @@ export interface RasterSpec {
   mode: RasterMode | 'classes'
   /** modo "classes": os anos da série, em ordem (o ano mostrado é o fim de `years`) */
   seriesYears?: number[]
+  /** modo "classes": como ler as classes (uso do solo ou mês do fogo); ausente: uso do solo */
+  legend?: SeriesLegend
+  /** fogo por mês: só este mês no mapa (1 a 12); ausente ou null: o ano todo */
+  month?: number | null
   /** maior valor (modo "valores") */
   max: number
   /** a cor da camada */
@@ -64,9 +70,17 @@ async function load(spec: RasterSpec, signal: AbortSignal): Promise<Loaded> {
   return { kind: 'packed', src: new Uint32Array(data.buffer, data.byteOffset, data.byteLength / 4), width: canvas.width, height: canvas.height }
 }
 
-/** as cores da legenda, montadas uma vez (o MapBiomas tem as mesmas cores em todas as séries) */
-let LUT: Uint32Array | null = null
-const lut = () => (LUT ??= classLut((c) => classInfo(c).color))
+/** as tabelas de cores, montadas uma vez cada: a da legenda do MapBiomas e as do fogo (o ano todo, ou um mês) */
+const LUTS = new Map<string, Uint32Array>()
+function lutFor(legend: SeriesLegend | undefined, month: number | null | undefined): Uint32Array {
+  const key = legend === 'meses' ? `meses:${month ?? 'ano'}` : 'classes'
+  let lut = LUTS.get(key)
+  if (!lut) {
+    lut = legend === 'meses' ? monthLut(month ?? null) : classLut((c) => classInfo(c).color)
+    LUTS.set(key, lut)
+  }
+  return lut
+}
 
 function RasterLayer({ spec, beforeSlugs }: { spec: RasterSpec; beforeSlugs: string[] }) {
   const { current: mapa } = useMap()
@@ -100,14 +114,14 @@ function RasterLayer({ spec, beforeSlugs }: { spec: RasterSpec; beforeSlugs: str
         dest.current = new Uint32Array(width * height)
       }
       const out = (dest.current ??= new Uint32Array(width * height))
-      if (loaded.kind === 'classes') paintClasses(loaded.frames.frame(frameIndex), out, width, height, spec.bounds, lut())
+      if (loaded.kind === 'classes') paintClasses(loaded.frames.frame(frameIndex), out, width, height, spec.bounds, lutFor(spec.legend, spec.month))
       else paintRaster(loaded.src, out, width, height, spec.bounds, { mode: spec.mode as RasterMode, rgb: hexToRgb(spec.color), from, to, max: spec.max })
       canvas.getContext('2d')!.putImageData(new ImageData(new Uint8ClampedArray(out.buffer, out.byteOffset, out.byteLength), width, height), 0, 0)
       setPainted((n) => n + 1)
     }, painted === 0 ? 0 : 40)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loaded, spec.color, spec.mode, spec.max, from, to, frameIndex, spec.bounds])
+  }, [loaded, spec.color, spec.mode, spec.max, from, to, frameIndex, spec.legend, spec.month, spec.bounds])
 
   // o MapLibre só copia a tela para a imagem enquanto a fonte está "tocando": toca por um quadro depois de cada repintura
   const sourceId = `raster-${spec.key}`

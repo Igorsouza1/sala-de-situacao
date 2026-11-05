@@ -22,6 +22,8 @@ import {
   type SeriesStats,
 } from './class-series'
 import { isMapBiomasLegend, looksLikeClasses, sortClasses } from './mapbiomas'
+import { looksLikeMonths } from './months'
+import { firstYearFromName } from './raster-pack'
 import { MAX_SERIES_STORED_BYTES as MAX_SERIES_BYTES, MAX_SERIES_YEARS } from './series-meta'
 
 const MAX_FRAME_PIXELS = 16_000_000
@@ -89,10 +91,18 @@ export class SeriesProblemError extends Error {
 
 export interface SeriesYear {
   file: File
+  /** o ano vem de uma banda do arquivo (série num arquivo só, uma banda por ano); ausente: a primeira */
+  band?: number
   year: number
   grid: Grid
   nodata: number | null
 }
+
+/**
+ * Como ler as classes da série: `mapbiomas` (uso do solo, nomes e cores oficiais), `meses` (fogo por mês: o valor é o mês em que
+ * queimou, 1 a 12) ou `classes` (códigos sem legenda conhecida).
+ */
+export type SeriesLegend = 'mapbiomas' | 'meses' | 'classes'
 
 export interface SeriesInspection {
   name: string
@@ -104,6 +114,8 @@ export interface SeriesInspection {
   missing: number[]
   /** o que os arquivos somam, em bytes */
   sourceBytes: number
+  /** já se sabe pela leitura (fogo por mês); ausente: decide-se pelas classes achadas */
+  legend?: SeriesLegend
 }
 
 export interface SeriesConversion extends SeriesInspection {
@@ -112,6 +124,69 @@ export interface SeriesConversion extends SeriesInspection {
   stats: SeriesStats
   /** todas as classes são do MapBiomas (nomes e cores oficiais) */
   mapbiomas: boolean
+  legend: SeriesLegend
+}
+
+/** "fogo_mensal_raster_2018_2023.tif" → "Fogo mensal 2018 a 2023": um nome que a pessoa só confirma. */
+export function bandSeriesName(fileName: string, first: number, last: number): string {
+  const stem = fileName
+    .replace(/\.[^.]+$/, '')
+    .replace(/(?<!\d)(?:19|20)\d{2}(?!\d)/g, ' ')
+    .replace(/[_\-.]+/g, ' ')
+    .replace(/\b(raster|tif|tiff)\b/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  const base = stem ? stem[0].toUpperCase() + stem.slice(1) : 'Série'
+  return `${base} ${first} a ${last}`
+}
+
+/**
+ * Um arquivo só, com uma banda por ano (o período no nome: "…_2018_2023.tif") e o MÊS do fogo em cada pixel: vira uma série de
+ * anos, como a do uso do solo, com a legenda dos meses. Devolve null se o arquivo não é desse tipo (segue o caminho de antes).
+ */
+export async function inspectBandSeries(file: File): Promise<SeriesInspection | null> {
+  const { fromBlob } = await import('geotiff')
+  let image
+  try {
+    image = await (await fromBlob(file)).getImage()
+  } catch {
+    return null
+  }
+  const bands = image.getSamplesPerPixel()
+  if (bands < 2 || bands > MAX_SERIES_YEARS || image.getBitsPerSample(0) !== 8) return null
+  const first = firstYearFromName(file.name, bands)
+  if (first === null) return null
+  const keys = image.getGeoKeys() as Record<string, number> | null
+  const epsg = keys?.GeographicTypeGeoKey ?? keys?.ProjectedCSTypeGeoKey
+  if (!keys || !epsg || !GEOGRAPHIC_OK.has(epsg)) return null // o caminho de antes já diz o que falta
+  const width = image.getWidth()
+  const height = image.getHeight()
+  if (width * height > MAX_FRAME_PIXELS) throw new SeriesProblemError({ code: 'grande' })
+  const nodata = image.getGDALNoData()
+
+  // os valores dizem se é mês: junta os valores banda a banda até ver um mês além de janeiro (um ano pode não ter fogo; só o 1 em
+  // todas as bandas é o raster de fogo de antes, 0/1 por ano). Um valor acima de 12 encerra: não é mês.
+  const seen = new Uint8Array(256)
+  for (let b = 0; b < bands; b++) {
+    const [band] = (await image.readRasters({ samples: [b] })) as unknown as ArrayLike<number>[]
+    for (let i = 0; i < band.length; i++) seen[band[i]] = 1
+    const codes: number[] = []
+    for (let c = 1; c < 256; c++) if (seen[c] && c !== nodata) codes.push(c)
+    if (codes.some((c) => c > 12)) return null
+    if (!looksLikeMonths(codes)) continue
+    const [w, s, e, n] = image.getBoundingBox()
+    const grid: Grid = { width, height, bounds: [w, s, e, n] }
+    return {
+      name: bandSeriesName(file.name, first, first + bands - 1),
+      years: Array.from({ length: bands }, (_, k) => ({ file, band: k, year: first + k, grid, nodata })),
+      grid,
+      adjusted: [],
+      missing: [],
+      sourceBytes: file.size,
+      legend: 'meses',
+    }
+  }
+  return null
 }
 
 /** Lê só o cabeçalho de cada arquivo (rápido) e confere se a série serve. */
@@ -175,8 +250,10 @@ export async function convertSeries(insp: SeriesInspection, onProgress: (fractio
     for (let k = 0; k < insp.years.length; k++) {
       const y = insp.years[k]
       const image = await (await fromBlob(y.file)).getImage()
-      const [band] = (await image.readRasters()) as unknown as ArrayLike<number>[]
+      const [band] = (await image.readRasters({ samples: [y.band ?? 0] })) as unknown as ArrayLike<number>[]
       let frame = normalizeClasses(band, y.nodata)
+      // fogo por mês: todo ano tem de trazer só meses; um valor fora de 1 a 12 diz que o arquivo não é o que parecia
+      if (insp.legend === 'meses' && frame.some((v) => v > 12)) throw new SeriesProblemError({ code: 'formato', file: y.file.name })
       if (!sameGrid(y.grid, grid)) frame = resampleNearest(frame, y.grid, grid)
       perYear.push(classAreas(frame, grid, rows))
       await writer.write(prev ? deltaFrame(prev, frame) : frame)
@@ -192,8 +269,10 @@ export async function convertSeries(insp: SeriesInspection, onProgress: (fractio
 
   const data = await compressed
   if (data.size > MAX_SERIES_BYTES) throw new SeriesProblemError({ code: 'pesado' })
-  const stats = buildStats(perYear, sortClasses)
-  return { ...insp, data, stats, mapbiomas: isMapBiomasLegend(stats.classes) }
+  const months = insp.legend === 'meses'
+  const stats = buildStats(perYear, months ? (codes) => [...codes].sort((a, b) => a - b) : sortClasses)
+  const mapbiomas = !months && isMapBiomasLegend(stats.classes)
+  return { ...insp, data, stats, mapbiomas, legend: months ? 'meses' : mapbiomas ? 'mapbiomas' : 'classes' }
 }
 
 /** Abre a série comprimida (do servidor ou da prévia) para pintar qualquer ano. */
