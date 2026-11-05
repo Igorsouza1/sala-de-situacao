@@ -43,7 +43,7 @@ function CartaoFocos({ onAbrir, regiaoId }: { onAbrir: (a: Alvo) => void; regiao
 }
 
 // A área queimada não pede nada ao servidor: os hectares por ano e mês foram calculados ao importar e moram na camada
-function CartaoFogoMensal({ fogo, onAbrir }: { fogo: FogoMensalFonte; onAbrir: (a: Alvo) => void }) {
+export function CartaoFogoMensal({ fogo, onAbrir, area }: { fogo: FogoMensalFonte; onAbrir: (a: Alvo) => void; area?: string }) {
   const totais = useMemo(() => fogo.stats.ha.map((linha) => linha.reduce((a, b) => a + b, 0)), [fogo])
   const r = areaQueimada(fogo.years, totais)
   return (
@@ -55,7 +55,7 @@ function CartaoFogoMensal({ fogo, onAbrir }: { fogo: FogoMensalFonte; onAbrir: (
       frase={r.frase}
       apoio={r.apoio}
       serie={r.serie}
-      onAbrir={() => onAbrir({ tipo: "fogoMensal", fogo })}
+      onAbrir={() => onAbrir({ tipo: "fogoMensal", fogo, ...(area && { area }) })}
       onTentar={() => {}}
     />
   )

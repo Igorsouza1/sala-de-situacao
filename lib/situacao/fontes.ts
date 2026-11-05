@@ -111,7 +111,14 @@ function numero(v: unknown): number | null {
  * Hectares de alerta por ano e mês ({ 2025: [jan, …, dez] }), o mesmo formato de `/api/desmatamento`. A área vem do atributo do
  * alerta e, sem ele, da geometria. Sem data, o ano basta: o alerta entra em janeiro daquele ano (o total do ano fica certo).
  */
-export function desmatamentoPorAnoMes(linhas: { properties: Record<string, unknown> | null; haGeom: number | null }[]): Record<number, number[]> {
+/**
+ * `areaDaGeometria`: vale a área da geometria (`haGeom`), e não a que o alerta diz. É o caso do recorte por área: só conta o
+ * pedaço do alerta que fica dentro da área escolhida.
+ */
+export function desmatamentoPorAnoMes(
+  linhas: { properties: Record<string, unknown> | null; haGeom: number | null }[],
+  { areaDaGeometria = false }: { areaDaGeometria?: boolean } = {},
+): Record<number, number[]> {
   const out: Record<number, number[]> = {}
   for (const { properties, haGeom } of linhas) {
     const p = properties ?? {}
@@ -120,9 +127,18 @@ export function desmatamentoPorAnoMes(linhas: { properties: Record<string, unkno
     const ano = m ? Number(m[1]) : numero(campo(p, CAMPOS_ANO))
     if (ano === null || !Number.isInteger(ano) || ano < 1900 || ano > 2100) continue
     const mes = m ? Math.min(11, Math.max(0, Number(m[2]) - 1)) : 0
-    const ha = numero(campo(p, CAMPOS_AREA)) ?? haGeom ?? 0
+    const ha = areaDaGeometria ? haGeom ?? 0 : numero(campo(p, CAMPOS_AREA)) ?? haGeom ?? 0
     if (!(ha > 0)) continue
     ;(out[ano] ??= Array(12).fill(0))[mes] += ha
   }
   return out
+}
+
+const CAMPOS_NOME = ['name', 'nome', 'nm', 'nome_area', 'denominacao', 'title', 'titulo', 'label']
+
+/** O nome de uma área clicada, para o título do recorte: o que as propriedades dizem, ou a camada ("Área de APPs"). */
+export function nomeDaArea(properties: Record<string, unknown> | null, camada: string): string {
+  const v = campo(properties ?? {}, CAMPOS_NOME)
+  const nome = typeof v === 'string' ? v.trim() : typeof v === 'number' ? String(v) : ''
+  return nome || `Área de ${camada.trim()}`
 }

@@ -1,4 +1,4 @@
-import { assuntosDaRegiao, desmatamentoPorAnoMes, ehCamadaDeDesmatamento, semAssunto, type Presenca } from '../fontes'
+import { nomeDaArea, assuntosDaRegiao, desmatamentoPorAnoMes, ehCamadaDeDesmatamento, semAssunto, type Presenca } from '../fontes'
 
 const nada: Presenca = { focos: false, desmatamento: false, javali: false, formoso: false, prata: false, cure: false }
 const tudo: Presenca = { focos: true, desmatamento: true, javali: true, formoso: true, prata: true, cure: true }
@@ -67,5 +67,18 @@ describe('desmatamento de camada importada, por ano e mês', () => {
       { properties: { ano: 2023 }, haGeom: 0 },
       { properties: null, haGeom: null },
     ])).toEqual({})
+  })
+})
+
+describe('recorte por área', () => {
+  it('nome da área: o que as propriedades dizem, ou a camada', () => {
+    expect(nomeDaArea({ NAME: 'Fazenda Acurizal' }, 'Rede Amolar')).toBe('Fazenda Acurizal')
+    expect(nomeDaArea({ nome: '  ' }, 'APPs')).toBe('Área de APPs')
+    expect(nomeDaArea(null, 'APPs')).toBe('Área de APPs')
+  })
+  it('no recorte vale só o pedaço do alerta dentro da área, não a área que o alerta diz', () => {
+    const linhas = [{ properties: { area_ha: 100, data_deteccao: '2024-03-10' }, haGeom: 4 }]
+    expect(desmatamentoPorAnoMes(linhas)[2024][2]).toBe(100)
+    expect(desmatamentoPorAnoMes(linhas, { areaDaGeometria: true })[2024][2]).toBe(4)
   })
 })

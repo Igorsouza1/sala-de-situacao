@@ -115,7 +115,7 @@ import { DockPanelButton, DockDivider, MapDock } from './MapDock'
 import { PrismCursor } from './PrismCursor'
 import { UserAvatarMenu } from './UserAvatarMenu'
 import { SituacaoPanel } from '@/components/situacao/SituacaoPanel'
-import { alvoDaCamada, type Alvo } from '@/components/situacao/alvo'
+import { alvoDaCamada, recorteDoClique, type Alvo, type Recorte } from '@/components/situacao/alvo'
 import {
   BASEMAP_MAX_ZOOM,
   DEFAULT_BASEMAP,
@@ -459,16 +459,20 @@ export default function MapLibreMap({
 
   // ── Situação: o detalhe aberto (um cartão do resumo ou um clique no mapa). Fechar o painel volta ao resumo, depois da saída (200 ms) ──
   const [situacaoAlvo, setSituacaoAlvo] = useState<Alvo | null>(null)
+  // a área clicada no mapa que recorta a Situação (DESIGN.md 13.10, "Recorte por área"); fechar o painel ou trocar de região a solta
+  const [situacaoRecorte, setSituacaoRecorte] = useState<Recorte | null>(null)
   useEffect(() => {
     if (dockOpen === 'situacao') return
-    const t = setTimeout(() => setSituacaoAlvo(null), 200)
+    const t = setTimeout(() => { setSituacaoAlvo(null); setSituacaoRecorte(null) }, 200)
     return () => clearTimeout(t)
   }, [dockOpen])
+  useEffect(() => { setSituacaoRecorte(null) }, [regiaoId])
 
   // O alerta (ou área) que a Situação está mostrando: o mapa o enquadra no espaço livre ao lado do painel e o desenha (a mesma
   // linguagem do Explorar, 13.5). Sai quando a pessoa volta ao resumo ou fecha o painel.
   const [situacaoDestaque, setSituacaoDestaque] = useState<Geometry | null>(null)
-  useEffect(() => { if (!situacaoAlvo) setSituacaoDestaque(null) }, [situacaoAlvo])
+  // o desenho sai ao voltar ao resumo da região; no resumo de uma área, a área segue desenhada
+  useEffect(() => { if (!situacaoAlvo && !situacaoRecorte) setSituacaoDestaque(null) }, [situacaoAlvo, situacaoRecorte])
   const mostrarSituacao = useCallback((geometry: Geometry, mover = true) => {
     setSituacaoDestaque(geometry)
     const map = mapRef.current
@@ -1097,7 +1101,7 @@ export default function MapLibreMap({
 
   // ── Shared feature-click handler (usado por layers MapLibre E por icon markers) ──
   const openFeatureModal = useCallback(
-    (slug: string, props: Record<string, any>, geometry?: Geometry) => {
+    (slug: string, props: Record<string, any>, geometry?: Geometry, featureId?: string | number) => {
       // focos, desmatamento e estações abrem no painel Situação, no detalhe do assunto
       const alvo = alvoDaCamada(slug, props)
       if (alvo) {
@@ -1112,13 +1116,31 @@ export default function MapLibreMap({
         selectExplore({ kind: slug, id: Number(props.id) })
         return
       }
+      // uma área (polígono de uma camada da região) recorta a Situação: o fogo e o desmatamento só de dentro dela.
+      // Os dados da própria área seguem a um toque, em "Ver os dados da área".
+      const layer = layers.find((l) => l.slug === slug)
+      const recorte = regiaoId ? recorteDoClique(slug, layer?.name ?? '', props, geometry, featureId) : null
+      if (recorte) {
+        setSituacaoAlvo(null)
+        setSituacaoRecorte(recorte)
+        setDockOpen('situacao')
+        return
+      }
       if (slug === 'acoes') setSelectedAcao(props)
       else setSelectedAcao(null)
       // o título é o nome da camada: sem ele a pessoa não sabe de qual camada são os dados que está lendo
       openModal(layers.find((l) => l.slug === slug)?.name ?? '', <FeatureDetails layerType={slug} properties={props} />)
     },
-    [openModal, selectExplore, mostrarSituacao, layers]
+    [openModal, selectExplore, mostrarSituacao, layers, regiaoId]
   )
+
+  // "Ver os dados da área" no recorte: o modal de sempre, com as propriedades do polígono
+  const verDadosDoRecorte = useCallback(() => {
+    if (!situacaoRecorte) return
+    const { slug, propriedades } = situacaoRecorte
+    openModal(layers.find((l) => l.slug === slug)?.name ?? '', <FeatureDetails layerType={slug} properties={propriedades} />)
+  }, [situacaoRecorte, openModal, layers])
+  const sairDoRecorte = useCallback(() => { setSituacaoRecorte(null); setSituacaoAlvo(null) }, [])
 
   // ── Hover handler para icon markers (HTML Markers não disparam onMouseMove do Map) ──
   // Um cartão por vez: com a lista de uma pilha à vista, o cartão da ação que está por baixo não abre (DESIGN.md 13.6)
@@ -1171,7 +1193,7 @@ export default function MapLibreMap({
       if (!e.features?.length) return
       const feature = e.features[0]
       const slug = feature.layer.id.replace(/-(fill|circle|line|hover-circle)$/, '')
-      openFeatureModal(slug, feature.properties ?? {}, feature.geometry)
+      openFeatureModal(slug, feature.properties ?? {}, feature.geometry, feature.id)
     },
     [coordInspectorActive, propertyInfoActive, selectProperty, measureMode, measureDrawing, openFeatureModal]
   )
@@ -2313,7 +2335,16 @@ export default function MapLibreMap({
           />
         </DockPanelButton>
         <DockPanelButton id="situacao" icon={LucideIcons.Activity} label="Situação" motion="rise" side wide>
-          <SituacaoPanel open={dockOpen === 'situacao'} alvo={situacaoAlvo} onAlvo={setSituacaoAlvo} regiaoId={regiaoId} onMostrar={mostrarSituacao} />
+          <SituacaoPanel
+            open={dockOpen === 'situacao'}
+            alvo={situacaoAlvo}
+            onAlvo={setSituacaoAlvo}
+            regiaoId={regiaoId}
+            onMostrar={mostrarSituacao}
+            recorte={situacaoRecorte}
+            onSairDoRecorte={sairDoRecorte}
+            onVerDadosDaArea={verDadosDoRecorte}
+          />
         </DockPanelButton>
         <DockDivider />
         <ToolMenu

@@ -21,7 +21,7 @@ const DesmatamentoContext = createContext<DesmatamentoContextType | undefined>(u
  * `regiaoId`: só os alertas desta região. `camada`: os alertas vêm de uma camada importada da região (ex.: MapBiomas Alerta), no
  * mesmo formato; ela devolve todos os anos de uma vez e o ano escolhido é filtrado aqui.
  */
-export function DesmatamentoProvider({ children, regiaoId, camada }: { children: ReactNode; regiaoId?: number; camada?: string }) {
+export function DesmatamentoProvider({ children, regiaoId, camada, dados }: { children: ReactNode; regiaoId?: number; camada?: string; dados?: DesmatamentoData }) {
   const [desmatamentoData, setDesmatamentoData] = useState<DesmatamentoData>({})
   const [filteredDesmatamentoData, setFilteredDesmatamentoData] = useState<number[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -29,6 +29,13 @@ export function DesmatamentoProvider({ children, regiaoId, camada }: { children:
   const [selectedYear, setSelectedYear] = useState<string>(() => String(new Date().getFullYear()))
 
   useEffect(() => {
+    // `dados`: já vieram prontos (o recorte por área): todos os anos, nada a buscar
+    if (dados) {
+      setDesmatamentoData(dados)
+      setIsLoading(false)
+      setError(null)
+      return
+    }
     const controller = new AbortController()
     async function fetchDesmatamentoData() {
       setIsLoading(true)
@@ -60,7 +67,7 @@ export function DesmatamentoProvider({ children, regiaoId, camada }: { children:
 
     fetchDesmatamentoData()
     return () => controller.abort()
-  }, [selectedYear, regiaoId, camada])
+  }, [selectedYear, regiaoId, camada, dados])
 
   useEffect(() => {
     if (selectedYear === "todos") {

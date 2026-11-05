@@ -1,5 +1,7 @@
 import { GET as assuntos } from './assuntos/route'
 import { GET as desmatamentoCamada } from './desmatamento-camada/route'
+import { GET as recorte } from './recorte/route'
+import { recorteDaArea } from '@/lib/service/recorteService'
 import { resolveEnvironmentalReadScope } from '@/lib/api/environmental-read-scope'
 import { apiError } from '@/lib/api/responses'
 import { lerAlertasDaCamada, lerFontesDaRegiao } from '@/lib/repositories/situacaoFontesRepository'
@@ -8,6 +10,7 @@ import { findLayerEntryBySlug } from '@/lib/repositories/layerRepository'
 jest.mock('@/lib/api/environmental-read-scope', () => ({ resolveEnvironmentalReadScope: jest.fn() }))
 jest.mock('@/lib/repositories/situacaoFontesRepository', () => ({ lerFontesDaRegiao: jest.fn(), lerAlertasDaCamada: jest.fn() }))
 jest.mock('@/lib/repositories/layerRepository', () => ({ findLayerEntryBySlug: jest.fn() }))
+jest.mock('@/lib/service/recorteService', () => ({ recorteDaArea: jest.fn() }))
 
 const scope = jest.mocked(resolveEnvironmentalReadScope)
 const fontes = jest.mocked(lerFontesDaRegiao)
@@ -73,5 +76,30 @@ describe('GET /api/situacao/desmatamento-camada', () => {
   it('sem camada ou sem região, recusa', async () => {
     expect((await desmatamentoCamada(req('/api/situacao/desmatamento-camada?regiao_id=2'))).status).toBe(400)
     expect((await desmatamentoCamada(req(`/api/situacao/desmatamento-camada?slug=${camada.slug}`))).status).toBe(400)
+  })
+})
+
+describe('GET /api/situacao/recorte', () => {
+  const corte = jest.mocked(recorteDaArea)
+  it('recorta pela área da região escolhida', async () => {
+    corte.mockResolvedValue({ area: { nome: 'Fazenda X', camada: 'Rede Amolar', ha: 10, geometria: { type: 'Polygon', coordinates: [] } }, fogoMensal: [], desmatamento: null })
+    const res = await recorte(req('/api/situacao/recorte?regiao_id=2&camada=rede-amolar&area=7'))
+    expect(res.status).toBe(200)
+    expect(corte).toHaveBeenCalledWith(2, 'rede-amolar', 7)
+  })
+  it('área que não é da região: 404', async () => {
+    corte.mockResolvedValue(null)
+    expect((await recorte(req('/api/situacao/recorte?regiao_id=2&camada=rede-amolar&area=7'))).status).toBe(404)
+  })
+  it('sem região, camada ou área válida: 400, sem ler nada', async () => {
+    for (const q of ['camada=x&area=7', 'regiao_id=2&area=7', 'regiao_id=2&camada=x', 'regiao_id=2&camada=x&area=7x']) {
+      expect((await recorte(req(`/api/situacao/recorte?${q}`))).status).toBe(400)
+    }
+    expect(corte).not.toHaveBeenCalled()
+  })
+  it('região que a pessoa não acessa: a recusa do escopo passa adiante', async () => {
+    scope.mockResolvedValue({ response: apiError('Região não acessível.', 403) } as never)
+    expect((await recorte(req('/api/situacao/recorte?regiao_id=1&camada=x&area=7'))).status).toBe(403)
+    expect(corte).not.toHaveBeenCalled()
   })
 })
