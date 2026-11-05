@@ -60,9 +60,12 @@ describe.each([{name:'update POST',handler:update},{name:'update DELETE',handler
     (db.execute as jest.Mock).mockResolvedValue({ rows: [{ ok: false }] });
     expect((await handler(request(),context)).status).toBe(403); noMutation();
   });
-  it('rejects an action whose region belongs to another organization',async()=> {
+  it('rejects an action whose region belongs to another organization without a role there',async()=> {
     (getTenantIdForRegion as jest.Mock).mockResolvedValue('org-b');
+    (db.execute as jest.Mock).mockResolvedValue({ rows: [{ ok: false }] });
     expect((await handler(request(),context)).status).toBe(403); noMutation();
+    // o papel procurado é o da Organização dona da Região
+    expect(new PgDialect().sqlToQuery((db.execute as jest.Mock).mock.calls[0][0]).params).toContain('org-b');
   });
   it('rejects a viewer without regional assignments',async()=> {
     (getAccessibleRegionIdsForUser as jest.Mock).mockResolvedValue([]);

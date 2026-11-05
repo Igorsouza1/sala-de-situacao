@@ -15,11 +15,16 @@ export async function requireWriteRegion(user: User, tenantId: string, requested
   const regionTenant = await getTenantIdForRegion(regionId);
   if (!regionTenant) return { regionId, tenantId, response: apiError("Regiao nao encontrada.", 404) };
   if (user.app_metadata?.is_superadmin === true) return { regionId, tenantId: regionTenant, response: null };
-  if (regionTenant !== tenantId) return { regionId, tenantId, response: apiError("Regiao pertence a outra organizacao.", 403) };
+  // o papel que conta é o da Organização dona da Região (a pessoa pode ter papel em mais de uma)
   const grant = await db.execute<{ ok: boolean }>(sql`
     SELECT EXISTS (SELECT 1 FROM monitoramento.roles
-      WHERE user_id = ${user.id}::uuid AND tenant_id = ${tenantId}::uuid
+      WHERE user_id = ${user.id}::uuid AND tenant_id = ${regionTenant}::uuid
         AND (role = 'owner' OR (role = 'editor' AND region_id = ${regionId}))) AS ok
   `);
-  return { regionId, tenantId, response: grant.rows[0]?.ok === true ? null : apiError("Sem permissao de escrita nesta regiao.", 403) };
+  if (grant.rows[0]?.ok === true) return { regionId, tenantId: regionTenant, response: null };
+  return {
+    regionId,
+    tenantId,
+    response: apiError(regionTenant !== tenantId ? "Regiao pertence a outra organizacao." : "Sem permissao de escrita nesta regiao.", 403),
+  };
 }

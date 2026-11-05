@@ -8,6 +8,7 @@ import {
   ensureLegacyUserAccessInDb,
   findAuthUserByEmailInDb,
   getRegionNamesInDb,
+  getRegionTenantsInDb,
   getRoleAssignmentByIdInDb,
   getTenantNameInDb,
   insertRoleAssignmentsInDb,
@@ -63,16 +64,35 @@ export interface CreateUserAccessResult {
   mode: "invited" | "notified";
 }
 
+/**
+ * Os papéis a criar, um grupo por Organização. Owner: a Organização pedida, inteira. Os demais: as Regiões agrupadas pela
+ * Organização dona de cada uma (a pessoa pode ver Regiões de Organizações diferentes; o app troca de Organização ao abrir
+ * a Região, ver lib/api/open-region.ts).
+ */
+export async function grantsFor(payload: CreateUserAccessPayload): Promise<{ tenantId: string; regionIds: number[] }[]> {
+  if (payload.role === "owner") {
+    if (!payload.tenantId || !(await tenantExistsInDb(payload.tenantId))) {
+      throw new UserManagementError("Organização não encontrada.", 404);
+    }
+    return [{ tenantId: payload.tenantId, regionIds: [] }];
+  }
+  const ids = [...new Set(payload.regionIds)];
+  const owners = await getRegionTenantsInDb(ids);
+  if (owners.length !== ids.length) {
+    throw new UserManagementError("Uma ou mais regiões não existem ou não têm organização.", 404);
+  }
+  const byTenant = new Map<string, number[]>();
+  for (const id of ids) {
+    const tenantId = owners.find((o) => o.id === id)!.tenantId;
+    byTenant.set(tenantId, [...(byTenant.get(tenantId) ?? []), id]);
+  }
+  return [...byTenant].map(([tenantId, regionIds]) => ({ tenantId, regionIds }));
+}
+
 export async function createUserAccess(payload: CreateUserAccessPayload): Promise<CreateUserAccessResult> {
-  const { email, tenantId, role, regionIds } = payload;
-
-  if (!(await tenantExistsInDb(tenantId))) {
-    throw new UserManagementError("Organização não encontrada.", 404);
-  }
-
-  if (!(await regionsBelongToTenantInDb(tenantId, regionIds))) {
-    throw new UserManagementError("Uma ou mais regiões não pertencem a essa organização.", 400);
-  }
+  const { email, role } = payload;
+  const grants = await grantsFor(payload);
+  const tenantId = grants[0].tenantId;
 
   const supabaseAdmin = createAdminClient();
   const existing = await findAuthUserByEmailInDb(email);
@@ -121,19 +141,27 @@ export async function createUserAccess(payload: CreateUserAccessPayload): Promis
     mode = "notified";
   }
 
-  const insertedRows = await insertRoleAssignmentsInDb({ tenantId, userId, role, regionIds });
+  const insertedRows: { id: number; regionId: number | null }[] = [];
+  const grantedTenants: string[] = [];
+  for (const grant of grants) {
+    const inserted = await insertRoleAssignmentsInDb({ tenantId: grant.tenantId, userId, role, regionIds: grant.regionIds });
+    if (inserted.length === 0) continue;
+    insertedRows.push(...inserted);
+    grantedTenants.push(grant.tenantId);
+    const firstRegionId = inserted.find((r) => r.regionId != null)?.regionId ?? null;
+    await ensureLegacyUserAccessInDb({ userId, tenantId: grant.tenantId, regionId: firstRegionId });
+  }
 
   if (insertedRows.length === 0) {
     return { userId, email, createdAssignments: 0, alreadyGranted: true, mode };
   }
 
-  const firstRegionId = insertedRows.find((r) => r.regionId != null)?.regionId ?? null;
-  await ensureLegacyUserAccessInDb({ userId, tenantId, regionId: firstRegionId });
-
-  const [organizationName, regionNames] = await Promise.all([
-    getTenantNameInDb(tenantId),
+  const [tenantNames, regionNames] = await Promise.all([
+    Promise.all(grantedTenants.map((id) => getTenantNameInDb(id))),
     getRegionNamesInDb(insertedRows.map((r) => r.regionId).filter((id): id is number => id != null)),
   ]);
+  const names = tenantNames.filter((n): n is string => !!n);
+  const organizationName = names.length > 1 ? `${names.slice(0, -1).join(", ")} e ${names[names.length - 1]}` : names[0] ?? null;
 
   const emailContent = mode === "invited"
     ? buildInviteEmail({

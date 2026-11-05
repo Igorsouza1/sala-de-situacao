@@ -1,4 +1,4 @@
-import { desmatamento, focos, javali, quando, turbidez, visibilidade } from "../estado"
+import { areaQueimada, desmatamento, focos, javali, quando, turbidez, visibilidade } from "../estado"
 
 const hoje = new Date("2026-10-07T12:00:00")
 
@@ -68,4 +68,24 @@ test("javali conta o mês e compara com o anterior", () => {
   expect(javali(0, 4).tom).toBe("ok")
   expect(javali(3, 1)).toMatchObject({ tom: "atencao", frase: "3 relatos de javali neste mês", apoio: "No mês passado foram 1" })
   expect(javali(null, null).tom).toBe("neutro")
+})
+
+describe("área queimada (fogo por mês, anual)", () => {
+  it("o agora é o último ano; mais que o anterior é crítico, e diz o ano de pico", () => {
+    const r = areaQueimada([2019, 2020, 2021], [500, 110_248, 2_200])
+    expect(r.frase).toBe("2,2 mil ha queimados em 2021")
+    expect(r.tom).toBe("atencao")
+    expect(r.apoio).toBe("O ano de mais fogo foi 2020, com 110 mil ha")
+    expect(areaQueimada([2020, 2021], [100, 300]).tom).toBe("crit")
+  })
+
+  it("o último ano sendo o pico, diz isso", () => {
+    expect(areaQueimada([2020, 2021], [100, 300]).apoio).toBe("O ano de mais fogo da série (desde 2020)")
+  })
+
+  it("sem fogo no último ano é tudo certo; série vazia é sem leitura", () => {
+    expect(areaQueimada([2020, 2021], [80, 0])).toMatchObject({ tom: "ok", frase: "Nenhuma área queimada em 2021" })
+    expect(areaQueimada([2020], [0]).apoio).toBe("Nenhum fogo desde 2020")
+    expect(areaQueimada([], []).tom).toBe("neutro")
+  })
 })

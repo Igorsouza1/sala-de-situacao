@@ -8,7 +8,7 @@ export interface RegionOption {
   organizacao: string | null
 }
 
-/** Mais de uma Organização na lista (só o Superadmin vê isso): aí cada linha diz de quem é a Região. */
+/** Mais de uma Organização na lista (o Superadmin, ou quem tem papel em mais de uma): aí cada linha diz de quem é a Região. */
 export const mixesOrganizations = (list: RegionOption[]) => new Set(list.map((r) => r.organizacao ?? '')).size > 1
 
 /** A linha de apoio de uma Região: "Bonito/MS", com a Organização quando a lista mistura Organizações. Sem nada a dizer, null. */

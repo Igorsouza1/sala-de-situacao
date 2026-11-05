@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAuthWithTenant } from "@/lib/api/require-auth";
-import { getAccessibleRegionIdsForUser, getRegionIdsForUser } from "@/lib/api/require-region";
+import { getRegionIdsForUser } from "@/lib/api/require-region";
+import { resolveScope } from "@/lib/api/scope";
 import { db } from "@/db";
 import { sql } from "drizzle-orm";
 import { parseRegiaoIdParam } from "@/lib/api/region-id";
@@ -69,9 +70,10 @@ export async function GET(request: Request) {
   if (!requested.ok) return NextResponse.json(null, { status: 400 })
   if (requested.id !== null) {
     const id = requested.id
-    const allowed = await getAccessibleRegionIdsForUser(user!.id, tenantId!, isSuperAdmin);
-    if (allowed !== null && !allowed.includes(id)) return NextResponse.json(null, { status: 403 });
-    const row = await specificRegionsBBox([id], isSuperAdmin ? undefined : tenantId!)
+    // a Região pode ser de outra Organização da pessoa: o escopo confere o papel na Organização dona dela
+    const scope = await resolveScope({ regiaoId: id })
+    if (scope.response) return NextResponse.json(null, { status: scope.response.status })
+    const row = await specificRegionsBBox([id], isSuperAdmin ? undefined : scope.tenantId)
     if (!row || row.count === 0) return NextResponse.json(null)
     return NextResponse.json({
       nome: row.nome,

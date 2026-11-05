@@ -28,12 +28,15 @@ import { useFogo } from "@/context/FogoContext"
 import { useJson } from "./use-json"
 import { RelatorioDesmatamento } from "./relatorio-desmatamento"
 import type { Alvo, TipoAlvo } from "./alvo"
+import type { FogoMensalFonte } from "@/lib/situacao/fontes"
+import { FireSeriesView } from "@/components/map/FireSeries"
 import type { OnMostrar } from "./SituacaoPanel"
 
 const SEM_SYNC = "Esta estação ainda não recebe leituras novas: o que aparece é o que já estava guardado."
 
 const TITULOS: Record<TipoAlvo, { titulo: string; icone: LucideIcon }> = {
   focos: { titulo: "Focos de calor", icone: Flame },
+  fogoMensal: { titulo: "Área queimada", icone: Flame },
   desmatamento: { titulo: "Desmatamento", icone: TreePine },
   javali: { titulo: "Avistamentos de javali", icone: PawPrint },
   formoso: { titulo: "Rio Formoso · Balneário Municipal", icone: Waves },
@@ -153,17 +156,34 @@ function DetalheFocos({ item, voltar }: { item?: Record<string, unknown>; voltar
   )
 }
 
-function DetalheDesmatamentoSerie({ voltar }: { voltar: () => void }) {
+// A área queimada (raster de fogo por mês): o mesmo gráfico do canto do mapa, com o ano e o mês escolhidos aqui dentro.
+function DetalheFogoMensal({ fogo, voltar }: { fogo: FogoMensalFonte; voltar: () => void }) {
+  const [ano, setAno] = useState(() => fogo.years[fogo.years.length - 1])
+  const [mes, setMes] = useState<number | null>(null)
+  return (
+    <Moldura tipo="fogoMensal" voltar={voltar}>
+      <p className="text-sm text-muted-foreground">
+        De {fogo.years[0]} a {fogo.years[fogo.years.length - 1]}, pela camada “{fogo.nome}”. O dado é anual: o último ano é o mais recente que ela tem.
+      </p>
+      <section className="rounded-lg border border-border bg-card p-4">
+        <FireSeriesView name={fogo.nome} stats={fogo.stats} years={fogo.years} year={ano} onYear={setAno} month={mes} onMonth={setMes} mapless />
+      </section>
+    </Moldura>
+  )
+}
+
+function DetalheDesmatamentoSerie({ voltar, camada }: { voltar: () => void; camada?: { slug: string; nome: string } }) {
   const { selectedYear, setSelectedYear } = useDesmatamento()
   return (
     <Moldura tipo="desmatamento" voltar={voltar} acao={<SeletorAno ano={selectedYear} onChange={setSelectedYear} />}>
+      {camada && <p className="text-sm text-muted-foreground">Alertas da camada “{camada.nome}”.</p>}
       <GraficoDesmatamento />
     </Moldura>
   )
 }
 
-function DetalheDesmatamento({ item, voltar, regiaoId, onMostrar }: { item?: Record<string, unknown>; voltar: () => void; regiaoId?: number; onMostrar?: OnMostrar }) {
-  if (!item) return <DetalheDesmatamentoSerie voltar={voltar} />
+function DetalheDesmatamento({ item, camada, voltar, regiaoId, onMostrar }: { item?: Record<string, unknown>; camada?: { slug: string; nome: string }; voltar: () => void; regiaoId?: number; onMostrar?: OnMostrar }) {
+  if (!item) return <DetalheDesmatamentoSerie voltar={voltar} camada={camada} />
   const alertaId = Number(item.id)
   return (
     <Moldura tipo="desmatamento" voltar={voltar}>
@@ -290,7 +310,8 @@ function DetalheCure({ voltar }: { voltar: () => void }) {
 export function Detalhe({ alvo, voltar, regiaoId, onMostrar }: { alvo: Alvo; voltar: () => void; regiaoId?: number; onMostrar?: OnMostrar }) {
   switch (alvo.tipo) {
     case "focos": return <DetalheFocos item={alvo.item} voltar={voltar} />
-    case "desmatamento": return <DetalheDesmatamento item={alvo.item} voltar={voltar} regiaoId={regiaoId} onMostrar={onMostrar} />
+    case "fogoMensal": return alvo.fogo ? <DetalheFogoMensal fogo={alvo.fogo} voltar={voltar} /> : null
+    case "desmatamento": return <DetalheDesmatamento item={alvo.item} camada={alvo.camada} voltar={voltar} regiaoId={regiaoId} onMostrar={onMostrar} />
     case "javali": return <DetalheJavali voltar={voltar} />
     case "formoso": return <DetalheFormoso voltar={voltar} />
     case "prata": return <DetalhePrata voltar={voltar} />

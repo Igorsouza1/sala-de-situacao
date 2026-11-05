@@ -19,6 +19,8 @@ interface FireSeriesViewProps {
   /** só este mês no mapa (1 a 12); null: o ano todo */
   month: number | null
   onMonth: (month: number | null) => void
+  /** o gráfico não mexe no mapa (painel Situação): as frases falam do gráfico, não do mapa */
+  mapless?: boolean
 }
 
 /** hectares em palavras curtas: "437", "2,2 mil", "110 mil" */
@@ -28,7 +30,7 @@ function haShort(v: number): string {
 }
 const haText = (v: number) => `${haShort(v)} ${Math.round(v) === 1 ? 'hectare' : 'hectares'}`
 
-export function FireSeriesView({ name, stats, years, year, onYear, month, onMonth }: FireSeriesViewProps) {
+export function FireSeriesView({ name, stats, years, year, onYear, month, onMonth, mapless = false }: FireSeriesViewProps) {
   const { totals, byMonth } = useMemo(() => {
     const totals = stats.ha.map((row) => row.reduce((a, b) => a + b, 0))
     const byMonth = stats.ha.map((row) => {
@@ -49,9 +51,9 @@ export function FireSeriesView({ name, stats, years, year, onYear, month, onMont
 
   const yearCaption = `O ano de mais fogo foi ${years[peakYear]}, com ${haText(totals[peakYear])}.`
   const monthCaption = month
-    ? `O mapa mostra só ${MONTHS[month - 1]} de ${year}: ${haText(months[month - 1])}.`
+    ? `${mapless ? 'Em' : 'O mapa mostra só'} ${MONTHS[month - 1]} de ${year}: ${haText(months[month - 1])}.`
     : burnedThisYear
-      ? `Mais fogo em ${MONTHS[peakMonth]}: ${haText(months[peakMonth])}. Clique num mês para ver só ele no mapa.`
+      ? `Mais fogo em ${MONTHS[peakMonth]}: ${haText(months[peakMonth])}.${mapless ? '' : ' Clique num mês para ver só ele no mapa.'}`
       : `Não houve fogo em ${year}.`
 
   return (
@@ -59,7 +61,7 @@ export function FireSeriesView({ name, stats, years, year, onYear, month, onMont
       <div>
         <p className="text-sm font-medium">Hectares queimados por ano</p>
         <p className="mt-0.5 text-xs leading-snug text-muted-foreground">{yearCaption}</p>
-        <div role="group" aria-label={`Ano de ${name} no mapa`} className="mt-3 flex h-32 items-end gap-1.5">
+        <div role="group" aria-label={mapless ? `Ano de ${name}` : `Ano de ${name} no mapa`} className="mt-3 flex h-32 items-end gap-1.5">
           {years.map((y, i) => (
             <button
               key={y}
@@ -86,7 +88,7 @@ export function FireSeriesView({ name, stats, years, year, onYear, month, onMont
       <div>
         <p className="text-sm font-medium">Em {year}, mês a mês</p>
         <p className="mt-0.5 text-xs leading-snug text-muted-foreground" aria-live="polite">{monthCaption}</p>
-        <div role="group" aria-label={`Mês de ${year} no mapa`} className="mt-3 flex h-20 items-end gap-1">
+        <div role="group" aria-label={mapless ? `Mês de ${year}` : `Mês de ${year} no mapa`} className="mt-3 flex h-20 items-end gap-1">
           {months.map((v, i) => {
             const chosen = month === i + 1
             return (

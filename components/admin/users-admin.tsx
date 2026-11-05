@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AlertCircle, Mail, Pencil, Trash2, UserX } from "lucide-react";
+import { AlertCircle, Mail, MapPinPlus, Pencil, Trash2, UserX } from "lucide-react";
 
 type Organization = { id: string; name: string; slug: string | null };
 type Region = { id: number; nome: string; organizationId: string | null };
@@ -113,6 +113,27 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
 
   const regionsForOrg = (orgId: string) => regions.filter((r) => r.organizationId === orgId);
 
+  // As Regiões agrupadas pela Organização dona: a pessoa pode ver Regiões de mais de uma (o mapa troca de Organização ao
+  // abrir a Região). Organização sem Região não aparece.
+  const regionGroups = useMemo(
+    () => orgs.map((o) => ({ org: o, regions: regionsForOrg(o.id) })).filter((g) => g.regions.length > 0),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [orgs, regions],
+  );
+
+  // O que o email digitado já vê: dono vê todas as Regiões da Organização; os demais, as Regiões dos seus papéis.
+  const alreadyGranted = useMemo(() => {
+    const email = createForm.email.trim().toLowerCase();
+    const mine = rows.filter((r) => r.roleId !== null && (r.email ?? "").toLowerCase() === email);
+    const ids = new Set<number>();
+    for (const r of mine) {
+      if (r.role === "owner" && r.tenantId) regionsForOrg(r.tenantId).forEach((g) => ids.add(g.id));
+      else if (r.regionId) ids.add(r.regionId);
+    }
+    return ids;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, regions, createForm.email]);
+
   const filteredRows = useMemo(
     () => orgFilter === "all" ? rows : orgFilter === "attention"
       ? rows.filter((row) => row.status === "no_access" || row.status === "no_region")
@@ -131,7 +152,7 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
   };
 
   const openCreateForUser = (row: AccessRow) => {
-    setCreateForm({ ...initialCreateForm, email: row.email ?? "", tenantId: initialOrgId ?? "" });
+    setCreateForm({ ...initialCreateForm, email: row.email ?? "", tenantId: initialOrgId ?? "", role: row.role && row.role !== "owner" ? row.role : "viewer" });
     setCreateError(null);
     setCreateSuccess(null);
     setCreateOpen(true);
@@ -148,8 +169,8 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
     setCreateError(null);
     setCreateSuccess(null);
 
-    if (!createForm.email || !createForm.tenantId) {
-      setCreateError("Email e organização são obrigatórios.");
+    if (!createForm.email || (createForm.role === "owner" && !createForm.tenantId)) {
+      setCreateError(createForm.role === "owner" ? "Email e organização são obrigatórios." : "O email é obrigatório.");
       return;
     }
     if (createForm.role !== "owner" && createForm.regionIds.length === 0) {
@@ -162,12 +183,9 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
       const res = await fetch("/api/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: createForm.email,
-          tenantId: createForm.tenantId,
-          role: createForm.role,
-          regionIds: createForm.role === "owner" ? [] : createForm.regionIds,
-        }),
+        body: JSON.stringify(createForm.role === "owner"
+          ? { email: createForm.email, tenantId: createForm.tenantId, role: "owner", regionIds: [] }
+          : { email: createForm.email, role: createForm.role, regionIds: createForm.regionIds.filter((id) => !alreadyGranted.has(id)) }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -372,6 +390,9 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
                   )}
                   {row.roleId !== null && !row.isSuperadmin && (
                     <>
+                      <Button variant="outline" size="sm" disabled={!row.email} onClick={() => openCreateForUser(row)} title="Dar mais regiões a esta pessoa" aria-label="Dar mais regiões a esta pessoa">
+                        <MapPinPlus className="h-3.5 w-3.5" />
+                      </Button>
                       <Button variant="outline" size="sm" onClick={() => openEdit(row)} title="Editar acesso">
                         <Pencil className="h-3.5 w-3.5" />
                       </Button>
@@ -420,25 +441,6 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
               </div>
 
               <div className="space-y-1.5">
-                <Label>Organização</Label>
-                <Select
-                  value={createForm.tenantId}
-                  onValueChange={(v) => setCreateForm((p) => ({ ...p, tenantId: v, regionIds: [] }))}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecionar organização…" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {orgs.map((o) => (
-                      <SelectItem key={o.id} value={o.id}>
-                        {o.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
                 <Label>Papel (Role)</Label>
                 <Select value={createForm.role} onValueChange={(v) => setCreateForm((p) => ({ ...p, role: v as Role, regionIds: v === "owner" ? [] : p.regionIds }))}>
                   <SelectTrigger>
@@ -453,33 +455,59 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
                 </Select>
               </div>
 
-              {createForm.tenantId && (
-                <div className="space-y-2">
-                  {createForm.role === "owner" ? (
-                    <p className="text-sm text-neutral-600">Owner acessa todas as regiões desta organização.</p>
-                  ) : (
-                    <div className="space-y-1.5">
-                      <Label>Regiões permitidas</Label>
-                      <p className="text-xs text-neutral-500">Selecione ao menos uma região para o usuário conseguir acessar os dados.</p>
-                      <div className="max-h-40 overflow-y-auto rounded-md border p-2 space-y-1.5">
-                        {regionsForOrg(createForm.tenantId).length === 0 && (
-                          <p className="text-xs text-neutral-400 italic">Essa organização não tem regiões cadastradas.</p>
-                        )}
-                        {regionsForOrg(createForm.tenantId).map((r) => (
-                          <div key={r.id} className="flex items-center gap-2">
-                            <Checkbox
-                              id={`region-${r.id}`}
-                              checked={createForm.regionIds.includes(r.id)}
-                              onCheckedChange={() => toggleRegion(r.id)}
-                            />
-                            <Label htmlFor={`region-${r.id}`} className="font-normal cursor-pointer">
-                              {r.nome}
-                            </Label>
-                          </div>
-                        ))}
+              {createForm.role === "owner" ? (
+                <div className="space-y-1.5">
+                  <Label>Organização</Label>
+                  <Select
+                    value={createForm.tenantId}
+                    onValueChange={(v) => setCreateForm((p) => ({ ...p, tenantId: v, regionIds: [] }))}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecionar organização…" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {orgs.map((o) => (
+                        <SelectItem key={o.id} value={o.id}>
+                          {o.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Owner acessa todas as regiões desta organização.</p>
+                </div>
+              ) : (
+                <div className="space-y-1.5">
+                  <Label>Regiões que a pessoa vê</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Pode marcar regiões de organizações diferentes. No mapa ela troca de uma para a outra pelo menu da conta.
+                  </p>
+                  <div className="max-h-56 overflow-y-auto rounded-md border border-border p-2 space-y-3">
+                    {regionGroups.length === 0 && (
+                      <p className="text-xs text-muted-foreground">Nenhuma região cadastrada ainda.</p>
+                    )}
+                    {regionGroups.map(({ org, regions: list }) => (
+                      <div key={org.id} className="space-y-1.5">
+                        <p className="text-xs font-medium text-muted-foreground">{org.name}</p>
+                        {list.map((r) => {
+                          const has = alreadyGranted.has(r.id);
+                          return (
+                            <div key={r.id} className="flex items-center gap-2">
+                              <Checkbox
+                                id={`region-${r.id}`}
+                                checked={has || createForm.regionIds.includes(r.id)}
+                                disabled={has}
+                                onCheckedChange={() => toggleRegion(r.id)}
+                              />
+                              <Label htmlFor={`region-${r.id}`} className={has ? "font-normal text-muted-foreground" : "font-normal cursor-pointer"}>
+                                {r.nome}
+                                {has && <span className="ml-1.5 text-xs">· já vê</span>}
+                              </Label>
+                            </div>
+                          );
+                        })}
                       </div>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
               )}
 
@@ -492,7 +520,7 @@ export function UsersAdmin({ initialOrgId }: { initialOrgId?: string }) {
               <Button variant="outline" onClick={() => setCreateOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={onCreateSubmit} disabled={submitting || !createForm.email || !createForm.tenantId || (createForm.role !== "owner" && createForm.regionIds.length === 0)}>
+              <Button onClick={onCreateSubmit} disabled={submitting || !createForm.email || (createForm.role === "owner" ? !createForm.tenantId : !createForm.regionIds.some((id) => !alreadyGranted.has(id)))}>
                 {submitting ? "Enviando…" : "Criar e enviar acesso"}
               </Button>
             </DialogFooter>

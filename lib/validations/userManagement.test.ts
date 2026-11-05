@@ -19,3 +19,9 @@ it('accepts an explicit region for a limited role', () => {
   expect(createUserAccessSchema.safeParse({ email: 'a@example.com', tenantId, role: 'editor', regionIds: [11] }).success).toBe(true);
   expect(updateUserAccessSchema.safeParse({ role: 'viewer', regionId: 11 }).success).toBe(true);
 });
+
+it('owner needs the organization; limited roles take regions without naming one', () => {
+  expect(createUserAccessSchema.safeParse({ email: 'a@example.com', role: 'owner', regionIds: [] }).success).toBe(false);
+  // regiões de organizações diferentes, sem organização no pedido: o servidor descobre a de cada uma
+  expect(createUserAccessSchema.safeParse({ email: 'a@example.com', role: 'viewer', regionIds: [1, 2] }).success).toBe(true);
+});

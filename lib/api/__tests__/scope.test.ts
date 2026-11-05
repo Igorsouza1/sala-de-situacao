@@ -25,10 +25,18 @@ it.each([0, -1, 1.5, Number.NaN, Number.MAX_SAFE_INTEGER + 1])(
 it('allows an assigned region', async () => {
   expect(await resolveScope({ regiaoId: 11 })).toMatchObject({ tenantId: 'org-a', regiaoId: 11, response: null });
 });
-it('denies a different organization before considering grants', async () => {
+it('denies a region of another organization where the person has no role', async () => {
   (db.execute as jest.Mock).mockResolvedValue({ rows: [{ tenant_id: 'org-b' }] });
-  expect((await resolveScope({ regiaoId: 33 })).response?.status).toBe(403);
-  expect(getAccessibleRegionIdsForUser).not.toHaveBeenCalled();
+  (getAccessibleRegionIdsForUser as jest.Mock).mockResolvedValue([]);
+  const scope = await resolveScope({ regiaoId: 33 });
+  expect(scope.response?.status).toBe(403);
+  // os papéis consultados são os da Organização dona da Região, nunca os da preferida
+  expect(getAccessibleRegionIdsForUser).toHaveBeenCalledWith('u1', 'org-b', false);
+});
+it('allows a region of another organization where the person has a role, and the tenant follows it', async () => {
+  (db.execute as jest.Mock).mockResolvedValue({ rows: [{ tenant_id: 'org-b' }] });
+  (getAccessibleRegionIdsForUser as jest.Mock).mockResolvedValue([33]);
+  expect(await resolveScope({ regiaoId: 33 })).toMatchObject({ tenantId: 'org-b', regiaoId: 33, response: null });
 });
 it('denies missing grants instead of widening to the organization', async () => {
   (getAccessibleRegionIdsForUser as jest.Mock).mockResolvedValue([]);

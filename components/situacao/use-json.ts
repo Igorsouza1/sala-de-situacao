@@ -17,6 +17,8 @@ export function useJson<T>(url: string): Carga<T> {
   useEffect(() => {
     let vivo = true
     setEstado("carregando")
+    // sem endereço (ainda não se sabe o que pedir): fica carregando, sem ir ao servidor
+    if (!url) return () => { vivo = false }
     fetch(url)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
       .then((json) => {

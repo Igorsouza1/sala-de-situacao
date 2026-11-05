@@ -17,8 +17,8 @@ export type OnMostrar = (geometria: Geometry, mover?: boolean) => void
 function DetalheComDados({ alvo, voltar, regiaoId, onMostrar }: { alvo: Alvo; voltar: () => void; regiaoId?: number; onMostrar?: OnMostrar }) {
   const detalhe = <Detalhe alvo={alvo} voltar={voltar} regiaoId={regiaoId} onMostrar={onMostrar} />
   switch (alvo.tipo) {
-    case "focos": return <FogoProvider>{detalhe}</FogoProvider>
-    case "desmatamento": return alvo.item ? detalhe : <DesmatamentoProvider>{detalhe}</DesmatamentoProvider>
+    case "focos": return <FogoProvider regiaoId={regiaoId}>{detalhe}</FogoProvider>
+    case "desmatamento": return alvo.item ? detalhe : <DesmatamentoProvider regiaoId={regiaoId} camada={alvo.camada?.slug}>{detalhe}</DesmatamentoProvider>
     case "cure": return <DailyPonteCureProvider>{detalhe}</DailyPonteCureProvider>
     default: return detalhe
   }
@@ -35,7 +35,7 @@ export function SituacaoPanel({ open, alvo, onAlvo, regiaoId, onMostrar }: { ope
     <ViewSwap
       view={alvo ? "detalhe" : "resumo"}
       views={{
-        resumo: <Resumo onAbrir={onAlvo} />,
+        resumo: <Resumo onAbrir={onAlvo} regiaoId={regiaoId} />,
         detalhe: alvo ? <DetalheComDados alvo={alvo} voltar={() => onAlvo(null)} regiaoId={regiaoId} onMostrar={onMostrar} /> : null,
       }}
     />

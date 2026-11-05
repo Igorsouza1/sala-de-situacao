@@ -79,6 +79,26 @@ export function desmatamento(porAno: Record<string, number[]> | null | undefined
   }
 }
 
+/** hectares em palavras curtas: "437 ha", "2,2 mil ha", "110 mil ha" */
+export function haCurto(v: number): string {
+  if (v < 1000) return `${Math.round(v).toLocaleString("pt-BR")} ha`
+  return `${(v / 1000).toLocaleString("pt-BR", { maximumFractionDigits: v < 10_000 ? 1 : 0 })} mil ha`
+}
+
+// A área queimada vem por ano (o MapBiomas Fogo é anual): o "agora" é o último ano da série, comparado com o anterior.
+export function areaQueimada(anos: number[], totais: number[]): { tom: Tom; frase: string; apoio: string; serie: number[] } {
+  if (anos.length === 0 || totais.length !== anos.length) return { tom: "neutro", frase: "Sem leitura de área queimada", apoio: "A série não tem anos", serie: [] }
+  const k = anos.length - 1
+  const ultimo = totais[k]
+  const pico = totais.indexOf(Math.max(...totais))
+  const apoio = totais[pico] > 0
+    ? pico === k ? `O ano de mais fogo da série (desde ${anos[0]})` : `O ano de mais fogo foi ${anos[pico]}, com ${haCurto(totais[pico])}`
+    : `Nenhum fogo desde ${anos[0]}`
+  if (!(ultimo > 0)) return { tom: "ok", frase: `Nenhuma área queimada em ${anos[k]}`, apoio, serie: totais }
+  const mais = k > 0 && ultimo > totais[k - 1]
+  return { tom: mais ? "crit" : "atencao", frase: `${haCurto(ultimo)} queimados em ${anos[k]}`, apoio, serie: totais }
+}
+
 export function javali(esteMes: number | null | undefined, mesAnterior: number | null | undefined): { tom: Tom; frase: string; apoio: string } {
   if (esteMes == null) return { tom: "neutro", frase: "Sem leitura de avistamentos", apoio: "Os relatos não carregaram" }
   if (esteMes === 0) return { tom: "ok", frase: "Nenhum relato de javali neste mês", apoio: "Avistamentos de campo e do formulário público" }

@@ -7,7 +7,7 @@ export async function GET() {
   const { user, tenantId, response } = await requireAuthWithTenant()
   if (response || !user || !tenantId) return response ?? NextResponse.json({ error: 'Não autorizado.' }, { status: 401 })
   try {
-    const regioes = await listAccessibleRegions(user.id, tenantId, user.app_metadata?.is_superadmin === true)
+    const regioes = await listAccessibleRegions(user.id, user.app_metadata?.is_superadmin === true)
     return NextResponse.json({ regioes }, { headers: { 'Cache-Control': 'private, no-store' } })
   } catch (error) {
     console.error('Erro ao listar as regiões:', error)

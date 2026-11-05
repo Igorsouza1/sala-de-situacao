@@ -44,3 +44,23 @@ it('allows machine sync only with the configured secret', async () => {
   delete process.env.CRON_SECRET;
   expect((await updateSession(sync)).status).toBe(401);
 });
+
+describe('a Região aberta fica num cookie (a Organização segue a Região)', () => {
+  beforeEach(() => getUser.mockResolvedValue({ data: { user: { id: 'user' } }, error: null }));
+  const cookie = (r: Response) => (r as unknown as { cookies: { get(n: string): { value: string } | undefined } }).cookies.get('prisma_regiao')?.value;
+
+  it('página com regiao_id guarda a Região', async () => {
+    expect(cookie(await updateSession(request('/protected?regiao_id=2')))).toBe('2');
+  });
+  it('chamada de API não muda onde a pessoa está', async () => {
+    expect(cookie(await updateSession(request('/api/fogo?regiao_id=2')))).toBeUndefined();
+  });
+  it('regiao_id malformado ou repetido não guarda nada', async () => {
+    expect(cookie(await updateSession(request('/protected?regiao_id=2x')))).toBeUndefined();
+    expect(cookie(await updateSession(request('/protected?regiao_id=1&regiao_id=2')))).toBeUndefined();
+  });
+  it('sem sessão não guarda', async () => {
+    getUser.mockResolvedValue({ data: { user: null }, error: null });
+    expect(cookie(await updateSession(request('/protected?regiao_id=2')))).toBeUndefined();
+  });
+});

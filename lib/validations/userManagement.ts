@@ -3,11 +3,12 @@ import { z } from "zod";
 export const orgRoleEnum = z.enum(["owner", "editor", "viewer", "auditor"]);
 export type OrgRole = z.infer<typeof orgRoleEnum>;
 
+// Owner recebe uma Organização inteira (tenantId). Os demais recebem Regiões, que podem ser de Organizações diferentes: o
+// servidor descobre a Organização de cada Região e cria um papel em cada uma (tenantId, se vier, não é usado).
 export const createUserAccessSchema = z.object({
   email: z.string().trim().toLowerCase().email("Email inválido."),
-  tenantId: z.string().uuid("Organização inválida."),
+  tenantId: z.string().uuid("Organização inválida.").optional(),
   role: orgRoleEnum,
-  // Apenas Owner possui acesso à organização inteira sem região específica.
   regionIds: z.array(z.number().int().positive()).optional().default([]),
 }).superRefine((data, ctx) => {
   if (data.role !== "owner" && data.regionIds.length === 0) {
@@ -15,6 +16,9 @@ export const createUserAccessSchema = z.object({
   }
   if (data.role === "owner" && data.regionIds.length > 0) {
     ctx.addIssue({ code: "custom", path: ["regionIds"], message: "Owner já acessa todas as regiões da organização." });
+  }
+  if (data.role === "owner" && !data.tenantId) {
+    ctx.addIssue({ code: "custom", path: ["tenantId"], message: "Escolha a organização deste owner." });
   }
 });
 

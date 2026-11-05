@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { apiError } from "@/lib/api/responses";
 import { extractTenantId } from "@/lib/api/tenant-context";
+import { readOpenRegionId } from "@/lib/api/open-region";
 import type { User } from "@supabase/supabase-js";
 import { db } from "@/db";
 import { rolesInMonitoramento } from "@/db/schema";
@@ -28,10 +29,24 @@ export async function requireAuth(): Promise<AuthResult> {
   return { user, response: null };
 }
 
-/** Metadata selects a preferred organization; current database access authorizes it. */
+async function tenantOfRegion(regionId: number): Promise<string | null> {
+  const row = await db.execute<{ tenant_id: string | null }>(sql`
+    SELECT organization_id::text AS tenant_id FROM monitoramento.regioes WHERE id = ${regionId}
+  `);
+  return row.rows[0]?.tenant_id ?? null;
+}
+
+/**
+ * A Organização da requisição. Preferências, nesta ordem: a da Região aberta no mapa (cookie, ver open-region.ts), a do
+ * app_metadata e o primeiro papel. Preferência nunca autoriza: só vale uma Organização em que a pessoa tem papel atual
+ * (o Superadmin tem todas). Assim quem tem papel em duas Organizações troca de uma para a outra só abrindo a Região.
+ */
 export async function resolveTenantIdForUser(user: User): Promise<string | null> {
+  const isSuperadmin = user.app_metadata?.is_superadmin === true;
+  const openRegion = await readOpenRegionId();
+  const openTenant = openRegion ? await tenantOfRegion(openRegion) : null;
   const preferred = extractTenantId(user);
-  if (user.app_metadata?.is_superadmin === true && preferred) return preferred;
+  if (isSuperadmin && (openTenant ?? preferred)) return openTenant ?? preferred;
 
   const roles = await db.execute<{ tenant_id: string }>(sql`
     SELECT tenant_id::text AS tenant_id
@@ -40,7 +55,8 @@ export async function resolveTenantIdForUser(user: User): Promise<string | null>
     ORDER BY id ASC
   `);
   if (roles.rows.length) {
-    return roles.rows.find(row => row.tenant_id === preferred)?.tenant_id
+    return roles.rows.find(row => row.tenant_id === openTenant)?.tenant_id
+      ?? roles.rows.find(row => row.tenant_id === preferred)?.tenant_id
       ?? roles.rows[0].tenant_id;
   }
 

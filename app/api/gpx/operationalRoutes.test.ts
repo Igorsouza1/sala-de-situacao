@@ -82,10 +82,17 @@ test("estrada nova recebe tenant e região da sessão", async () => {
   expect(createEstradaData).toHaveBeenCalledWith({ nome: "Estrada" }, orgA, 12);
 });
 
-test("importação de GPX recusa região de outra organização", async () => {
+test("importação de GPX recusa região de outra organização sem papel de escrita lá", async () => {
   jest.mocked(getTenantIdForRegion).mockResolvedValue(orgB);
+  (db.execute as jest.Mock).mockResolvedValue({ rows: [{ ok: false }] });
   expect((await importGpxRoute(formRequest())).status).toBe(403);
   expect(importGpx).not.toHaveBeenCalled();
+});
+
+test("importação de GPX numa região de outra organização em que a pessoa edita grava nessa organização", async () => {
+  jest.mocked(getTenantIdForRegion).mockResolvedValue(orgB);
+  expect((await importGpxRoute(formRequest())).status).toBe(201);
+  expect(importGpx).toHaveBeenCalledWith(expect.objectContaining({ regiaoId: 12, tenantId: orgB }));
 });
 
 test("importação de GPX usa tenant da região autorizada", async () => {

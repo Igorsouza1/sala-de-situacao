@@ -17,7 +17,11 @@ interface DesmatamentoContextType {
 
 const DesmatamentoContext = createContext<DesmatamentoContextType | undefined>(undefined)
 
-export function DesmatamentoProvider({ children }: { children: ReactNode }) {
+/**
+ * `regiaoId`: só os alertas desta região. `camada`: os alertas vêm de uma camada importada da região (ex.: MapBiomas Alerta), no
+ * mesmo formato; ela devolve todos os anos de uma vez e o ano escolhido é filtrado aqui.
+ */
+export function DesmatamentoProvider({ children, regiaoId, camada }: { children: ReactNode; regiaoId?: number; camada?: string }) {
   const [desmatamentoData, setDesmatamentoData] = useState<DesmatamentoData>({})
   const [filteredDesmatamentoData, setFilteredDesmatamentoData] = useState<number[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -30,7 +34,12 @@ export function DesmatamentoProvider({ children }: { children: ReactNode }) {
       setIsLoading(true)
       setError(null)
       try {
-        const response = await fetch(`/api/desmatamento?year=${selectedYear}`, { signal: controller.signal })
+        const response = await fetch(
+          camada && regiaoId
+            ? `/api/situacao/desmatamento-camada?regiao_id=${regiaoId}&slug=${encodeURIComponent(camada)}`
+            : `/api/desmatamento?year=${selectedYear}${regiaoId ? `&regiao_id=${regiaoId}` : ""}`,
+          { signal: controller.signal },
+        )
         if (!response.ok) {
           throw new Error("Falha ao buscar dados")
         }
@@ -51,7 +60,7 @@ export function DesmatamentoProvider({ children }: { children: ReactNode }) {
 
     fetchDesmatamentoData()
     return () => controller.abort()
-  }, [selectedYear])
+  }, [selectedYear, regiaoId, camada])
 
   useEffect(() => {
     if (selectedYear === "todos") {

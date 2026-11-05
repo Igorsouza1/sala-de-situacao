@@ -28,8 +28,9 @@ export type ScopeResult =
  * tenant do usuário e a Região efetiva.
  *
  * - Com `regiaoId` explícito: o tenant efetivo é o da Organização dona da
- *   Região. Se a Região pertence a outra Organização, só Superadmin passa —
- *   usuário comum recebe 403 (isolamento de tenant).
+ *   Região. Passa quem tem acesso a ela nessa Organização (papel nela, ou
+ *   dono da Organização), mesmo que a Organização preferida da pessoa seja
+ *   outra; quem não tem papel lá recebe 403 (isolamento de tenant).
  * - Sem `regiaoId`: usa a Região associada ao usuário em roles.
  */
 export async function resolveScope(
@@ -51,12 +52,10 @@ export async function resolveScope(
     if (!regionTenant) {
       return denied(apiError(`Região ${opts.regiaoId} não possui Organização associada.`, 400));
     }
-    if (regionTenant !== tenantId && user.app_metadata?.is_superadmin !== true) {
-      return denied(apiError("Região pertence a outra Organização.", 403));
-    }
+    // os papéis contados são os da Organização dona da Região: sem papel lá, a lista vem vazia e a Região é negada
     const allowed = await getAccessibleRegionIdsForUser(user.id, regionTenant, user.app_metadata?.is_superadmin === true);
     if (allowed !== null && !allowed.includes(opts.regiaoId)) {
-      return denied(apiError("Região não acessível.", 403));
+      return denied(apiError(regionTenant !== tenantId ? "Região pertence a outra Organização." : "Região não acessível.", 403));
     }
     return { user, tenantId: regionTenant, regiaoId: opts.regiaoId, response: null };
   }

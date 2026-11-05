@@ -19,6 +19,7 @@ import { useUserRole } from '@/hooks/useUserRole'
 import { createClient } from '@/lib/supabase/client'
 import { cn } from '@/lib/utils'
 import { controlItem, controlSurface } from './helpers/control-style'
+import { openRegionCookie } from '@/lib/open-region-cookie'
 import { currentRegionLabel, mixesOrganizations, regionCaption, regionHref, type RegionOption } from './helpers/regions'
 
 // Conta da pessoa (DESIGN.md 13.11): um círculo no canto de baixo à esquerda, fora do dock porque conta não é ferramenta do mapa.
@@ -68,6 +69,8 @@ export function UserAvatarMenu({ onRegionChanged }: UserAvatarMenuProps) {
     setMenuOpen(false)
     if (region.id === currentId) return
     target.current = region
+    // a Região pode ser de outra Organização da pessoa: o cookie faz as rotas falarem dela já na primeira chamada
+    document.cookie = openRegionCookie(region.id, window.location.protocol === 'https:')
     startSwitch(() => router.push(regionHref(pathname, searchParams.toString(), region.id)))
   }
 

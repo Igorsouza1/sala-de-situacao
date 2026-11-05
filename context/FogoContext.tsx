@@ -17,7 +17,8 @@ interface FogoContextType {
 
 const FogoContext = createContext<FogoContextType | undefined>(undefined)
 
-export function FogoProvider({ children }: { children: ReactNode }) {
+/** `regiaoId`: só os focos desta região (sem ela, os de todas as regiões da pessoa) */
+export function FogoProvider({ children, regiaoId }: { children: ReactNode; regiaoId?: number }) {
   const [fogoData, setFogoData] = useState<FogoData>({})
   const [filteredFogoData, setFilteredFogoData] = useState<number[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -30,7 +31,7 @@ export function FogoProvider({ children }: { children: ReactNode }) {
       setIsLoading(true)
       setError(null)
       try {
-        const response = await fetch(`/api/fogo?year=${selectedYear}`, { signal: controller.signal })
+        const response = await fetch(`/api/fogo?year=${selectedYear}${regiaoId ? `&regiao_id=${regiaoId}` : ""}`, { signal: controller.signal })
         if (!response.ok) {
           throw new Error("Falha ao buscar dados")
         }
@@ -47,7 +48,7 @@ export function FogoProvider({ children }: { children: ReactNode }) {
 
     fetchFogoData()
     return () => controller.abort()
-  }, [selectedYear])
+  }, [selectedYear, regiaoId])
 
   useEffect(() => {
     if (selectedYear === "todos") {

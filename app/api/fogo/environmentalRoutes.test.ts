@@ -111,10 +111,18 @@ describe.each([
     expect(service).not.toHaveBeenCalled();
   });
 
-  test("Região de outra Organização retorna 403 antes da consulta", async () => {
+  test("Região de outra Organização sem papel lá retorna 403 antes da consulta", async () => {
     (db.execute as jest.Mock).mockResolvedValue({ rows: [{ tenant_id: "org-b" }] });
+    accessibleRegions.mockImplementation(async (_user, tenant) => (tenant === "org-b" ? [] : null));
     expect((await handler(request("regiao_id=22"))).status).toBe(403);
     expect(service).not.toHaveBeenCalled();
+  });
+
+  test("Região de outra Organização em que a pessoa tem papel: lê os dados dessa Organização", async () => {
+    (db.execute as jest.Mock).mockResolvedValue({ rows: [{ tenant_id: "org-b" }] });
+    accessibleRegions.mockImplementation(async (_user, tenant) => (tenant === "org-b" ? [22] : null));
+    expect((await handler(request("regiao_id=22"))).status).toBe(200);
+    expect(service).toHaveBeenCalledWith("org-b", false, 22);
   });
 
   test("Superadmin permanece global apesar da Região padrão", async () => {

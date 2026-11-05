@@ -49,10 +49,11 @@ beforeEach(() => {
     if (q.sql.includes("SELECT EXISTS") && q.sql.includes("AS ok") && q.params.length === 2) return { rows: [{ ok: role === "owner" }] };
     if (q.sql.includes('FROM "monitoramento"."acoes" a')) return { rows: q.params[0] === 22 ? [] : [{ id: q.params[0], regiao_id: q.params[0] === 12 ? 12 : 11 }] };
     if (q.sql.includes("SELECT EXISTS")) {
-      expect(q.params.slice(0, 2)).toEqual(["user-a", "org-a"]);
+      // o papel é procurado na Organização dona da Região; a pessoa só tem papel na org-a
+      expect(q.params[0]).toBe("user-a");
       expect(q.sql).toContain("role = 'owner'"); expect(q.sql).toContain("role = 'editor'");
       expect(q.sql).toContain("region_id =");
-      return { rows: [{ ok: role === "owner" || (role === "editor" && q.params[2] === 11) }] };
+      return { rows: [{ ok: q.params[1] === "org-a" && (role === "owner" || (role === "editor" && q.params[2] === 11)) }] };
     }
     return { rows: [{ id: 7 }] };
   });

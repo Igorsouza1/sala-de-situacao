@@ -11,6 +11,7 @@
 
 jest.mock("@/lib/supabase/server", () => ({ createClient: jest.fn() }));
 jest.mock("@/db", () => ({ db: { execute: jest.fn().mockResolvedValue({ rows: [] }) } }));
+jest.mock("@/lib/api/open-region", () => ({ readOpenRegionId: jest.fn().mockResolvedValue(null) }));
 
 import { createClient } from "@/lib/supabase/server";
 import { db } from "@/db";
@@ -99,4 +100,28 @@ it("does not revive stale metadata through legacy membership", async () => {
   (db.execute as jest.Mock).mockResolvedValueOnce({ rows: [] }).mockResolvedValueOnce({ rows: [{ organization_id: "current-org" }] });
   expect((await requireAuthWithTenant()).response?.status).toBe(403);
   expect(db.execute).toHaveBeenCalledTimes(1);
+});
+
+describe("a Região aberta escolhe a Organização (cookie, só preferência)", () => {
+  const openRegion = jest.requireMock("@/lib/api/open-region") as { readOpenRegionId: jest.Mock };
+  beforeEach(() => (db.execute as jest.Mock).mockReset());
+  afterEach(() => openRegion.readOpenRegionId.mockResolvedValue(null));
+
+  it("com papel nas duas Organizações, vale a da Região aberta, mesmo com outra no app_metadata", async () => {
+    openRegion.readOpenRegionId.mockResolvedValue(2);
+    mockSupabaseUser({ id: "u5", app_metadata: { tenant_id: "org-a" } });
+    (db.execute as jest.Mock)
+      .mockResolvedValueOnce({ rows: [{ tenant_id: "org-b" }] }) // dona da Região 2
+      .mockResolvedValueOnce({ rows: [{ tenant_id: "org-a" }, { tenant_id: "org-b" }] }); // papéis
+    expect((await requireAuthWithTenant()).tenantId).toBe("org-b");
+  });
+
+  it("sem papel na Organização da Região aberta, o cookie não dá acesso: fica a de sempre", async () => {
+    openRegion.readOpenRegionId.mockResolvedValue(2);
+    mockSupabaseUser({ id: "u6", app_metadata: {} });
+    (db.execute as jest.Mock)
+      .mockResolvedValueOnce({ rows: [{ tenant_id: "org-b" }] })
+      .mockResolvedValueOnce({ rows: [{ tenant_id: "org-a" }] });
+    expect((await requireAuthWithTenant()).tenantId).toBe("org-a");
+  });
 });

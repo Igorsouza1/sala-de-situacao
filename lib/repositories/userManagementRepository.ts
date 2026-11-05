@@ -218,6 +218,16 @@ export async function regionsBelongToTenantInDb(tenantId: string, regionIds: num
   return rows.length === regionIds.length;
 }
 
+/** A Organização dona de cada Região pedida. Região que não existe simplesmente não volta. */
+export async function getRegionTenantsInDb(regionIds: number[]): Promise<{ id: number; tenantId: string }[]> {
+  if (regionIds.length === 0) return [];
+  const rows = await db
+    .select({ id: regioesInMonitoramento.id, tenantId: regioesInMonitoramento.organizationId })
+    .from(regioesInMonitoramento)
+    .where(inArray(regioesInMonitoramento.id, regionIds));
+  return rows.filter((r): r is { id: number; tenantId: string } => r.tenantId != null);
+}
+
 export async function getTenantNameInDb(tenantId: string): Promise<string | null> {
   const result = await db.execute<{ name: string }>(sql`
     SELECT name FROM monitoramento.tenants WHERE id = ${tenantId}::uuid LIMIT 1
