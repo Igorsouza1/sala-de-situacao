@@ -3,6 +3,7 @@
 
 import type { Feature } from 'geojson'
 import type { GeometryKind } from './geojson'
+import type { SeriesMeta } from './series-meta'
 
 const MAX_BATCH_BYTES = 2_500_000
 const MAX_BATCH_FEATURES = 500
@@ -109,18 +110,34 @@ export interface SaveRasterInput {
   png: Blob
 }
 
-/** Grava uma camada raster: uma requisição só (a linha do catálogo e a imagem entram juntas, ou nenhuma). Tenta mais uma vez se falhar. */
-export async function saveRasterLayer(input: SaveRasterInput, fetcher: typeof fetch = fetch): Promise<{ slug: string }> {
-  const { png, ...meta } = input
+/** Uma requisição só, com o resumo e o arquivo juntos (a linha do catálogo e o dado entram juntos, ou nenhum). Tenta mais uma vez se falhar. */
+async function sendOnce(url: string, meta: object, field: string, blob: Blob, fileName: string, fallback: string, fetcher: typeof fetch): Promise<{ slug: string }> {
   const send = () => {
     const form = new FormData()
     form.set('meta', JSON.stringify(meta))
-    form.set('image', png, 'raster.png')
-    return fetcher('/api/layers/import/raster', { method: 'POST', body: form })
+    form.set(field, blob, fileName)
+    return fetcher(url, { method: 'POST', body: form })
   }
   let res = await send().catch(() => null)
   if (!res?.ok) res = await send().catch(() => null)
   if (!res) throw new SaveLayerError('A conexão caiu durante o envio.', true)
-  if (!res.ok) throw new SaveLayerError(await messageOf(res, 'Não foi possível salvar o raster.'), true)
+  if (!res.ok) throw new SaveLayerError(await messageOf(res, fallback), true)
   return { slug: (await res.json()).data.slug }
+}
+
+/** Grava uma camada raster (fogo por ano ou valores). */
+export async function saveRasterLayer(input: SaveRasterInput, fetcher: typeof fetch = fetch): Promise<{ slug: string }> {
+  const { png, ...meta } = input
+  return sendOnce('/api/layers/import/raster', meta, 'image', png, 'raster.png', 'Não foi possível salvar o raster.', fetcher)
+}
+
+export interface SaveSeriesInput extends SeriesMeta {
+  /** a série codificada (ver class-series.ts) */
+  data: Blob
+}
+
+/** Grava uma série de anos de um raster de classes (ex.: uso do solo do MapBiomas). */
+export async function saveSeriesLayer(input: SaveSeriesInput, fetcher: typeof fetch = fetch): Promise<{ slug: string }> {
+  const { data, ...meta } = input
+  return sendOnce('/api/layers/import/raster-series', meta, 'series', data, 'serie.bin', 'Não foi possível salvar a série.', fetcher)
 }

@@ -26,3 +26,14 @@ describe('colorFromFile', () => {
     expect(colorFromFile('qualquer.geojson')).toBe('#3b82f6')
   })
 })
+
+describe('isSidecarFile', () => {
+  const { isSidecarFile } = require('../files') as typeof import('../files')
+  it('ignora os auxiliares que vêm junto da pasta, e só eles', () => {
+    expect(isSidecarFile('CN_MapBiomas_UsoSolo_BAP_1985.tif.aux.xml')).toBe(true)
+    expect(isSidecarFile('Thumbs.db')).toBe(true)
+    expect(isSidecarFile('uso.ovr')).toBe(true)
+    expect(isSidecarFile('CN_MapBiomas_UsoSolo_BAP_1985.tif')).toBe(false)
+    expect(isSidecarFile('limite.geojson')).toBe(false)
+  })
+})

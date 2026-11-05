@@ -1,5 +1,6 @@
 import type { Feature } from 'geojson'
-import { chunkFeatures, saveGeoJsonLayer, saveRasterLayer } from '../upload'
+import { chunkFeatures, saveGeoJsonLayer, saveRasterLayer, saveSeriesLayer } from '../upload'
+import { seriesMetaSchema } from '../series-meta'
 
 const feature = (i: number, pad = 0): Feature => ({
   type: 'Feature',
@@ -98,5 +99,46 @@ describe('saveRasterLayer', () => {
     const fetcher = jest.fn(() => fail('Dê um nome à camada.')) as unknown as typeof fetch
     await expect(saveRasterLayer(input, fetcher)).rejects.toMatchObject({ message: 'Dê um nome à camada.' })
     expect(fetcher).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('série de anos', () => {
+  const meta = {
+    name: 'Uso do solo MapBiomas (BAP)', regiaoId: 1, width: 2, height: 2,
+    bounds: [-57, -22, -56, -21] as [number, number, number, number],
+    years: [1985, 1986], stats: { classes: [3, 15], ha: [[1, 2], [1.5, 1.5]] }, mapbiomas: true,
+  }
+
+  it('envia o resumo e a série juntos, sem a série no resumo', async () => {
+    let sent: FormData | null = null
+    let url = ''
+    const fetcher = jest.fn((u: string, init?: RequestInit) => {
+      url = u
+      sent = init?.body as FormData
+      return ok({ slug: 'uso-x' })
+    }) as unknown as typeof fetch
+    await expect(saveSeriesLayer({ ...meta, data: new Blob(['x']) }, fetcher)).resolves.toEqual({ slug: 'uso-x' })
+    expect(url).toBe('/api/layers/import/raster-series')
+    expect(JSON.parse(String(sent!.get('meta')))).toEqual(meta)
+    expect(sent!.get('series')).toBeInstanceOf(Blob)
+  })
+
+  it('o resumo válido passa', () => {
+    expect(seriesMetaSchema.safeParse(meta).success).toBe(true)
+  })
+
+  it('recusa anos fora de ordem ou repetidos', () => {
+    const r = seriesMetaSchema.safeParse({ ...meta, years: [1986, 1985] })
+    expect(r.success).toBe(false)
+    expect(r.error?.issues[0].message).toBe('Os anos da série precisam vir em ordem, sem repetir.')
+  })
+
+  it('recusa áreas que não conferem com os anos e as classes', () => {
+    expect(seriesMetaSchema.safeParse({ ...meta, stats: { classes: [3, 15], ha: [[1, 2]] } }).success).toBe(false)
+    expect(seriesMetaSchema.safeParse({ ...meta, stats: { classes: [3, 15], ha: [[1], [2]] } }).success).toBe(false)
+  })
+
+  it('recusa limites que não fecham uma área', () => {
+    expect(seriesMetaSchema.safeParse({ ...meta, bounds: [-56, -22, -57, -21] }).success).toBe(false)
   })
 })

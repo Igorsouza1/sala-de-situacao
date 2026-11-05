@@ -32,7 +32,8 @@ export interface LayerManagerOption {
   /** o mapa a desenha sempre por cima (os ícones das Ações): a linha diz isso e não tem alça */
   pinnedOnTop?: boolean
   /** o que a pessoa pode ajustar só para si (cor e transparência) e a cor que ela vê agora; ausente: nada a ajustar (a Fauna, o mapa de calor) */
-  personal?: { color: boolean; opacity: boolean; mainColor: string }
+  /** `colorReason`: por que a cor não muda, quando não muda (o cartão diz isso no lugar da cor) */
+  personal?: { color: boolean; opacity: boolean; mainColor: string; colorReason?: string }
 }
 
 export type LayerStatus = 'loading' | 'error'

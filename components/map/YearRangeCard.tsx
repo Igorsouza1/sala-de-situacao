@@ -3,11 +3,15 @@
 import { Slider } from '@/components/ui/slider'
 import { Collapse } from '@/components/ui/collapse'
 import { cn } from '@/lib/utils'
+import type { SeriesStats } from '@/lib/geo-import/class-series'
 import { controlSurface } from './helpers/control-style'
+import { ClassSeriesView } from './ClassSeries'
 
 // Período de cada camada importada que tem anos (DESIGN.md 13): fica no mapa enquanto a camada está ligada, para a pessoa ver e
 // mexer no recorte sem abrir painel. Uma linha por camada, com o nome, o período em palavras e o controle de dois pontos.
 // Cada camada tem o seu período: o filtro de datas do mapa (Este ano…) não mexe nas camadas importadas.
+// Uma série de anos de classes (uso do solo) mostra UM ano por vez, com o gráfico da divisão da área: um cartão por série,
+// na mesma coluna (um canto, um controle só: caso C30).
 
 export interface YearRangeItem {
   slug: string
@@ -17,42 +21,66 @@ export interface YearRangeItem {
   value: [number, number]
 }
 
+export interface SeriesItem {
+  slug: string
+  name: string
+  years: number[]
+  stats: SeriesStats
+  year: number
+}
+
 interface YearRangeCardProps {
   items: YearRangeItem[]
+  series?: SeriesItem[]
   onChange: (slug: string, value: [number, number]) => void
 }
 
 const label = ([a, b]: [number, number]) => (a === b ? `${a}` : `${a} a ${b}`)
 
-export function YearRangeCard({ items, onChange }: YearRangeCardProps) {
-  const open = items.length > 0
+export function YearRangeCard({ items, series = [], onChange }: YearRangeCardProps) {
+  const open = items.length > 0 || series.length > 0
   return (
-    <div className="pointer-events-none absolute right-[4.25rem] top-4 z-[400] w-72 max-sm:inset-x-3 max-sm:right-auto max-sm:top-16 max-sm:w-auto">
+    <div
+      className={cn(
+        'pointer-events-none absolute right-[4.25rem] top-4 z-[400] max-h-[calc(100svh-9rem)] overflow-y-auto max-sm:inset-x-3 max-sm:right-auto max-sm:top-16 max-sm:w-auto',
+        series.length ? 'w-80' : 'w-72',
+      )}
+    >
       <Collapse open={open} clip>
-        <section aria-label="Período das camadas" className={cn('pointer-events-auto rounded-lg p-4', controlSurface)}>
-          <h3 className="mb-3 text-sm font-semibold">Período</h3>
-          <ul className="space-y-5">
-            {items.map((item) => (
-              <li key={item.slug}>
-                <div className="mb-2 flex items-baseline justify-between gap-3">
-                  <span className="min-w-0 truncate text-sm">{item.name}</span>
-                  <span className="shrink-0 text-sm font-medium tabular-nums">{label(item.value)}</span>
-                </div>
-                <div className="py-2">
-                  <Slider
-                    min={item.min}
-                    max={item.max}
-                    step={1}
-                    minStepsBetweenThumbs={0}
-                    value={item.value}
-                    onValueChange={(v) => v.length === 2 && onChange(item.slug, [v[0], v[1]])}
-                    aria-label={`Período de ${item.name}`}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </section>
+        <div className="space-y-4">
+          {items.length > 0 && (
+            <section aria-label="Período das camadas" className={cn('pointer-events-auto rounded-lg p-4', controlSurface)}>
+              <h3 className="mb-3 text-sm font-semibold">Período</h3>
+              <ul className="space-y-5">
+                {items.map((item) => (
+                  <li key={item.slug}>
+                    <div className="mb-2 flex items-baseline justify-between gap-3">
+                      <span className="min-w-0 truncate text-sm">{item.name}</span>
+                      <span className="shrink-0 text-sm font-medium tabular-nums">{label(item.value)}</span>
+                    </div>
+                    <div className="py-2">
+                      <Slider
+                        min={item.min}
+                        max={item.max}
+                        step={1}
+                        minStepsBetweenThumbs={0}
+                        value={item.value}
+                        onValueChange={(v) => v.length === 2 && onChange(item.slug, [v[0], v[1]])}
+                        aria-label={`Período de ${item.name}`}
+                      />
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          {series.map((s) => (
+            <section key={s.slug} aria-label={s.name} className={cn('pointer-events-auto rounded-lg p-4', controlSurface)}>
+              <h3 className="mb-3 truncate text-sm font-semibold">{s.name}</h3>
+              <ClassSeriesView name={s.name} stats={s.stats} years={s.years} year={s.year} onYear={(y) => onChange(s.slug, [y, y])} />
+            </section>
+          ))}
+        </div>
       </Collapse>
     </div>
   )

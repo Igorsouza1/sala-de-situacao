@@ -96,3 +96,23 @@ export function paintRaster(src: Uint32Array, dest: Uint32Array, width: number, 
     }
   }
 }
+
+/** A tabela de cores de uma série de classes: o código vira a cor da legenda (RGBA de verdade); o 0, "fora da área", fica transparente. */
+export function classLut(colorOf: (code: number) => string): Uint32Array {
+  const lut = new Uint32Array(256)
+  for (let c = 1; c < 255; c++) {
+    const [r, g, b] = hexToRgb(colorOf(c))
+    lut[c] = ((255 << 24) | (b << 16) | (g << 8) | r) >>> 0
+  }
+  return lut
+}
+
+/** Pinta um ano de uma série de classes (`frame`, um byte por pixel) em `dest`, já em Mercator. */
+export function paintClasses(frame: Uint8Array, dest: Uint32Array, width: number, height: number, bounds: Bounds, lut: Uint32Array): void {
+  const rows = mercatorRowMap(height, bounds)
+  for (let j = 0; j < height; j++) {
+    const srcRow = rows[j] * width
+    const destRow = j * width
+    for (let i = 0; i < width; i++) dest[destRow + i] = lut[frame[srcRow + i]]
+  }
+}

@@ -60,7 +60,8 @@ import { EditAcaoModal } from './EditAcaoModal'
 import { FeatureDetails } from './feature-details'
 import { DropImport, type ImportPreview } from './DropImport'
 import { RasterLayers, type RasterSpec } from './RasterLayers'
-import { YearRangeCard, type YearRangeItem } from './YearRangeCard'
+import { YearRangeCard, type SeriesItem, type YearRangeItem } from './YearRangeCard'
+import type { SeriesStats } from '@/lib/geo-import/class-series'
 import { featureDate } from '@/lib/geo-import/geojson'
 import { GerarMapa, type GerarMapaSession } from './GerarMapa'
 import { GerarMapaButton } from './GerarMapaButton'
@@ -69,6 +70,7 @@ import { ExplorePanel } from './ExplorePanel'
 import { MapLegend, type LegendTarget } from './MapLegend'
 import { LegendFlash } from './LegendFlash'
 import { NewsBell } from './NewsBell'
+import { AcoesResumo } from './AcoesResumo'
 import { useNovidades } from './useNovidades'
 import type { NewsItem } from './helpers/novidades'
 import { buildRuleLegend, featuresForLegendEntry } from './helpers/legend-rules'
@@ -380,6 +382,26 @@ export default function MapLibreMap({
 
   // ── Explorar (DESIGN.md 13.5): o registro aberto no painel e o que ele desenha no mapa ──────────────────────────
   const [dockOpen, setDockOpen] = useState<string | null>(null)
+
+  // ── Resumo das Ações (DESIGN.md 13.13): aberto ou recolhido fica guardado no aparelho. Divide o canto de cima à esquerda com
+  // as Novidades, o cartão de importar e os painéis laterais do dock (Explorar, Situação): abrir um recolhe o outro.
+  const [acoesOpen, setAcoesOpen] = useState(false)
+  const [importing, setImporting] = useState(false)
+  useEffect(() => {
+    try { setAcoesOpen(window.localStorage.getItem('prisma:acoes-resumo') === 'aberto') } catch { /* sem armazenamento: começa recolhido */ }
+  }, [])
+  const changeAcoesOpen = useCallback((open: boolean) => {
+    setAcoesOpen(open)
+    try { window.localStorage.setItem('prisma:acoes-resumo', open ? 'aberto' : 'recolhido') } catch { /* segue sem lembrar */ }
+    if (open) {
+      setDockOpen((d) => (d === 'explore' || d === 'situacao' ? null : d))
+      setNewsYield(true) // as Novidades abrem no mesmo lugar: fecham
+    }
+  }, [])
+  const [newsOpen, setNewsOpen] = useState(false)
+  const [newsYield, setNewsYield] = useState(false)
+  // outro painel do mesmo canto está aberto: o resumo sai da frente enquanto isso e volta depois (a escolha da pessoa não muda)
+  const acoesShown = acoesOpen && !newsOpen && !importing && dockOpen !== 'explore' && dockOpen !== 'situacao'
   const [exploreSelection, setExploreSelection] = useState<ConsultaSelection | null>(null)
   const [exploreFeature, setExploreFeature] = useState<ConsultaItem | null>(null)
   const exploreOpen = useRef(false)
@@ -1023,17 +1045,27 @@ export default function MapLibreMap({
   // ── Camadas importadas: rasters ligados (a imagem é pintada com o período) e o controle de período ──
   const importedYears = useMemo(() => {
     const items: YearRangeItem[] = []
+    const series: SeriesItem[] = []
     const rasters: RasterSpec[] = []
     for (const layer of renderLayers) {
-      const sc = layer.schemaConfig as { source?: string; kind?: string; years?: [number, number]; raster?: Omit<RasterSpec, 'key' | 'source' | 'color' | 'opacity' | 'years'> } | undefined
+      const sc = layer.schemaConfig as { source?: string; kind?: string; years?: [number, number]; raster?: Omit<RasterSpec, 'key' | 'source' | 'color' | 'opacity' | 'years' | 'seriesYears'> & { years?: number[]; stats?: SeriesStats } } | undefined
       if (sc?.source !== 'drop-import' || !visibleLayers.includes(layer.slug)) continue
+      const opacity = layoutApi.layout ? effectiveOpacity(layoutApi.layout, layer.slug) : 1
+      // série de classes (uso do solo): um ano por vez, o último no começo
+      if (sc.kind === 'raster' && sc.raster?.mode === 'classes' && sc.raster.years && sc.raster.stats) {
+        const { years: seriesYears, stats, ...raster } = sc.raster
+        const year = yearRanges[layer.slug]?.[1] ?? seriesYears[seriesYears.length - 1]
+        series.push({ slug: layer.slug, name: layer.name, years: seriesYears, stats, year })
+        rasters.push({ ...raster, key: layer.slug, source: `/api/layers/${layer.slug}/raster`, color: readStyle(layer.visualConfig as any).fillColor, opacity, seriesYears, years: [year, year] })
+        continue
+      }
       const value = yearRanges[layer.slug] ?? sc.years
       if (sc.years && sc.years[0] < sc.years[1] && value) items.push({ slug: layer.slug, name: layer.name, min: sc.years[0], max: sc.years[1], value })
       if (sc.kind === 'raster' && sc.raster) {
-        rasters.push({ ...sc.raster, key: layer.slug, source: `/api/layers/${layer.slug}/raster`, color: readStyle(layer.visualConfig as any).fillColor, opacity: layoutApi.layout ? effectiveOpacity(layoutApi.layout, layer.slug) : 1, years: value })
+        rasters.push({ ...sc.raster, key: layer.slug, source: `/api/layers/${layer.slug}/raster`, color: readStyle(layer.visualConfig as any).fillColor, opacity, years: value })
       }
     }
-    return { items, rasters }
+    return { items, series, rasters }
   }, [renderLayers, layoutApi.layout, visibleLayers, yearRanges])
   const rasterSpecs = useMemo(
     () => (importPreview?.kind === 'raster' ? [...importedYears.rasters, importPreview.spec] : importedYears.rasters),
@@ -1373,6 +1405,12 @@ export default function MapLibreMap({
       const caps = personalCaps(l.visualConfig as any, geom)
       if (!caps.color && !caps.opacity) continue
       const shown = renderLayers.find((r) => r.slug === l.slug) ?? l
+      // uso do solo: cada classe tem a cor da legenda; uma cor só para a camada não faria sentido
+      const sc = l.schemaConfig as { kind?: string; raster?: { mode?: string } } | undefined
+      if (sc?.kind === 'raster' && sc.raster?.mode === 'classes') {
+        out[l.slug] = { color: false, opacity: true, mainColor: mainColor(readStyle(shown.visualConfig as any, geom)), colorReason: 'As cores desta camada são as das classes do uso do solo, por isso só a transparência muda.' }
+        continue
+      }
       out[l.slug] = { ...caps, mainColor: mainColor(readStyle(shown.visualConfig as any, geom)) }
     }
     return out
@@ -1401,6 +1439,17 @@ export default function MapLibreMap({
       },
     ]
   }, [layerManagerOptions, renderLayers, personalInfo])
+
+  // As Ações que o mapa mostra agora (com os filtros e as áreas desligadas), para o resumo; null enquanto os dados não chegaram
+  const acoesLayer = useMemo(() => {
+    const item = processedLayers.find((p) => p.layer.slug === 'acoes' && p.isIcon)
+    if (!item) return null
+    const vc = item.layer.visualConfig as any
+    return {
+      features: layerData['acoes'] ? (item.displayData.features as { properties?: Record<string, unknown> | null }[]) : null,
+      config: { baseStyle: vc?.baseStyle || vc, rules: vc?.rules },
+    }
+  }, [processedLayers, layerData])
 
   // A legenda das camadas de pinos (Ações), das regras do catálogo e do que está no mapa agora: a cor e o ícone dizem coisas diferentes
   const ruleLegends = useMemo(() => {
@@ -1967,11 +2016,30 @@ export default function MapLibreMap({
       {/* ── Controls overlay ─────────────────────────────────────────────── */}
 
       {/* Câmera: zoom, bússola e 2D|3D */}
-      <NewsBell items={news.items} unread={news.unread} since={news.since} options={panelOptions} onOpen={() => { news.markSeen(); if (dockOpen === 'explore') setDockOpen(null) }} onClose={news.dismiss} onShow={handleNewsShow} yield={dockOpen === 'explore'} />
+      <NewsBell
+        items={news.items}
+        unread={news.unread}
+        since={news.since}
+        options={panelOptions}
+        onOpen={() => { news.markSeen(); setNewsOpen(true); setNewsYield(false); if (dockOpen === 'explore') setDockOpen(null) }}
+        onClose={() => { setNewsOpen(false); news.dismiss() }}
+        onShow={handleNewsShow}
+        yield={dockOpen === 'explore' || newsYield}
+      />
+      {/* Resumo das Ações: ao lado do sino, só com a camada Ações ligada */}
+      <AcoesResumo
+        show={!!acoesLayer}
+        regiaoId={regiaoId ?? undefined}
+        refreshKey={layerData['acoes']}
+        onMap={acoesLayer?.features ? acoesLayer.features.length : null}
+        config={acoesLayer?.config}
+        open={acoesShown}
+        onOpenChange={changeAcoesOpen}
+      />
       <MapLegend mapRef={mapRef} ready={mapLoaded} options={panelOptions} activeLayers={panelActiveLayers} ruleLegends={ruleLegends} counts={layerCounts} onShow={handleLegendShow} />
       <CameraControls mapRef={mapRef} onZoom={zoomBy} ready={mapLoaded} viewMode={viewMode} onViewModeChange={handleViewModeChange} canFitRegion={!!regionBounds} onFitRegion={handleFitRegion} />
 
-      <YearRangeCard items={importedYears.items} onChange={(slug, value) => setYearRanges((prev) => ({ ...prev, [slug]: value }))} />
+      <YearRangeCard items={importedYears.items} series={importedYears.series} onChange={(slug, value) => setYearRanges((prev) => ({ ...prev, [slug]: value }))} />
 
       {/* Soltar um arquivo no mapa: mostra a prévia e pede para salvar como camada */}
       <DropImport
@@ -1981,6 +2049,7 @@ export default function MapLibreMap({
         onPreview={setImportPreview}
         onSaved={handleImported}
         onNotice={setNotice}
+        onActiveChange={setImporting}
       />
 
       {/* Dock: o que o mapa mostra (Camadas, Filtros), ferramentas (Medir, Consultar) e Imprimir */}

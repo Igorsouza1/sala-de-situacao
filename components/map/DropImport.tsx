@@ -1,17 +1,22 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { FileUp, Palette, TriangleAlert, UploadCloud, X } from 'lucide-react'
+import { ChartColumnStacked, CircleCheck, FileUp, ListChecks, Palette, TriangleAlert, UploadCloud, X } from 'lucide-react'
 import type { FeatureCollection } from 'geojson'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useFileDrop } from '@/hooks/useFileDrop'
+import { useRegion } from '@/context/RegionContext'
 import { cn } from '@/lib/utils'
-import { colorFromFile, kindOfFile, nameFromFile } from '@/lib/geo-import/files'
+import { colorFromFile, isSidecarFile, kindOfFile, nameFromFile } from '@/lib/geo-import/files'
 import { MAX_MB, problemMessage, readGeoJson, type GeoJsonSummary } from '@/lib/geo-import/geojson'
 import { RasterProblemError, convertRaster, inspectRaster, rasterProblemMessage, type RasterConversion, type RasterInfo } from '@/lib/geo-import/raster'
-import { SaveLayerError, saveGeoJsonLayer, saveRasterLayer } from '@/lib/geo-import/upload'
+import { groupSeries, shareInside, type Bounds } from '@/lib/geo-import/class-series'
+import { SeriesProblemError, convertSeries, inspectSeries, probeClasses, seriesProblemMessage, type SeriesConversion, type SeriesInspection } from '@/lib/geo-import/class-series-read'
+import { ZipProblemError, isZip, readZip } from '@/lib/geo-import/zip'
+import { SaveLayerError, saveGeoJsonLayer, saveRasterLayer, saveSeriesLayer } from '@/lib/geo-import/upload'
 import { controlItem, controlSurface } from './helpers/control-style'
+import { ClassSeriesView } from './ClassSeries'
 import { ColorField } from './LayerEditor'
 import { PanelCard } from './PanelCard'
 import type { NoticeData } from './Notice'
@@ -21,6 +26,9 @@ import type { RasterSpec } from './RasterLayers'
 // Estados desenhados: lendo (esqueleto), preparando (raster: barra de andamento), pronto (prévia no mapa), salvando (barra),
 // erro (o que ela preencheu fica) e arquivo que não serve (diz o que fazer). A tela pensa pela pessoa: nome e cor já vêm
 // sugeridos pelo nome do arquivo e o campo de ano é achado sozinho. Vários arquivos soltos de uma vez viram uma fila, um cartão por vez.
+// Uma SÉRIE DE ANOS (um raster de classes por ano, ex.: o uso do solo do MapBiomas, solta como pasta ou como vários arquivos)
+// vira UM cartão: a tela confere a série (anos, grade, região, legenda), mostra o gráfico da divisão da área e a prévia de um ano
+// no mapa, e só então a pessoa salva. Os auxiliares que vêm junto (.aux.xml) são ignorados em silêncio.
 
 export type ImportPreview =
   | { kind: 'vetor'; data: FeatureCollection; color: string }
@@ -35,15 +43,21 @@ interface DropImportProps {
   /** a camada foi gravada: o mapa recarrega o catálogo e liga a camada */
   onSaved: (slug: string) => void
   onNotice: (notice: NoticeData) => void
+  /** o cartão está aberto (ocupa o canto esquerdo: o resumo das Ações sai da frente) */
+  onActiveChange?: (active: boolean) => void
 }
 
 type Item =
   | { kind: 'vetor'; collection: FeatureCollection; summary: GeoJsonSummary }
   | { kind: 'raster'; conversion: RasterConversion }
+  | { kind: 'serie'; conversion: SeriesConversion }
+
+/** o que espera a vez na fila: um arquivo, ou os arquivos de uma série de anos (ou um .zip que não abriu, com o motivo) */
+type Job = { name: string; files: File[]; problem?: string; /** um .zip ainda sendo aberto */ opening?: boolean }
 
 type Step =
   | { phase: 'lendo' }
-  | { phase: 'preparando'; info: RasterInfo; fraction: number }
+  | { phase: 'preparando'; info: RasterInfo | SeriesInspection; fraction: number }
   | { phase: 'problema'; message: string }
   | { phase: 'pronto'; item: Item }
   | { phase: 'salvando'; item: Item; done: number; total: number }
@@ -60,46 +74,173 @@ const count = (n: number, [one, many]: [string, string]) => `${n.toLocaleString(
 const period = (a: number, b: number) => (a === b ? `${a}` : `${a} a ${b}`)
 
 function boundsOf(item: Item): [number, number, number, number] {
-  return item.kind === 'vetor' ? item.summary.bounds : item.conversion.bounds
+  return item.kind === 'vetor' ? item.summary.bounds : item.kind === 'serie' ? item.conversion.grid.bounds : item.conversion.bounds
 }
 
-export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNotice }: DropImportProps) {
-  const [queue, setQueue] = useState<File[]>([])
+const isSeries = (job: Job) => job.files.length > 1
+const yearsLabel = (ys: number[]) => (ys.length === 1 ? `${ys[0]}` : `${ys.slice(0, -1).join(', ')} e ${ys[ys.length - 1]}`)
+const mb = (bytes: number) => `${(bytes / 1_000_000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} MB`
+
+/** O que foi solto vira a fila: as séries primeiro (um item cada), depois os arquivos soltos. */
+function jobsFrom(files: File[]): Job[] {
+  const { series, singles } = groupSeries(files.filter((f) => !isSidecarFile(f.name)))
+  return [...series.map((g) => ({ name: g[0].name, files: g })), ...singles.map((f) => ({ name: f.name, files: [f] }))]
+}
+
+/** Uma linha da conferência: o ícone diz se passou ou se pede atenção, e a frase diz o quê (nunca só a cor). */
+function CheckRow({ ok, children }: { ok: boolean; children: React.ReactNode }) {
+  const Icon = ok ? CircleCheck : TriangleAlert
+  return (
+    <li className="flex gap-2.5">
+      <Icon className={cn('mt-0.5 h-4 w-4 shrink-0', ok ? 'text-ok' : 'text-warn')} aria-hidden />
+      <span className="min-w-0 text-sm leading-snug">
+        <span className="sr-only">{ok ? 'Conferido: ' : 'Atenção: '}</span>
+        {children}
+      </span>
+    </li>
+  )
+}
+
+/** A conferência da série: o que passou e o que pede atenção, cada coisa numa frase com o próximo passo. */
+function SeriesChecks({ c, region }: { c: SeriesConversion; region: { bbox: Bounds; nome: string | null } | null }) {
+  const inside = region ? shareInside(c.grid.bounds, region.bbox) : null
+  const where = region?.nome ? `de ${region.nome}` : 'aberta no mapa'
+  const adjusted = c.adjusted.map((a) => a.year)
+  const finer = c.adjusted.some((a) => a.finer)
+  const single = c.years.length === 1
+  return (
+    <ul className="space-y-3">
+      {single ? (
+        <CheckRow ok>O ano {c.years[0].year}, achado no nome do arquivo. Para ver a mudança ao longo do tempo, solte a pasta ou o .zip com todos os anos.</CheckRow>
+      ) : c.missing.length ? (
+        <CheckRow ok={false}>Faltam {yearsLabel(c.missing)}. O gráfico e o mapa pulam {c.missing.length === 1 ? 'esse ano' : 'esses anos'}.</CheckRow>
+      ) : (
+        <CheckRow ok>{c.years.length} anos seguidos, um arquivo por ano.</CheckRow>
+      )}
+      {single ? null : adjusted.length ? (
+        <CheckRow ok={false}>
+          {yearsLabel(adjusted)} {adjusted.length === 1 ? 'veio' : 'vieram'} {finer ? 'com mais detalhe' : 'com outro tamanho de pixel'} que os outros anos, provavelmente de
+          outra exportação. Ajustamos à grade dos outros para comparar; uma mudança que só aparece {adjusted.length === 1 ? `em ${adjusted[0]}` : 'nesses anos'} pode vir disso.
+        </CheckRow>
+      ) : (
+        <CheckRow ok>Todos os anos na mesma grade.</CheckRow>
+      )}
+      {inside !== null &&
+        (inside >= 0.9 ? (
+          <CheckRow ok>Dentro da região {where}.</CheckRow>
+        ) : inside > 0 ? (
+          <CheckRow ok={false}>Parte do raster fica fora da região {where}. Confira se é a área certa.</CheckRow>
+        ) : (
+          <CheckRow ok={false}>O raster fica fora da região {where}. Confira se é a área certa antes de salvar.</CheckRow>
+        ))}
+      {c.mapbiomas ? (
+        <CheckRow ok>Classes do MapBiomas, com os nomes e as cores oficiais.</CheckRow>
+      ) : (
+        <CheckRow ok={false}>Algumas classes não estão na legenda do MapBiomas e aparecem como “Classe” seguida do número.</CheckRow>
+      )}
+      <CheckRow ok>
+        {single
+          ? `Guardamos compactado: os ${mb(c.sourceBytes)} do arquivo viram ${mb(c.data.size)}.`
+          : `Guardamos só o que muda de um ano para o outro: os ${mb(c.sourceBytes)} dos arquivos viram ${mb(c.data.size)}.`}
+      </CheckRow>
+    </ul>
+  )
+}
+
+export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNotice, onActiveChange }: DropImportProps) {
+  const [queue, setQueue] = useState<Job[]>([])
   const [step, setStep] = useState<Step>({ phase: 'lendo' })
   const [name, setName] = useState('')
   const [color, setColor] = useState(() => colorFromFile(''))
+  /** série de anos: o ano que a prévia mostra no mapa */
+  const [previewYear, setPreviewYear] = useState<number | null>(null)
+  const { region } = useRegion()
   const [entered, setEntered] = useState(false)
   const [leaving, setLeaving] = useState(false)
-  const file = queue[0] as File | undefined
+  const file = queue[0] as Job | undefined
   const hasFile = !!file
   // quem chama pode passar uma função nova a cada render: a limpeza da prévia não pode depender da identidade dela
   const previewRef = useRef(onPreview)
   previewRef.current = onPreview
 
-  const dragging = useFileDrop((files) => setQueue((q) => [...q, ...files]))
+  // um .zip é aberto aqui e vale como a pasta que ele guarda (a série costuma chegar zipada do Google Drive)
+  // Enquanto abre, o cartão já aparece dizendo "Abrindo…" (um item provisório na fila, trocado pelo que veio de dentro).
+  const dragging = useFileDrop(async (dropped) => {
+    const zips = dropped.filter((f) => isZip(f.name))
+    if (!zips.length) { setQueue((q) => [...q, ...jobsFrom(dropped)]); return }
+    const opening: Job = { name: zips[0].name, files: [], opening: true }
+    setQueue((q) => [...q, opening])
+    const files = dropped.filter((f) => !isZip(f.name))
+    const problems: Job[] = []
+    for (const z of zips) {
+      try {
+        files.push(...(await readZip(z)))
+      } catch (e) {
+        problems.push({ name: z.name, files: [z], problem: e instanceof ZipProblemError ? e.message : `Não conseguimos abrir “${z.name}”.` })
+      }
+    }
+    // se a pessoa descartou enquanto abria, o provisório já saiu da fila e nada entra
+    setQueue((q) => q.flatMap((j) => (j === opening ? [...jobsFrom(files), ...problems] : [j])))
+  })
 
-  // chega a vez de um arquivo: lê, confere e mostra a prévia (nada é gravado ainda)
+  // chega a vez de um arquivo (ou de uma série): lê, confere e mostra a prévia (nada é gravado ainda)
   useEffect(() => {
-    if (!file) return
+    if (!file) { setStep({ phase: 'lendo' }); return } // a fila esvaziou: nada do arquivo anterior fica
     let alive = true
     setStep({ phase: 'lendo' })
     setName(nameFromFile(file.name))
     setColor(colorFromFile(file.name))
+    setPreviewYear(null)
     setLeaving(false)
 
-    const kind = kindOfFile(file.name)
+    if (file.opening) return // fica em "lendo" até o .zip abrir
+    if (file.problem) {
+      setStep({ phase: 'problema', message: file.problem })
+      return
+    }
+
+    // uso do solo (classes): um arquivo ou vários, sempre o mesmo caminho, com as cores da legenda e sem pedir cor
+    const runSeries = async (files: File[]) => {
+      try {
+        const insp = await inspectSeries(files)
+        if (!alive) return
+        setName(insp.name)
+        setStep({ phase: 'preparando', info: insp, fraction: 0 })
+        const conversion = await convertSeries(insp, (fraction) => alive && setStep({ phase: 'preparando', info: insp, fraction }))
+        if (!alive) return
+        setPreviewYear(conversion.years[conversion.years.length - 1].year)
+        setStep({ phase: 'pronto', item: { kind: 'serie', conversion } })
+      } catch (e) {
+        if (!alive) return
+        setStep({ phase: 'problema', message: e instanceof SeriesProblemError ? e.message : seriesProblemMessage({ code: 'ilegivel', file: file.name }) })
+      }
+    }
+
+    if (isSeries(file)) {
+      runSeries(file.files)
+      return () => { alive = false }
+    }
+
+    const single = file.files[0]
+    const kind = kindOfFile(single.name)
     if (kind === 'desconhecido') {
-      setStep({ phase: 'problema', message: `“${file.name}” não é um formato que o mapa lê. Use GeoJSON (.geojson) ou raster (.tif).` })
+      setStep({ phase: 'problema', message: `“${single.name}” não é um formato que o mapa lê. Use GeoJSON (.geojson), raster (.tif) ou um .zip com eles.` })
       return
     }
 
     if (kind === 'raster') {
       ;(async () => {
         try {
-          const info = await inspectRaster(file)
+          const info = await inspectRaster(single)
+          if (!alive) return
+          // um raster de uma banda pode ser de classes (um ano de uso do solo): a tela vê pelos valores, não pelo jeito que chegou
+          if (info.mode === 'valores' && (await probeClasses(single))) {
+            if (alive) await runSeries([single])
+            return
+          }
           if (!alive) return
           setStep({ phase: 'preparando', info, fraction: 0 })
-          const conversion = await convertRaster(file, info, (fraction) => alive && setStep({ phase: 'preparando', info, fraction }))
+          const conversion = await convertRaster(single, info, (fraction) => alive && setStep({ phase: 'preparando', info, fraction }))
           if (alive) setStep({ phase: 'pronto', item: { kind: 'raster', conversion } })
         } catch (e) {
           if (!alive) return
@@ -109,11 +250,11 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
       return () => { alive = false }
     }
 
-    if (file.size > MAX_MB * 1024 * 1024) {
-      setStep({ phase: 'problema', message: problemMessage({ code: 'grande-demais', mb: Math.round(file.size / 1024 / 1024) }) })
+    if (single.size > MAX_MB * 1024 * 1024) {
+      setStep({ phase: 'problema', message: problemMessage({ code: 'grande-demais', mb: Math.round(single.size / 1024 / 1024) }) })
       return
     }
-    file.text().then(
+    single.text().then(
       (text) => {
         if (!alive) return
         const reading = readGeoJson(text)
@@ -124,6 +265,10 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
     return () => { alive = false }
   }, [file])
 
+  const activeRef = useRef(onActiveChange)
+  activeRef.current = onActiveChange
+  useEffect(() => { activeRef.current?.(hasFile) }, [hasFile])
+
   // o cartão cresce ao entrar (8.1): um quadro depois de montado
   useEffect(() => {
     if (!hasFile) { setEntered(false); return }
@@ -132,16 +277,29 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
   }, [hasFile])
 
   // a prévia no mapa acompanha o que a pessoa vê no cartão (inclusive a cor, ao vivo)
-  const item = step.phase === 'pronto' || step.phase === 'salvando' || step.phase === 'erro' ? step.item : null
+  // Sem arquivo na fila (descartou ou salvou), não há prévia: o último passo fica guardado em `step` até chegar outro arquivo,
+  // e era ele que mantinha a prévia no mapa depois do Descartar.
+  const item = file && (step.phase === 'pronto' || step.phase === 'salvando' || step.phase === 'erro') ? step.item : null
   useEffect(() => {
     if (!item) { previewRef.current(null); return }
     if (item.kind === 'vetor') { previewRef.current({ kind: 'vetor', data: item.collection, color }); return }
+    if (item.kind === 'serie') {
+      // a prévia é a própria série que vai ser salva, aberta como o mapa a abrirá depois
+      const c = item.conversion
+      const seriesYears = c.years.map((y) => y.year)
+      const year = previewYear ?? seriesYears[seriesYears.length - 1]
+      previewRef.current({
+        kind: 'raster',
+        spec: { key: 'preview', source: c.data, bounds: c.grid.bounds, width: c.grid.width, height: c.grid.height, mode: 'classes', max: 1, color, firstYear: seriesYears[0], seriesYears, years: [year, year] },
+      })
+      return
+    }
     const c = item.conversion
     previewRef.current({
       kind: 'raster',
       spec: { key: 'preview', source: c.png, bounds: c.bounds, width: c.width, height: c.height, mode: c.mode, max: c.max, color, firstYear: c.firstYear },
     })
-  }, [item, color])
+  }, [item, color, previewYear])
   useEffect(() => () => previewRef.current(null), [])
 
   // enquadra o que chegou, deixando o cartão (à esquerda) fora da área da câmera
@@ -189,6 +347,20 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
           },
           (done, total) => setStep({ phase: 'salvando', item: current, done, total }),
         ))
+      } else if (current.kind === 'serie') {
+        const c = current.conversion
+        setStep({ phase: 'salvando', item: current, done: 0, total: 1 })
+        ;({ slug } = await saveSeriesLayer({
+          name: label,
+          regiaoId,
+          width: c.grid.width,
+          height: c.grid.height,
+          bounds: c.grid.bounds,
+          years: c.years.map((y) => y.year),
+          stats: c.stats,
+          mapbiomas: c.mapbiomas,
+          data: c.data,
+        }))
       } else {
         const c = current.conversion
         setStep({ phase: 'salvando', item: current, done: 0, total: 1 })
@@ -237,7 +409,7 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
           <UploadCloud className="h-8 w-8 text-primary" aria-hidden />
           <p className="text-base font-semibold">Solte para adicionar ao mapa</p>
           <p className="text-sm text-muted-foreground">
-            GeoJSON ou raster (.tif). Pode soltar vários de uma vez.
+            GeoJSON ou raster (.tif). Pode soltar vários de uma vez, ou a pasta de uma série de anos.
             {!canEdit && ' Você verá a prévia, mas só editores salvam.'}
           </p>
         </div>
@@ -270,7 +442,11 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
 
           <div className="min-h-0 flex-1 space-y-4 overflow-y-auto bg-muted/50 p-4 pb-6">
             {step.phase === 'lendo' && (
-              <PanelCard title="Lendo o arquivo…" caption={file.name} icon={FileUp}>
+              <PanelCard
+                title={file.opening ? 'Abrindo o .zip…' : isSeries(file) ? `Lendo ${file.files.length} arquivos…` : 'Lendo o arquivo…'}
+                caption={file.name}
+                icon={FileUp}
+              >
                 <div className="space-y-2" aria-hidden>
                   <div className="h-4 w-3/4 rounded-sm bg-shimmer" />
                   <div className="h-4 w-1/2 rounded-sm bg-shimmer" />
@@ -279,10 +455,15 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
             )}
 
             {step.phase === 'preparando' && (
-              <PanelCard title="Preparando o raster…" caption={file.name} icon={FileUp}>
+              <PanelCard title={isSeries(file) ? 'Preparando a série…' : 'Preparando o raster…'} caption={file.name} icon={FileUp}>
                 <div role="status" aria-live="polite">
                   <p className="mb-2 text-sm">
-                    {step.info.mode === 'bandas' ? `Lendo ${step.info.bands} anos de dados.` : 'Lendo os valores.'} Pode levar alguns segundos.
+                    {'years' in step.info
+                      ? `Lendo ${step.info.years.length} anos e conferindo cada um.`
+                      : step.info.mode === 'bandas'
+                        ? `Lendo ${step.info.bands} anos de dados.`
+                        : 'Lendo os valores.'}{' '}
+                    Pode levar alguns segundos.
                   </p>
                   <div className="h-2 overflow-hidden rounded-full bg-border" aria-hidden>
                     <div className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out" style={{ width: `${Math.round(step.fraction * 100)}%` }} />
@@ -292,15 +473,34 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
             )}
 
             {step.phase === 'problema' && (
-              <PanelCard title="Este arquivo não entrou" caption={file.name} icon={TriangleAlert}>
+              <PanelCard
+                title={isSeries(file) ? 'Esta série não entrou' : 'Este arquivo não entrou'}
+                caption={isSeries(file) ? `${file.files.length} arquivos, a partir de ${file.name}` : file.name}
+                icon={TriangleAlert}
+              >
                 <p role="alert" className="text-sm">{step.message}</p>
               </PanelCard>
             )}
 
             {item && (
               <>
-                <PanelCard title="O que encontramos" caption={queue.length > 1 ? `${file.name} · arquivo 1 de ${queue.length}` : file.name} icon={FileUp}>
-                  {item.kind === 'vetor' ? (
+                <PanelCard
+                  title="O que encontramos"
+                  caption={`${isSeries(file) ? `${file.files.length} arquivos` : file.name}${queue.length > 1 ? ` · item 1 de ${queue.length}` : ''}`}
+                  icon={item.kind === 'serie' ? ListChecks : FileUp}
+                >
+                  {item.kind === 'serie' ? (
+                    <>
+                      <p className="mb-4 text-sm">
+                        <strong className="font-semibold">Uso do solo</strong>
+                        {item.conversion.years.length === 1
+                          ? ` de ${item.conversion.years[0].year}`
+                          : `, um mapa por ano, de ${period(item.conversion.years[0].year, item.conversion.years[item.conversion.years.length - 1].year)}`}
+                        , com {item.conversion.stats.classes.length} {item.conversion.stats.classes.length === 1 ? 'classe' : 'classes'}. Cada classe já vem com a sua cor.
+                      </p>
+                      <SeriesChecks c={item.conversion} region={region ? { bbox: region.bbox, nome: region.nome } : null} />
+                    </>
+                  ) : item.kind === 'vetor' ? (
                     <>
                       <p className="text-sm">
                         <strong className="font-semibold">{count(item.summary.count, NOUN[item.summary.kind])}</strong>
@@ -327,15 +527,38 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
                   )}
                 </PanelCard>
 
-                <PanelCard title="Como vai aparecer" caption="A prévia já está no mapa." icon={Palette}>
+                {item.kind === 'serie' && (
+                  <PanelCard
+                    title={item.conversion.years.length === 1 ? 'Como a área se divide' : 'Como a área mudou'}
+                    caption={item.conversion.years.length === 1 ? 'Quanto da área cada classe ocupa.' : 'Cada barra é um ano. Clique numa barra ou arraste para ver o ano no mapa.'}
+                    icon={ChartColumnStacked}
+                  >
+                    <ClassSeriesView
+                      name={name}
+                      stats={item.conversion.stats}
+                      years={item.conversion.years.map((y) => y.year)}
+                      year={previewYear ?? item.conversion.years[item.conversion.years.length - 1].year}
+                      onYear={setPreviewYear}
+                    />
+                  </PanelCard>
+                )}
+
+                <PanelCard
+                  title="Como vai aparecer"
+                  caption={item.kind === 'serie' ? 'A prévia já está no mapa, com a cor de cada classe.' : 'A prévia já está no mapa.'}
+                  icon={Palette}
+                >
                   <div className="space-y-5">
                     <label className="block">
                       <span className="mb-2 block text-sm">Nome</span>
                       <Input value={name} onChange={(e) => setName(e.target.value)} maxLength={80} disabled={saving} />
                     </label>
-                    <fieldset disabled={saving} className="min-w-0 border-0 p-0">
-                      <ColorField value={color} onChange={setColor} />
-                    </fieldset>
+                    {/* a série usa as cores da legenda de cada classe: não há uma cor da camada para escolher */}
+                    {item.kind !== 'serie' && (
+                      <fieldset disabled={saving} className="min-w-0 border-0 p-0">
+                        <ColorField value={color} onChange={setColor} />
+                      </fieldset>
+                    )}
                   </div>
                 </PanelCard>
               </>
@@ -344,11 +567,15 @@ export function DropImport({ regiaoId, canEdit, mapRef, onPreview, onSaved, onNo
             {step.phase === 'salvando' && (
               <div role="status" aria-live="polite">
                 <p className="mb-2 text-sm">
-                  {step.item.kind === 'vetor' ? `Salvando… ${step.done.toLocaleString('pt-BR')} de ${step.total.toLocaleString('pt-BR')}` : 'Salvando o raster…'}
+                  {step.item.kind === 'vetor'
+                    ? `Salvando… ${step.done.toLocaleString('pt-BR')} de ${step.total.toLocaleString('pt-BR')}`
+                    : step.item.kind === 'serie'
+                      ? 'Salvando a série…'
+                      : 'Salvando o raster…'}
                 </p>
                 <div className="h-2 overflow-hidden rounded-full bg-border" aria-hidden>
                   <div
-                    className={cn('h-full rounded-full bg-primary transition-[width] duration-300 ease-out', step.item.kind === 'raster' && 'w-full bg-shimmer')}
+                    className={cn('h-full rounded-full bg-primary transition-[width] duration-300 ease-out', step.item.kind !== 'vetor' && 'w-full bg-shimmer')}
                     style={step.item.kind === 'vetor' ? { width: `${step.total ? (step.done / step.total) * 100 : 0}%` } : undefined}
                   />
                 </div>

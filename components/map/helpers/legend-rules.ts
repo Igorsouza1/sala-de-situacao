@@ -110,3 +110,36 @@ export function buildRuleLegend(
   if (iconEntries.length > 0) sections.push({ title: 'Ícone', entries: iconEntries })
   return sections
 }
+
+export interface CountedEntry extends RuleLegendEntry {
+  count: number
+}
+export interface CountedSection {
+  title: RuleLegendSection['title']
+  entries: CountedEntry[]
+}
+
+/**
+ * A legenda das regras com QUANTOS pinos há em cada item, do maior para o menor (o resumo das Ações, 13.12). Usa a mesma
+ * classificação da legenda e do marcador: o que o gráfico diz vermelho é o que o mapa desenha vermelho (C20, C29).
+ */
+export function countRuleLegend(
+  config: { baseStyle?: { color?: string; iconName?: string }; rules?: Rule[] } | null | undefined,
+  /** cada item é uma ação, ou um grupo de ações iguais com `count` (o resumo vem agrupado do servidor) */
+  features: { properties?: Record<string, unknown> | null; count?: number }[],
+): CountedSection[] {
+  const sections = buildRuleLegend(config, features)
+  const rules = (config?.rules ?? []).filter((r) => r && r.values && typeof r.values === 'object')
+  const counts = new Map<string, number>()
+  const bump = (k: string, by: number) => counts.set(k, (counts.get(k) ?? 0) + by)
+  for (const f of features) {
+    const by = f.count ?? 1
+    const { color, icon } = classifyFeature(rules, f)
+    bump(`Cor|${color?.key ?? 'base:color'}`, by)
+    bump(`Ícone|${icon?.key ?? 'base:icon'}`, by)
+  }
+  return sections.map((s) => ({
+    title: s.title,
+    entries: s.entries.map((e) => ({ ...e, count: counts.get(`${s.title}|${e.key}`) ?? 0 })).sort((a, b) => b.count - a.count),
+  }))
+}

@@ -362,7 +362,7 @@ export function LayerTree({ options, layout, activeLayers, onLayerToggle, onGrou
         opacity={own.opacity ?? 1}
         onOpacity={(v) => onLayoutChange((l) => setLayerStyle(l, option.slug, { opacity: v >= 1 ? null : v }))}
         color={caps.color ? { value: caps.mainColor, onChange: (hex) => onLayoutChange((l) => setLayerStyle(l, option.slug, { color: hex })) } : undefined}
-        colorLockedReason={caps.color ? undefined : 'A cor desta camada mostra a situação de cada registro, por isso só a transparência muda.'}
+        colorLockedReason={caps.color ? undefined : caps.colorReason ?? 'A cor desta camada mostra a situação de cada registro, por isso só a transparência muda.'}
         changed={own.color !== undefined || own.opacity !== undefined}
         onReset={() => onLayoutChange((l) => setLayerStyle(l, option.slug, { color: null, opacity: null }))}
       />

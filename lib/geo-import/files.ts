@@ -23,3 +23,12 @@ export function colorFromFile(fileName: string): string {
   if (/agua|água|rio|hidro|bacia/.test(n)) return '#0284c7'
   return '#3b82f6'
 }
+
+/**
+ * Arquivo que acompanha outro e não é um dado por si (estatística do QGIS, pirâmide, mundo do TIFF, arquivo do sistema).
+ * Vem junto quando a pessoa solta uma pasta; a tela o ignora em silêncio em vez de dizer "este arquivo não entrou" 40 vezes.
+ */
+export function isSidecarFile(name: string): boolean {
+  const n = name.toLowerCase()
+  return /\.(aux\.xml|ovr|tfw|tifw|tiffw|msk|qml|sld|lock)$/.test(n) || /^(thumbs\.db|desktop\.ini|\.ds_store)$/.test(n) || n.startsWith('~$')
+}
